@@ -27,7 +27,7 @@
     <?php if ($inviteLink): ?>
       <div class="card card-soft credentials">
         <h3>Pozvánka pro: <?= e($inviteLink['name']) ?></h3>
-        <p>E-mail s pozvánkou se nepodařilo odeslat. Předejte prosím tento odkaz sami – <strong>zobrazuje se jen teď</strong> a platí 14 dní.</p>
+        <p>E-mail s pozvánkou se nepodařilo odeslat. Předejte prosím tento odkaz sami – <strong>zobrazuje se jen teď</strong> a platí <?= $inviteDays ?> dní.</p>
         <p><code><?= e($inviteLink['link']) ?></code></p>
       </div>
     <?php endif ?>
@@ -44,9 +44,9 @@
         </ul>
       </div>
     <?php endforeach ?>
-    <?php if ($u['kind'] === 'owner'): ?>
+    <?php if ($canInvite): ?>
     <form method="post" action="<?= url('/muj-ucet/pozvat') ?>" class="card form">
-      <h3>Pozvat manžela, manželku nebo dalšího spoluvlastníka</h3>
+      <h3>Pozvat manžela, manželku nebo dalšího člena domácnosti</h3>
       <p class="hint">Pozvaný dostane e-mail s odkazem, nastaví si heslo a jeho účet se přiřadí k Vaší jednotce. Bude mít stejný přístup jako Vy.</p>
       <?= csrf_field() ?>
       <div class="form-row">

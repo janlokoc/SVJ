@@ -11,6 +11,7 @@
     </div>
     <label>Místo <input type="text" name="place" value="<?= e($ev['place']) ?>" placeholder="Např. sušárna vchodu B"></label>
     <label>Poznámka <input type="text" name="note" value="<?= e($ev['note']) ?>"></label>
+    <label class="check"><input type="checkbox" name="rsvp"<?= $ev['rsvp'] ? ' checked' : '' ?>> <span>Sbírat účast vlastníků <small>Vlastníci na webu potvrdí, zda přijdou, a výbor uvidí odhad usnášeníschopnosti.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit termín</button><a class="btn btn-ghost" href="<?= url('/admin/terminy') ?>">Zrušit</a></div>
   </form>
 </div>

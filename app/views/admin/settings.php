@@ -18,6 +18,25 @@
         <label>Jméno odesílatele <input type="text" name="mail_from_name" value="<?= e(setting('mail_from_name', 'SVJ Tábor 48')) ?>"></label>
       </div>
       <p class="hint">Použijte adresu na doméně webu (zřídíte ji u poskytovatele hostingu). Zprávy odeslané „z“ adresy u Seznamu, Centra nebo Gmailu většinou skončí ve spamu. Na tuto adresu také přijdou odpovědi.</p>
+      <label class="check"><input type="checkbox" name="mail_tracking"<?= setting_on('mail_tracking') ? ' checked' : '' ?>> <span>Evidovat, kdo zprávu otevřel a kdo klikl na odkaz <small>Příjemci jsou o tom informováni v patičce každé zprávy.</small></span></label>
+    </fieldset>
+    <fieldset>
+      <legend>Pozvánky členů domácnosti</legend>
+      <label class="check"><input type="checkbox" name="invite_enabled"<?= setting_on('invite_enabled') ? ' checked' : '' ?>> Vlastníci mohou sami pozvat manžela, manželku nebo spoluvlastníka</label>
+      <label class="check"><input type="checkbox" name="invite_by_tenants"<?= setting_on('invite_by_tenants', false) ? ' checked' : '' ?>> <span>Zvát mohou i nájemníci <small>Člověk pozvaný nájemníkem je vždy veden jako nájemník.</small></span></label>
+      <div class="form-row">
+        <label>Pozvaný vlastníkem je veden jako
+          <select name="invite_kind"><?php foreach (KINDS as $k => $label): ?><option value="<?= $k ?>"<?= setting('invite_kind', 'owner') === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
+        </label>
+        <label>Nejvíc účtů na jednotku <input type="number" name="invite_max" min="1" max="20" value="<?= setting_int('invite_max', 6, 1, 20) ?>"></label>
+        <label>Platnost pozvánky (dní) <input type="number" name="invite_days" min="1" max="90" value="<?= setting_int('invite_days', 14, 1, 90) ?>"></label>
+      </div>
+      <p class="hint">Vlastníci dostávají e-maily určené vlastníkům a mohou potvrzovat účast na shromáždění. U jednotlivého účtu to změníte v sekci Uživatelé.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Shromáždění</legend>
+      <label>Usnášeníschopnost: je potřeba více než (% všech hlasů) <input type="number" name="quorum_percent" min="1" max="99" value="<?= setting_int('quorum_percent', 50, 1, 99) ?>"></label>
+      <p class="hint">Obvykle 50 % (přítomna většina všech hlasů). Řiďte se stanovami.</p>
     </fieldset>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit nastavení</button></div>
   </form>

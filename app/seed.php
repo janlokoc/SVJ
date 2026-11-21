@@ -36,7 +36,7 @@ function seed_database(PDO $pdo): void
         $st->execute([...$c, ($i + 1) * 10]);
     }
 
-    $pdo->prepare('INSERT INTO events (title, event_date, note) VALUES (?,?,?)')
+    $pdo->prepare('INSERT INTO events (title, event_date, note, rsvp) VALUES (?,?,?,1)')
         ->execute(['Shromáždění vlastníků SVJ', '2026-12-02', 'Čas, místo a program najdete v pozvánce.']);
 
     $settings = [

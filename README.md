@@ -26,7 +26,13 @@ a administrace pro výbor.
 - Dokumenty: nahrávání, kategorie, viditelnost
 - Termíny, kontakty, texty webu
 - Zprávy e-mailem: rozeslání důležitého oznámení vlastníkům nebo všem
-  obyvatelům s účtem, zkušební zpráva, historie odeslaných zpráv
+  obyvatelům s účtem, zkušební zpráva, historie; u každé zprávy přehled,
+  kdo ji otevřel a kdo klikl na odkaz (lze vypnout v Nastavení)
+- Účast na shromáždění: vlastníci na webu potvrdí účast za svou jednotku,
+  správce vidí přehled po jednotkách a odhad usnášeníschopnosti podle
+  spoluvlastnických podílů; odpověď může zapsat i za vlastníka bez účtu
+- Nastavení: odesílatel e-mailů, pravidla pozvánek členů domácnosti,
+  hranice usnášeníschopnosti
 - Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu
 - Jednotky: seznam jednotek s vlastníkem dle evidence, patrem a podílem,
   přiřazení účtů k jednotkám, hromadné založení jednotek

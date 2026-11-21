@@ -7,7 +7,7 @@
     <tbody>
     <?php foreach ($mailings as $m): ?>
       <tr>
-        <td data-label="Předmět"><details><summary><strong><?= e($m['subject']) ?></strong></summary><div class="prose mail-body"><?= format_text($m['body']) ?></div>
+        <td data-label="Předmět"><a href="<?= url('/admin/zpravy/' . $m['id']) ?>"><strong><?= e($m['subject']) ?></strong></a><details><summary>Text zprávy</summary><div class="prose mail-body"><?= format_text($m['body']) ?></div>
           <?php if ($m['failed_list']): ?><p class="hint">Nepodařilo se odeslat: <?= e(str_replace("\n", ', ', $m['failed_list'])) ?></p><?php endif ?></details></td>
         <td data-label="Komu"><?= $m['audience'] === 'owners' ? 'Vlastníci' : 'Všichni obyvatelé' ?></td>
         <td data-label="Odesláno"><?= (int) $m['sent_count'] ?><?= $m['failed_count'] ? ' <span class="tag tag-pin">' . (int) $m['failed_count'] . ' selhalo</span>' : '' ?></td>

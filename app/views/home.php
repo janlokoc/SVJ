@@ -36,6 +36,7 @@
           <strong class="event-title"><?= e($event['title']) ?></strong>
           <p class="event-meta"><?= e(implode(' · ', array_filter([WEEKDAYS[(int) date('w', $t)], $event['event_time'], $event['place']]))) ?></p>
           <?php if ($event['note']): ?><p class="event-note"><?= e($event['note']) ?></p><?php endif ?>
+          <?php if ($event['rsvp']): ?><p class="event-rsvp"><a class="more" href="<?= url('/terminy/' . $event['id']) ?>">Dát vědět, zda přijdu <?= icon('arrow') ?></a></p><?php endif ?>
         </div>
       </div>
       <?php endif ?>

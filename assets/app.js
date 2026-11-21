@@ -32,3 +32,7 @@ document.querySelectorAll('input[data-filter]').forEach((input) => {
   });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 });
+
+// Ukazatel přihlášené účasti (šířky se nastavují skriptem kvůli bezpečnostním pravidlům stránky)
+document.querySelectorAll('.meter-fill[data-width]').forEach((el) => { el.style.width = el.dataset.width + '%'; });
+document.querySelectorAll('.meter-mark[data-left]').forEach((el) => { el.style.left = el.dataset.left + '%'; });

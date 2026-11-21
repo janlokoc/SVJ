@@ -73,7 +73,8 @@ CREATE TABLE events (
   event_date TEXT NOT NULL,
   event_time TEXT NOT NULL DEFAULT '',
   place TEXT NOT NULL DEFAULT '',
-  note TEXT NOT NULL DEFAULT ''
+  note TEXT NOT NULL DEFAULT '',
+  rsvp INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE forum_posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,8 +104,28 @@ CREATE TABLE mailings (
   sent_count INTEGER NOT NULL DEFAULT 0,
   failed_count INTEGER NOT NULL DEFAULT 0,
   failed_list TEXT NOT NULL DEFAULT '',
+  tracked INTEGER NOT NULL DEFAULT 0,
   sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   sent_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE TABLE event_rsvp (
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL CHECK (status IN ('yes','proxy','no')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  PRIMARY KEY (event_id, unit_id)
+);
+CREATE TABLE mailing_recipients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mailing_id INTEGER NOT NULL REFERENCES mailings(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  sent_ok INTEGER NOT NULL DEFAULT 0,
+  opened_at TEXT,
+  clicked_at TEXT
 );
 CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE login_attempts (ip TEXT NOT NULL, at INTEGER NOT NULL);

@@ -47,7 +47,7 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
-        $pdo->exec('PRAGMA user_version = 2');
+        $pdo->exec('PRAGMA user_version = 3');
         $pdo->commit();
         return $pdo;
     }
@@ -89,6 +89,35 @@ INSERT OR IGNORE INTO units (entrance, number) SELECT DISTINCT entrance, unit FR
 INSERT INTO user_units (user_id, unit_id) SELECT u.id, n.id FROM users u JOIN units n ON n.entrance = u.entrance AND n.number = u.unit WHERE u.unit <> '';
 SQL);
         $pdo->exec('PRAGMA user_version = 2');
+        $pdo->commit();
+    }
+    if ($version < 3) {
+        // Doplnění starší databáze o účast na shromáždění a evidenci příjemců e-mailů.
+        $pdo->beginTransaction();
+        $pdo->exec(<<<'SQL'
+ALTER TABLE events ADD COLUMN rsvp INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE mailings ADD COLUMN tracked INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE event_rsvp (
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL CHECK (status IN ('yes','proxy','no')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  PRIMARY KEY (event_id, unit_id)
+);
+CREATE TABLE mailing_recipients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  mailing_id INTEGER NOT NULL REFERENCES mailings(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  sent_ok INTEGER NOT NULL DEFAULT 0,
+  opened_at TEXT,
+  clicked_at TEXT
+);
+SQL);
+        $pdo->exec('PRAGMA user_version = 3');
         $pdo->commit();
     }
     return $pdo;
@@ -430,7 +459,7 @@ function mail_recipients(string $audience): array
     return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND password_hash <> '!'" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
 }
 /** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
-function send_mail(string $to, string $subject, string $text): bool
+function send_mail(string $to, string $subject, string $text, ?string $html = null): bool
 {
     $from = setting('mail_from');
     if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -447,14 +476,15 @@ function send_mail(string $to, string $subject, string $text): bool
         'Auto-Submitted' => 'auto-generated',
     ];
     $body = chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $text)), 76, "\r\n");
+    if ($html !== null) {
+        $b = 'svj-' . bin2hex(random_bytes(12));
+        $headers['Content-Type'] = 'multipart/alternative; boundary="' . $b . '"';
+        unset($headers['Content-Transfer-Encoding']);
+        $body = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$body\r\n--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . chunk_split(base64_encode($html), 76, "\r\n") . "\r\n--$b--\r\n";
+    }
     $params = preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$/', $from) ? '-f' . $from : '';
     return @mail($to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $body, $headers, $params);
-}
-/** Text zprávy doplněný o patičku s informací, proč ji adresát dostal a jak odběr vypnout. */
-function mail_text(string $body): string
-{
-    return trim(str_replace('**', '', $body)) . "\n\n-- \nZprávu posílá výbor SVJ Tábor 48 a–d obyvatelům domu s účtem na webu " . absolute_url('/')
-        . "\nZasílání zpráv si můžete vypnout ve svém účtu: " . absolute_url('/muj-ucet') . "\n";
 }
 
 // ---------- Jednotky ----------
@@ -475,4 +505,78 @@ function user_unit_ids(int $userId): array
 function all_units(): array
 {
     return all('SELECT * FROM units ORDER BY entrance, CAST(number AS INTEGER), number');
+}
+
+// ---------- Nastavení, účast na shromáždění, sledování e-mailů ----------
+
+const RSVP = ['yes' => 'Přijdu osobně', 'proxy' => 'Zastoupí mě zmocněnec', 'no' => 'Nepřijdu'];
+
+function setting_on(string $key, bool $default = true): bool
+{
+    return setting($key, $default ? '1' : '0') === '1';
+}
+function setting_int(string $key, int $default, int $min, int $max): int
+{
+    $v = setting($key, (string) $default);
+    return ctype_digit($v) ? max($min, min($max, (int) $v)) : $default;
+}
+/** Převede zápis podílu („652/100000“, „0,65 %“) na číslo; nečitelný zápis dá 0. */
+function share_value(string $share): float
+{
+    $s = str_replace([' ', ','], ['', '.'], trim($share));
+    if (preg_match('~^(\d+(?:\.\d+)?)/(\d+(?:\.\d+)?)$~', $s, $m)) {
+        return (float) $m[2] > 0 ? (float) $m[1] / (float) $m[2] : 0.0;
+    }
+    return preg_match('~^(\d+(?:\.\d+)?)%$~', $s, $m) ? (float) $m[1] / 100 : 0.0;
+}
+/**
+ * Přehled přihlášené účasti na termínu a odhad usnášeníschopnosti.
+ * Váhou jednotky je její spoluvlastnický podíl; pokud ho některá jednotka nemá vyplněný, počítá se každá jednotka stejně.
+ */
+function attendance(int $eventId): array
+{
+    $rows = all('SELECT un.*, r.status, r.updated_at, u.name responder FROM units un
+        LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ?
+        LEFT JOIN users u ON u.id = r.user_id ORDER BY un.entrance, CAST(un.number AS INTEGER), un.number', [$eventId]);
+    $byShare = (bool) $rows;
+    foreach ($rows as $r) {
+        $byShare = $byShare && share_value($r['share']) > 0;
+    }
+    $total = $present = 0.0;
+    $counts = ['yes' => 0, 'proxy' => 0, 'no' => 0, 'none' => 0];
+    foreach ($rows as &$r) {
+        $r['weight'] = $byShare ? share_value($r['share']) : 1.0;
+        $total += $r['weight'];
+        $counts[$r['status'] ?? 'none']++;
+        if ($r['status'] === 'yes' || $r['status'] === 'proxy') {
+            $present += $r['weight'];
+        }
+    }
+    unset($r);
+    $threshold = setting_int('quorum_percent', 50, 1, 99);
+    $percent = $total > 0 ? $present / $total * 100 : 0.0;
+    return ['rows' => $rows, 'byShare' => $byShare, 'percent' => $percent, 'threshold' => $threshold,
+        'quorate' => $percent > $threshold, 'counts' => $counts, 'units' => count($rows)];
+}
+function percent_cz(float $p): string
+{
+    return number_format($p, 1, ',', ' ') . ' %';
+}
+/** Sestaví textovou a HTML podobu zprávy; s $token přepíše odkazy na tento web na sledované a přidá měřicí obrázek. */
+function build_mail(string $body, ?string $token): array
+{
+    $base = rtrim(absolute_url('/'), '/');
+    $track = fn(string $url): string => $token === null ? $url
+        : $base . '/e/' . $token . '?u=' . rawurlencode(substr($url, strlen($base)) ?: '/');
+    $pattern = '~' . preg_quote($base, '~') . '(?:/[^\s<"]*[^\s<".,;:!?)])?~u';
+    $footer = 'Zprávu posílá výbor SVJ Tábor 48 a–d obyvatelům domu s účtem na webu.';
+    $notice = $token === null ? '' : ' Web eviduje otevření zprávy a odkazů v ní, aby výbor věděl, ke komu se informace dostala.';
+    $text = preg_replace_callback($pattern, fn($m) => $track($m[0]), trim(str_replace('**', '', $body)))
+        . "\n\n-- \n" . $footer . $notice . "\nZasílání zpráv si můžete vypnout ve svém účtu: " . absolute_url('/muj-ucet') . "\n";
+    $html = preg_replace_callback('~href="(' . preg_quote(e($base), '~') . '[^"]*)"~u', fn($m) => 'href="' . e($track(html_entity_decode($m[1], ENT_QUOTES))) . '"', format_text($body));
+    $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1b2622;max-width:600px">' . $html
+        . '<p style="font-size:13px;color:#586660;border-top:1px solid #ddd5c3;padding-top:12px;margin-top:24px">' . e($footer . $notice)
+        . ' Zasílání zpráv si můžete vypnout ve <a href="' . e(absolute_url('/muj-ucet')) . '">svém účtu</a>.</p>'
+        . ($token === null ? '' : '<img src="' . e($base . '/e/' . $token . '.gif') . '" width="1" height="1" alt="">') . '</div>';
+    return [$text, $html];
 }

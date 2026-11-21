@@ -10,7 +10,9 @@ $accountData = function (array $u, array $errors = []): array {
     }
     $link = $_SESSION['invite_link'] ?? null;
     unset($_SESSION['invite_link']);
-    return ['title' => 'Můj účet', 'u' => $u, 'errors' => $errors, 'units' => $units, 'inviteLink' => $link];
+    return ['title' => 'Můj účet', 'u' => $u, 'errors' => $errors, 'units' => $units, 'inviteLink' => $link,
+        'canInvite' => setting_on('invite_enabled') && ($u['kind'] === 'owner' || setting_on('invite_by_tenants', false)),
+        'inviteDays' => setting_int('invite_days', 14, 1, 90)];
 };
 
 $route('GET', '/muj-ucet', function () use ($accountData) {
@@ -61,8 +63,10 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
     $email = post('email');
     $chosen = array_values(array_intersect($mine, array_map('intval', (array) ($_POST['units'] ?? []))));
     $errors = [];
-    if ($u['kind'] !== 'owner' || !$mine) {
-        $errors[] = 'Pozvat dalšího člena domácnosti může jen vlastník s přiřazenou jednotkou. Obraťte se prosím na výbor.';
+    $days = setting_int('invite_days', 14, 1, 90);
+    $max = setting_int('invite_max', 6, 1, 20);
+    if (!setting_on('invite_enabled') || !$mine || ($u['kind'] !== 'owner' && !setting_on('invite_by_tenants', false))) {
+        $errors[] = 'Pozvat dalšího člena domácnosti teď nemůžete. Obraťte se prosím na výbor.';
     } else {
         if ($name === '') {
             $errors[] = 'Vyplňte jméno pozvané osoby.';
@@ -76,8 +80,8 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
             $errors[] = 'Vyberte alespoň jednu jednotku.';
         }
         foreach ($chosen as $unitId) {
-            if ((int) val('SELECT COUNT(*) FROM user_units WHERE unit_id = ?', [$unitId]) >= 6) {
-                $errors[] = 'K jedné jednotce lze přiřadit nejvýše 6 účtů. Další účet může přidat výbor.';
+            if ((int) val('SELECT COUNT(*) FROM user_units WHERE unit_id = ?', [$unitId]) >= $max) {
+                $errors[] = 'K jedné jednotce lze pozvánkou přiřadit nejvýše ' . $max . ' účtů. Další účet může přidat výbor.';
                 break;
             }
         }
@@ -88,16 +92,16 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
         return;
     }
     $token = bin2hex(random_bytes(32));
-    q("INSERT INTO users (name, email, role, kind, password_hash, invited_by, invite_hash, invite_expires) VALUES (?,?,'resident','owner',?,?,?,datetime('now','localtime','+14 days'))",
-        [$name, $email, NO_PASSWORD, $u['id'], hash('sha256', $token)]);
+    q("INSERT INTO users (name, email, role, kind, password_hash, invited_by, invite_hash, invite_expires) VALUES (?,?,'resident',?,?,?,?,datetime('now','localtime',?))",
+        [$name, $email, $u['kind'] === 'tenant' ? 'tenant' : (setting('invite_kind', 'owner') === 'tenant' ? 'tenant' : 'owner'), NO_PASSWORD, $u['id'], hash('sha256', $token), '+' . $days . ' days']);
     $newId = (int) db()->lastInsertId();
     foreach ($chosen as $unitId) {
         q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$newId, $unitId]);
     }
     $link = absolute_url('/pozvanka/' . $token);
-    $text = "Dobrý den,\n\n" . $u['name'] . " Vás zve na web SVJ Tábor 48 a–d jako dalšího člena domácnosti.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí 14 dní):\n$link\n\nPokud pozvánku nečekáte, zprávu prosím ignorujte.\n";
+    $text = "Dobrý den,\n\n" . $u['name'] . " Vás zve na web SVJ Tábor 48 a–d jako dalšího člena domácnosti.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPokud pozvánku nečekáte, zprávu prosím ignorujte.\n";
     if (send_mail($email, 'Pozvánka na web SVJ Tábor 48', $text)) {
-        flash('Pozvánka byla odeslána na ' . $email . '. Platí 14 dní.');
+        flash('Pozvánka byla odeslána na ' . $email . '. Platí ' . $days . ' dní.');
     } else {
         $_SESSION['invite_link'] = ['name' => $name, 'link' => $link];
     }
@@ -183,4 +187,35 @@ $route('POST', '/zavady', function () {
     q('INSERT INTO tickets (user_id, subject, location, body) VALUES (?,?,?,?)', [$u['id'], $subject, mb_substr(post('location'), 0, 150), $body]);
     flash('Děkujeme, závada byla nahlášena výboru. Stav řešení uvidíte na této stránce.');
     redirect('/zavady');
+});
+
+// ---------- Účast na shromáždění ----------
+
+$route('GET', '/terminy/(\d+)', function (int $id) {
+    $u = require_login();
+    $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
+    $mine = $ev['rsvp'] && $u['kind'] === 'owner'
+        ? all('SELECT un.*, r.status, ru.name responder FROM units un JOIN user_units uu ON uu.unit_id = un.id
+            LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ? LEFT JOIN users ru ON ru.id = r.user_id
+            WHERE uu.user_id = ? ORDER BY un.entrance, un.number', [$id, $u['id']])
+        : [];
+    render('event', ['title' => $ev['title'], 'ev' => $ev, 'mine' => $mine, 'att' => $ev['rsvp'] ? attendance($id) : null,
+        'open' => $ev['event_date'] >= date('Y-m-d')]);
+});
+
+$route('POST', '/terminy/(\d+)/ucast', function (int $id) {
+    $u = require_login();
+    $ev = one('SELECT * FROM events WHERE id = ? AND rsvp = 1', [$id]) ?? not_found();
+    $unitId = (int) post('unit_id');
+    $status = post('status');
+    if ($ev['event_date'] < date('Y-m-d')) {
+        flash('Termín už proběhl, účast nelze měnit.', 'error');
+    } elseif ($u['kind'] !== 'owner' || !in_array($unitId, user_unit_ids((int) $u['id']), true) || !isset(RSVP[$status])) {
+        flash('Účast může potvrdit jen vlastník za svou jednotku.', 'error');
+    } else {
+        q("INSERT INTO event_rsvp (event_id, unit_id, user_id, status) VALUES (?,?,?,?)
+            ON CONFLICT(event_id, unit_id) DO UPDATE SET user_id = excluded.user_id, status = excluded.status, updated_at = datetime('now','localtime')", [$id, $unitId, $u['id'], $status]);
+        flash('Děkujeme, účast je zaznamenaná. Do dne konání ji můžete změnit.');
+    }
+    redirect('/terminy/' . $id);
 });

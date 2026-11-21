@@ -191,3 +191,19 @@ $acceptInvite = function (string $token) {
 };
 $route('GET', '/pozvanka/([a-f0-9]{64})', $acceptInvite);
 $route('POST', '/pozvanka/([a-f0-9]{64})', $acceptInvite);
+
+// ---------- Sledování e-mailů ----------
+
+$route('GET', '/e/([a-f0-9]{32})\.gif', function ($token) {
+    q("UPDATE mailing_recipients SET opened_at = COALESCE(opened_at, datetime('now','localtime')) WHERE token = ?", [(string) $token]);
+    header('Content-Type: image/gif');
+    header('Cache-Control: no-store, private');
+    echo base64_decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7');
+});
+
+$route('GET', '/e/([a-f0-9]{32})', function ($token) {
+    q("UPDATE mailing_recipients SET clicked_at = COALESCE(clicked_at, datetime('now','localtime')), opened_at = COALESCE(opened_at, datetime('now','localtime')) WHERE token = ?", [(string) $token]);
+    // Přesměrování jen na stránky tohoto webu, nikdy na cizí adresu.
+    $to = $_GET['u'] ?? '/';
+    redirect(is_string($to) && preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $to) ? $to : '/');
+});
