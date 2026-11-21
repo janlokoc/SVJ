@@ -1,0 +1,24 @@
+<div class="wrap page narrow">
+  <header class="page-head"><h1>Hlášení závad</h1>
+    <p class="lead">Nahlaste výboru závadu ve společných prostorách. V případě havárie volejte rovnou <a href="<?= url('/kontakty') ?>#havarie">havarijní servis</a>.</p></header>
+  <form method="post" action="<?= url('/zavady') ?>" class="card form">
+    <h2>Nová závada</h2>
+    <?= csrf_field() ?>
+    <label>Co se stalo <input type="text" name="subject" maxlength="150" placeholder="Např. nesvítí světlo na chodbě" required></label>
+    <label>Kde <input type="text" name="location" maxlength="150" placeholder="Např. vchod C, 3. patro"></label>
+    <label>Popis <textarea name="body" rows="4" maxlength="5000" required></textarea></label>
+    <button class="btn" type="submit">Nahlásit závadu</button>
+  </form>
+  <h2>Moje hlášení</h2>
+  <?php if (!$tickets): ?><p class="empty">Zatím jste nic nenahlásili.</p><?php endif ?>
+  <div class="ticket-list">
+    <?php foreach ($tickets as $t): ?>
+      <article class="ticket">
+        <header><h3><?= e($t['subject']) ?></h3><span class="status status-<?= e($t['status']) ?>"><?= TICKET_STATUS[$t['status']] ?></span></header>
+        <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?></p>
+        <div class="prose"><?= format_text($t['body']) ?></div>
+        <?php if ($t['admin_note']): ?><div class="callout"><strong>Odpověď výboru:</strong> <?= format_text($t['admin_note']) ?></div><?php endif ?>
+      </article>
+    <?php endforeach ?>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+Options -Indexes
+AddDefaultCharset UTF-8
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+# Soubory vzhledu se servírují přímo, vše ostatní obsluhuje index.php
+RewriteRule ^assets/ - [L]
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^ index.php [L]
+</IfModule>
