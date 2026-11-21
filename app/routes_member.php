@@ -11,6 +11,7 @@ $accountData = function (array $u, array $errors = []): array {
     $link = $_SESSION['invite_link'] ?? null;
     unset($_SESSION['invite_link']);
     return ['title' => 'Můj účet', 'u' => $u, 'errors' => $errors, 'units' => $units, 'inviteLink' => $link,
+        'totpSetup' => $u['totp_enabled'] ? null : ($_SESSION['totp_setup'] ?? null),
         'canInvite' => setting_on('invite_enabled') && ($u['kind'] === 'owner' || setting_on('invite_by_tenants', false)),
         'inviteDays' => setting_int('invite_days', 14, 1, 90)];
 };
@@ -27,15 +28,21 @@ $route('POST', '/muj-ucet', function () use ($accountData) {
         if (!password_verify((string) ($_POST['current_password'] ?? ''), $u['password_hash'])) {
             $errors[] = 'Současné heslo není správně.';
         }
-        if (mb_strlen($new) < 10) {
-            $errors[] = 'Nové heslo musí mít alespoň 10 znaků.';
+        if ($problem = password_problem($new, $u['email'], $u['name'])) {
+            $errors[] = $problem;
+        }
+        if (!$errors && password_verify($new, $u['password_hash'])) {
+            $errors[] = 'Nové heslo musí být jiné než dosavadní.';
         }
         if ($new !== (string) ($_POST['new_password2'] ?? '')) {
             $errors[] = 'Nová hesla se neshodují.';
         }
         if (!$errors) {
-            q('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?', [password_hash($new, PASSWORD_DEFAULT), $u['id']]);
+            $hash = password_hash($new, PASSWORD_DEFAULT);
+            q('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?', [$hash, $u['id']]);
             session_regenerate_id(true);
+            $_SESSION['pv'] = pw_fingerprint($hash); // toto přihlášení zůstává, ostatní zařízení se odhlásí
+            audit('password_changed');
             flash('Heslo bylo změněno.');
             redirect('/muj-ucet');
         }
@@ -79,6 +86,9 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
         if (!$chosen) {
             $errors[] = 'Vyberte alespoň jednu jednotku.';
         }
+        if ((int) val('SELECT COUNT(*) FROM users WHERE invited_by = ? AND password_hash = ?', [$u['id'], NO_PASSWORD]) >= 3) {
+            $errors[] = 'Máte už tři nepřijaté pozvánky. Počkejte na jejich přijetí, nebo některou zrušte.';
+        }
         foreach ($chosen as $unitId) {
             if ((int) val('SELECT COUNT(*) FROM user_units WHERE unit_id = ?', [$unitId]) >= $max) {
                 $errors[] = 'K jedné jednotce lze pozvánkou přiřadit nejvýše ' . $max . ' účtů. Další účet může přidat výbor.';
@@ -98,6 +108,7 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
     foreach ($chosen as $unitId) {
         q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$newId, $unitId]);
     }
+    audit('invite_sent', $email);
     $link = absolute_url('/pozvanka/' . $token);
     $text = "Dobrý den,\n\n" . $u['name'] . " Vás zve na web SVJ Tábor 48 a–d jako dalšího člena domácnosti.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPokud pozvánku nečekáte, zprávu prosím ignorujte.\n";
     if (send_mail($email, 'Pozvánka na web SVJ Tábor 48', $text)) {
@@ -113,6 +124,43 @@ $route('POST', '/muj-ucet/pozvanka/(\d+)/zrusit', function (int $id) {
     q('DELETE FROM users WHERE id = ? AND invited_by = ? AND password_hash = ?', [$id, $u['id'], NO_PASSWORD]);
     flash('Pozvánka byla zrušena.');
     redirect('/muj-ucet');
+});
+
+// ---------- Dvoufázové ověření ----------
+
+$route('POST', '/muj-ucet/overeni', function () use ($accountData) {
+    $u = require_login();
+    $action = post('action');
+    $errors = [];
+    if ($action === 'start' && !$u['totp_enabled']) {
+        $_SESSION['totp_setup'] = totp_new_secret();
+    } elseif ($action === 'cancel') {
+        unset($_SESSION['totp_setup']);
+    } elseif ($action === 'confirm' && !$u['totp_enabled'] && !empty($_SESSION['totp_setup'])) {
+        $step = totp_verify($_SESSION['totp_setup'], post('code'));
+        if ($step === null) {
+            $errors[] = 'Kód nesouhlasí. Zkontrolujte, že jste klíč opsali správně a že má telefon správný čas, a zadejte aktuální kód.';
+        } else {
+            q('UPDATE users SET totp_secret = ?, totp_enabled = 1, totp_last = ? WHERE id = ?', [$_SESSION['totp_setup'], $step, $u['id']]);
+            unset($_SESSION['totp_setup']);
+            audit('2fa_enabled');
+            flash('Dvoufázové ověření je zapnuté. Při příštím přihlášení zadáte i kód z aplikace.');
+        }
+    } elseif ($action === 'disable' && $u['totp_enabled']) {
+        if (!password_verify((string) ($_POST['current_password'] ?? ''), $u['password_hash'])) {
+            $errors[] = 'Pro vypnutí dvoufázového ověření zadejte správné současné heslo.';
+        } else {
+            q('UPDATE users SET totp_secret = NULL, totp_enabled = 0, totp_last = 0 WHERE id = ?', [$u['id']]);
+            audit('2fa_disabled');
+            flash('Dvoufázové ověření bylo vypnuto.', 'info');
+        }
+    }
+    if ($errors) {
+        http_response_code(422);
+        render('account', $accountData($u, $errors));
+        return;
+    }
+    redirect('/muj-ucet#overeni');
 });
 
 // ---------- Diskuze ----------

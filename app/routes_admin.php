@@ -13,6 +13,8 @@ $route('GET', '/admin', function () {
         ],
         'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units FROM tickets t LEFT JOIN users u ON u.id = t.user_id WHERE t.status <> 'done' ORDER BY t.id DESC LIMIT 5"),
         'external' => (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL'),
+        'adminsWithout2fa' => (int) val("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1 AND totp_enabled = 0"),
+        'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')"),
     ]);
 });
 
@@ -102,6 +104,7 @@ $route('GET', '/admin/aktuality/(\d+)', $postForm);
 $route('POST', '/admin/aktuality/(\d+)', $postForm);
 $route('POST', '/admin/aktuality/(\d+)/smazat', function (int $id) {
     require_admin();
+    audit('post_deleted', (string) val('SELECT title FROM posts WHERE id = ?', [$id]));
     q('DELETE FROM posts WHERE id = ?', [$id]);
     flash('Aktualita byla smazána. Přiložené dokumenty zůstaly v sekci Dokumenty.');
     redirect('/admin/aktuality');
@@ -173,6 +176,7 @@ $route('GET', '/admin/dokumenty/(\d+)', $docForm);
 $route('POST', '/admin/dokumenty/(\d+)', $docForm);
 $route('POST', '/admin/dokumenty/(\d+)/smazat', function (int $id) {
     require_admin();
+    audit('document_deleted', (string) val('SELECT title FROM documents WHERE id = ?', [$id]));
     delete_document($id);
     flash('Dokument byl smazán.');
     redirect('/admin/dokumenty');
@@ -303,11 +307,13 @@ $userForm = function (int $id = 0) {
             if ($id) {
                 q('UPDATE users SET name = ?, email = ?, role = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
                 $userId = $id;
+                audit('user_updated', $u['email'] . ' · ' . $u['role'] . ($u['active'] ? '' : ' · vypnutý'));
                 flash('Uživatel byl uložen.');
             } else {
                 $pass = random_password();
                 q('INSERT INTO users (name, email, role, phone, active, kind, email_notify, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
                 $userId = (int) db()->lastInsertId();
+                audit('user_created', $u['email'] . ' · ' . $u['role']);
                 $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];
             }
             q('DELETE FROM user_units WHERE user_id = ?', [$userId]);
@@ -331,6 +337,7 @@ $route('POST', '/admin/uzivatele/(\d+)/heslo', function (int $id) {
     $u = one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found();
     $pass = random_password();
     q('UPDATE users SET password_hash = ?, must_change_password = 1, invite_hash = NULL, invite_expires = NULL WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $id]);
+    audit('password_reset', $u['email']);
     $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];
     redirect('/admin/uzivatele');
 });
@@ -339,6 +346,7 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
     if ($id === (int) $me['id']) {
         flash('Vlastní účet smazat nelze.', 'error');
     } else {
+        audit('user_deleted', (string) val('SELECT email FROM users WHERE id = ?', [$id]));
         q('DELETE FROM users WHERE id = ?', [$id]);
         flash('Uživatel byl smazán.');
     }
@@ -369,7 +377,7 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 
 // ---------- Nastavení ----------
 
-const SETTING_KEYS = ['intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
+const SETTING_KEYS = ['site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
     'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
 $route('GET', '/admin/nastaveni', function () {
@@ -378,6 +386,10 @@ $route('GET', '/admin/nastaveni', function () {
 });
 $route('POST', '/admin/nastaveni', function () {
     require_admin();
+    if (post('site_url') !== '' && !preg_match('~^https?://[A-Za-z0-9.\-]+(:\d+)?(/[^\s]*)?$~', post('site_url'))) {
+        flash('Adresa webu musí začínat https:// (např. https://www.svjtabor48.cz). Nastavení nebylo uloženo.', 'error');
+        redirect('/admin/nastaveni');
+    }
     if (post('mail_from') !== '' && !filter_var(post('mail_from'), FILTER_VALIDATE_EMAIL)) {
         flash('Adresa odesílatele e-mailů nemá správný tvar. Nastavení nebylo uloženo.', 'error');
         redirect('/admin/nastaveni');
@@ -385,6 +397,7 @@ $route('POST', '/admin/nastaveni', function () {
     foreach (SETTING_KEYS as $k) {
         q('INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [$k, in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k)]);
     }
+    audit('settings_saved');
     flash('Nastavení bylo uloženo.');
     redirect('/admin/nastaveni');
 });
@@ -437,6 +450,7 @@ $mailForm = function () {
                     q('INSERT INTO mailing_recipients (mailing_id, user_id, name, email, token, sent_ok) VALUES (?,?,?,?,?,?)', [$mailingId, $r['id'], $r['name'], $r['email'], $token, $ok ? 1 : 0]);
                 }
                 q('UPDATE mailings SET sent_count = ?, failed_count = ?, failed_list = ? WHERE id = ?', [$sent, count($failed), implode("\n", $failed), $mailingId]);
+                audit('mailing_sent', $m['subject'] . ' · ' . $sent . ' příjemců');
                 flash("Zpráva byla předána k odeslání $sent příjemcům." . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed ? 'info' : 'ok');
                 redirect('/admin/zpravy/' . $mailingId);
             }
@@ -538,6 +552,7 @@ $route('GET', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)/smazat', function (int $id) {
     require_admin();
+    audit('unit_deleted', (string) val("SELECT '48' || entrance || '/' || number FROM units WHERE id = ?", [$id]));
     q('DELETE FROM units WHERE id = ?', [$id]);
     flash('Jednotka byla smazána. Účty jejích obyvatel zůstaly zachované.');
     redirect('/admin/jednotky');
@@ -574,4 +589,32 @@ $route('GET', '/admin/zpravy/(\d+)', function (int $id) {
     $m = one('SELECT m.*, u.name author_name FROM mailings m LEFT JOIN users u ON u.id = m.sent_by WHERE m.id = ?', [$id]) ?? not_found();
     render('admin/mailing', ['title' => $m['subject'], 'm' => $m,
         'recipients' => all('SELECT r.*, ' . units_sql('u') . ' unit_names FROM mailing_recipients r LEFT JOIN users u ON u.id = r.user_id WHERE r.mailing_id = ? ORDER BY r.name', [$id])]);
+});
+
+// ---------- Zabezpečení: vypnutí dvoufázového ověření a záznamy ----------
+
+$route('POST', '/admin/uzivatele/(\d+)/overeni', function (int $id) {
+    require_admin();
+    $u = one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found();
+    q('UPDATE users SET totp_secret = NULL, totp_enabled = 0, totp_last = 0 WHERE id = ?', [$id]);
+    audit('2fa_reset', $u['email']);
+    flash('Dvoufázové ověření uživatele „' . $u['name'] . '“ bylo vypnuto. Zapnout si ho může znovu ve svém účtu.');
+    redirect('/admin/uzivatele');
+});
+
+const AUDIT_LABELS = [
+    'login' => 'Přihlášení', 'login_failed' => 'Neúspěšné přihlášení', 'login_2fa_failed' => 'Chybný ověřovací kód', 'logout' => 'Odhlášení',
+    'setup' => 'Vytvoření prvního správce', 'setup_code_failed' => 'Chybný instalační kód', 'password_changed' => 'Změna hesla',
+    '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
+    'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo',
+    'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
+    'unit_deleted' => 'Smazání jednotky', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
+];
+$route('GET', '/admin/zaznamy', function () {
+    require_admin();
+    $only = isset($_GET['jen-problemy']);
+    $where = $only ? "WHERE a.action IN ('login_failed','login_2fa_failed','setup_code_failed','2fa_disabled','2fa_reset','user_deleted','password_reset')" : '';
+    render('admin/audit', ['title' => 'Záznamy', 'only' => $only,
+        'rows' => all("SELECT a.*, u.name user_name FROM audit_log a LEFT JOIN users u ON u.id = a.user_id $where ORDER BY a.id DESC LIMIT 300"),
+        'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')")]);
 });

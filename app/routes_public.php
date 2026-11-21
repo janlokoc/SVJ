@@ -98,31 +98,59 @@ $route('GET', '/prihlaseni', function () {
 });
 
 $route('POST', '/prihlaseni', function () {
-    $ip = client_ip();
-    q('DELETE FROM login_attempts WHERE at < ?', [time() - 900]);
-    if ((int) val('SELECT COUNT(*) FROM login_attempts WHERE ip = ?', [$ip]) >= 8) {
+    $email = post('email');
+    if (login_blocked($email)) {
         flash('Příliš mnoho neúspěšných pokusů. Zkuste to prosím znovu za 15 minut.', 'error');
         redirect('/prihlaseni');
     }
-    $email = post('email');
     $u = one('SELECT * FROM users WHERE email = ? AND active = 1', [$email]);
     // Hash se ověřuje i pro neexistující účet, aby odezva neprozradila, které e-maily jsou registrované.
     $hash = $u['password_hash'] ?? '$2y$10$5iGzRBULwQkdHVH7LcQeruy9PLnpzCeVdDqlNNyrbTAr6ZReT.NXy';
     if (!password_verify((string) ($_POST['password'] ?? ''), $hash) || !$u) {
-        q('INSERT INTO login_attempts (ip, at) VALUES (?,?)', [$ip, time()]);
+        login_failed($email);
         http_response_code(422);
         render('login', ['title' => 'Přihlášení', 'email' => $email, 'error' => 'Nesprávný e-mail nebo heslo.']);
         return;
     }
     $after = $_SESSION['after_login'] ?? null;
-    session_regenerate_id(true);
-    $_SESSION = ['uid' => $u['id']];
-    q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$u['id']]);
-    q('DELETE FROM login_attempts WHERE ip = ?', [$ip]);
-    redirect(is_string($after) && str_starts_with($after, '/') && !str_starts_with($after, '//') ? $after : ($u['role'] === 'admin' ? '/admin' : '/'));
+    if ($u['totp_enabled']) {
+        session_regenerate_id(true);
+        $_SESSION = ['pending' => ['uid' => (int) $u['id'], 'at' => time(), 'after' => $after]];
+        redirect('/prihlaseni/overeni');
+    }
+    finish_login($u, $after);
 });
 
+$verify = function () {
+    $pending = $_SESSION['pending'] ?? null;
+    $u = $pending && time() - $pending['at'] < 300 ? one('SELECT * FROM users WHERE id = ? AND active = 1 AND totp_enabled = 1', [$pending['uid']]) : null;
+    if (!$u) {
+        unset($_SESSION['pending']);
+        redirect('/prihlaseni');
+    }
+    $error = null;
+    if ($GLOBALS['METHOD'] === 'POST') {
+        if (login_blocked($u['email'])) {
+            unset($_SESSION['pending']);
+            flash('Příliš mnoho neúspěšných pokusů. Zkuste to prosím znovu za 15 minut.', 'error');
+            redirect('/prihlaseni');
+        }
+        $step = totp_verify((string) $u['totp_secret'], post('code'), (int) $u['totp_last']);
+        if ($step !== null) {
+            q('UPDATE users SET totp_last = ? WHERE id = ?', [$step, $u['id']]);
+            finish_login($u, $pending['after']);
+        }
+        login_failed($u['email'], 'login_2fa_failed');
+        $error = 'Kód není správný nebo už vypršel. Zadejte aktuální kód z aplikace.';
+        http_response_code(422);
+    }
+    render('verify', ['title' => 'Ověření přihlášení', 'error' => $error]);
+};
+$route('GET', '/prihlaseni/overeni', $verify);
+$route('POST', '/prihlaseni/overeni', $verify);
+
 $route('POST', '/odhlaseni', function () {
+    audit('logout');
     $_SESSION = [];
     session_regenerate_id(true);
     flash('Byli jste odhlášeni.');
@@ -133,22 +161,32 @@ $setup = function () {
     if ((int) val("SELECT COUNT(*) FROM users WHERE role = 'admin'") > 0) {
         not_found();
     }
+    $code = setup_code();
     $data = ['title' => 'První spuštění', 'name' => post('name'), 'email' => post('email'), 'errors' => []];
     if ($GLOBALS['METHOD'] === 'POST') {
         $pass = (string) ($_POST['password'] ?? '');
+        if (login_blocked('')) {
+            $data['errors'][] = 'Příliš mnoho pokusů. Zkuste to znovu za 15 minut.';
+        } elseif (!hash_equals($code, strtoupper(preg_replace('/[^A-Za-z0-9]/', '', post('code'))))) {
+            login_failed('', 'setup_code_failed');
+            $data['errors'][] = 'Instalační kód není správný.';
+        }
         if ($data['name'] === '') {
             $data['errors'][] = 'Vyplňte jméno.';
         }
         if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
             $data['errors'][] = 'Zadejte platný e-mail.';
         }
-        if (mb_strlen($pass) < 10) {
-            $data['errors'][] = 'Heslo musí mít alespoň 10 znaků.';
+        if ($problem = password_problem($pass, $data['email'], $data['name'])) {
+            $data['errors'][] = $problem;
         }
         if (!$data['errors']) {
             q("INSERT INTO users (email, name, password_hash, role) VALUES (?,?,?,'admin')", [$data['email'], $data['name'], password_hash($pass, PASSWORD_DEFAULT)]);
-            session_regenerate_id(true);
-            $_SESSION = ['uid' => (int) db()->lastInsertId()];
+            $new = one('SELECT * FROM users WHERE id = ?', [(int) db()->lastInsertId()]);
+            q("INSERT INTO settings (key, value) VALUES ('site_url', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [rtrim(absolute_url('/'), '/')]);
+            array_map('unlink', glob(STORAGE_DIR . '/instalacni-kod-*.txt'));
+            login_user($new);
+            audit('setup', $new['email']);
             flash('Účet správce je vytvořen. Vítejte v administraci.');
             redirect('/admin');
         }
@@ -171,16 +209,16 @@ $acceptInvite = function (string $token) {
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $pass = (string) ($_POST['password'] ?? '');
-        if (mb_strlen($pass) < 10) {
-            $errors[] = 'Heslo musí mít alespoň 10 znaků.';
+        if ($problem = password_problem($pass, $inv['email'], $inv['name'])) {
+            $errors[] = $problem;
         }
         if ($pass !== (string) ($_POST['password2'] ?? '')) {
             $errors[] = 'Hesla se neshodují.';
         }
         if (!$errors) {
             q("UPDATE users SET password_hash = ?, invite_hash = NULL, invite_expires = NULL, last_login_at = datetime('now','localtime') WHERE id = ?", [password_hash($pass, PASSWORD_DEFAULT), $inv['id']]);
-            session_regenerate_id(true);
-            $_SESSION = ['uid' => $inv['id']];
+            login_user(one('SELECT * FROM users WHERE id = ?', [$inv['id']]));
+            audit('invite_accepted', $inv['email']);
             flash('Vítejte! Účet je aktivní.');
             redirect('/');
         }

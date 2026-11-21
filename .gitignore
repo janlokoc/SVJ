@@ -1,4 +1,5 @@
 /storage/*
 !/storage/.htaccess
 !/storage/.gitkeep
+!/storage/index.html
 .DS_Store

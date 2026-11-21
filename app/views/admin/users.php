@@ -13,13 +13,14 @@
     <tbody>
     <?php foreach ($users as $x): ?>
       <tr<?= $x['active'] ? '' : ' class="is-off"' ?>>
-        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?><?= $x['password_hash'] === NO_PASSWORD ? ' <span class="tag tag-pin">čeká na přijetí pozvánky</span>' : '' ?><?= $x['inviter_name'] ? '<br><small>pozval(a) ' . e($x['inviter_name']) . '</small>' : '' ?></td>
+        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?><?= $x['totp_enabled'] ? ' <span class="tag tag-lock">2FA</span>' : ($x['role'] === 'admin' && $x['active'] ? ' <span class="tag tag-pin">bez 2FA</span>' : '') ?><?= $x['password_hash'] === NO_PASSWORD ? ' <span class="tag tag-pin">čeká na přijetí pozvánky</span>' : '' ?><?= $x['inviter_name'] ? '<br><small>pozval(a) ' . e($x['inviter_name']) . '</small>' : '' ?></td>
         <td data-label="E-mail"><?= e($x['email']) ?></td>
         <td data-label="Role"><?= ROLES[$x['role']] ?> · <?= mb_strtolower(KINDS[$x['kind']]) ?><?= $x['email_notify'] ? '' : ' <span class="tag">bez e-mailů</span>' ?></td>
         <td data-label="Jednotka"><?= e($x['unit_names'] ?? '') ?></td>
         <td data-label="Poslední přihlášení"><?= $x['last_login_at'] ? cz_datetime($x['last_login_at']) : 'zatím ne' ?></td>
         <td class="t-actions">
           <form method="post" action="<?= url('/admin/uzivatele/' . $x['id'] . '/heslo') ?>" data-confirm="Vygenerovat nové dočasné heslo pro „<?= e($x['name']) ?>“? Stávající heslo přestane platit."><?= csrf_field() ?><button class="link" type="submit">Nové heslo</button></form>
+          <?php if ($x['totp_enabled'] && (int) $x['id'] !== (int) user()['id']): ?><form method="post" action="<?= url('/admin/uzivatele/' . $x['id'] . '/overeni') ?>" data-confirm="Vypnout dvoufázové ověření uživatele „<?= e($x['name']) ?>“? Udělejte to jen tehdy, když o to prokazatelně požádal on sám."><?= csrf_field() ?><button class="link" type="submit">Vypnout 2FA</button></form><?php endif ?>
           <?php if ((int) $x['id'] !== (int) user()['id']): ?>
           <form method="post" action="<?= url('/admin/uzivatele/' . $x['id'] . '/smazat') ?>" data-confirm="Opravdu smazat účet „<?= e($x['name']) ?>“?"><?= csrf_field() ?><button class="link-danger" type="submit">Smazat</button></form>
           <?php endif ?>

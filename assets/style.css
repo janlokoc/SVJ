@@ -383,3 +383,9 @@ legend { font-weight: 700; padding-inline: .4rem; }
 .in-admin .page > details.card { margin-bottom: 1.25rem; }
 div.stat:hover { border-color: var(--line); }
 .table td[data-label="Podíl"] { white-space: nowrap; overflow-wrap: normal; }
+
+/* Zabezpečení */
+.totp-key { font-size: 1.2rem; letter-spacing: .06em; padding: .5rem .8rem; display: inline-block; margin-top: .4rem; }
+.page > .flash + .flash { margin-top: -.5rem; }
+.admin-nav a { padding-inline: .6rem; font-size: .95rem; }
+@media (max-width: 1320px) { .admin-label { display: none; } }

@@ -34,8 +34,18 @@ function db(): PDO
     if (!is_dir(UPLOAD_DIR)) {
         mkdir(UPLOAD_DIR, 0775, true);
     }
-    $file = STORAGE_DIR . '/svj.sqlite';
-    $fresh = !is_file($file);
+    // Databáze má náhodný název, aby ji nešlo stáhnout ani na serveru, který by nerespektoval zákaz přístupu do složky storage.
+    if (is_file(STORAGE_DIR . '/svj.sqlite')) {
+        rename(STORAGE_DIR . '/svj.sqlite', STORAGE_DIR . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite');
+    }
+    $found = glob(STORAGE_DIR . '/svj-*.sqlite');
+    $file = $found ? $found[0] : STORAGE_DIR . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite';
+    $fresh = !$found;
+    foreach (['', '/uploads'] as $dir) {
+        if (!is_file(STORAGE_DIR . $dir . '/index.html')) {
+            @file_put_contents(STORAGE_DIR . $dir . '/index.html', '');
+        }
+    }
     $pdo = new PDO('sqlite:' . $file, null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -47,7 +57,7 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
-        $pdo->exec('PRAGMA user_version = 3');
+        $pdo->exec('PRAGMA user_version = 4');
         $pdo->commit();
         return $pdo;
     }
@@ -118,6 +128,20 @@ CREATE TABLE mailing_recipients (
 );
 SQL);
         $pdo->exec('PRAGMA user_version = 3');
+        $pdo->commit();
+    }
+    if ($version < 4) {
+        // Doplnění starší databáze o dvoufázové ověření, zámek účtu a záznamy událostí.
+        $pdo->beginTransaction();
+        $pdo->exec(<<<'SQL'
+ALTER TABLE users ADD COLUMN totp_secret TEXT;
+ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN totp_last INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE login_attempts ADD COLUMN email TEXT NOT NULL DEFAULT '';
+CREATE TABLE audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL, ip TEXT NOT NULL DEFAULT '', action TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '');
+SQL);
+        $pdo->exec('PRAGMA user_version = 4');
         $pdo->commit();
     }
     return $pdo;
@@ -285,8 +309,12 @@ function user(): ?array
     static $u = false;
     if ($u === false) {
         $u = empty($_SESSION['uid']) ? null : one('SELECT * FROM users WHERE id = ? AND active = 1', [$_SESSION['uid']]);
+        // Po změně hesla (i správcem) přestávají platit všechna dřívější přihlášení.
+        if ($u && !hash_equals(pw_fingerprint($u['password_hash']), (string) ($_SESSION['pv'] ?? ''))) {
+            $u = null;
+        }
         if (!$u) {
-            unset($_SESSION['uid']);
+            unset($_SESSION['uid'], $_SESSION['pv']);
         }
     }
     return $u;
@@ -369,6 +397,15 @@ function store_upload(array $f): array|string
     if (!in_array($ext, ALLOWED_EXT, true)) {
         return 'Nepovolený typ souboru. Povolené jsou: ' . implode(', ', ALLOWED_EXT) . '.';
     }
+    // Obsah musí odpovídat příponě – přejmenovaný program nebo skript se nenahraje.
+    $mime = (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
+    $expected = ['pdf' => ['application/pdf'], 'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'], 'png' => ['image/png']][$ext]
+        ?? ['application/zip', 'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-office', 'application/octet-stream', 'application/x-ole-storage', 'application/CDFV2',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.oasis.opendocument.text', 'application/vnd.oasis.opendocument.spreadsheet'];
+    if (!in_array($mime, $expected, true)) {
+        return 'Obsah souboru neodpovídá jeho příponě (.' . $ext . '). Soubor nebyl nahrán.';
+    }
     $name = bin2hex(random_bytes(16)) . '.' . $ext;
     if (!move_uploaded_file($f['tmp_name'], UPLOAD_DIR . '/' . $name)) {
         return 'Soubor se nepodařilo uložit. Zkontrolujte práva zápisu do složky storage.';
@@ -402,7 +439,7 @@ function http_download(string $url): ?string
 {
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 60, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS]);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 60, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_MAXREDIRS => 3]);
         $data = curl_exec($ch);
         $ok = $data !== false && curl_getinfo($ch, CURLINFO_RESPONSE_CODE) === 200;
         curl_close($ch);
@@ -450,6 +487,11 @@ function author_label(?array $row): string
 /** Úplná adresa webu včetně domény – pro odkazy v e-mailech. */
 function absolute_url(string $path = '/'): string
 {
+    // Pevně nastavená adresa webu má přednost – odkazy v e-mailech pak nejde podvrhnout upravenou hlavičkou požadavku.
+    $fixed = setting('site_url');
+    if (preg_match('~^https?://[A-Za-z0-9.\-]+(:\d+)?(/[^\s]*)?$~', $fixed)) {
+        return rtrim($fixed, '/') . $path;
+    }
     $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
     $host = preg_replace('/[^A-Za-z0-9.:\-\[\]]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
     return ($https ? 'https' : 'http') . '://' . $host . url($path);
@@ -579,4 +621,118 @@ function build_mail(string $body, ?string $token): array
         . ' Zasílání zpráv si můžete vypnout ve <a href="' . e(absolute_url('/muj-ucet')) . '">svém účtu</a>.</p>'
         . ($token === null ? '' : '<img src="' . e($base . '/e/' . $token . '.gif') . '" width="1" height="1" alt="">') . '</div>';
     return [$text, $html];
+}
+
+// ---------- Zabezpečení ----------
+
+const IDLE_LIMIT = 7200;      // odhlášení po 2 hodinách nečinnosti
+const SESSION_LIMIT = 43200;  // nejdéle 12 hodin na jedno přihlášení
+
+/** Otisk hesla uložený v relaci: po změně hesla přestanou platit všechna ostatní přihlášení. */
+function pw_fingerprint(string $hash): string
+{
+    return substr(hash('sha256', 'svj-session|' . $hash), 0, 32);
+}
+function login_user(array $u): void
+{
+    session_regenerate_id(true);
+    $_SESSION = ['uid' => (int) $u['id'], 'pv' => pw_fingerprint($u['password_hash']), 'start' => time(), 'seen' => time()];
+}
+function audit(string $action, string $detail = '', ?int $userId = null): void
+{
+    q('INSERT INTO audit_log (user_id, ip, action, detail) VALUES (?,?,?,?)', [$userId ?? ($_SESSION['uid'] ?? null), client_ip(), $action, mb_substr($detail, 0, 300)]);
+    if (random_int(1, 200) === 1) {
+        q("DELETE FROM audit_log WHERE at < datetime('now','localtime','-1 year')");
+    }
+}
+/** Ochrana proti hádání hesel: nejvýše 8 chyb z jedné adresy a 10 chyb na jeden účet za 15 minut. */
+function login_blocked(string $email): bool
+{
+    q('DELETE FROM login_attempts WHERE at < ?', [time() - 900]);
+    return (int) val('SELECT COUNT(*) FROM login_attempts WHERE ip = ?', [client_ip()]) >= 8
+        || ($email !== '' && (int) val('SELECT COUNT(*) FROM login_attempts WHERE email = ?', [mb_strtolower($email)]) >= 10);
+}
+function login_failed(string $email, string $what = 'login_failed'): void
+{
+    q('INSERT INTO login_attempts (ip, at, email) VALUES (?,?,?)', [client_ip(), time(), mb_strtolower($email)]);
+    audit($what, $email);
+}
+function finish_login(array $u, mixed $after): never
+{
+    login_user($u);
+    q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$u['id']]);
+    q('DELETE FROM login_attempts WHERE ip = ? OR email = ?', [client_ip(), mb_strtolower($u['email'])]);
+    audit('login', $u['email']);
+    redirect(is_string($after) && preg_match('~^/(?![/\\\\])~', $after) ? $after : ($u['role'] === 'admin' ? '/admin' : '/'));
+}
+/** Vrátí důvod, proč heslo nelze použít, nebo null, když je v pořádku. */
+function password_problem(string $pass, string $email = '', string $name = ''): ?string
+{
+    static $common = ['1234567890', '0123456789', '12345678910', '0987654321', 'qwertyuiop', 'qwertzuiop', 'asdfghjkl1', 'password123', 'password1234',
+        'heslo12345', 'heslo123456', 'heslo1234567', 'hesloheslo', 'administrator', 'adminadmin', 'tabor48tabor48', 'svjtabor48', 'iloveyou123', 'qwerty12345', 'abcdefghij', 'aaaaaaaaaa', '1q2w3e4r5t', '1q2w3e4r5t6z', 'milujutebe', 'nevimheslo'];
+    $low = mb_strtolower($pass);
+    if (mb_strlen($pass) < 10) {
+        return 'Heslo musí mít alespoň 10 znaků.';
+    }
+    if (mb_strlen($pass) > 200) {
+        return 'Heslo je příliš dlouhé (nejvýše 200 znaků).';
+    }
+    if (in_array($low, $common, true) || preg_match('/^(.)\1+$/u', $pass) || ctype_digit($pass)) {
+        return 'Toto heslo je příliš snadné uhodnout. Zvolte jiné – nejlépe několik nesouvisejících slov.';
+    }
+    $local = mb_strtolower(strstr($email, '@', true) ?: '');
+    if (($local !== '' && mb_strlen($local) >= 4 && str_contains($low, $local)) || ($name !== '' && $low === mb_strtolower($name))) {
+        return 'Heslo nesmí obsahovat Váš e-mail ani jméno.';
+    }
+    return null;
+}
+/** Instalační kód pro první spuštění; leží v souboru s náhodným názvem ve složce storage, kam se dostane jen ten, kdo web nahrál. */
+function setup_code(): string
+{
+    $files = glob(STORAGE_DIR . '/instalacni-kod-*.txt');
+    if ($files) {
+        return trim((string) file_get_contents($files[0]));
+    }
+    $code = strtoupper(bin2hex(random_bytes(6)));
+    file_put_contents(STORAGE_DIR . '/instalacni-kod-' . bin2hex(random_bytes(8)) . '.txt', $code . "\n");
+    return $code;
+}
+
+// ---------- Dvoufázové ověření (TOTP, RFC 6238) ----------
+
+const BASE32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function totp_new_secret(): string
+{
+    $s = '';
+    foreach (str_split(random_bytes(20)) as $byte) {
+        $s .= str_pad(decbin(ord($byte)), 8, '0', STR_PAD_LEFT);
+    }
+    return implode('', array_map(fn($c) => BASE32[bindec($c)], str_split($s, 5)));
+}
+function totp_code(string $secret, int $counter): string
+{
+    $bits = '';
+    foreach (str_split(strtoupper($secret)) as $c) {
+        $bits .= str_pad(decbin((int) strpos(BASE32, $c)), 5, '0', STR_PAD_LEFT);
+    }
+    $key = implode('', array_map(fn($b) => chr(bindec($b)), array_filter(str_split($bits, 8), fn($b) => strlen($b) === 8)));
+    $h = hash_hmac('sha1', pack('J', $counter), $key, true);
+    $o = ord($h[19]) & 0x0f;
+    return str_pad((string) ((unpack('N', substr($h, $o, 4))[1] & 0x7fffffff) % 1000000), 6, '0', STR_PAD_LEFT);
+}
+/** Ověří kód (s tolerancí ±30 s). Vrátí časový krok použitého kódu, nebo null; krok ≤ $last odmítne, aby kód nešel použít dvakrát. */
+function totp_verify(string $secret, string $code, int $last = 0): ?int
+{
+    $code = preg_replace('/\s+/', '', $code);
+    if (!preg_match('/^\d{6}$/', $code)) {
+        return null;
+    }
+    $now = intdiv(time(), 30);
+    foreach ([$now, $now - 1, $now + 1] as $step) {
+        if ($step > $last && hash_equals(totp_code($secret, $step), $code)) {
+            return $step;
+        }
+    }
+    return null;
 }

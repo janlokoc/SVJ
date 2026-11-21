@@ -11,6 +11,18 @@ if (PHP_SAPI === 'cli-server') {
 
 require __DIR__ . '/app/lib.php';
 
+// Chyby se návštěvníkům nikdy nevypisují (prozradily by cesty a strukturu webu); zapisují se do protokolu serveru.
+ini_set('display_errors', '0');
+error_reporting(E_ALL);
+set_exception_handler(function (Throwable $e) {
+    error_log('SVJ web: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    echo '<!doctype html><html lang="cs"><meta charset="utf-8"><title>Chyba</title><p>Omlouváme se, na webu došlo k chybě. Zkuste to prosím za chvíli znovu.</p></html>';
+});
+
 date_default_timezone_set('Europe/Prague');
 mb_internal_encoding('UTF-8');
 
@@ -25,14 +37,41 @@ if ($PATH === '/index.php') {
 }
 
 $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+ini_set('session.use_strict_mode', '1');
+ini_set('session.use_only_cookies', '1');
+ini_set('session.use_trans_sid', '0');
+ini_set('session.gc_maxlifetime', (string) SESSION_LIMIT);
 session_name('svj_session');
 session_set_cookie_params(['lifetime' => 0, 'path' => $BASE . '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
 session_start();
 
+// Automatické odhlášení po delší nečinnosti a nejdéle po 12 hodinách.
+if (!empty($_SESSION['uid'])) {
+    if (time() - ($_SESSION['seen'] ?? 0) > IDLE_LIMIT || time() - ($_SESSION['start'] ?? 0) > SESSION_LIMIT) {
+        audit('session_expired');
+        $_SESSION = [];
+        session_regenerate_id(true);
+        flash('Z bezpečnostních důvodů jsme Vás po delší nečinnosti odhlásili. Přihlaste se prosím znovu.', 'info');
+    } else {
+        $_SESSION['seen'] = time();
+    }
+}
+
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
-header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+header('Cross-Origin-Opener-Policy: same-origin');
+header('X-Permitted-Cross-Domain-Policies: none');
+header_remove('X-Powered-By');
+if ($https) {
+    header('Strict-Transport-Security: max-age=31536000');
+}
+if (!empty($_SESSION['uid']) || !empty($_SESSION['pending'])) {
+    // Stránky přihlášených se neukládají v prohlížeči ani po cestě – na sdíleném počítači je po odhlášení nejde vrátit tlačítkem Zpět.
+    header('Cache-Control: no-store, private');
+}
 
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
 if ($METHOD === 'POST') {

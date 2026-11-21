@@ -1,5 +1,9 @@
 <div class="wrap page">
   <header class="page-head"><h1>Administrace</h1><p class="lead">Správa obsahu webu, uživatelů a hlášených závad.</p></header>
+  <div class="flash flash-error" id="storage-probe" data-probe="<?= e(json_encode([url('/storage/.gitkeep'), url('/app/schema.sql'), url('/tools/import-webnode.php')])) ?>" hidden>Pozor: server zpřístupňuje vnitřní soubory webu (složky app, storage nebo tools jsou čitelné zvenku). Soubor .htaccess na tomto hostingu nefunguje – obraťte se na poskytovatele hostingu, než web začnete používat.</div>
+  <?php if (user()['totp_enabled'] == 0): ?><div class="flash flash-info">Váš účet správce chrání jen heslo. <a href="<?= url('/muj-ucet#overeni') ?>">Zapněte si dvoufázové ověření</a> – trvá to dvě minuty.</div>
+  <?php elseif ($adminsWithout2fa): ?><div class="flash flash-info">Správců bez dvoufázového ověření: <?= $adminsWithout2fa ?>. Požádejte je, ať si ho zapnou ve svém účtu.</div><?php endif ?>
+  <?php if ($failed24 >= 20): ?><div class="flash flash-error">Za posledních 24 hodin bylo <?= $failed24 ?> neúspěšných pokusů o přihlášení. Podívejte se do <a href="<?= url('/admin/zaznamy?jen-problemy') ?>">Záznamů</a>.</div><?php endif ?>
   <div class="stat-grid">
     <a class="stat" href="<?= url('/admin/aktuality') ?>"><span class="stat-num"><?= $stats['posts'] ?></span><span>aktualit</span></a>
     <a class="stat" href="<?= url('/admin/dokumenty') ?>"><span class="stat-num"><?= $stats['documents'] ?></span><span>dokumentů</span></a>

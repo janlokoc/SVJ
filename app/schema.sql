@@ -12,6 +12,9 @@ CREATE TABLE users (
   invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   invite_hash TEXT,
   invite_expires TEXT,
+  totp_secret TEXT,
+  totp_enabled INTEGER NOT NULL DEFAULT 0,
+  totp_last INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   last_login_at TEXT
 );
@@ -128,7 +131,15 @@ CREATE TABLE mailing_recipients (
   clicked_at TEXT
 );
 CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-CREATE TABLE login_attempts (ip TEXT NOT NULL, at INTEGER NOT NULL);
+CREATE TABLE login_attempts (ip TEXT NOT NULL, at INTEGER NOT NULL, email TEXT NOT NULL DEFAULT '');
+CREATE TABLE audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  ip TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT ''
+);
 CREATE INDEX idx_posts_pub ON posts(published_at);
 CREATE INDEX idx_docs_cat ON documents(category, doc_date);
 CREATE INDEX idx_forum_parent ON forum_posts(parent_id);

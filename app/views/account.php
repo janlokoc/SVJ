@@ -21,6 +21,30 @@
       <button class="btn" type="submit">Změnit heslo</button>
     </form>
   </div>
+  <section class="household" id="overeni">
+    <h2>Dvoufázové ověření</h2>
+    <div class="card form">
+      <?php if ($u['totp_enabled']): ?>
+        <p><span class="status status-done">Zapnuto</span> Při přihlášení zadáváte kromě hesla i kód z aplikace v telefonu.</p>
+        <form method="post" action="<?= url('/muj-ucet/overeni') ?>" class="form">
+          <?= csrf_field() ?><input type="hidden" name="action" value="disable">
+          <label>Pro vypnutí zadejte současné heslo <input type="password" name="current_password" id="totp-disable-password" autocomplete="current-password" required></label>
+          <button class="btn btn-ghost" type="submit">Vypnout dvoufázové ověření</button>
+        </form>
+      <?php elseif ($totpSetup): ?>
+        <p><strong>1.</strong> V telefonu otevřete ověřovací aplikaci (Google Authenticator, Microsoft Authenticator, Aegis apod.), zvolte přidání účtu a <strong>zadání klíče ručně</strong>. Typ klíče: podle času.</p>
+        <p><strong>2.</strong> Opište tento klíč:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
+        <form method="post" action="<?= url('/muj-ucet/overeni') ?>" class="form">
+          <?= csrf_field() ?><input type="hidden" name="action" value="confirm">
+          <label><strong>3.</strong> Zadejte šestimístný kód, který aplikace ukazuje <input type="text" name="code" id="totp-confirm" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></label>
+          <div class="actions"><button class="btn" type="submit">Zapnout</button><button class="btn btn-ghost" type="submit" name="action" value="cancel" formnovalidate>Zrušit</button></div>
+        </form>
+      <?php else: ?>
+        <p>Kromě hesla budete při přihlášení zadávat i krátký kód z aplikace v telefonu. Kdyby někdo Vaše heslo uhodl nebo ukradl, bez telefonu se nepřihlásí.<?= $u['role'] === 'admin' ? ' <strong>Správcům webu to důrazně doporučujeme.</strong>' : '' ?></p>
+        <form method="post" action="<?= url('/muj-ucet/overeni') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="start"><button class="btn" type="submit">Nastavit dvoufázové ověření</button></form>
+      <?php endif ?>
+    </div>
+  </section>
   <?php if ($units): ?>
   <section class="household">
     <h2>Moje domácnost</h2>

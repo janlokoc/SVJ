@@ -36,3 +36,10 @@ document.querySelectorAll('input[data-filter]').forEach((input) => {
 // Ukazatel přihlášené účasti (šířky se nastavují skriptem kvůli bezpečnostním pravidlům stránky)
 document.querySelectorAll('.meter-fill[data-width]').forEach((el) => { el.style.width = el.dataset.width + '%'; });
 document.querySelectorAll('.meter-mark[data-left]').forEach((el) => { el.style.left = el.dataset.left + '%'; });
+
+// Kontrola v administraci: vnitřní soubory webu nesmí být dostupné přímo z internetu
+const probe = document.getElementById('storage-probe');
+if (probe) {
+  Promise.all(JSON.parse(probe.dataset.probe).map((u) => fetch(u, { credentials: 'omit', cache: 'no-store' }).then((r) => r.status === 200, () => false)))
+    .then((hits) => { if (hits.some(Boolean)) probe.hidden = false; });
+}

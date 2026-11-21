@@ -2,6 +2,8 @@
   <header class="page-head"><h1>Nastavení webu</h1></header>
   <form method="post" class="card form">
     <?= csrf_field() ?>
+    <label>Adresa webu <input type="url" name="site_url" value="<?= e(setting('site_url')) ?>" placeholder="https://www.vase-domena.cz"></label>
+    <p class="hint">Používá se pro odkazy v e-mailech a pozvánkách. Po přestěhování webu na jinou adresu ji zde změňte.</p>
     <label>Úvodní text na hlavní stránce <textarea name="intro" rows="4"><?= e(setting('intro')) ?></textarea></label>
     <label>Adresa domu <input type="text" name="address" value="<?= e(setting('address')) ?>"></label>
     <div class="form-row">

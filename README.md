@@ -61,7 +61,9 @@ a otevřít <http://localhost:8000>.
    a zakažte přístup do `app/`, `storage/` a `tools/`.
 4. Zapněte HTTPS.
 5. Otevřete web. **Při prvním spuštění se zobrazí formulář pro vytvoření
-   účtu správce** – vyplňte ho hned po nahrání.
+   účtu správce.** Vyžaduje instalační kód ze souboru
+   `storage/instalacni-kod-….txt`, který si přečtete přes FTP – cizí člověk
+   se k němu nedostane. Po vytvoření správce se soubor sám smaže.
 6. V Administraci → Přehled stáhněte tlačítkem soubory ze starého webu
    (nebo `php tools/import-webnode.php`). Do té doby dokumenty odkazují na
    Webnode a po jeho zrušení by přestaly fungovat.
@@ -76,6 +78,28 @@ rozesláním pošlete zkušební zprávu sami sobě.
 
 Limit velikosti nahrávaného souboru určuje hosting (`upload_max_filesize`
 a `post_max_size` v nastavení PHP).
+
+## Zabezpečení
+
+- Hesla jsou uložena jen jako otisk (bcrypt); slabá a běžná hesla web odmítne.
+- Dvoufázové ověření kódem z aplikace v telefonu (Můj účet) – správcům
+  důrazně doporučeno, administrace na chybějící ověření upozorňuje.
+- Ochrana proti hádání hesel: nejvýše 8 chyb z jedné adresy a 10 chyb na
+  jeden účet za 15 minut.
+- Odhlášení po 2 hodinách nečinnosti, nejdéle po 12 hodinách. Změna nebo
+  reset hesla odhlásí všechna ostatní zařízení.
+- Všechny formuláře jsou chráněné proti podvrženým požadavkům (CSRF),
+  výstup proti vložení skriptů (XSS + přísná CSP), dotazy do databáze proti
+  SQL injection.
+- Nahrávat lze jen vyjmenované typy souborů a obsah musí odpovídat příponě;
+  soubory i databáze mají náhodné názvy a leží ve složce, kam web zvenku
+  nepouští.
+- Administrace → Záznamy ukazuje přihlášení, neúspěšné pokusy a citlivé
+  změny za poslední rok.
+- **Podmínky na straně hostingu:** zapnuté HTTPS a fungující `.htaccess`
+  (Apache). Přehled administrace sám zkontroluje, zda nejsou vnitřní složky
+  čitelné zvenku, a případně zobrazí varování.
+- Zapomenuté heslo jediného správce: `php tools/reset-password.php e-mail`.
 
 ## Zálohování
 
