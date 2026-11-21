@@ -17,6 +17,9 @@ a administrace pro výbor.
 - Diskuze se sousedy
 - Hlášení závad výboru a sledování stavu řešení
 - Vlastní účet (kontakt, změna hesla)
+- Vlastník může pozvat manžela, manželku nebo dalšího spoluvlastníka –
+  pozvaný si přes odkaz z e-mailu nastaví heslo a účet se přiřadí k téže
+  jednotce
 
 **Administrace (správce webu)**
 - Aktuality: psaní, plánování na datum, připnutí, viditelnost, přílohy
@@ -25,6 +28,8 @@ a administrace pro výbor.
 - Zprávy e-mailem: rozeslání důležitého oznámení vlastníkům nebo všem
   obyvatelům s účtem, zkušební zpráva, historie odeslaných zpráv
 - Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu
+- Jednotky: seznam jednotek s vlastníkem dle evidence, patrem a podílem,
+  přiřazení účtů k jednotkám, hromadné založení jednotek
 - Závady: stav a odpověď obyvateli, moderace diskuze
 
 ## Požadavky

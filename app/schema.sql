@@ -4,15 +4,31 @@ CREATE TABLE users (
   name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'resident' CHECK (role IN ('admin','resident')),
-  entrance TEXT NOT NULL DEFAULT '',
-  unit TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL DEFAULT '',
   kind TEXT NOT NULL DEFAULT 'owner' CHECK (kind IN ('owner','tenant')),
   email_notify INTEGER NOT NULL DEFAULT 1,
   active INTEGER NOT NULL DEFAULT 1,
   must_change_password INTEGER NOT NULL DEFAULT 0,
+  invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  invite_hash TEXT,
+  invite_expires TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   last_login_at TEXT
+);
+CREATE TABLE units (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entrance TEXT NOT NULL DEFAULT '',
+  number TEXT NOT NULL,
+  floor TEXT NOT NULL DEFAULT '',
+  share TEXT NOT NULL DEFAULT '',
+  owner_note TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  UNIQUE (entrance, number)
+);
+CREATE TABLE user_units (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, unit_id)
 );
 CREATE TABLE posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -28,7 +28,7 @@ document.querySelectorAll('input[data-filter]').forEach((input) => {
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   input.addEventListener('input', () => {
     const q = norm(input.value.trim());
-    box.querySelectorAll('label').forEach((l) => { l.hidden = q !== '' && !norm(l.textContent).includes(q); });
+    box.querySelectorAll(input.dataset.filterRows || 'label').forEach((l) => { l.hidden = q !== '' && !norm(l.textContent).includes(q); });
   });
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 });

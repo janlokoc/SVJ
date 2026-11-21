@@ -13,12 +13,18 @@
       <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>"></label>
     </div>
     <p class="hint">Obyvatel domu (vlastník i nájemník) vidí neveřejné dokumenty, diskuzi a hlášení závad. Správce webu navíc upravuje obsah a účty.</p>
-    <div class="form-row">
-      <label>Vchod
-        <select name="entrance"><?php foreach (ENTRANCES as $en): ?><option value="<?= $en ?>"<?= $u['entrance'] === $en ? ' selected' : '' ?>><?= $en === '' ? '—' : '48 ' . $en ?></option><?php endforeach ?></select>
-      </label>
-      <label>Číslo bytu <input type="text" name="unit" value="<?= e($u['unit']) ?>" maxlength="10"></label>
-    </div>
+    <fieldset>
+      <legend>Jednotky</legend>
+      <?php if (!$units): ?><p class="hint">Zatím nejsou založené žádné jednotky. Přidáte je v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a>.</p><?php else: ?>
+      <label>Hledat jednotku <input type="search" data-filter="#unit-pick" placeholder="Např. 48C/12"></label>
+      <div class="pick" id="unit-pick">
+        <?php foreach ($units as $un): ?>
+          <label class="check"><input type="checkbox" name="units[]" value="<?= $un['id'] ?>"<?= in_array((int) $un['id'], $unitIds, true) ? ' checked' : '' ?>>
+            <span><?= e(unit_name($un)) ?><?php if ($un['owner_note']): ?> <small><?= e($un['owner_note']) ?></small><?php endif ?></span></label>
+        <?php endforeach ?>
+      </div>
+      <?php endif ?>
+    </fieldset>
     <div class="form-row">
       <label>Vztah k domu
         <select name="kind"><?php foreach (KINDS as $k => $label): ?><option value="<?= $k ?>"<?= $u['kind'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>

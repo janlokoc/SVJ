@@ -11,7 +11,7 @@ $route('GET', '/admin', function () {
             'users' => (int) val('SELECT COUNT(*) FROM users WHERE active = 1'),
             'tickets' => (int) val("SELECT COUNT(*) FROM tickets WHERE status <> 'done'"),
         ],
-        'tickets' => all("SELECT t.*, u.name author_name, u.entrance author_entrance FROM tickets t LEFT JOIN users u ON u.id = t.user_id WHERE t.status <> 'done' ORDER BY t.id DESC LIMIT 5"),
+        'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units FROM tickets t LEFT JOIN users u ON u.id = t.user_id WHERE t.status <> 'done' ORDER BY t.id DESC LIMIT 5"),
         'external' => (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL'),
     ]);
 });
@@ -271,21 +271,22 @@ $route('POST', '/admin/terminy/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/admin/uzivatele', function () {
     require_admin();
-    render('admin/users', ['title' => 'Uživatelé', 'users' => all("SELECT * FROM users ORDER BY active DESC, role = 'admin' DESC, entrance, name")]);
+    render('admin/users', ['title' => 'Uživatelé', 'users' => all('SELECT u.*, ' . units_sql('u') . " unit_names, i.name inviter_name FROM users u LEFT JOIN users i ON i.id = u.invited_by ORDER BY u.active DESC, u.role = 'admin' DESC, unit_names IS NULL, unit_names, u.name")]);
 });
 $userForm = function (int $id = 0) {
     $me = require_admin();
     $u = $id ? (one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'kind' => 'owner', 'email_notify' => 1, 'entrance' => '', 'unit' => '', 'phone' => '', 'active' => 1];
+        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'kind' => 'owner', 'email_notify' => 1, 'phone' => '', 'active' => 1];
+    $unitIds = $id ? user_unit_ids($id) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $u = array_merge($u, [
             'name' => post('name'), 'email' => post('email'),
             'role' => isset(ROLES[post('role')]) ? post('role') : 'resident',
-            'entrance' => in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '',
-            'unit' => post('unit'), 'phone' => post('phone'), 'active' => isset($_POST['active']) ? 1 : 0,
+            'phone' => post('phone'), 'active' => isset($_POST['active']) ? 1 : 0,
             'kind' => isset(KINDS[post('kind')]) ? post('kind') : 'owner', 'email_notify' => isset($_POST['email_notify']) ? 1 : 0,
         ]);
+        $unitIds = array_map('intval', (array) ($_POST['units'] ?? []));
         if ($u['name'] === '') {
             $errors[] = 'Vyplňte jméno.';
         }
@@ -298,20 +299,28 @@ $userForm = function (int $id = 0) {
             $errors[] = 'Sami sobě nemůžete odebrat práva správce ani účet vypnout.';
         }
         if (!$errors) {
-            $args = [$u['name'], $u['email'], $u['role'], $u['entrance'], $u['unit'], $u['phone'], $u['active'], $u['kind'], $u['email_notify']];
+            $args = [$u['name'], $u['email'], $u['role'], $u['phone'], $u['active'], $u['kind'], $u['email_notify']];
             if ($id) {
-                q('UPDATE users SET name = ?, email = ?, role = ?, entrance = ?, unit = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE users SET name = ?, email = ?, role = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
+                $userId = $id;
                 flash('Uživatel byl uložen.');
             } else {
                 $pass = random_password();
-                q('INSERT INTO users (name, email, role, entrance, unit, phone, active, kind, email_notify, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
+                q('INSERT INTO users (name, email, role, phone, active, kind, email_notify, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
+                $userId = (int) db()->lastInsertId();
                 $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];
+            }
+            q('DELETE FROM user_units WHERE user_id = ?', [$userId]);
+            foreach (array_unique($unitIds) as $unitId) {
+                if (val('SELECT 1 FROM units WHERE id = ?', [$unitId])) {
+                    q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$userId, $unitId]);
+                }
             }
             redirect('/admin/uzivatele');
         }
         http_response_code(422);
     }
-    render('admin/user_form', ['title' => $u['id'] ? 'Upravit uživatele' : 'Nový uživatel', 'u' => $u, 'errors' => $errors]);
+    render('admin/user_form', ['title' => $u['id'] ? 'Upravit uživatele' : 'Nový uživatel', 'u' => $u, 'errors' => $errors, 'units' => all_units(), 'unitIds' => $unitIds]);
 };
 $route('GET', '/admin/uzivatele/novy', $userForm);
 $route('POST', '/admin/uzivatele/novy', $userForm);
@@ -321,7 +330,7 @@ $route('POST', '/admin/uzivatele/(\d+)/heslo', function (int $id) {
     require_admin();
     $u = one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found();
     $pass = random_password();
-    q('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $id]);
+    q('UPDATE users SET password_hash = ?, must_change_password = 1, invite_hash = NULL, invite_expires = NULL WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $id]);
     $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];
     redirect('/admin/uzivatele');
 });
@@ -340,7 +349,7 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/admin/zavady', function () {
     require_admin();
-    render('admin/tickets', ['title' => 'Hlášené závady', 'tickets' => all("SELECT t.*, u.name author_name, u.entrance author_entrance, u.unit author_unit, u.phone author_phone, u.email author_email
+    render('admin/tickets', ['title' => 'Hlášené závady', 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
         FROM tickets t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.status = 'done', t.id DESC")]);
 });
 $route('POST', '/admin/zavady/(\d+)', function (int $id) {
@@ -442,3 +451,81 @@ $mailForm = function () {
 };
 $route('GET', '/admin/zpravy/nova', $mailForm);
 $route('POST', '/admin/zpravy/nova', $mailForm);
+
+// ---------- Jednotky ----------
+
+$route('GET', '/admin/jednotky', function () {
+    require_admin();
+    $people = [];
+    foreach (all('SELECT uu.unit_id, u.id, u.name, u.kind, u.active, u.password_hash = ? pending FROM user_units uu JOIN users u ON u.id = uu.user_id ORDER BY u.kind, u.name', [NO_PASSWORD]) as $p) {
+        $people[$p['unit_id']][] = $p;
+    }
+    render('admin/units', ['title' => 'Jednotky', 'units' => all_units(), 'people' => $people]);
+});
+
+$route('POST', '/admin/jednotky/hromadne', function () {
+    require_admin();
+    $entrance = in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '';
+    $from = (int) post('from');
+    $to = (int) post('to');
+    if ($from < 1 || $to < $from || $to - $from >= 200) {
+        flash('Zadejte rozsah čísel jednotek od–do (nejvýše 200 najednou).', 'error');
+        redirect('/admin/jednotky');
+    }
+    $added = 0;
+    for ($n = $from; $n <= $to; $n++) {
+        $added += q('INSERT OR IGNORE INTO units (entrance, number) VALUES (?,?)', [$entrance, (string) $n])->rowCount();
+    }
+    flash("Přidáno jednotek: $added." . ($added < $to - $from + 1 ? ' Už existující byly přeskočeny.' : ''));
+    redirect('/admin/jednotky');
+});
+
+$unitForm = function (int $id = 0) {
+    require_admin();
+    $unit = $id ? (one('SELECT * FROM units WHERE id = ?', [$id]) ?? not_found())
+        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => ''];
+    $userIds = $id ? array_map('intval', array_column(all('SELECT user_id FROM user_units WHERE unit_id = ?', [$id]), 'user_id')) : [];
+    $errors = [];
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $unit = array_merge($unit, [
+            'entrance' => in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '',
+            'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'),
+        ]);
+        $userIds = array_map('intval', (array) ($_POST['users'] ?? []));
+        if ($unit['number'] === '' || mb_strlen($unit['number']) > 10) {
+            $errors[] = 'Vyplňte číslo jednotky (nejvýše 10 znaků).';
+        } elseif (val('SELECT 1 FROM units WHERE entrance = ? AND number = ? AND id <> ?', [$unit['entrance'], $unit['number'], $id])) {
+            $errors[] = 'Jednotka s tímto vchodem a číslem už existuje.';
+        }
+        if (!$errors) {
+            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note']];
+            if ($id) {
+                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ? WHERE id = ?', [...$args, $id]);
+            } else {
+                q('INSERT INTO units (entrance, number, floor, share, owner_note, note) VALUES (?,?,?,?,?,?)', $args);
+                $id = (int) db()->lastInsertId();
+            }
+            q('DELETE FROM user_units WHERE unit_id = ?', [$id]);
+            foreach (array_unique($userIds) as $userId) {
+                if (val('SELECT 1 FROM users WHERE id = ?', [$userId])) {
+                    q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$userId, $id]);
+                }
+            }
+            flash('Jednotka byla uložena.');
+            redirect('/admin/jednotky');
+        }
+        http_response_code(422);
+    }
+    render('admin/unit_form', ['title' => $unit['id'] ? 'Upravit jednotku ' . unit_name($unit) : 'Nová jednotka', 'unit' => $unit, 'errors' => $errors,
+        'userIds' => $userIds, 'users' => all('SELECT id, name, email, kind, active FROM users ORDER BY name')]);
+};
+$route('GET', '/admin/jednotky/nova', $unitForm);
+$route('POST', '/admin/jednotky/nova', $unitForm);
+$route('GET', '/admin/jednotky/(\d+)', $unitForm);
+$route('POST', '/admin/jednotky/(\d+)', $unitForm);
+$route('POST', '/admin/jednotky/(\d+)/smazat', function (int $id) {
+    require_admin();
+    q('DELETE FROM units WHERE id = ?', [$id]);
+    flash('Jednotka byla smazána. Účty jejích obyvatel zůstaly zachované.');
+    redirect('/admin/jednotky');
+});

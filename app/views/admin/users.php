@@ -9,14 +9,14 @@
   </div>
   <?php endif ?>
   <table class="table">
-    <thead><tr><th>Jméno</th><th>E-mail</th><th>Role</th><th>Vchod / byt</th><th>Poslední přihlášení</th><th></th></tr></thead>
+    <thead><tr><th>Jméno</th><th>E-mail</th><th>Role</th><th>Jednotka</th><th>Poslední přihlášení</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($users as $x): ?>
       <tr<?= $x['active'] ? '' : ' class="is-off"' ?>>
-        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?></td>
+        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?><?= $x['password_hash'] === NO_PASSWORD ? ' <span class="tag tag-pin">čeká na přijetí pozvánky</span>' : '' ?><?= $x['inviter_name'] ? '<br><small>pozval(a) ' . e($x['inviter_name']) . '</small>' : '' ?></td>
         <td data-label="E-mail"><?= e($x['email']) ?></td>
         <td data-label="Role"><?= ROLES[$x['role']] ?> · <?= mb_strtolower(KINDS[$x['kind']]) ?><?= $x['email_notify'] ? '' : ' <span class="tag">bez e-mailů</span>' ?></td>
-        <td data-label="Vchod / byt"><?= e(implode(' / ', array_filter([$x['entrance'], $x['unit']]))) ?></td>
+        <td data-label="Jednotka"><?= e($x['unit_names'] ?? '') ?></td>
         <td data-label="Poslední přihlášení"><?= $x['last_login_at'] ? cz_datetime($x['last_login_at']) : 'zatím ne' ?></td>
         <td class="t-actions">
           <form method="post" action="<?= url('/admin/uzivatele/' . $x['id'] . '/heslo') ?>" data-confirm="Vygenerovat nové dočasné heslo pro „<?= e($x['name']) ?>“? Stávající heslo přestane platit."><?= csrf_field() ?><button class="link" type="submit">Nové heslo</button></form>

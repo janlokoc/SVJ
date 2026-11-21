@@ -346,3 +346,17 @@ legend { font-weight: 700; padding-inline: .4rem; }
 /* Zprávy e-mailem */
 .table summary { cursor: pointer; }
 .mail-body { margin-top: .75rem; padding: .9rem 1rem; background: var(--bg); border-radius: 10px; }
+
+/* Jednotky a domácnost */
+.household { display: grid; gap: 1rem; margin-top: 2.5rem; }
+.household h2 { margin: 0; }
+.muted { color: var(--muted); font-weight: 400; }
+.people { list-style: none; margin: 0; padding: 0; }
+.people li { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .75rem; padding: .55rem 0; border-top: 1px solid var(--line); }
+.people li:first-child { border-top: 0; }
+.people small { color: var(--muted); }
+.people form { margin: 0 0 0 auto; }
+.table-filter { display: grid; gap: .35rem; font-weight: 600; max-width: 420px; margin-bottom: 1rem; }
+.credentials code { overflow-wrap: anywhere; display: inline-block; }
+.in-admin .page > form.card { margin-top: 2rem; }
+.form > .btn { justify-self: start; }

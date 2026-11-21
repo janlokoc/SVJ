@@ -19,6 +19,7 @@ const TICKET_STATUS = ['new' => 'Nová', 'in_progress' => 'Řeší se', 'done' =
 const VISIBILITY = ['public' => 'Veřejné', 'residents' => 'Jen pro přihlášené'];
 const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
 const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
+const NO_PASSWORD = '!'; // účet čeká na přijetí pozvánky, přihlásit se zatím nejde
 const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu'];
 const ENTRANCES = ['', 'A', 'B', 'C', 'D'];
 
@@ -46,9 +47,12 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
-        $pdo->exec('PRAGMA user_version = 1');
+        $pdo->exec('PRAGMA user_version = 2');
         $pdo->commit();
-    } elseif ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 1) {
+        return $pdo;
+    }
+    $version = (int) $pdo->query('PRAGMA user_version')->fetchColumn();
+    if ($version < 1) {
         // Doplnění starší databáze o rozesílání e-mailů.
         $pdo->beginTransaction();
         $pdo->exec("ALTER TABLE users ADD COLUMN kind TEXT NOT NULL DEFAULT 'owner' CHECK (kind IN ('owner','tenant'))");
@@ -57,6 +61,34 @@ function db(): PDO
             audience TEXT NOT NULL CHECK (audience IN ('owners','all')), sent_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
             failed_list TEXT NOT NULL DEFAULT '', sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL, sent_at TEXT NOT NULL DEFAULT (datetime('now','localtime')))");
         $pdo->exec('PRAGMA user_version = 1');
+        $pdo->commit();
+    }
+    if ($version < 2) {
+        // Doplnění starší databáze o seznam jednotek a pozvánky; dosavadní vchod a číslo bytu u účtů se převedou na jednotky.
+        $pdo->beginTransaction();
+        $pdo->exec(<<<'SQL'
+CREATE TABLE units (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entrance TEXT NOT NULL DEFAULT '',
+  number TEXT NOT NULL,
+  floor TEXT NOT NULL DEFAULT '',
+  share TEXT NOT NULL DEFAULT '',
+  owner_note TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  UNIQUE (entrance, number)
+);
+CREATE TABLE user_units (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  unit_id INTEGER NOT NULL REFERENCES units(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, unit_id)
+);
+ALTER TABLE users ADD COLUMN invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN invite_hash TEXT;
+ALTER TABLE users ADD COLUMN invite_expires TEXT;
+INSERT OR IGNORE INTO units (entrance, number) SELECT DISTINCT entrance, unit FROM users WHERE unit <> '';
+INSERT INTO user_units (user_id, unit_id) SELECT u.id, n.id FROM users u JOIN units n ON n.entrance = u.entrance AND n.number = u.unit WHERE u.unit <> '';
+SQL);
+        $pdo->exec('PRAGMA user_version = 2');
         $pdo->commit();
     }
     return $pdo;
@@ -381,7 +413,7 @@ function author_label(?array $row): string
     if (!$row || empty($row['author_name'])) {
         return 'Bývalý uživatel';
     }
-    return $row['author_name'] . (!empty($row['author_entrance']) ? ', vchod ' . $row['author_entrance'] : '');
+    return $row['author_name'] . (!empty($row['author_units']) ? ' (' . $row['author_units'] . ')' : '');
 }
 
 // ---------- E-maily ----------
@@ -395,7 +427,7 @@ function absolute_url(string $path = '/'): string
 }
 function mail_recipients(string $audience): array
 {
-    return all('SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1' . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
+    return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND password_hash <> '!'" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
 }
 /** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
 function send_mail(string $to, string $subject, string $text): bool
@@ -423,4 +455,24 @@ function mail_text(string $body): string
 {
     return trim(str_replace('**', '', $body)) . "\n\n-- \nZprávu posílá výbor SVJ Tábor 48 a–d obyvatelům domu s účtem na webu " . absolute_url('/')
         . "\nZasílání zpráv si můžete vypnout ve svém účtu: " . absolute_url('/muj-ucet') . "\n";
+}
+
+// ---------- Jednotky ----------
+
+/** SQL výraz: označení jednotek uživatele (např. „48C/12“), pro tabulku s aliasem $alias. */
+function units_sql(string $alias): string
+{
+    return "(SELECT group_concat('48' || un.entrance || '/' || un.number, ', ') FROM user_units uu JOIN units un ON un.id = uu.unit_id WHERE uu.user_id = $alias.id)";
+}
+function unit_name(array $unit): string
+{
+    return '48' . $unit['entrance'] . '/' . $unit['number'];
+}
+function user_unit_ids(int $userId): array
+{
+    return array_map('intval', array_column(all('SELECT unit_id FROM user_units WHERE user_id = ?', [$userId]), 'unit_id'));
+}
+function all_units(): array
+{
+    return all('SELECT * FROM units ORDER BY entrance, CAST(number AS INTEGER), number');
 }

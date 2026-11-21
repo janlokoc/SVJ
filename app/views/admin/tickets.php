@@ -5,7 +5,7 @@
   <?php foreach ($tickets as $t): ?>
     <article class="ticket" id="z<?= $t['id'] ?>">
       <header><h3><?= e($t['subject']) ?></h3><span class="status status-<?= e($t['status']) ?>"><?= TICKET_STATUS[$t['status']] ?></span></header>
-      <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?> · <?= e(author_label($t)) ?><?= !empty($t['author_unit']) ? ', byt ' . e($t['author_unit']) : '' ?>
+      <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?> · <?= e(author_label($t)) ?>
         <?php if (!empty($t['author_phone'])): ?> · <a href="<?= e(tel_href($t['author_phone'])) ?>"><?= e($t['author_phone']) ?></a><?php endif ?>
         <?php if (!empty($t['author_email'])): ?> · <a href="mailto:<?= e($t['author_email']) ?>"><?= e($t['author_email']) ?></a><?php endif ?></p>
       <div class="prose"><?= format_text($t['body']) ?></div>

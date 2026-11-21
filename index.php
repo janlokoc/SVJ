@@ -60,7 +60,7 @@ require __DIR__ . '/app/routes_admin.php';
 
 foreach ($routes as [$m, $pattern, $handler]) {
     if ($m === $METHOD && preg_match('#^' . $pattern . '$#', $PATH, $mm)) {
-        $handler(...array_map('intval', array_slice($mm, 1)));
+        $handler(...array_map(fn($v) => ctype_digit($v) ? (int) $v : $v, array_slice($mm, 1)));
         exit;
     }
 }

@@ -158,3 +158,36 @@ $setup = function () {
 };
 $route('GET', '/instalace', $setup);
 $route('POST', '/instalace', $setup);
+
+// ---------- Přijetí pozvánky ----------
+
+$acceptInvite = function (string $token) {
+    $inv = one("SELECT * FROM users WHERE invite_hash = ? AND password_hash = ? AND active = 1 AND invite_expires >= datetime('now','localtime')", [hash('sha256', $token), NO_PASSWORD]);
+    if (!$inv) {
+        http_response_code(404);
+        render('error', ['title' => 'Pozvánka neplatí', 'message' => 'Odkaz už byl použit, vypršel, nebo byla pozvánka zrušena. Požádejte o novou toho, kdo Vás pozval, nebo výbor SVJ.']);
+        return;
+    }
+    $errors = [];
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $pass = (string) ($_POST['password'] ?? '');
+        if (mb_strlen($pass) < 10) {
+            $errors[] = 'Heslo musí mít alespoň 10 znaků.';
+        }
+        if ($pass !== (string) ($_POST['password2'] ?? '')) {
+            $errors[] = 'Hesla se neshodují.';
+        }
+        if (!$errors) {
+            q("UPDATE users SET password_hash = ?, invite_hash = NULL, invite_expires = NULL, last_login_at = datetime('now','localtime') WHERE id = ?", [password_hash($pass, PASSWORD_DEFAULT), $inv['id']]);
+            session_regenerate_id(true);
+            $_SESSION = ['uid' => $inv['id']];
+            flash('Vítejte! Účet je aktivní.');
+            redirect('/');
+        }
+        http_response_code(422);
+    }
+    render('invite', ['title' => 'Pozvánka', 'inv' => $inv, 'errors' => $errors, 'token' => $token,
+        'unitNames' => array_map('unit_name', all('SELECT un.* FROM units un JOIN user_units uu ON uu.unit_id = un.id WHERE uu.user_id = ?', [$inv['id']]))]);
+};
+$route('GET', '/pozvanka/([a-f0-9]{64})', $acceptInvite);
+$route('POST', '/pozvanka/([a-f0-9]{64})', $acceptInvite);
