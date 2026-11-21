@@ -609,7 +609,7 @@ const AUDIT_LABELS = [
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
     'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
-    'unit_deleted' => 'Smazání jednotky', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
+    'unit_deleted' => 'Smazání jednotky', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];
 $route('GET', '/admin/zaznamy', function () {
     require_admin();
@@ -619,3 +619,41 @@ $route('GET', '/admin/zaznamy', function () {
         'rows' => all("SELECT a.*, u.name user_name FROM audit_log a LEFT JOIN users u ON u.id = a.user_id $where ORDER BY a.id DESC LIMIT 300"),
         'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')")]);
 });
+
+// ---------- Import jednotek a vlastníků z katastru ----------
+
+$cadastreImport = function () {
+    require_admin();
+    $text = (string) ($_POST['text'] ?? '');
+    $parsed = null;
+    if ($GLOBALS['METHOD'] === 'POST') {
+        if (strlen($text) > 500000) {
+            flash('Vložený text je příliš dlouhý.', 'error');
+            redirect('/admin/jednotky/import');
+        }
+        $parsed = parse_cadastre($text);
+        if ($parsed['units'] && post('action') === 'save') {
+            $new = $updated = 0;
+            foreach ($parsed['units'] as $u) {
+                $id = val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$u['entrance'], $u['number']]);
+                if ($id) {
+                    q('UPDATE units SET share = ?, owner_note = ? WHERE id = ?', [$u['share'], $u['owner_note'], $id]);
+                    $updated++;
+                } else {
+                    q('INSERT INTO units (entrance, number, share, owner_note) VALUES (?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note']]);
+                    $new++;
+                }
+            }
+            audit('units_imported', "nových $new, aktualizovaných $updated");
+            flash("Import hotov: nových jednotek $new, aktualizovaných $updated. Účty přiřazené k jednotkám zůstaly beze změny.");
+            redirect('/admin/jednotky');
+        }
+    }
+    $existing = [];
+    foreach (all_units() as $un) {
+        $existing[$un['entrance'] . '/' . $un['number']] = $un;
+    }
+    render('admin/units_import', ['title' => 'Import z katastru', 'text' => $text, 'parsed' => $parsed, 'existing' => $existing]);
+};
+$route('GET', '/admin/jednotky/import', $cadastreImport);
+$route('POST', '/admin/jednotky/import', $cadastreImport);

@@ -802,3 +802,82 @@ function totp_verify(string $secret, string $code, int $last = 0): ?int
     }
     return null;
 }
+
+// ---------- Import vlastníků z katastru nemovitostí ----------
+
+function gcd_int(int $a, int $b): int
+{
+    while ($b !== 0) {
+        [$a, $b] = [$b, $a % $b];
+    }
+    return max(1, abs($a));
+}
+/**
+ * Zpracuje text zkopírovaný z Nahlížení do KN (stránka stavby, část „Vlastníci, jiní oprávnění“).
+ * Vrací jednotky s vlastníky a podílem (součet podílů vlastníků jednotky) a případná upozornění.
+ */
+function parse_cadastre(string $text): array
+{
+    $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/u', '$1', $text);   // odkazy ve tvaru [text](adresa) → text
+    $lines = array_values(array_filter(array_map('trim', preg_split('/\R/u', $text)), fn($l) => $l !== ''));
+    $start = 0;
+    foreach ($lines as $i => $l) {
+        if (str_starts_with($l, 'Vlastnické právo')) {
+            $start = $i + 1;
+        }
+    }
+    $units = [];
+    $warnings = [];
+    for ($i = $start; $i < count($lines) - 1; $i++) {
+        if (!preg_match('/^Jednotk[ay]\s*:\s*(.+)$/u', $lines[$i + 1], $m) || str_starts_with($lines[$i], 'Jednotk')) {
+            continue;
+        }
+        preg_match_all('~\d+\s*/\s*\d+~', $m[1], $f);
+        $fractions = array_map(fn($x) => preg_replace('/\s+/', '', $x), $f[0]);
+        if (count($fractions) < 2) {
+            $warnings[] = 'Řádek „' . mb_substr($lines[$i + 1], 0, 60) . '“ se nepodařilo přečíst (chybí jednotka nebo podíl).';
+            continue;
+        }
+        [$num, $den] = array_map('intval', explode('/', array_pop($fractions)));
+        $name = trim(explode(',', $lines[$i])[0]);
+        if ($den <= 0 || $name === '') {
+            continue;
+        }
+        if (count($fractions) > 1) {
+            $warnings[] = $name . ': jeden podíl ' . $num . '/' . $den . ' je v katastru uveden společně pro jednotky ' . implode(', ', $fractions) . '. Rozdělil se mezi ně rovným dílem – skutečné rozdělení ověřte v prohlášení vlastníka.';
+        }
+        foreach ($fractions as $unitKey) {
+            [$cp, $number] = explode('/', $unitKey);
+            $units[$unitKey] ??= ['cp' => (int) $cp, 'number' => $number, 'owners' => [], 'num' => 0, 'den' => 1];
+            $u = &$units[$unitKey];
+            $u['owners'][] = ['name' => $name, 'share' => $num . '/' . $den];
+            // přičtení podílu: a/b + c/d
+            $addNum = $num;
+            $addDen = $den * count($fractions);
+            $u['num'] = $u['num'] * $addDen + $addNum * $u['den'];
+            $u['den'] *= $addDen;
+            $g = gcd_int($u['num'], $u['den']);
+            $u['num'] = intdiv($u['num'], $g);
+            $u['den'] = intdiv($u['den'], $g);
+            unset($u);
+        }
+        $i++;
+    }
+    // Čísla popisná → vchody A, B, C, D podle pořadí.
+    $cps = array_values(array_unique(array_column($units, 'cp')));
+    sort($cps);
+    $letters = array_values(array_filter(ENTRANCES));
+    $total = 0.0;
+    foreach ($units as &$u) {
+        $u['entrance'] = $letters[array_search($u['cp'], $cps, true)] ?? '';
+        $u['share'] = $u['num'] . '/' . $u['den'];
+        $u['owner_note'] = mb_substr(implode('; ', array_map(fn($o) => $o['name'] . (count($u['owners']) > 1 ? ' (' . $o['share'] . ')' : ''), $u['owners'])), 0, 255);
+        $total += $u['num'] / $u['den'];
+    }
+    unset($u);
+    if (count($cps) > count($letters)) {
+        $warnings[] = 'Stavba má víc čísel popisných než vchodů A–D; jednotky z dalších vchodů zůstaly bez označení vchodu.';
+    }
+    uasort($units, fn($a, $b) => [$a['cp'], (int) $a['number']] <=> [$b['cp'], (int) $b['number']]);
+    return ['units' => $units, 'warnings' => $warnings, 'total' => $total];
+}

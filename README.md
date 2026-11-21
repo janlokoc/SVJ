@@ -35,7 +35,8 @@ a administrace pro výbor.
   hranice usnášeníschopnosti
 - Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu
 - Jednotky: seznam jednotek s vlastníkem dle evidence, patrem a podílem,
-  přiřazení účtů k jednotkám, hromadné založení jednotek
+  přiřazení účtů k jednotkám, hromadné založení jednotek, import
+  vlastníků a podílů vložením textu z Nahlížení do katastru nemovitostí
 - Závady: stav a odpověď obyvateli, moderace diskuze
 
 ## Požadavky
