@@ -7,7 +7,6 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 require __DIR__ . '/../app/lib.php';
-require __DIR__ . '/../app/extra_lib.php';
 $file = $argv[1] ?? '';
 $zip = new ZipArchive();
 if ($file === '' || $zip->open($file) !== true) {

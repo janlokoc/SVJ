@@ -21,7 +21,7 @@
   <table class="table">
     <thead><tr><th>Den</th><th>Čas</th><th>Co</th><th>Kdo</th><th></th></tr></thead>
     <tbody><?php foreach ($rows as $r): ?>
-      <tr><td data-label="Den"><strong><?= cz_date($r['res_date']) ?></strong> <small class="muted"><?= WEEKDAYS[(int) date('w', strtotime($r['res_date']))] ?></small></td>
+      <tr><td data-label="Den"><strong><?= cz_date($r['res_date']) ?></strong> <small class="muted"><?= weekday_name((int) date('w', strtotime($r['res_date']))) ?></small></td>
         <td data-label="Čas"><?= e($r['time_from']) ?>–<?= e($r['time_to']) ?></td><td data-label="Co"><?= e($r['resource']) ?><?= $r['note'] ? '<br><small class="muted">' . e($r['note']) . '</small>' : '' ?></td>
         <td data-label="Kdo"><?= e(author_label($r)) ?></td>
         <td class="t-actions"><?php if ((int) $r['user_id'] === (int) user()['id']): ?><form method="post" action="<?= url('/rezervace/' . $r['id'] . '/zrusit') ?>" data-confirm="Zrušit tuto rezervaci?"><?= csrf_field() ?><button class="link-danger" type="submit">Zrušit</button></form><?php endif ?></td></tr>

@@ -10,8 +10,6 @@ if (PHP_SAPI === 'cli-server') {
 }
 
 require __DIR__ . '/app/lib.php';
-require __DIR__ . '/app/extra_lib.php';
-require __DIR__ . '/app/platform_lib.php';
 
 // Chyby se návštěvníkům nikdy nevypisují (prozradily by cesty a strukturu webu); zapisují se do protokolu serveru.
 ini_set('display_errors', '0');
@@ -118,6 +116,7 @@ if ($IS_PLATFORM) {
     if ($METHOD === 'POST') {
         check_csrf();
     }
+    $GLOBALS['IS_PLATFORM'] = true;
     require __DIR__ . '/app/platform.php';
     exit;
 }

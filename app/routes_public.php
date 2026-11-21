@@ -321,3 +321,17 @@ $route('GET', '/logo', function () {
     header('Cache-Control: public, max-age=86400');
     readfile(UPLOAD_DIR . '/' . $file);
 });
+
+// ---------- Přepnutí jazyka ----------
+
+$route('GET', '/jazyk/([a-z]{2})', function ($lang) {
+    if (isset(LANGS[(string) $lang])) {
+        setcookie('svj_lang', (string) $lang, ['expires' => time() + 365 * 86400, 'path' => ($GLOBALS['BASE'] ?? '') . '/', 'httponly' => true, 'samesite' => 'Lax',
+            'secure' => ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https']);
+    }
+    // Zpět na stránku, odkud návštěvník přišel (jen v rámci tohoto webu).
+    $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    $base = (string) ($GLOBALS['BASE'] ?? '');
+    $back = $base !== '' && str_starts_with($back, $base) ? substr($back, strlen($base)) : $back;
+    redirect(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_starts_with($back, '/jazyk') ? $back : '/');
+});

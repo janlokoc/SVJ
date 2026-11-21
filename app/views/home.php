@@ -31,11 +31,11 @@
       </svg>
       <?php if ($event): $t = strtotime($event['event_date']); ?>
       <div class="event-card">
-        <div class="event-date"><span class="event-day"><?= date('j', $t) ?></span><span class="event-month"><?= MONTHS_SHORT[(int) date('n', $t)] ?> <?= date('Y', $t) ?></span></div>
+        <div class="event-date"><span class="event-day"><?= date('j', $t) ?></span><span class="event-month"><?= month_name((int) date('n', $t), true) ?> <?= date('Y', $t) ?></span></div>
         <div>
           <p class="eyebrow">Nejbližší termín</p>
           <strong class="event-title"><?= e($event['title']) ?></strong>
-          <p class="event-meta"><?= e(implode(' · ', array_filter([WEEKDAYS[(int) date('w', $t)], $event['event_time'], $event['place']]))) ?></p>
+          <p class="event-meta"><?= e(implode(' · ', array_filter([weekday_name((int) date('w', $t)), $event['event_time'], $event['place']]))) ?></p>
           <?php if ($event['note']): ?><p class="event-note"><?= e($event['note']) ?></p><?php endif ?>
           <?php if ($event['rsvp']): ?><p class="event-rsvp"><a class="more" href="<?= url('/terminy/' . $event['id']) ?>">Dát vědět, zda přijdu <?= icon('arrow') ?></a></p><?php endif ?>
         </div>

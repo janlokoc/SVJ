@@ -23,7 +23,7 @@ $inAdmin = str_starts_with($path, '/admin') && is_admin();
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
 <!doctype html>
-<html lang="<?= e(site('lang')) ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>">
+<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -97,6 +97,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
       <li><a href="<?= url('/dokumenty') ?>">Dokumenty</a></li>
       <li><a href="<?= url('/kontakty') ?>">Kontakty</a></li>
       <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
+      <li class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></li>
       <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
     </ul>
   </div>

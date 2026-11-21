@@ -479,3 +479,8 @@ div.stat:hover { border-color: var(--line); }
 .slug-row input { flex: 1; }
 .nav-more summary, .brand-text strong { white-space: nowrap; }
 @media (min-width: 1101px) and (max-width: 1400px) { .user-link .user-id { max-width: 8.5rem; } .site-nav { gap: .5rem; } .header-row { gap: 1rem; } }
+
+/* Přepínač jazyka */
+.lang-switch { display: inline-flex; gap: .25rem; }
+.lang-switch a { padding: .15rem .5rem; border-radius: 6px; border: 1px solid var(--line); text-decoration: none; font-size: .82rem; font-weight: 700; color: var(--muted); }
+.lang-switch a[aria-current] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }

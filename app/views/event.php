@@ -1,7 +1,7 @@
 <?php $t = strtotime($ev['event_date']); ?>
 <div class="wrap page narrow">
   <p class="crumbs"><a href="<?= url('/') ?>">← Úvod</a></p>
-  <p class="eyebrow"><?= WEEKDAYS[(int) date('w', $t)] ?> <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?></p>
+  <p class="eyebrow"><?= weekday_name((int) date('w', $t)) ?> <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?></p>
   <h1><?= e($ev['title']) ?></h1>
   <p class="lead"><?= e(implode(' · ', array_filter([$ev['place'], $ev['note']]))) ?></p>
 

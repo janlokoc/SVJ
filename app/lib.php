@@ -20,7 +20,7 @@ if (PHP_SAPI === 'cli') {
     boot_tenant(preg_match('/^[a-z0-9][a-z0-9-]{1,38}$/', $cliTenant) ? $cliTenant : '');
 }
 
-const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська'];
+const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська', 'vi' => 'Tiếng Việt'];
 const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá'];
 /** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
 const FEATURES = [
@@ -365,7 +365,10 @@ function render(string $view, array $data = []): void
     ob_start();
     require __DIR__ . '/views/' . $view . '.php';
     $content = ob_get_clean();
+    ob_start();
     require __DIR__ . '/views/' . ($GLOBALS['LAYOUT'] ?? 'layout') . '.php';
+    $html = ob_get_clean();
+    echo page_translatable() ? translate_html($html, current_lang()) : $html;
 }
 function flash(?string $msg = null, string $type = 'ok'): ?array
 {
@@ -390,7 +393,12 @@ function cz_date(?string $iso, bool $long = false): string
     if (!$iso || !($t = strtotime($iso))) {
         return '';
     }
-    return $long ? date('j', $t) . '. ' . MONTHS[(int) date('n', $t)] . ' ' . date('Y', $t) : date('j. n. Y', $t);
+    if (!$long) {
+        return date('j. n. Y', $t);
+    }
+    $month = month_name((int) date('n', $t));
+    $lang = page_translatable() ? current_lang() : 'cs';
+    return in_array($lang, ['en', 'uk', 'vi'], true) ? date('j', $t) . ' ' . $month . ($lang === 'vi' ? ', ' : ' ') . date('Y', $t) : date('j', $t) . '. ' . $month . ' ' . date('Y', $t);
 }
 function cz_datetime(?string $iso): string
 {
@@ -423,19 +431,37 @@ function format_text(string $text): string
         return preg_replace_callback('~https?://[^\s<]+[^\s<.,;:!?)]~u', fn($m) => '<a href="' . $m[0] . '" rel="noopener noreferrer">' . $m[0] . '</a>', $s);
     };
     $out = '';
-    foreach (preg_split('/\R\s*\R/u', trim(str_replace("\r", '', $text))) as $block) {
-        $lines = array_values(array_filter(array_map('trim', explode("\n", $block)), fn($l) => $l !== ''));
-        if (!$lines) {
-            continue;
+    $paragraph = [];
+    $list = [];
+    $flush = function () use (&$out, &$paragraph, &$list, $inline) {
+        if ($paragraph) {
+            $out .= '<p>' . implode('<br>', array_map($inline, $paragraph)) . '</p>';
         }
-        if (count(array_filter($lines, fn($l) => str_starts_with($l, '- '))) === count($lines)) {
-            $out .= '<ul>' . implode('', array_map(fn($l) => '<li>' . $inline(substr($l, 2)) . '</li>', $lines)) . '</ul>';
-        } elseif (count($lines) === 1 && str_starts_with($lines[0], '## ')) {
-            $out .= '<h3>' . $inline(substr($lines[0], 3)) . '</h3>';
+        if ($list) {
+            $out .= '<ul>' . implode('', array_map(fn($l) => '<li>' . $inline($l) . '</li>', $list)) . '</ul>';
+        }
+        $paragraph = $list = [];
+    };
+    foreach (explode("\n", trim(str_replace("\r", '', $text))) as $line) {
+        $line = trim($line);
+        if ($line === '') {
+            $flush();
+        } elseif (str_starts_with($line, '## ')) {
+            $flush();
+            $out .= '<h3>' . $inline(substr($line, 3)) . '</h3>';
+        } elseif (str_starts_with($line, '- ')) {
+            if ($paragraph) {
+                $flush();
+            }
+            $list[] = substr($line, 2);
         } else {
-            $out .= '<p>' . implode('<br>', array_map($inline, $lines)) . '</p>';
+            if ($list) {
+                $flush();
+            }
+            $paragraph[] = $line;
         }
     }
+    $flush();
     return $out;
 }
 function excerpt(string $text, int $len = 180): string
@@ -1257,3 +1283,8 @@ function user_badge(array $u): string
     $units = (string) val('SELECT ' . units_sql('u') . ' FROM users u WHERE u.id = ?', [$u['id']]);
     return mb_strtolower(KINDS[$u['kind']] ?? '') . ($units !== '' ? ' · ' . $units : '');
 }
+
+// Části aplikace, které knihovna potřebuje vždy (i v nástrojích z příkazové řádky).
+require_once __DIR__ . '/i18n.php';
+require_once __DIR__ . '/platform_lib.php';
+require_once __DIR__ . '/extra_lib.php';

@@ -143,6 +143,16 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
 
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
 
+## Jazyky
+
+Veřejná část a část pro obyvatele jsou dostupné česky, slovensky,
+anglicky, ukrajinsky a vietnamsky. Výchozí jazyk volí správce
+společenství v Nastavení; každý návštěvník si ho může přepnout v patičce.
+Překládá se rozhraní webu (menu, formuláře, hlášky, data). Obsah, který
+píše výbor a obyvatelé, administrace a e-maily zůstávají v původním
+znění. Slovníky jsou v `app/lang/` (český text → překlad); překlady jsou
+strojové a je vhodné nechat je projít rodilým mluvčím.
+
 ## Zabezpečení
 
 - Hesla jsou uložena jen jako otisk (bcrypt); slabá a běžná hesla web odmítne.
