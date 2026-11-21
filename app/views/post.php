@@ -1,6 +1,6 @@
 <?php
-$visible = array_values(array_filter($docs, fn($d) => user() || $d['visibility'] === 'public'));
-$hidden = count($docs) - count($visible);
+$visible = array_values(array_filter($docs, 'can_open_document'));
+$hidden = count(array_filter($docs, fn($d) => !$d['unit_id'])) - count(array_filter($visible, fn($d) => !$d['unit_id']));
 ?>
 <div class="wrap page narrow">
   <p class="crumbs"><a href="<?= url('/aktuality') ?>">← Aktuality</a></p>

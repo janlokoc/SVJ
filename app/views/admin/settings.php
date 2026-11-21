@@ -40,6 +40,11 @@
       <label>Usnášeníschopnost: je potřeba více než (% všech hlasů) <input type="number" name="quorum_percent" min="1" max="99" value="<?= setting_int('quorum_percent', 50, 1, 99) ?>"></label>
       <p class="hint">Obvykle 50 % (přítomna většina všech hlasů). Řiďte se stanovami.</p>
     </fieldset>
+    <fieldset>
+      <legend>Ochrana osobních údajů</legend>
+      <label>Text stránky „Ochrana osobních údajů“ <textarea name="privacy_text" rows="12"><?= e(setting('privacy_text') !== '' ? setting('privacy_text') : PRIVACY_DEFAULT) ?></textarea></label>
+      <p class="hint">Předvyplněný text je návrh odpovídající tomu, co web skutečně ukládá. Než ho zveřejníte obyvatelům, nechte ho projít výborem; nadpisy začínají dvěma křížky (## ).</p>
+    </fieldset>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit nastavení</button></div>
   </form>
 </div>

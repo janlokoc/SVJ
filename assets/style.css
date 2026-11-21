@@ -403,3 +403,49 @@ div.stat:hover { border-color: var(--line); }
 .user-link .user-id { display: grid; line-height: 1.15; min-width: 0; }
 .user-link .user-id strong, .user-link .user-id small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-link .user-id small { color: var(--muted); font-weight: 500; font-size: .78rem; }
+
+/* Nabídka „Pro obyvatele“ */
+.nav-more { position: relative; }
+.nav-more summary { list-style: none; cursor: pointer; padding: .5rem .8rem; border-radius: 999px; font-weight: 600; display: flex; align-items: center; gap: .35rem; }
+.nav-more summary::-webkit-details-marker { display: none; }
+.nav-more summary::after { content: ""; width: .45em; height: .45em; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); }
+.nav-more summary:hover { background: var(--surface-2); }
+.nav-more details.is-active > summary { background: var(--primary); color: var(--on-primary); }
+.site-nav .nav-more ul { position: absolute; top: calc(100% + .4rem); left: 0; z-index: 30; min-width: 15rem; flex-direction: column; gap: .1rem; padding: .4rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
+.site-nav .nav-more ul a { border-radius: 8px; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .site-nav .nav-more ul { position: static; box-shadow: none; border: 0; padding: 0 0 0 .9rem; background: transparent; min-width: 0; }
+  .nav-more summary { padding: .7rem .9rem; border-radius: 10px; }
+}
+.admin-nav ul { flex-wrap: wrap; }
+.admin-nav .wrap { overflow-x: visible; align-items: flex-start; }
+.admin-nav a { padding-block: .55rem; }
+.admin-label { padding-top: .7rem; }
+
+/* Hlasování, tisk a drobnosti nových stránek */
+.status-poll-open { background: var(--ok-soft); color: var(--ok); }
+.status-poll-planned { background: var(--warn-soft); color: var(--warn); }
+.status-poll-closed { background: var(--surface-2); color: var(--muted); }
+.poll-items { padding-left: 1.2rem; display: grid; gap: .9rem; margin: 0; }
+.poll-items fieldset { gap: .5rem; padding: .8rem 1rem; }
+.poll-items legend { font-weight: 600; }
+.poll-form { margin-bottom: 1.25rem; }
+.poll-results { display: grid; gap: .5rem; margin-bottom: 1.5rem; }
+.vote-form { flex-wrap: wrap; }
+.vote-form select { max-width: 11rem; }
+.inline-form input[type=text] { min-height: 38px; padding: .3rem .5rem; width: 9rem; }
+.own-docs { background: var(--soft); border-radius: var(--radius); padding: 1.2rem 1.3rem; }
+.sign-row { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 4rem; text-align: center; }
+.sign-cell { min-width: 9rem; height: 2.4rem; }
+.print-doc h1 { font-size: 2rem; }
+.print-doc p { line-height: 1.9; }
+@media print {
+  .no-print, .flash { display: none !important; }
+  .print-doc { max-width: none; width: 100%; padding: 0; }
+  .print-table { font-size: 11pt; border: 0; }
+  .print-table th, .print-table td { border: 1px solid #000; padding: 4pt 6pt; }
+  .print-table thead { display: table-header-group !important; }
+  .print-table, .print-table tbody { display: table !important; } .print-table tbody { display: table-row-group !important; }
+  .print-table tr { display: table-row !important; page-break-inside: avoid; } .print-table td, .print-table th { display: table-cell !important; }
+  a { color: #000; text-decoration: none; }
+}

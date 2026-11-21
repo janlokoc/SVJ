@@ -10,6 +10,7 @@ if (PHP_SAPI === 'cli-server') {
 }
 
 require __DIR__ . '/app/lib.php';
+require __DIR__ . '/app/extra_lib.php';
 
 // Chyby se návštěvníkům nikdy nevypisují (prozradily by cesty a strukturu webu); zapisují se do protokolu serveru.
 ini_set('display_errors', '0');
@@ -118,6 +119,11 @@ if ($PATH === '/favicon.ico') {
     exit;
 }
 
+// Úlohy jednou denně (připomenutí revizí) spustí první návštěva dne.
+if ($METHOD === 'GET' && !$needsSetup) {
+    daily_tasks();
+}
+
 $routes = [];
 $route = function (string $method, string $pattern, callable $handler) use (&$routes): void {
     $routes[] = [$method, $pattern, $handler];
@@ -125,6 +131,7 @@ $route = function (string $method, string $pattern, callable $handler) use (&$ro
 require __DIR__ . '/app/routes_public.php';
 require __DIR__ . '/app/routes_member.php';
 require __DIR__ . '/app/routes_admin.php';
+require __DIR__ . '/app/routes_extra.php';
 
 foreach ($routes as [$m, $pattern, $handler]) {
     if ($m === $METHOD && preg_match('#^' . $pattern . '$#', $PATH, $mm)) {

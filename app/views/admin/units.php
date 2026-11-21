@@ -1,5 +1,5 @@
 <div class="wrap page">
-  <header class="page-head row"><h1>Jednotky</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/jednotky/import') ?>">Import z katastru</a><a class="btn" href="<?= url('/admin/jednotky/nova') ?>">+ Nová jednotka</a></span></header>
+  <header class="page-head row"><h1>Jednotky</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/jednotky/export') ?>">Seznam členů (CSV)</a><a class="btn btn-ghost" href="<?= url('/admin/jednotky/import') ?>">Import z katastru</a><a class="btn" href="<?= url('/admin/jednotky/nova') ?>">+ Nová jednotka</a></span></header>
   <p class="lead">Seznam jednotek v domě, jejich vlastníci a účty, které k nim patří. Seznam vidí jen správci webu.</p>
   <?php if (!$units): ?><p class="empty">Zatím tu není žádná jednotka. Přidejte je jednotlivě, nebo najednou formulářem níže.</p><?php else: ?>
   <label class="table-filter">Hledat <input type="search" data-filter="#units-table tbody" data-filter-rows="tr" placeholder="Číslo jednotky nebo jméno…"></label>

@@ -12,6 +12,8 @@
     <label>Spoluvlastnický podíl <input type="text" name="share" value="<?= e($unit['share']) ?>" placeholder="Např. 652/100000"></label>
     <label>Vlastník dle evidence <input type="text" name="owner_note" value="<?= e($unit['owner_note']) ?>" placeholder="Např. Novákovi (SJM)"></label>
     <p class="hint">Jméno vlastníka podle katastru nebo evidence SVJ. Vyplňte i tehdy, když vlastník účet na webu nemá.</p>
+    <label>Adresa pro doručování <textarea name="owner_contact" rows="3" placeholder="Jméno a adresa každého vlastníka na samostatném řádku"><?= e($unit['owner_contact']) ?></textarea></label>
+    <p class="hint">Jméno a adresa vlastníků podle katastru (doplní je import z katastru). Vidí je jen správci webu; slouží pro seznam členů a doručování.</p>
     <label>Poznámka <input type="text" name="note" value="<?= e($unit['note']) ?>"></label>
     <fieldset>
       <legend>Účty přiřazené k jednotce</legend>

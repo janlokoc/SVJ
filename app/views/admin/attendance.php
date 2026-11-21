@@ -19,6 +19,7 @@
     <div class="stat"><span class="stat-num"><?= $c['no'] ?></span><span>nepřijde</span></div>
     <div class="stat"><span class="stat-num"><?= $c['none'] ?></span><span>bez odpovědi</span></div>
   </div>
+  <p class="actions"><a class="btn btn-ghost" href="<?= url('/admin/terminy/' . $ev['id'] . '/prezence') ?>">Prezenční listina k tisku</a></p>
   <p class="hint">Odpověď můžete zapsat i za vlastníka, který se ozval jinak než přes web. Stejně lze seznam použít při prezenci na místě.</p>
   <table class="table">
     <thead><tr><th>Jednotka</th><th>Vlastník dle evidence</th><th>Podíl</th><th>Účast</th><th>Zapsal(a)</th><th></th></tr></thead>
@@ -28,12 +29,13 @@
         <td data-label="Jednotka"><strong><?= e(unit_name($r)) ?></strong></td>
         <td data-label="Vlastník dle evidence"><?= e($r['owner_note']) ?></td>
         <td data-label="Podíl"><?= e($r['share']) ?></td>
-        <td data-label="Účast"><?php if ($r['status']): ?><span class="status status-rsvp-<?= e($r['status']) ?>"><?= RSVP[$r['status']] ?></span><?php else: ?><span class="muted">bez odpovědi</span><?php endif ?></td>
+        <td data-label="Účast"><?php if ($r['status']): ?><span class="status status-rsvp-<?= e($r['status']) ?>"><?= RSVP[$r['status']] ?></span><?= $r['status'] === 'proxy' && $r['proxy_name'] ? '<br><small>' . e($r['proxy_name']) . '</small>' : '' ?><?php else: ?><span class="muted">bez odpovědi</span><?php endif ?></td>
         <td data-label="Zapsal(a)"><?= $r['status'] ? e($r['responder'] ?? '') . ' <small class="muted">' . cz_datetime($r['updated_at']) . '</small>' : '' ?></td>
         <td class="t-actions"><form method="post" action="<?= url('/admin/terminy/' . $ev['id'] . '/ucast') ?>" class="inline-form">
           <?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $r['id'] ?>">
           <label class="sr-only" for="s<?= $r['id'] ?>">Účast jednotky <?= e(unit_name($r)) ?></label>
           <select name="status" id="s<?= $r['id'] ?>"><option value="">bez odpovědi</option><?php foreach (RSVP as $k => $label): ?><option value="<?= $k ?>"<?= $r['status'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
+          <label class="sr-only" for="px<?= $r['id'] ?>">Zmocněnec</label><input type="text" name="proxy_name" id="px<?= $r['id'] ?>" value="<?= e($r['proxy_name'] ?? '') ?>" placeholder="zmocněnec" maxlength="190">
           <button class="btn btn-small btn-ghost" type="submit">Zapsat</button></form></td>
       </tr>
     <?php endforeach ?>

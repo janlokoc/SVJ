@@ -2,12 +2,12 @@
 $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
-if ($u) {
-    $nav += ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky'];
-}
+$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
-    '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky', '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy'];
+    '/admin/hlasovani' => 'Hlasování', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
+    '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Rezervace', '/admin/prostory' => 'Prostory', '/admin/klice' => 'Klíče a čipy',
+    '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
 $inAdmin = str_starts_with($path, '/admin') && is_admin();
 // Hláška se zobrazí jen na skutečné stránce; požadavek prohlížeče na neexistující soubor (např. /favicon.ico) ji nesmí spotřebovat.
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
@@ -37,6 +37,11 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <?php foreach ($nav as $href => $label): ?>
           <li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li>
         <?php endforeach ?>
+        <?php if ($more): $moreActive = (bool) array_filter(array_keys($more), $active) || str_starts_with($path, '/terminy'); ?>
+          <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Pro obyvatele</summary>
+            <ul><?php foreach ($more as $href => $label): ?><li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li><?php endforeach ?></ul>
+          </details></li>
+        <?php endif ?>
       </ul>
       <div class="nav-user">
         <?php if ($u): ?>
@@ -80,6 +85,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
       <li><a href="<?= url('/aktuality') ?>">Aktuality</a></li>
       <li><a href="<?= url('/dokumenty') ?>">Dokumenty</a></li>
       <li><a href="<?= url('/kontakty') ?>">Kontakty</a></li>
+      <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
       <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
     </ul>
   </div>

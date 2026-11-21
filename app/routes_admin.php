@@ -13,6 +13,7 @@ $route('GET', '/admin', function () {
         ],
         'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units FROM tickets t LEFT JOIN users u ON u.id = t.user_id WHERE t.status <> 'done' ORDER BY t.id DESC LIMIT 5"),
         'external' => (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL'),
+        'maintenanceDue' => all('SELECT * FROM maintenance WHERE next_date IS NOT NULL AND next_date <= ? ORDER BY next_date', [date('Y-m-d', time() + 30 * 86400)]),
         'adminsWithout2fa' => (int) val("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1 AND totp_enabled = 0"),
         'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')"),
     ]);
@@ -123,7 +124,7 @@ $route('GET', '/admin/dokumenty', function () {
 $docForm = function (int $id = 0) {
     require_admin();
     $doc = $id ? (one('SELECT * FROM documents WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'title' => '', 'category' => 'oznameni', 'visibility' => 'public', 'doc_date' => date('Y-m-d'), 'filename' => null, 'original_name' => '', 'external_url' => null];
+        : ['id' => 0, 'title' => '', 'category' => 'oznameni', 'visibility' => 'public', 'doc_date' => date('Y-m-d'), 'filename' => null, 'original_name' => '', 'external_url' => null, 'unit_id' => null];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $doc = array_merge($doc, [
@@ -131,7 +132,11 @@ $docForm = function (int $id = 0) {
             'category' => isset(CATEGORIES[post('category')]) ? post('category') : 'oznameni',
             'visibility' => isset(VISIBILITY[post('visibility')]) ? post('visibility') : 'public',
             'doc_date' => post('doc_date') ?: null,
+            'unit_id' => val('SELECT id FROM units WHERE id = ?', [(int) post('unit_id')]) ?: null,
         ]);
+        if ($doc['unit_id']) {
+            $doc['visibility'] = 'residents';   // dokument jednotky není nikdy veřejný
+        }
         if ($doc['doc_date'] !== null && !valid_date($doc['doc_date'])) {
             $errors[] = 'Zadejte platné datum, nebo pole nechte prázdné.';
         }
@@ -151,7 +156,7 @@ $docForm = function (int $id = 0) {
                 $doc['title'] = $up ? pathinfo($up[1], PATHINFO_FILENAME) : ($doc['original_name'] ?: 'Dokument');
             }
             if ($id) {
-                q('UPDATE documents SET title = ?, category = ?, visibility = ?, doc_date = ? WHERE id = ?', [$doc['title'], $doc['category'], $doc['visibility'], $doc['doc_date'], $id]);
+                q('UPDATE documents SET title = ?, category = ?, visibility = ?, doc_date = ?, unit_id = ? WHERE id = ?', [$doc['title'], $doc['category'], $doc['visibility'], $doc['doc_date'], $doc['unit_id'], $id]);
                 if ($up) {
                     if ($doc['filename']) {
                         @unlink(UPLOAD_DIR . '/' . basename($doc['filename']));
@@ -159,8 +164,8 @@ $docForm = function (int $id = 0) {
                     q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL WHERE id = ?', [$up[0], $up[1], $up[2], $id]);
                 }
             } else {
-                q('INSERT INTO documents (title, category, visibility, doc_date, filename, original_name, size) VALUES (?,?,?,?,?,?,?)',
-                    [$doc['title'], $doc['category'], $doc['visibility'], $doc['doc_date'], $up[0], $up[1], $up[2]]);
+                q('INSERT INTO documents (title, category, visibility, doc_date, filename, original_name, size, unit_id) VALUES (?,?,?,?,?,?,?,?)',
+                    [$doc['title'], $doc['category'], $doc['visibility'], $doc['doc_date'], $up[0], $up[1], $up[2], $doc['unit_id']]);
             }
             flash('Dokument byl uložen.');
             redirect('/admin/dokumenty');
@@ -234,10 +239,12 @@ $route('GET', '/admin/terminy', function () {
 $eventForm = function (int $id = 0) {
     require_admin();
     $ev = $id ? (one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'title' => 'Shromáždění vlastníků SVJ', 'event_date' => '', 'event_time' => '', 'place' => '', 'note' => '', 'rsvp' => 1];
+        : ['id' => 0, 'title' => 'Shromáždění vlastníků SVJ', 'event_date' => '', 'event_time' => '', 'place' => '', 'note' => '', 'rsvp' => 1, 'program' => ''];
+    $evDocs = $id ? array_map('intval', array_column(all('SELECT document_id FROM event_documents WHERE event_id = ?', [$id]), 'document_id')) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
-        $ev = array_merge($ev, ['title' => post('title'), 'event_date' => post('event_date'), 'event_time' => post('event_time'), 'place' => post('place'), 'note' => post('note'), 'rsvp' => isset($_POST['rsvp']) ? 1 : 0]);
+        $ev = array_merge($ev, ['title' => post('title'), 'event_date' => post('event_date'), 'event_time' => post('event_time'), 'place' => post('place'), 'note' => post('note'), 'rsvp' => isset($_POST['rsvp']) ? 1 : 0, 'program' => mb_substr(post('program'), 0, 4000)]);
+        $evDocs = array_map('intval', (array) ($_POST['documents'] ?? []));
         if ($ev['title'] === '') {
             $errors[] = 'Vyplňte název.';
         }
@@ -248,15 +255,26 @@ $eventForm = function (int $id = 0) {
             $errors[] = 'Čas zadejte ve tvaru HH:MM, nebo pole nechte prázdné.';
         }
         if (!$errors) {
-            $args = [$ev['title'], $ev['event_date'], $ev['event_time'], $ev['place'], $ev['note'], $ev['rsvp']];
-            $id ? q('UPDATE events SET title = ?, event_date = ?, event_time = ?, place = ?, note = ?, rsvp = ? WHERE id = ?', [...$args, $id])
-                : q('INSERT INTO events (title, event_date, event_time, place, note, rsvp) VALUES (?,?,?,?,?,?)', $args);
+            $args = [$ev['title'], $ev['event_date'], $ev['event_time'], $ev['place'], $ev['note'], $ev['rsvp'], $ev['program']];
+            if ($id) {
+                q('UPDATE events SET title = ?, event_date = ?, event_time = ?, place = ?, note = ?, rsvp = ?, program = ? WHERE id = ?', [...$args, $id]);
+            } else {
+                q('INSERT INTO events (title, event_date, event_time, place, note, rsvp, program) VALUES (?,?,?,?,?,?,?)', $args);
+                $id = (int) db()->lastInsertId();
+            }
+            q('DELETE FROM event_documents WHERE event_id = ?', [$id]);
+            foreach (array_unique($evDocs) as $docId) {
+                if (val('SELECT 1 FROM documents WHERE id = ? AND unit_id IS NULL', [$docId])) {
+                    q('INSERT INTO event_documents (event_id, document_id) VALUES (?,?)', [$id, $docId]);
+                }
+            }
             flash('Termín byl uložen.');
             redirect('/admin/terminy');
         }
         http_response_code(422);
     }
-    render('admin/event_form', ['title' => $ev['id'] ? 'Upravit termín' : 'Nový termín', 'ev' => $ev, 'errors' => $errors]);
+    render('admin/event_form', ['title' => $ev['id'] ? 'Upravit termín' : 'Nový termín', 'ev' => $ev, 'errors' => $errors, 'evDocs' => $evDocs,
+        'documents' => all('SELECT id, title, category, doc_date FROM documents WHERE unit_id IS NULL ORDER BY created_at DESC, id DESC')]);
 };
 $route('GET', '/admin/terminy/novy', $eventForm);
 $route('POST', '/admin/terminy/novy', $eventForm);
@@ -378,7 +396,7 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 // ---------- Nastavení ----------
 
 const SETTING_KEYS = ['site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
-    'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent'];
+    'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent', 'privacy_text'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
 $route('GET', '/admin/nastaveni', function () {
     require_admin();
@@ -509,13 +527,13 @@ $route('POST', '/admin/jednotky/hromadne', function () {
 $unitForm = function (int $id = 0) {
     require_admin();
     $unit = $id ? (one('SELECT * FROM units WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => ''];
+        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => '', 'owner_contact' => ''];
     $userIds = $id ? array_map('intval', array_column(all('SELECT user_id FROM user_units WHERE unit_id = ?', [$id]), 'user_id')) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $unit = array_merge($unit, [
             'entrance' => in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '',
-            'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'),
+            'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'), 'owner_contact' => mb_substr(post('owner_contact'), 0, 2000),
         ]);
         $userIds = array_map('intval', (array) ($_POST['users'] ?? []));
         if ($unit['number'] === '' || mb_strlen($unit['number']) > 10) {
@@ -524,11 +542,11 @@ $unitForm = function (int $id = 0) {
             $errors[] = 'Jednotka s tímto vchodem a číslem už existuje.';
         }
         if (!$errors) {
-            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note']];
+            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact']];
             if ($id) {
-                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ? WHERE id = ?', [...$args, $id]);
             } else {
-                q('INSERT INTO units (entrance, number, floor, share, owner_note, note) VALUES (?,?,?,?,?,?)', $args);
+                q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact) VALUES (?,?,?,?,?,?,?)', $args);
                 $id = (int) db()->lastInsertId();
             }
             q('DELETE FROM user_units WHERE unit_id = ?', [$id]);
@@ -551,6 +569,10 @@ $route('GET', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)/smazat', function (int $id) {
     require_admin();
+    if (val('SELECT 1 FROM documents WHERE unit_id = ?', [$id])) {
+        flash('Jednotka má přiřazené dokumenty. Nejdřív je smažte nebo přiřaďte jinam – jinak by je mohli vidět i ostatní.', 'error');
+        redirect('/admin/jednotky');
+    }
     q('DELETE FROM units WHERE id = ?', [$id]);
     flash('Jednotka byla smazána. Účty jejích obyvatel zůstaly zachované.');
     redirect('/admin/jednotky');
@@ -572,8 +594,9 @@ $route('POST', '/admin/terminy/(\d+)/ucast', function (int $id) {
         not_found();
     }
     if (isset(RSVP[$status])) {
-        q("INSERT INTO event_rsvp (event_id, unit_id, user_id, status) VALUES (?,?,?,?)
-            ON CONFLICT(event_id, unit_id) DO UPDATE SET user_id = excluded.user_id, status = excluded.status, updated_at = datetime('now','localtime')", [$id, $unitId, $admin['id'], $status]);
+        q("INSERT INTO event_rsvp (event_id, unit_id, user_id, status, proxy_name) VALUES (?,?,?,?,?)
+            ON CONFLICT(event_id, unit_id) DO UPDATE SET user_id = excluded.user_id, status = excluded.status, proxy_name = excluded.proxy_name, updated_at = datetime('now','localtime')",
+            [$id, $unitId, $admin['id'], $status, $status === 'proxy' ? mb_substr(post('proxy_name'), 0, 190) : '']);
     } else {
         q('DELETE FROM event_rsvp WHERE event_id = ? AND unit_id = ?', [$id, $unitId]);
     }
@@ -645,10 +668,10 @@ $cadastreImport = function () {
             foreach ($parsed['units'] as $u) {
                 $id = val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$u['entrance'], $u['number']]);
                 if ($id) {
-                    q('UPDATE units SET share = ?, owner_note = ? WHERE id = ?', [$u['share'], $u['owner_note'], $id]);
+                    q('UPDATE units SET share = ?, owner_note = ?, owner_contact = ? WHERE id = ?', [$u['share'], $u['owner_note'], $u['owner_contact'], $id]);
                     $updated++;
                 } else {
-                    q('INSERT INTO units (entrance, number, share, owner_note) VALUES (?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note']]);
+                    q('INSERT INTO units (entrance, number, share, owner_note, owner_contact) VALUES (?,?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note'], $u['owner_contact']]);
                     $new++;
                 }
             }

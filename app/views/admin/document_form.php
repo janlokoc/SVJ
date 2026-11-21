@@ -15,6 +15,9 @@
       <label>Datum dokumentu <input type="date" name="doc_date" value="<?= e($doc['doc_date']) ?>"></label>
     </div>
     <?php $current = $doc['visibility']; require __DIR__ . '/_vis.php'; ?>
+    <label>Jen pro jednotku (nepovinné)
+      <select name="unit_id"><option value="">— pro všechny podle volby výše —</option><?php foreach (unit_options() as $uid => $uname): ?><option value="<?= $uid ?>"<?= (int) $doc['unit_id'] === (int) $uid ? ' selected' : '' ?>><?= e($uname) ?></option><?php endforeach ?></select></label>
+    <p class="hint">Dokument přiřazený jednotce uvidí jen lidé z této jednotky a výbor – hodí se pro vyúčtování nebo předpis záloh.</p>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit dokument</button><a class="btn btn-ghost" href="<?= url('/admin/dokumenty') ?>">Zrušit</a></div>
   </form>
 </div>

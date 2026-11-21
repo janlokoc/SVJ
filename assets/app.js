@@ -43,3 +43,8 @@ if (probe) {
   Promise.all(JSON.parse(probe.dataset.probe).map((u) => fetch(u, { credentials: 'omit', cache: 'no-store' }).then((r) => r.status === 200, () => false)))
     .then((hits) => { if (hits.some(Boolean)) probe.hidden = false; });
 }
+
+// Tisk plné moci a prezenční listiny
+document.querySelectorAll('[data-print]').forEach((b) => b.addEventListener('click', () => window.print()));
+// Rozbalovací nabídka „Pro obyvatele“ se zavře kliknutím mimo ni
+document.addEventListener('click', (e) => { document.querySelectorAll('.nav-more details[open]').forEach((d) => { if (!d.contains(e.target)) d.open = false; }); });

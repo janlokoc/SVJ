@@ -76,12 +76,26 @@ function db_mysql(): PDO
         require __DIR__ . '/seed.php';
         $pdo->beginTransaction();
         seed_database($pdo);
-        $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '5')");
+        $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '6')");
         $pdo->commit();
-    } elseif ((int) $pdo->query("SELECT value FROM settings WHERE `key` = 'schema_version'")->fetchColumn() < 5) {
+        return $pdo;
+    }
+    $mysqlVersion = (int) $pdo->query("SELECT value FROM settings WHERE `key` = 'schema_version'")->fetchColumn();
+    if ($mysqlVersion < 6) {
+        $pdo->exec('ALTER TABLE documents ADD COLUMN unit_id INT NULL, ADD FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL');
+        $pdo->exec("ALTER TABLE units ADD COLUMN owner_contact VARCHAR(2000) NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE events ADD COLUMN program VARCHAR(4000) NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE event_rsvp ADD COLUMN proxy_name VARCHAR(191) NOT NULL DEFAULT ''");
+        foreach (array_filter(array_map('trim', explode(";\n", file_get_contents(__DIR__ . '/schema.v6.mysql.sql')))) as $statement) {
+            $pdo->exec($statement);
+        }
+    }
+    if ($mysqlVersion < 5) {
         $pdo->exec("ALTER TABLE audit_log ADD COLUMN user_name VARCHAR(191) NOT NULL DEFAULT '', ADD COLUMN chain CHAR(64) NULL, MODIFY action VARCHAR(100) NOT NULL, MODIFY detail VARCHAR(1000) NOT NULL DEFAULT ''");
         $pdo->exec("ALTER TABLE forum_posts ADD COLUMN edited_note VARCHAR(191) NOT NULL DEFAULT ''");
-        $pdo->exec("UPDATE settings SET value = '5' WHERE `key` = 'schema_version'");
+    }
+    if ($mysqlVersion < 6) {
+        $pdo->exec("UPDATE settings SET value = '6' WHERE `key` = 'schema_version'");
     }
     return $pdo;
 }
@@ -128,7 +142,7 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
-        $pdo->exec('PRAGMA user_version = 5');
+        $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
         return $pdo;
     }
@@ -222,6 +236,17 @@ SQL);
         $pdo->exec('ALTER TABLE audit_log ADD COLUMN chain TEXT');
         $pdo->exec("ALTER TABLE forum_posts ADD COLUMN edited_note TEXT NOT NULL DEFAULT ''");
         $pdo->exec('PRAGMA user_version = 5');
+        $pdo->commit();
+    }
+    if ($version < 6) {
+        // Doplnění starší databáze: hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, podklady shromáždění.
+        $pdo->beginTransaction();
+        $pdo->exec('ALTER TABLE documents ADD COLUMN unit_id INTEGER REFERENCES units(id) ON DELETE SET NULL');
+        $pdo->exec("ALTER TABLE units ADD COLUMN owner_contact TEXT NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE events ADD COLUMN program TEXT NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE event_rsvp ADD COLUMN proxy_name TEXT NOT NULL DEFAULT ''");
+        $pdo->exec(file_get_contents(__DIR__ . '/schema.v6.sql'));
+        $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
     }
     return $pdo;
@@ -663,7 +688,7 @@ function share_value(string $share): float
  */
 function attendance(int $eventId): array
 {
-    $rows = all('SELECT un.*, r.status, r.updated_at, u.name responder FROM units un
+    $rows = all('SELECT un.*, r.status, r.proxy_name, r.updated_at, u.name responder FROM units un
         LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ?
         LEFT JOIN users u ON u.id = r.user_id ORDER BY un.entrance, un.number + 0, un.number', [$eventId]);
     $byShare = (bool) $rows;
@@ -895,6 +920,12 @@ function parse_cadastre(string $text): array
         }
         [$num, $den] = array_map('intval', explode('/', array_pop($fractions)));
         $name = trim(explode(',', $lines[$i])[0]);
+        $contact = $lines[$i];
+        // U společného jmění manželů bez společné adresy následují řádky s adresou každého z nich.
+        for ($j = $i + 2; str_starts_with($name, 'SJ ') && $j <= $i + 3 && isset($lines[$j]) && str_contains($lines[$j], ',')
+            && !str_starts_with($lines[$j], 'Jednotk') && !str_starts_with($lines[$j + 1] ?? '', 'Jednotk'); $j++) {
+            $contact .= ' | ' . $lines[$j];
+        }
         if ($den <= 0 || $name === '') {
             continue;
         }
@@ -905,7 +936,7 @@ function parse_cadastre(string $text): array
             [$cp, $number] = explode('/', $unitKey);
             $units[$unitKey] ??= ['cp' => (int) $cp, 'number' => $number, 'owners' => [], 'num' => 0, 'den' => 1];
             $u = &$units[$unitKey];
-            $u['owners'][] = ['name' => $name, 'share' => $num . '/' . $den];
+            $u['owners'][] = ['name' => $name, 'share' => $num . '/' . $den, 'contact' => $contact];
             // přičtení podílu: a/b + c/d
             $addNum = $num;
             $addDen = $den * count($fractions);
@@ -926,6 +957,7 @@ function parse_cadastre(string $text): array
     foreach ($units as &$u) {
         $u['entrance'] = $letters[array_search($u['cp'], $cps, true)] ?? '';
         $u['share'] = $u['num'] . '/' . $u['den'];
+        $u['owner_contact'] = mb_substr(implode("\n", array_map(fn($o) => $o['contact'], $u['owners'])), 0, 2000);
         $u['owner_note'] = mb_substr(implode('; ', array_map(fn($o) => $o['name'] . (count($u['owners']) > 1 ? ' (' . $o['share'] . ')' : ''), $u['owners'])), 0, 255);
         $total += $u['num'] / $u['den'];
     }
@@ -1030,19 +1062,26 @@ const ADMIN_ACTIONS = [
     '/admin/diskuze/(\d+)' => ['Úprava příspěvku v diskuzi', 'forum_posts', 'title'],
     '/admin/nastaveni' => ['Změna nastavení', 'settings', null],
     '/admin/import' => ['Stažení souborů ze starého webu', null, null],
+    '/admin/hlasovani/nove' => ['Nové hlasování', null, null],
+    '/admin/hlasovani/(\d+)' => ['Úprava hlasování', 'polls', 'title'],
+    '/admin/hlasovani/(\d+)/smazat' => ['Smazání hlasování', 'polls', 'title'],
+    '/admin/revize/(\d+)/provedeno' => ['Revize zapsána jako provedená', 'maintenance', 'title'],
 ];
 const AUDIT_FIELDS = ['title' => 'nadpis', 'body' => 'text', 'visibility' => 'viditelnost', 'pinned' => 'připnuto', 'published_at' => 'datum zveřejnění',
     'name' => 'jméno', 'phone' => 'telefon', 'role' => 'role', 'kind' => 'typ', 'active' => 'aktivní', 'email_notify' => 'zasílání e-mailů',
     'share' => 'podíl', 'owner_note' => 'vlastník dle evidence', 'floor' => 'patro', 'entrance' => 'vchod', 'number' => 'číslo', 'note' => 'poznámka',
     'status' => 'stav', 'admin_note' => 'odpověď výboru', 'subject' => 'předmět', 'location' => 'místo', 'category' => 'kategorie', 'doc_date' => 'datum',
     'original_name' => 'soubor', 'event_date' => 'datum', 'event_time' => 'čas', 'place' => 'místo', 'rsvp' => 'sbírat účast', 'grp' => 'skupina', 'sort' => 'pořadí',
-    'must_change_password' => 'vynucená změna hesla', 'totp_enabled' => 'dvoufázové ověření', 'email' => 'e-mail',
+    'must_change_password' => 'vynucená změna hesla', 'totp_enabled' => 'dvoufázové ověření', 'email' => 'e-mail', 'owner_contact' => 'adresa pro doručování', 'program' => 'program', 'unit_id' => 'jednotka', 'opens_at' => 'začátek', 'closes_at' => 'konec',
+    'threshold' => 'hranice přijetí (%)', 'online' => 'hlasování přes web', 'published' => 'zveřejnit výsledky', 'contractor' => 'kdo provádí', 'last_date' => 'naposledy provedeno',
+    'interval_months' => 'interval (měsíce)', 'next_date' => 'příští termín', 'label' => 'označení', 'holder' => 'komu vydáno', 'issued_at' => 'vydáno', 'returned_at' => 'vráceno',
+    'kind_reading' => 'měřidlo', 'meter_no' => 'číslo měřidla', 'amount' => 'stav', 'read_date' => 'datum odečtu', 'res_date' => 'den', 'time_from' => 'od', 'time_to' => 'do', 'privacy_text' => 'text o ochraně údajů',
     // nastavení webu
     'site_url' => 'adresa webu', 'intro' => 'úvodní text', 'address' => 'adresa domu', 'ico' => 'IČ', 'account' => 'číslo účtu', 'emergency_note' => 'pravidla havarijního servisu',
     'forum_note' => 'úvodní text diskuze', 'webmaster_email' => 'e-mail správce webu', 'mail_from' => 'adresa odesílatele', 'mail_from_name' => 'jméno odesílatele',
     'mail_tracking' => 'sledování e-mailů', 'invite_enabled' => 'pozvánky vlastníků', 'invite_by_tenants' => 'pozvánky od nájemníků', 'invite_kind' => 'pozvaný je veden jako',
     'invite_max' => 'nejvíc účtů na jednotku', 'invite_days' => 'platnost pozvánky (dní)', 'quorum_percent' => 'hranice usnášeníschopnosti (%)'];
-const AUDIT_SKIP = ['id', 'password_hash', 'totp_secret', 'totp_last', 'invite_hash', 'invite_expires', 'last_login_at', 'created_at', 'updated_at', 'filename', 'size', 'external_url', 'edited_note', 'last_activity_at', 'author_id', 'user_id', 'invited_by'];
+const AUDIT_SKIP = ['reminded_for', 'event_id', 'created_by', 'resource_id', 'id', 'password_hash', 'totp_secret', 'totp_last', 'invite_hash', 'invite_expires', 'last_login_at', 'created_at', 'updated_at', 'filename', 'size', 'external_url', 'edited_note', 'last_activity_at', 'author_id', 'user_id', 'invited_by'];
 
 function audit_row(?string $table, int $id): ?array
 {
@@ -1067,7 +1106,13 @@ function audit_value(mixed $v, string $col = ''): string
 /** Zavolá se před obsluhou požadavku správce: zapamatuje si akci a stav záznamu před změnou. */
 function admin_audit_begin(string $pattern, array $args): void
 {
-    [$label, $table, $nameCol] = ADMIN_ACTIONS[$pattern] ?? ['Akce v administraci (' . ($GLOBALS['PATH'] ?? '') . ')', null, null];
+    $known = ADMIN_ACTIONS[$pattern] ?? null;
+    // Obecné evidence (revize, prostory, rezervace, klíče, odečty).
+    if (!$known && preg_match('~^/admin/([a-z]+)(/novy|/\(\\d\+\)(/smazat)?)$~', $pattern, $m) && isset(crud_defs()[$m[1]])) {
+        $def = crud_defs()[$m[1]];
+        $known = [($m[2] === '/novy' ? 'Nový záznam' : (isset($m[3]) ? 'Smazání záznamu' : 'Úprava záznamu')) . ' – ' . $def['title'], $def['table'], $def['name']];
+    }
+    [$label, $table, $nameCol] = $known ?? ['Akce v administraci (' . ($GLOBALS['PATH'] ?? '') . ')', null, null];
     $id = isset($args[0]) && is_int($args[0]) ? $args[0] : 0;
     $GLOBALS['ADMIN_AUDIT'] = ['label' => $label, 'table' => $table, 'id' => $id, 'nameCol' => $nameCol, 'before' => audit_row($table, $id)];
 }

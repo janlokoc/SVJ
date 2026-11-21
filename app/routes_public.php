@@ -8,7 +8,7 @@ $route('GET', '/', function () {
         'posts' => all("SELECT * FROM posts WHERE $v AND published_at <= date('now','localtime') ORDER BY pinned DESC, published_at DESC, id DESC LIMIT 4"),
         'event' => one("SELECT * FROM events WHERE event_date >= date('now','localtime') ORDER BY event_date LIMIT 1"),
         'emergency' => all("SELECT * FROM contacts WHERE grp = 'havarie' ORDER BY sort, id"),
-        'counts' => array_column(all("SELECT category, COUNT(*) c FROM documents WHERE $v GROUP BY category"), 'c', 'category'),
+        'counts' => array_column(all('SELECT category, COUNT(*) c FROM documents WHERE ' . doc_scope_sql() . ' GROUP BY category'), 'c', 'category'),
     ]);
 });
 
@@ -35,7 +35,7 @@ $route('GET', '/dokumenty', function () {
         $cat = '';
     }
     $search = trim((string) ($_GET['q'] ?? ''));
-    $where = [vis_sql()];
+    $where = [doc_scope_sql()];
     $params = [];
     if ($cat) {
         $where[] = 'category = ?';
@@ -51,14 +51,17 @@ $route('GET', '/dokumenty', function () {
     foreach (all($sql, $params) as $d) {
         $groups[$d['category']][] = $d;
     }
-    $hidden = user() ? 0 : (int) val("SELECT COUNT(*) FROM documents WHERE visibility = 'residents'");
+    $hidden = user() ? 0 : (int) val("SELECT COUNT(*) FROM documents WHERE visibility = 'residents' AND unit_id IS NULL");
     render('documents', ['title' => 'Dokumenty', 'groups' => $groups, 'cat' => $cat, 'search' => $search, 'hidden' => $hidden]);
 });
 
 $route('GET', '/soubor/(\d+)', function (int $id) {
     $d = one('SELECT * FROM documents WHERE id = ?', [$id]) ?? not_found();
-    if ($d['visibility'] === 'residents') {
+    if ($d['visibility'] === 'residents' || $d['unit_id']) {
         require_login();
+    }
+    if (!can_open_document($d)) {
+        not_found();   // dokument jiné jednotky
     }
     if (!$d['filename']) {
         if ($d['external_url'] && str_starts_with($d['external_url'], 'https://')) {

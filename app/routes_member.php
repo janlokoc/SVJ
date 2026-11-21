@@ -247,11 +247,13 @@ $route('GET', '/terminy/(\d+)', function (int $id) {
     $u = require_login();
     $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
     $mine = $ev['rsvp'] && $u['kind'] === 'owner'
-        ? all('SELECT un.*, r.status, ru.name responder FROM units un JOIN user_units uu ON uu.unit_id = un.id
+        ? all('SELECT un.*, r.status, r.proxy_name, ru.name responder FROM units un JOIN user_units uu ON uu.unit_id = un.id
             LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ? LEFT JOIN users ru ON ru.id = r.user_id
             WHERE uu.user_id = ? ORDER BY un.entrance, un.number', [$id, $u['id']])
         : [];
     render('event', ['title' => $ev['title'], 'ev' => $ev, 'mine' => $mine, 'att' => $ev['rsvp'] ? attendance($id) : null,
+        'evDocs' => all('SELECT d.* FROM documents d JOIN event_documents ed ON ed.document_id = d.id WHERE ed.event_id = ? AND ' . doc_scope_sql('d') . ' ORDER BY d.title', [$id]),
+        'evPolls' => all('SELECT * FROM polls WHERE event_id = ? ORDER BY id', [$id]),
         'open' => $ev['event_date'] >= date('Y-m-d')]);
 });
 
@@ -265,8 +267,9 @@ $route('POST', '/terminy/(\d+)/ucast', function (int $id) {
     } elseif ($u['kind'] !== 'owner' || !in_array($unitId, user_unit_ids((int) $u['id']), true) || !isset(RSVP[$status])) {
         flash('Účast může potvrdit jen vlastník za svou jednotku.', 'error');
     } else {
-        q("INSERT INTO event_rsvp (event_id, unit_id, user_id, status) VALUES (?,?,?,?)
-            ON CONFLICT(event_id, unit_id) DO UPDATE SET user_id = excluded.user_id, status = excluded.status, updated_at = datetime('now','localtime')", [$id, $unitId, $u['id'], $status]);
+        $proxy = $status === 'proxy' ? mb_substr(post('proxy_name'), 0, 190) : '';
+        q("INSERT INTO event_rsvp (event_id, unit_id, user_id, status, proxy_name) VALUES (?,?,?,?,?)
+            ON CONFLICT(event_id, unit_id) DO UPDATE SET user_id = excluded.user_id, status = excluded.status, proxy_name = excluded.proxy_name, updated_at = datetime('now','localtime')", [$id, $unitId, $u['id'], $status, $proxy]);
         flash('Děkujeme, účast je zaznamenaná. Do dne konání ji můžete změnit.');
     }
     redirect('/terminy/' . $id);

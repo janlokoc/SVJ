@@ -4,6 +4,7 @@
   <?php if (user()['totp_enabled'] == 0): ?><div class="flash flash-info">Váš účet správce chrání jen heslo. <a href="<?= url('/muj-ucet#overeni') ?>">Zapněte si dvoufázové ověření</a> – trvá to dvě minuty.</div>
   <?php elseif ($adminsWithout2fa): ?><div class="flash flash-info">Správců bez dvoufázového ověření: <?= $adminsWithout2fa ?>. Požádejte je, ať si ho zapnou ve svém účtu.</div><?php endif ?>
   <?php if ($failed24 >= 20): ?><div class="flash flash-error">Za posledních 24 hodin bylo <?= $failed24 ?> neúspěšných pokusů o přihlášení. Podívejte se do <a href="<?= url('/admin/zaznamy?jen-problemy') ?>">Záznamů</a>.</div><?php endif ?>
+  <?php if ($maintenanceDue): ?><div class="flash flash-<?= maintenance_state($maintenanceDue[0]['next_date']) === 'overdue' ? 'error' : 'info' ?>">Blíží se termín revize: <?= e(implode('; ', array_map(fn($m) => $m['title'] . ' (' . cz_date($m['next_date']) . (maintenance_state($m['next_date']) === 'overdue' ? ', po termínu' : '') . ')', $maintenanceDue))) ?>. <a href="<?= url('/admin/revize') ?>">Otevřít revize</a></div><?php endif ?>
   <div class="stat-grid">
     <a class="stat" href="<?= url('/admin/aktuality') ?>"><span class="stat-num"><?= $stats['posts'] ?></span><span>aktualit</span></a>
     <a class="stat" href="<?= url('/admin/dokumenty') ?>"><span class="stat-num"><?= $stats['documents'] ?></span><span>dokumentů</span></a>
@@ -15,6 +16,7 @@
     <a class="btn btn-ghost" href="<?= url('/admin/zpravy/nova') ?>">+ Zpráva e-mailem</a>
     <a class="btn btn-ghost" href="<?= url('/admin/dokumenty/novy') ?>">+ Nahrát dokument</a>
     <a class="btn btn-ghost" href="<?= url('/admin/uzivatele/novy') ?>">+ Přidat obyvatele</a>
+    <a class="btn btn-ghost" href="<?= url('/admin/zaloha') ?>">Stáhnout zálohu</a>
   </div>
   <?php if ($external): ?>
   <div class="card card-soft">

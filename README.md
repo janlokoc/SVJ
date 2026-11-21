@@ -46,6 +46,19 @@ a administrace pro výbor.
   změnilo); záznamy nejdou z webu upravit ani smazat a web hlídá, že do
   nich nikdo nezasáhl přímo v databázi
 
+**Další funkce**
+- Hlasování mimo zasedání (per rollam) i zápis hlasování ze shromáždění,
+  počítané podle spoluvlastnických podílů
+- Dokumenty jen pro jednu jednotku (vyúčtování, předpis záloh) včetně
+  hromadného nahrání podle názvu souboru
+- Shromáždění: program, podklady, plná moc a prezenční listina k tisku
+- Odečty měřidel, rezervace společných prostor, evidence klíčů a čipů
+- Revize a údržba s připomenutím správcům e-mailem
+- Adresy vlastníků a export seznamu členů do tabulky
+- Stránka Ochrana osobních údajů s upravitelným textem
+- Záloha všech dat jedním tlačítkem; obnova příkazem
+  `php tools/restore-backup.php zaloha.zip` (i mezi SQLite a MySQL)
+
 ## Požadavky
 
 PHP 8.1+ s rozšířením `mbstring` a jednou z databází:

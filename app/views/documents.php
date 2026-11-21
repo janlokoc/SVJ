@@ -12,7 +12,14 @@
       <a href="<?= url('/dokumenty?kategorie=' . $k) ?>"<?= $cat === $k ? ' aria-current="true"' : '' ?>><?= $label ?></a>
     <?php endforeach ?>
   </nav>
-  <?php if (!$groups): ?><p class="empty">Žádný dokument neodpovídá výběru.</p><?php endif ?>
+  <?php $own = []; foreach ($groups as $k => $list) { foreach ($list as $i => $d) { if ($d['unit_id'] && in_array((int) $d['unit_id'], my_unit_ids(), true)) { $own[] = $d; unset($groups[$k][$i]); } } } $groups = array_filter($groups); ?>
+  <?php if ($own): ?>
+    <section class="doc-group own-docs">
+      <h2>Dokumenty Vaší jednotky <span class="count"><?= count($own) ?></span></h2>
+      <?php $docs = $own; require __DIR__ . '/_doclist.php'; ?>
+    </section>
+  <?php endif ?>
+  <?php if (!$groups && !$own): ?><p class="empty">Žádný dokument neodpovídá výběru.</p><?php endif ?>
   <?php foreach (CATEGORIES as $k => $label): if (empty($groups[$k])) continue; ?>
     <section class="doc-group">
       <h2><?= $label ?> <span class="count"><?= count($groups[$k]) ?></span></h2>

@@ -26,6 +26,7 @@ CREATE TABLE units (
   floor VARCHAR(10) NOT NULL DEFAULT '',
   share VARCHAR(50) NOT NULL DEFAULT '',
   owner_note VARCHAR(255) NOT NULL DEFAULT '',
+  owner_contact VARCHAR(2000) NOT NULL DEFAULT '',
   note VARCHAR(255) NOT NULL DEFAULT '',
   UNIQUE KEY uq_unit (entrance, number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -57,9 +58,11 @@ CREATE TABLE documents (
   original_name VARCHAR(255) NOT NULL DEFAULT '',
   size INT NOT NULL DEFAULT 0,
   external_url VARCHAR(1000) NULL,
+  unit_id INT NULL,
   doc_date DATE NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY idx_docs_cat (category, doc_date)
+  KEY idx_docs_cat (category, doc_date),
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE post_documents (
   post_id INT NOT NULL,
@@ -85,7 +88,8 @@ CREATE TABLE events (
   event_time VARCHAR(5) NOT NULL DEFAULT '',
   place VARCHAR(255) NOT NULL DEFAULT '',
   note VARCHAR(500) NOT NULL DEFAULT '',
-  rsvp TINYINT NOT NULL DEFAULT 0
+  rsvp TINYINT NOT NULL DEFAULT 0,
+  program VARCHAR(4000) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE forum_posts (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -130,6 +134,7 @@ CREATE TABLE event_rsvp (
   unit_id INT NOT NULL,
   user_id INT NULL,
   status VARCHAR(10) NOT NULL,
+  proxy_name VARCHAR(191) NOT NULL DEFAULT '',
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (event_id, unit_id),
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
@@ -171,4 +176,95 @@ CREATE TABLE audit_log (
   chain CHAR(64) NULL,
   KEY idx_audit_at (at),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE event_documents (
+  event_id INT NOT NULL,
+  document_id INT NOT NULL,
+  PRIMARY KEY (event_id, document_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE polls (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NULL,
+  opens_at DATE NOT NULL,
+  closes_at DATE NOT NULL,
+  threshold INT NOT NULL DEFAULT 50,
+  online TINYINT NOT NULL DEFAULT 1,
+  published TINYINT NOT NULL DEFAULT 0,
+  event_id INT NULL,
+  created_by INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE poll_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  poll_id INT NOT NULL,
+  question VARCHAR(1000) NOT NULL,
+  sort INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE poll_votes (
+  item_id INT NOT NULL,
+  unit_id INT NOT NULL,
+  user_id INT NULL,
+  choice VARCHAR(10) NOT NULL,
+  voted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (item_id, unit_id),
+  FOREIGN KEY (item_id) REFERENCES poll_items(id) ON DELETE CASCADE,
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE maintenance (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  contractor VARCHAR(255) NOT NULL DEFAULT '',
+  last_date DATE NULL,
+  interval_months INT NOT NULL DEFAULT 0,
+  next_date DATE NULL,
+  note VARCHAR(500) NOT NULL DEFAULT '',
+  reminded_for DATE NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE readings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  unit_id INT NOT NULL,
+  kind VARCHAR(20) NOT NULL,
+  meter_no VARCHAR(50) NOT NULL DEFAULT '',
+  amount DOUBLE NOT NULL,
+  read_date DATE NOT NULL,
+  user_id INT NULL,
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE resources (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(191) NOT NULL,
+  note VARCHAR(500) NOT NULL DEFAULT '',
+  active TINYINT NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE reservations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  resource_id INT NOT NULL,
+  user_id INT NULL,
+  res_date DATE NOT NULL,
+  time_from VARCHAR(5) NOT NULL,
+  time_to VARCHAR(5) NOT NULL,
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE keys_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  label VARCHAR(191) NOT NULL,
+  unit_id INT NULL,
+  holder VARCHAR(191) NOT NULL DEFAULT '',
+  issued_at DATE NULL,
+  returned_at DATE NULL,
+  note VARCHAR(500) NOT NULL DEFAULT '',
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

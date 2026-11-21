@@ -11,6 +11,18 @@
     </div>
     <label>Místo <input type="text" name="place" value="<?= e($ev['place']) ?>" placeholder="Např. sušárna vchodu B"></label>
     <label>Poznámka <input type="text" name="note" value="<?= e($ev['note']) ?>"></label>
+    <label>Program <textarea name="program" rows="6" placeholder="- Zahájení a volba předsedajícího&#10;- Schválení účetní závěrky&#10;- …"><?= e($ev['program']) ?></textarea></label>
+    <p class="hint">Každý bod na samostatný řádek začínající pomlčkou a mezerou. Zobrazí se přihlášeným obyvatelům na stránce termínu.</p>
+    <fieldset>
+      <legend>Podklady</legend>
+      <label>Vyberte z dokumentů <input type="search" data-filter="#event-docs" placeholder="Hledat dokument…"></label>
+      <div class="pick" id="event-docs">
+        <?php foreach ($documents as $d): ?>
+          <label class="check"><input type="checkbox" name="documents[]" value="<?= $d['id'] ?>"<?= in_array((int) $d['id'], $evDocs, true) ? ' checked' : '' ?>>
+            <span><?= e($d['title']) ?> <small><?= CATEGORIES[$d['category']] ?? '' ?><?= $d['doc_date'] ? ' · ' . cz_date($d['doc_date']) : '' ?></small></span></label>
+        <?php endforeach ?>
+      </div>
+    </fieldset>
     <label class="check"><input type="checkbox" name="rsvp"<?= $ev['rsvp'] ? ' checked' : '' ?>> <span>Sbírat účast vlastníků <small>Vlastníci na webu potvrdí, zda přijdou, a výbor uvidí odhad usnášeníschopnosti.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit termín</button><a class="btn btn-ghost" href="<?= url('/admin/terminy') ?>">Zrušit</a></div>
   </form>

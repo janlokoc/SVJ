@@ -17,7 +17,7 @@
     <h2>Náhled</h2>
     <p>Nalezeno jednotek: <strong><?= count($parsed['units']) ?></strong>. Součet podílů: <strong><?= percent_cz($parsed['total'] * 100) ?></strong><?= abs($parsed['total'] - 1) < 0.0001 ? ' – sedí.' : ' – nevychází na 100 %, zkontrolujte, zda je text úplný.' ?></p>
     <?php foreach ($parsed['warnings'] as $w): ?><div class="flash flash-info"><?= e($w) ?></div><?php endforeach ?>
-    <p class="hint">Uložením se u existujících jednotek přepíše vlastník dle evidence a podíl. Patro, poznámka a přiřazené účty zůstanou. Adresy vlastníků se neukládají.</p>
+    <p class="hint">Uložením se u existujících jednotek přepíše vlastník dle evidence a podíl. Patro, poznámka a přiřazené účty zůstanou. Adresy vlastníků z katastru se uloží k jednotce pro seznam členů a doručování; vidí je jen správci webu.</p>
     <table class="table">
       <thead><tr><th>Jednotka</th><th>V katastru</th><th>Vlastník dle evidence</th><th>Podíl</th><th>Stav</th></tr></thead>
       <tbody>
