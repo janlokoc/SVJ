@@ -1,0 +1,171 @@
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(191) NOT NULL UNIQUE,
+  name VARCHAR(191) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'resident',
+  phone VARCHAR(50) NOT NULL DEFAULT '',
+  kind VARCHAR(20) NOT NULL DEFAULT 'owner',
+  email_notify TINYINT NOT NULL DEFAULT 1,
+  active TINYINT NOT NULL DEFAULT 1,
+  must_change_password TINYINT NOT NULL DEFAULT 0,
+  invited_by INT NULL,
+  invite_hash VARCHAR(64) NULL,
+  invite_expires DATETIME NULL,
+  totp_secret VARCHAR(64) NULL,
+  totp_enabled TINYINT NOT NULL DEFAULT 0,
+  totp_last BIGINT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_at DATETIME NULL,
+  FOREIGN KEY (invited_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE units (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  entrance VARCHAR(5) NOT NULL DEFAULT '',
+  number VARCHAR(10) NOT NULL,
+  floor VARCHAR(10) NOT NULL DEFAULT '',
+  share VARCHAR(50) NOT NULL DEFAULT '',
+  owner_note VARCHAR(255) NOT NULL DEFAULT '',
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  UNIQUE KEY uq_unit (entrance, number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE user_units (
+  user_id INT NOT NULL,
+  unit_id INT NOT NULL,
+  PRIMARY KEY (user_id, unit_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  visibility VARCHAR(20) NOT NULL DEFAULT 'public',
+  pinned TINYINT NOT NULL DEFAULT 0,
+  published_at DATE NOT NULL,
+  author_id INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_posts_pub (published_at),
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  category VARCHAR(30) NOT NULL,
+  visibility VARCHAR(20) NOT NULL DEFAULT 'public',
+  filename VARCHAR(80) NULL,
+  original_name VARCHAR(255) NOT NULL DEFAULT '',
+  size INT NOT NULL DEFAULT 0,
+  external_url VARCHAR(1000) NULL,
+  doc_date DATE NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_docs_cat (category, doc_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE post_documents (
+  post_id INT NOT NULL,
+  document_id INT NOT NULL,
+  PRIMARY KEY (post_id, document_id),
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE contacts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  grp VARCHAR(20) NOT NULL,
+  role VARCHAR(191) NOT NULL DEFAULT '',
+  name VARCHAR(191) NOT NULL,
+  phone VARCHAR(50) NOT NULL DEFAULT '',
+  email VARCHAR(191) NOT NULL DEFAULT '',
+  note VARCHAR(255) NOT NULL DEFAULT '',
+  sort INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  event_date DATE NOT NULL,
+  event_time VARCHAR(5) NOT NULL DEFAULT '',
+  place VARCHAR(255) NOT NULL DEFAULT '',
+  note VARCHAR(500) NOT NULL DEFAULT '',
+  rsvp TINYINT NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE forum_posts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  parent_id INT NULL,
+  title VARCHAR(191) NOT NULL DEFAULT '',
+  body TEXT NOT NULL,
+  author_id INT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_forum_parent (parent_id),
+  FOREIGN KEY (parent_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE tickets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NULL,
+  subject VARCHAR(191) NOT NULL,
+  location VARCHAR(191) NOT NULL DEFAULT '',
+  body TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'new',
+  admin_note VARCHAR(4000) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE mailings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  subject VARCHAR(191) NOT NULL,
+  body TEXT NOT NULL,
+  audience VARCHAR(20) NOT NULL,
+  sent_count INT NOT NULL DEFAULT 0,
+  failed_count INT NOT NULL DEFAULT 0,
+  failed_list TEXT NULL,
+  tracked TINYINT NOT NULL DEFAULT 0,
+  sent_by INT NULL,
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE event_rsvp (
+  event_id INT NOT NULL,
+  unit_id INT NOT NULL,
+  user_id INT NULL,
+  status VARCHAR(10) NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (event_id, unit_id),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE mailing_recipients (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  mailing_id INT NOT NULL,
+  user_id INT NULL,
+  name VARCHAR(191) NOT NULL,
+  email VARCHAR(191) NOT NULL,
+  token VARCHAR(32) NOT NULL UNIQUE,
+  sent_ok TINYINT NOT NULL DEFAULT 0,
+  opened_at DATETIME NULL,
+  clicked_at DATETIME NULL,
+  FOREIGN KEY (mailing_id) REFERENCES mailings(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE settings (
+  `key` VARCHAR(64) NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE login_attempts (
+  ip VARCHAR(45) NOT NULL,
+  at INT NOT NULL,
+  email VARCHAR(191) NOT NULL DEFAULT '',
+  KEY idx_attempts_ip (ip),
+  KEY idx_attempts_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE audit_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  user_id INT NULL,
+  ip VARCHAR(45) NOT NULL DEFAULT '',
+  action VARCHAR(40) NOT NULL,
+  detail VARCHAR(400) NOT NULL DEFAULT '',
+  KEY idx_audit_at (at),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

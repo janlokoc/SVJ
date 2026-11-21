@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+date_default_timezone_set('Europe/Prague');
+
 const STORAGE_DIR = __DIR__ . '/../storage';
 const UPLOAD_DIR = STORAGE_DIR . '/uploads';
 const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'odt', 'ods', 'jpg', 'jpeg', 'png'];
@@ -25,11 +27,74 @@ const ENTRANCES = ['', 'A', 'B', 'C', 'D'];
 
 // ---------- Databáze ----------
 
+/** Nastavení ze souboru storage/config.php (viz config.example.php); bez něj se použije SQLite. */
+function app_config(): array
+{
+    static $config = null;
+    if ($config === null) {
+        $file = STORAGE_DIR . '/config.php';
+        $config = is_file($file) ? (array) require $file : [];
+    }
+    return $config;
+}
+function db_driver(): string
+{
+    return (app_config()['db']['driver'] ?? 'sqlite') === 'mysql' ? 'mysql' : 'sqlite';
+}
+/** Dotazy jsou psané pro SQLite; pro MySQL/MariaDB se těch několik odlišných zápisů převede zde. */
+function sql(string $sql): string
+{
+    if (db_driver() !== 'mysql') {
+        return $sql;
+    }
+    $sql = strtr($sql, [
+        "datetime('now','localtime','-1 day')" => '(NOW() - INTERVAL 1 DAY)',
+        "datetime('now','localtime','-1 year')" => '(NOW() - INTERVAL 1 YEAR)',
+        "datetime('now','localtime')" => 'NOW()',
+        "date('now','localtime')" => 'CURDATE()',
+        'INSERT OR IGNORE' => 'INSERT IGNORE',
+    ]);
+    $sql = preg_replace('/ON CONFLICT\s*\([^)]*\)\s*DO UPDATE SET/', 'ON DUPLICATE KEY UPDATE', $sql);
+    return preg_replace('/\bexcluded\.(\w+)/', 'VALUES($1)', $sql);
+}
+function db_mysql(): PDO
+{
+    $c = app_config()['db'];
+    $pdo = new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $c['host'] ?? 'localhost', (int) ($c['port'] ?? 3306), $c['name'] ?? ''),
+        (string) ($c['user'] ?? ''), (string) ($c['password'] ?? ''), [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
+    $pdo->exec("SET time_zone = '" . date('P') . "'");
+    if (!$pdo->query("SHOW TABLES LIKE 'users'")->fetch()) {
+        foreach (array_filter(array_map('trim', explode(";\n", file_get_contents(__DIR__ . '/schema.mysql.sql')))) as $statement) {
+            $pdo->exec($statement);
+        }
+        require __DIR__ . '/seed.php';
+        $pdo->beginTransaction();
+        seed_database($pdo);
+        $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '4')");
+        $pdo->commit();
+    }
+    return $pdo;
+}
 function db(): PDO
 {
     static $pdo = null;
     if ($pdo) {
         return $pdo;
+    }
+    if (db_driver() === 'mysql') {
+        if (!is_dir(UPLOAD_DIR)) {
+            mkdir(UPLOAD_DIR, 0775, true);
+        }
+        foreach (['', '/uploads'] as $dir) {
+            if (!is_file(STORAGE_DIR . $dir . '/index.html')) {
+                @file_put_contents(STORAGE_DIR . $dir . '/index.html', '');
+            }
+        }
+        return $pdo = db_mysql();
     }
     if (!is_dir(UPLOAD_DIR)) {
         mkdir(UPLOAD_DIR, 0775, true);
@@ -149,7 +214,7 @@ SQL);
 
 function q(string $sql, array $params = []): PDOStatement
 {
-    $st = db()->prepare($sql);
+    $st = db()->prepare(sql($sql));
     $st->execute($params);
     return $st;
 }
@@ -170,7 +235,7 @@ function setting(string $key, string $default = ''): string
 {
     static $cache = null;
     if ($cache === null || $key === '__reset') {
-        $cache = array_column(all('SELECT key, value FROM settings'), 'value', 'key');
+        $cache = array_column(all('SELECT `key`, value FROM settings'), 'value', 'key');
     }
     return $cache[$key] ?? $default;
 }
@@ -534,7 +599,8 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
 /** SQL výraz: označení jednotek uživatele (např. „48C/12“), pro tabulku s aliasem $alias. */
 function units_sql(string $alias): string
 {
-    return "(SELECT group_concat('48' || un.entrance || '/' || un.number, ', ') FROM user_units uu JOIN units un ON un.id = uu.unit_id WHERE uu.user_id = $alias.id)";
+    $names = db_driver() === 'mysql' ? "GROUP_CONCAT(CONCAT('48', un.entrance, '/', un.number) ORDER BY un.entrance, un.number SEPARATOR ', ')" : "group_concat('48' || un.entrance || '/' || un.number, ', ')";
+    return "(SELECT $names FROM user_units uu JOIN units un ON un.id = uu.unit_id WHERE uu.user_id = $alias.id)";
 }
 function unit_name(array $unit): string
 {
@@ -546,7 +612,7 @@ function user_unit_ids(int $userId): array
 }
 function all_units(): array
 {
-    return all('SELECT * FROM units ORDER BY entrance, CAST(number AS INTEGER), number');
+    return all('SELECT * FROM units ORDER BY entrance, number + 0, number');
 }
 
 // ---------- Nastavení, účast na shromáždění, sledování e-mailů ----------
@@ -579,7 +645,7 @@ function attendance(int $eventId): array
 {
     $rows = all('SELECT un.*, r.status, r.updated_at, u.name responder FROM units un
         LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ?
-        LEFT JOIN users u ON u.id = r.user_id ORDER BY un.entrance, CAST(un.number AS INTEGER), un.number', [$eventId]);
+        LEFT JOIN users u ON u.id = r.user_id ORDER BY un.entrance, un.number + 0, un.number', [$eventId]);
     $byShare = (bool) $rows;
     foreach ($rows as $r) {
         $byShare = $byShare && share_value($r['share']) > 0;

@@ -395,7 +395,7 @@ $route('POST', '/admin/nastaveni', function () {
         redirect('/admin/nastaveni');
     }
     foreach (SETTING_KEYS as $k) {
-        q('INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [$k, in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k)]);
+        q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', [$k, in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k)]);
     }
     audit('settings_saved');
     flash('Nastavení bylo uloženo.');
@@ -552,7 +552,8 @@ $route('GET', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)/smazat', function (int $id) {
     require_admin();
-    audit('unit_deleted', (string) val("SELECT '48' || entrance || '/' || number FROM units WHERE id = ?", [$id]));
+    $unit = one('SELECT * FROM units WHERE id = ?', [$id]);
+    audit('unit_deleted', $unit ? unit_name($unit) : '');
     q('DELETE FROM units WHERE id = ?', [$id]);
     flash('Jednotka byla smazána. Účty jejích obyvatel zůstaly zachované.');
     redirect('/admin/jednotky');

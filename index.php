@@ -73,6 +73,29 @@ if (!empty($_SESSION['uid']) || !empty($_SESSION['pending'])) {
     header('Cache-Control: no-store, private');
 }
 
+// Srozumitelná hláška, když na hostingu chybí databáze nebo k ní nesedí přihlašovací údaje.
+$dbProblem = null;
+if (db_driver() === 'sqlite' && !extension_loaded('pdo_sqlite')) {
+    $dbProblem = 'Na tomto hostingu není dostupná databáze SQLite. Založte si u poskytovatele databázi MySQL a její údaje zapište do souboru storage/config.php podle vzoru config.example.php.';
+} elseif (db_driver() === 'mysql' && !extension_loaded('pdo_mysql')) {
+    $dbProblem = 'Na tomto hostingu chybí rozšíření PHP pro MySQL (pdo_mysql). Požádejte poskytovatele hostingu o jeho zapnutí.';
+} else {
+    try {
+        db();
+    } catch (PDOException $e) {
+        error_log('SVJ web, databáze: ' . $e->getMessage());
+        $dbProblem = db_driver() === 'mysql'
+            ? 'Nepodařilo se připojit k databázi MySQL. Zkontrolujte adresu serveru, název databáze, uživatele a heslo v souboru storage/config.php.'
+            : 'Nepodařilo se otevřít databázi. Zkontrolujte, že PHP smí zapisovat do složky storage.';
+    }
+}
+if ($dbProblem !== null) {
+    http_response_code(503);
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Web není nastaven</title><p>' . htmlspecialchars($dbProblem) . '</p></html>';
+    exit;
+}
+
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
 if ($METHOD === 'POST') {
     check_csrf();

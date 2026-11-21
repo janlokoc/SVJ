@@ -102,8 +102,8 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
         return;
     }
     $token = bin2hex(random_bytes(32));
-    q("INSERT INTO users (name, email, role, kind, password_hash, invited_by, invite_hash, invite_expires) VALUES (?,?,'resident',?,?,?,?,datetime('now','localtime',?))",
-        [$name, $email, $u['kind'] === 'tenant' ? 'tenant' : (setting('invite_kind', 'owner') === 'tenant' ? 'tenant' : 'owner'), NO_PASSWORD, $u['id'], hash('sha256', $token), '+' . $days . ' days']);
+    q("INSERT INTO users (name, email, role, kind, password_hash, invited_by, invite_hash, invite_expires) VALUES (?,?,'resident',?,?,?,?,?)",
+        [$name, $email, $u['kind'] === 'tenant' ? 'tenant' : (setting('invite_kind', 'owner') === 'tenant' ? 'tenant' : 'owner'), NO_PASSWORD, $u['id'], hash('sha256', $token), date('Y-m-d H:i:s', time() + $days * 86400)]);
     $newId = (int) db()->lastInsertId();
     foreach ($chosen as $unitId) {
         q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$newId, $unitId]);

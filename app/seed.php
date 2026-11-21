@@ -48,7 +48,7 @@ function seed_database(PDO $pdo): void
         'forum_note' => 'Diskuze není oficiální komunikační kanál s výborem – členové výboru nejsou povinni reagovat. Uveďte prosím, kterého vchodu či bytu se příspěvek týká. Vulgární a urážlivé příspěvky správce maže.',
         'webmaster_email' => '',
     ];
-    $st = $pdo->prepare('INSERT INTO settings (key, value) VALUES (?,?)');
+    $st = $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)');
     foreach ($settings as $k => $v) {
         $st->execute([$k, $v]);
     }

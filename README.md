@@ -40,9 +40,15 @@ a administrace pro výbor.
 
 ## Požadavky
 
-PHP 8.1+ s rozšířeními `pdo_sqlite` a `mbstring`. Žádná databáze ani další
-knihovny nejsou potřeba – data jsou v souboru `storage/svj.sqlite`,
-nahrané soubory v `storage/uploads/`. Stačí běžný český webhosting s PHP.
+PHP 8.1+ s rozšířením `mbstring` a jednou z databází:
+
+- **MySQL / MariaDB** (`pdo_mysql`) – má ji každý hosting; doporučeno pro
+  ostrý provoz. Údaje k databázi se zapisují do `storage/config.php`.
+- **SQLite** (`pdo_sqlite`) – nic se nenastavuje, data jsou v souboru ve
+  složce `storage/`. Hodí se pro vyzkoušení na vlastním počítači.
+
+Nahrané soubory jsou vždy ve `storage/uploads/`. Žádné další knihovny
+nejsou potřeba.
 
 ## Spuštění na vlastním počítači
 
@@ -55,6 +61,9 @@ a otevřít <http://localhost:8000>.
 ## Nasazení na hosting
 
 1. Nahrajte obsah repozitáře do kořenové složky webu (FTP).
+   U poskytovatele založte databázi MySQL, soubor `config.example.php`
+   zkopírujte jako `storage/config.php` a doplňte do něj její údaje.
+   Tabulky a výchozí obsah se při prvním otevření webu vytvoří samy.
 2. Složka `storage/` musí být zapisovatelná pro PHP.
 3. Hosting musí mít Apache s `mod_rewrite` (soubor `.htaccess` je součástí).
    Na Nginx nasměrujte všechny požadavky mimo `/assets/` na `index.php`
@@ -103,8 +112,9 @@ a `post_max_size` v nastavení PHP).
 
 ## Zálohování
 
-Zálohujte složku `storage/` (databáze i nahrané soubory). Nic jiného se
-za provozu nemění.
+Zálohujte složku `storage/` (nahrané soubory, nastavení a u SQLite i
+databáze). Při použití MySQL zálohujte navíc databázi – export nabízí
+administrace hostingu (phpMyAdmin).
 
 ## Struktura
 
@@ -113,7 +123,9 @@ index.php            vstupní bod a směrování
 app/lib.php          databáze, přihlášení, pomocné funkce
 app/routes_*.php     veřejná část, část pro obyvatele, administrace
 app/views/           šablony stránek
-app/schema.sql       struktura databáze
+app/schema.sql       struktura databáze (SQLite)
+app/schema.mysql.sql struktura databáze (MySQL / MariaDB)
+config.example.php   vzor nastavení databáze MySQL
 app/seed.json|php    výchozí obsah převzatý ze starého webu
 assets/              vzhled (CSS, JS, písma Fraunces a Figtree – licence OFL)
 storage/             data (není v gitu)

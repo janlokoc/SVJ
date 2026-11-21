@@ -42,8 +42,8 @@ $route('GET', '/dokumenty', function () {
         $params[] = $cat;
     }
     if ($search !== '') {
-        $where[] = "(title LIKE ? ESCAPE '\\' OR original_name LIKE ? ESCAPE '\\')";
-        $like = '%' . addcslashes($search, '%_\\') . '%';
+        $where[] = "(title LIKE ? ESCAPE '!' OR original_name LIKE ? ESCAPE '!')";
+        $like = '%' . strtr($search, ['!' => '!!', '%' => '!%', '_' => '!_']) . '%';
         array_push($params, $like, $like);
     }
     $sql = 'SELECT * FROM documents WHERE ' . implode(' AND ', $where) . ' ORDER BY doc_date IS NULL, doc_date DESC, title';
@@ -183,7 +183,7 @@ $setup = function () {
         if (!$data['errors']) {
             q("INSERT INTO users (email, name, password_hash, role) VALUES (?,?,?,'admin')", [$data['email'], $data['name'], password_hash($pass, PASSWORD_DEFAULT)]);
             $new = one('SELECT * FROM users WHERE id = ?', [(int) db()->lastInsertId()]);
-            q("INSERT INTO settings (key, value) VALUES ('site_url', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", [rtrim(absolute_url('/'), '/')]);
+            q("INSERT INTO settings (`key`, value) VALUES ('site_url', ?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value", [rtrim(absolute_url('/'), '/')]);
             array_map('unlink', glob(STORAGE_DIR . '/instalacni-kod-*.txt'));
             login_user($new);
             audit('setup', $new['email']);
