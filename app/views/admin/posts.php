@@ -9,7 +9,7 @@
         <td data-label="Zveřejněno"><?= cz_date($p['published_at']) ?><?= $p['published_at'] > date('Y-m-d') ? ' <span class="tag">naplánováno</span>' : '' ?></td>
         <td data-label="Viditelnost"><?= VISIBILITY[$p['visibility']] ?></td>
         <td data-label="Přílohy"><?= (int) $p['docs'] ?></td>
-        <td class="t-actions"><a href="<?= url('/aktuality/' . $p['id']) ?>">Zobrazit</a>
+        <td class="t-actions"><a href="<?= url('/aktuality/' . $p['id']) ?>">Zobrazit</a> <a href="<?= url('/admin/zpravy/nova?aktualita=' . $p['id']) ?>">Poslat e-mailem</a>
           <form method="post" action="<?= url('/admin/aktuality/' . $p['id'] . '/smazat') ?>" data-confirm="Opravdu smazat aktualitu „<?= e($p['title']) ?>“?"><?= csrf_field() ?><button class="link-danger" type="submit">Smazat</button></form></td>
       </tr>
     <?php endforeach ?>

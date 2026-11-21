@@ -342,3 +342,7 @@ legend { font-weight: 700; padding-inline: .4rem; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media print { .site-header, .admin-nav, .site-footer, .btn, .chips, .doc-filter { display: none !important; } body { background: #fff; } }
+
+/* Zprávy e-mailem */
+.table summary { cursor: pointer; }
+.mail-body { margin-top: .75rem; padding: .9rem 1rem; background: var(--bg); border-radius: 10px; }

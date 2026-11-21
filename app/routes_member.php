@@ -33,7 +33,7 @@ $route('POST', '/muj-ucet', function () {
             $errors[] = 'Vyplňte jméno.';
         }
         if (!$errors) {
-            q('UPDATE users SET name = ?, phone = ? WHERE id = ?', [$name, post('phone'), $u['id']]);
+            q('UPDATE users SET name = ?, phone = ?, email_notify = ? WHERE id = ?', [$name, post('phone'), isset($_POST['email_notify']) ? 1 : 0, $u['id']]);
             flash('Údaje byly uloženy.');
             redirect('/muj-ucet');
         }

@@ -17,6 +17,8 @@ const CATEGORIES = [
 const CONTACT_GROUPS = ['vybor' => 'Výbor SVJ', 'sprava' => 'Správa a účetnictví', 'havarie' => 'Havarijní servis'];
 const TICKET_STATUS = ['new' => 'Nová', 'in_progress' => 'Řeší se', 'done' => 'Vyřešeno'];
 const VISIBILITY = ['public' => 'Veřejné', 'residents' => 'Jen pro přihlášené'];
+const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
+const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
 const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu'];
 const ENTRANCES = ['', 'A', 'B', 'C', 'D'];
 
@@ -44,6 +46,17 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
+        $pdo->exec('PRAGMA user_version = 1');
+        $pdo->commit();
+    } elseif ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 1) {
+        // Doplnění starší databáze o rozesílání e-mailů.
+        $pdo->beginTransaction();
+        $pdo->exec("ALTER TABLE users ADD COLUMN kind TEXT NOT NULL DEFAULT 'owner' CHECK (kind IN ('owner','tenant'))");
+        $pdo->exec('ALTER TABLE users ADD COLUMN email_notify INTEGER NOT NULL DEFAULT 1');
+        $pdo->exec("CREATE TABLE mailings (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, body TEXT NOT NULL,
+            audience TEXT NOT NULL CHECK (audience IN ('owners','all')), sent_count INTEGER NOT NULL DEFAULT 0, failed_count INTEGER NOT NULL DEFAULT 0,
+            failed_list TEXT NOT NULL DEFAULT '', sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL, sent_at TEXT NOT NULL DEFAULT (datetime('now','localtime')))");
+        $pdo->exec('PRAGMA user_version = 1');
         $pdo->commit();
     }
     return $pdo;
@@ -369,4 +382,45 @@ function author_label(?array $row): string
         return 'Bývalý uživatel';
     }
     return $row['author_name'] . (!empty($row['author_entrance']) ? ', vchod ' . $row['author_entrance'] : '');
+}
+
+// ---------- E-maily ----------
+
+/** Úplná adresa webu včetně domény – pro odkazy v e-mailech. */
+function absolute_url(string $path = '/'): string
+{
+    $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    $host = preg_replace('/[^A-Za-z0-9.:\-\[\]]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    return ($https ? 'https' : 'http') . '://' . $host . url($path);
+}
+function mail_recipients(string $audience): array
+{
+    return all('SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1' . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
+}
+/** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
+function send_mail(string $to, string $subject, string $text): bool
+{
+    $from = setting('mail_from');
+    if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+    $name = trim(preg_replace('/[\r\n"<>]+/', ' ', setting('mail_from_name', 'SVJ Tábor 48')));
+    $subject = trim(preg_replace('/\s+/u', ' ', $subject));
+    $headers = [
+        'From' => mb_encode_mimeheader($name, 'UTF-8', 'B', "\r\n") . ' <' . $from . '>',
+        'Reply-To' => $from,
+        'MIME-Version' => '1.0',
+        'Content-Type' => 'text/plain; charset=UTF-8',
+        'Content-Transfer-Encoding' => 'base64',
+        'Auto-Submitted' => 'auto-generated',
+    ];
+    $body = chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $text)), 76, "\r\n");
+    $params = preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$/', $from) ? '-f' . $from : '';
+    return @mail($to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $body, $headers, $params);
+}
+/** Text zprávy doplněný o patičku s informací, proč ji adresát dostal a jak odběr vypnout. */
+function mail_text(string $body): string
+{
+    return trim(str_replace('**', '', $body)) . "\n\n-- \nZprávu posílá výbor SVJ Tábor 48 a–d obyvatelům domu s účtem na webu " . absolute_url('/')
+        . "\nZasílání zpráv si můžete vypnout ve svém účtu: " . absolute_url('/muj-ucet') . "\n";
 }

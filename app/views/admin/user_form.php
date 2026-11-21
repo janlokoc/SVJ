@@ -19,6 +19,13 @@
       </label>
       <label>Číslo bytu <input type="text" name="unit" value="<?= e($u['unit']) ?>" maxlength="10"></label>
     </div>
+    <div class="form-row">
+      <label>Vztah k domu
+        <select name="kind"><?php foreach (KINDS as $k => $label): ?><option value="<?= $k ?>"<?= $u['kind'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
+      </label>
+    </div>
+    <p class="hint">Zprávy určené vlastníkům (například pozvánky na shromáždění) se nájemníkům neposílají.</p>
+    <label class="check"><input type="checkbox" name="email_notify"<?= $u['email_notify'] ? ' checked' : '' ?>> Posílat důležité zprávy výboru e-mailem</label>
     <label class="check"><input type="checkbox" name="active"<?= $u['active'] ? ' checked' : '' ?>> Účet je aktivní (může se přihlásit)</label>
     <?php if (!$u['id']): ?><p class="hint">Po uložení se zobrazí dočasné heslo, které uživateli předáte.</p><?php endif ?>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit uživatele</button><a class="btn btn-ghost" href="<?= url('/admin/uzivatele') ?>">Zrušit</a></div>

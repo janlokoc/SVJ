@@ -7,6 +7,8 @@ CREATE TABLE users (
   entrance TEXT NOT NULL DEFAULT '',
   unit TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'owner' CHECK (kind IN ('owner','tenant')),
+  email_notify INTEGER NOT NULL DEFAULT 1,
   active INTEGER NOT NULL DEFAULT 1,
   must_change_password INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -76,6 +78,17 @@ CREATE TABLE tickets (
   admin_note TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE TABLE mailings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  audience TEXT NOT NULL CHECK (audience IN ('owners','all')),
+  sent_count INTEGER NOT NULL DEFAULT 0,
+  failed_count INTEGER NOT NULL DEFAULT 0,
+  failed_list TEXT NOT NULL DEFAULT '',
+  sent_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  sent_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE login_attempts (ip TEXT NOT NULL, at INTEGER NOT NULL);

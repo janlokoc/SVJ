@@ -276,7 +276,7 @@ $route('GET', '/admin/uzivatele', function () {
 $userForm = function (int $id = 0) {
     $me = require_admin();
     $u = $id ? (one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'entrance' => '', 'unit' => '', 'phone' => '', 'active' => 1];
+        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'kind' => 'owner', 'email_notify' => 1, 'entrance' => '', 'unit' => '', 'phone' => '', 'active' => 1];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $u = array_merge($u, [
@@ -284,6 +284,7 @@ $userForm = function (int $id = 0) {
             'role' => isset(ROLES[post('role')]) ? post('role') : 'resident',
             'entrance' => in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '',
             'unit' => post('unit'), 'phone' => post('phone'), 'active' => isset($_POST['active']) ? 1 : 0,
+            'kind' => isset(KINDS[post('kind')]) ? post('kind') : 'owner', 'email_notify' => isset($_POST['email_notify']) ? 1 : 0,
         ]);
         if ($u['name'] === '') {
             $errors[] = 'Vyplňte jméno.';
@@ -297,13 +298,13 @@ $userForm = function (int $id = 0) {
             $errors[] = 'Sami sobě nemůžete odebrat práva správce ani účet vypnout.';
         }
         if (!$errors) {
-            $args = [$u['name'], $u['email'], $u['role'], $u['entrance'], $u['unit'], $u['phone'], $u['active']];
+            $args = [$u['name'], $u['email'], $u['role'], $u['entrance'], $u['unit'], $u['phone'], $u['active'], $u['kind'], $u['email_notify']];
             if ($id) {
-                q('UPDATE users SET name = ?, email = ?, role = ?, entrance = ?, unit = ?, phone = ?, active = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE users SET name = ?, email = ?, role = ?, entrance = ?, unit = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
                 flash('Uživatel byl uložen.');
             } else {
                 $pass = random_password();
-                q('INSERT INTO users (name, email, role, entrance, unit, phone, active, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
+                q('INSERT INTO users (name, email, role, entrance, unit, phone, active, kind, email_notify, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
                 $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];
             }
             redirect('/admin/uzivatele');
@@ -359,16 +360,85 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 
 // ---------- Nastavení ----------
 
-const SETTING_KEYS = ['intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email'];
+const SETTING_KEYS = ['intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name'];
 $route('GET', '/admin/nastaveni', function () {
     require_admin();
     render('admin/settings', ['title' => 'Nastavení webu']);
 });
 $route('POST', '/admin/nastaveni', function () {
     require_admin();
+    if (post('mail_from') !== '' && !filter_var(post('mail_from'), FILTER_VALIDATE_EMAIL)) {
+        flash('Adresa odesílatele e-mailů nemá správný tvar. Nastavení nebylo uloženo.', 'error');
+        redirect('/admin/nastaveni');
+    }
     foreach (SETTING_KEYS as $k) {
         q('INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [$k, post($k)]);
     }
     flash('Nastavení bylo uloženo.');
     redirect('/admin/nastaveni');
 });
+
+// ---------- Zprávy e-mailem ----------
+
+$route('GET', '/admin/zpravy', function () {
+    require_admin();
+    render('admin/mailings', ['title' => 'Zprávy e-mailem', 'mailings' => all('SELECT m.*, u.name author_name FROM mailings m LEFT JOIN users u ON u.id = m.sent_by ORDER BY m.id DESC')]);
+});
+
+$mailForm = function () {
+    $admin = require_admin();
+    $m = ['subject' => '', 'body' => '', 'audience' => 'owners'];
+    $errors = [];
+    $notice = null;
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $m = ['subject' => post('subject'), 'body' => post('body'), 'audience' => isset(AUDIENCES[post('audience')]) ? post('audience') : 'owners'];
+        if ($m['subject'] === '' || mb_strlen($m['subject']) > 150) {
+            $errors[] = 'Vyplňte předmět (nejvýše 150 znaků).';
+        }
+        if ($m['body'] === '') {
+            $errors[] = 'Vyplňte text zprávy.';
+        }
+        if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Nejdřív v Nastavení vyplňte adresu odesílatele e-mailů.';
+        }
+        $text = mail_text($m['body']);
+        if (!$errors && post('action') === 'test') {
+            send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text)
+                ? $notice = 'Zkušební zpráva byla předána k odeslání na ' . $admin['email'] . '. Zkontrolujte, že dorazila a nespadla do spamu.'
+                : $errors[] = 'Zkušební zprávu se nepodařilo odeslat. Server nejspíš nemá povolené odesílání e-mailů – ověřte to u poskytovatele hostingu.';
+        } elseif (!$errors) {
+            // Jednorázový klíč brání dvojímu odeslání při opakovaném kliknutí nebo obnovení stránky.
+            if (!hash_equals((string) ($_SESSION['mail_nonce'] ?? ''), post('nonce')) || post('nonce') === '') {
+                $errors[] = 'Formulář už byl jednou odeslán. Zkontrolujte historii zpráv, než ho odešlete znovu.';
+            } else {
+                unset($_SESSION['mail_nonce']);
+                @set_time_limit(600);
+                $sent = 0;
+                $failed = [];
+                foreach (mail_recipients($m['audience']) as $r) {
+                    send_mail($r['email'], $m['subject'], $text) ? $sent++ : $failed[] = $r['name'] . ' <' . $r['email'] . '>';
+                }
+                q('INSERT INTO mailings (subject, body, audience, sent_count, failed_count, failed_list, sent_by) VALUES (?,?,?,?,?,?,?)',
+                    [$m['subject'], $m['body'], $m['audience'], $sent, count($failed), implode("\n", $failed), $admin['id']]);
+                flash("Zpráva byla předána k odeslání $sent příjemcům." . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed ? 'info' : 'ok');
+                redirect('/admin/zpravy');
+            }
+        }
+        if ($errors) {
+            http_response_code(422);
+        }
+    } elseif (($pid = (int) ($_GET['aktualita'] ?? 0)) && ($p = one('SELECT * FROM posts WHERE id = ?', [$pid]))) {
+        $docs = post_documents($pid);
+        $m['subject'] = $p['title'];
+        $m['body'] = trim($p['body']) . "\n\nCelé oznámení" . ($docs ? ' včetně příloh' : '') . ' najdete na webu: ' . absolute_url('/aktuality/' . $pid)
+            . ($p['visibility'] === 'residents' || array_filter($docs, fn($d) => $d['visibility'] === 'residents') ? "\n(Pro zobrazení se přihlaste.)" : '');
+    }
+    render('admin/mailing_form', [
+        'title' => 'Nová zpráva e-mailem', 'm' => $m, 'errors' => $errors, 'notice' => $notice,
+        'nonce' => $_SESSION['mail_nonce'] = bin2hex(random_bytes(16)),
+        'counts' => ['owners' => count(mail_recipients('owners')), 'all' => count(mail_recipients('all'))],
+        'optedOut' => (int) val('SELECT COUNT(*) FROM users WHERE active = 1 AND email_notify = 0'),
+    ]);
+};
+$route('GET', '/admin/zpravy/nova', $mailForm);
+$route('POST', '/admin/zpravy/nova', $mailForm);

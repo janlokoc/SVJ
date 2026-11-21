@@ -12,7 +12,12 @@ if (toggle && nav) {
 
 // Potvrzení před nevratnými akcemi (mazání, reset hesla)
 document.addEventListener('submit', (e) => {
-  const msg = e.target.dataset.confirm;
+  let msg = e.target.dataset.confirm;
+  // Hromadný e-mail: před odesláním zopakuj, komu zpráva půjde
+  if (e.submitter && e.submitter.hasAttribute('data-confirm-audience')) {
+    const sel = e.target.querySelector('[name=audience]');
+    msg = 'Opravdu odeslat zprávu? Příjemci: ' + sel.options[sel.selectedIndex].text + '. Odeslání nelze vzít zpět.';
+  }
   if (msg && !window.confirm(msg)) e.preventDefault();
 });
 

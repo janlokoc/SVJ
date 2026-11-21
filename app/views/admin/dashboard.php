@@ -8,6 +8,7 @@
   </div>
   <div class="actions">
     <a class="btn" href="<?= url('/admin/aktuality/nova') ?>">+ Nová aktualita</a>
+    <a class="btn btn-ghost" href="<?= url('/admin/zpravy/nova') ?>">+ Zpráva e-mailem</a>
     <a class="btn btn-ghost" href="<?= url('/admin/dokumenty/novy') ?>">+ Nahrát dokument</a>
     <a class="btn btn-ghost" href="<?= url('/admin/uzivatele/novy') ?>">+ Přidat obyvatele</a>
   </div>

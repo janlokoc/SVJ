@@ -6,7 +6,7 @@ if ($u) {
     $nav += ['/diskuze' => 'Diskuze', '/zavady' => 'Závady'];
 }
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
-$adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/terminy' => 'Termíny',
+$adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
     '/admin/kontakty' => 'Kontakty', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady', '/admin/nastaveni' => 'Nastavení'];
 $inAdmin = str_starts_with($path, '/admin') && is_admin();
 $flash = flash();

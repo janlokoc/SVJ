@@ -22,6 +22,8 @@ a administrace pro výbor.
 - Aktuality: psaní, plánování na datum, připnutí, viditelnost, přílohy
 - Dokumenty: nahrávání, kategorie, viditelnost
 - Termíny, kontakty, texty webu
+- Zprávy e-mailem: rozeslání důležitého oznámení vlastníkům nebo všem
+  obyvatelům s účtem, zkušební zpráva, historie odeslaných zpráv
 - Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu
 - Závady: stav a odpověď obyvateli, moderace diskuze
 
@@ -52,6 +54,14 @@ a otevřít <http://localhost:8000>.
 6. V Administraci → Přehled stáhněte tlačítkem soubory ze starého webu
    (nebo `php tools/import-webnode.php`). Do té doby dokumenty odkazují na
    Webnode a po jeho zrušení by přestaly fungovat.
+
+### Rozesílání e-mailů
+
+E-maily se odesílají funkcí PHP `mail()`, kterou musí hosting povolovat.
+V Administraci → Nastavení vyplňte adresu odesílatele na doméně webu
+(např. `vybor@vase-domena.cz`) a u domény nastavte záznamy SPF a DKIM podle
+návodu poskytovatele – jinak zprávy často končí ve spamu. Před prvním
+rozesláním pošlete zkušební zprávu sami sobě.
 
 Limit velikosti nahrávaného souboru určuje hosting (`upload_max_filesize`
 a `post_max_size` v nastavení PHP).
