@@ -85,14 +85,31 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
   </div>
 </header>
 
-<?php if ($inAdmin): ?>
+<?php if ($inAdmin):
+    // Položky administrace seskupené podle toho, k čemu slouží; skupina bez dostupných položek se nezobrazí.
+    $adminGroups = ['Obsah webu' => ['/admin/aktuality', '/admin/dokumenty', '/admin/kontakty', '/admin/terminy'],
+        'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/zavady'],
+        'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/klice'],
+        'Provoz domu' => ['/admin/odecty', '/admin/revize', '/admin/rezervace', '/admin/prostory'],
+        'Správa webu' => ['/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/hlaseni']];
+    $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : str_starts_with($path, $href);
+    $adminCurrent = 'Přehled';
+    foreach ($adminNav as $href => $label) {
+        if ($href !== '/admin' && $adminActive($href)) {
+            $adminCurrent = $label;
+        }
+    }
+?>
+<div class="admin-shell">
 <nav class="admin-nav" aria-label="Administrace">
-  <div class="wrap"><span class="admin-label">Administrace</span>
-    <ul>
-      <?php foreach ($adminNav as $href => $label): ?>
-        <li><a href="<?= url($href) ?>"<?= ($href === '/admin' ? $path === '/admin' : str_starts_with($path, $href)) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li>
-      <?php endforeach ?>
-    </ul>
+  <button class="admin-toggle" type="button" aria-expanded="false" aria-controls="admin-menu"><?= icon('menu') ?><span>Administrace · <?= e($adminCurrent) ?></span></button>
+  <div class="admin-menu" id="admin-menu">
+    <?php if (isset($adminNav['/admin'])): ?><a class="admin-home" href="<?= url('/admin') ?>"<?= $adminActive('/admin') ? ' aria-current="page"' : '' ?>>Přehled</a><?php endif ?>
+    <?php foreach ($adminGroups as $group => $hrefs): $items = array_intersect_key($adminNav, array_flip($hrefs)); if (!$items) { continue; } ?>
+      <div class="admin-group"><span class="admin-label"><?= e($group) ?></span>
+        <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?></a></li><?php endforeach ?></ul>
+      </div>
+    <?php endforeach ?>
   </div>
 </nav>
 <?php endif ?>
@@ -104,6 +121,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
   <?php endif ?>
   <?= $content ?>
 </main>
+<?php if ($inAdmin): ?></div><?php endif ?>
 
 <footer class="site-footer">
   <div class="wrap footer-grid">

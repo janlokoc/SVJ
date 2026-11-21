@@ -130,3 +130,10 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
     form.querySelector('textarea').focus();
   }));
 })();
+
+// Menu administrace na úzké obrazovce
+(() => {
+  const btn = document.querySelector('.admin-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => { btn.setAttribute('aria-expanded', String(btn.parentElement.classList.toggle('is-open'))); });
+})();
