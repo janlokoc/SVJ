@@ -15,5 +15,5 @@ if (!$u) {
 $pass = random_password();
 q('UPDATE users SET password_hash = ?, must_change_password = 1, active = 1, totp_secret = NULL, totp_enabled = 0, totp_last = 0, invite_hash = NULL WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
 q('DELETE FROM login_attempts');
-q('INSERT INTO audit_log (user_id, ip, action, detail) VALUES (?,?,?,?)', [$u['id'], 'cli', 'password_reset', $u['email'] . ' (z příkazové řádky)']);
+audit('password_reset', $u['email'] . ' (z příkazové řádky serveru)', (int) $u['id']);
 echo "Dočasné heslo pro {$u['email']}: $pass\nPo přihlášení si ho hned změňte.\n";

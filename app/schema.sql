@@ -86,7 +86,8 @@ CREATE TABLE forum_posts (
   body TEXT NOT NULL,
   author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-  last_activity_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  last_activity_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  edited_note TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE tickets (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -138,7 +139,9 @@ CREATE TABLE audit_log (
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   ip TEXT NOT NULL DEFAULT '',
   action TEXT NOT NULL,
-  detail TEXT NOT NULL DEFAULT ''
+  detail TEXT NOT NULL DEFAULT '',
+  user_name TEXT NOT NULL DEFAULT '',
+  chain TEXT
 );
 CREATE INDEX idx_posts_pub ON posts(published_at);
 CREATE INDEX idx_docs_cat ON documents(category, doc_date);

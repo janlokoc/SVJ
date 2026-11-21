@@ -3,13 +3,14 @@ $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
 if ($u) {
-    $nav += ['/diskuze' => 'Diskuze', '/zavady' => 'Závady'];
+    $nav += ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky'];
 }
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
-    '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady', '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy'];
+    '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky', '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy'];
 $inAdmin = str_starts_with($path, '/admin') && is_admin();
-$flash = flash();
+// Hláška se zobrazí jen na skutečné stránce; požadavek prohlížeče na neexistující soubor (např. /favicon.ico) ji nesmí spotřebovat.
+$flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
 <!doctype html>
 <html lang="cs">
@@ -40,7 +41,7 @@ $flash = flash();
       <div class="nav-user">
         <?php if ($u): ?>
           <?php if ($u['role'] === 'admin'): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>
-          <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span><?= e($u['name']) ?></span></a>
+          <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($u['name']) ?></strong><small><?= e(user_badge($u)) ?></small></span></a>
           <form method="post" action="<?= url('/odhlaseni') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Odhlásit</button></form>
         <?php else: ?>
           <a class="btn btn-small" href="<?= url('/prihlaseni') ?>"><?= icon('lock') ?> Přihlásit se</a>

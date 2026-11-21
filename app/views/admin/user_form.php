@@ -12,7 +12,7 @@
       </label>
       <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>"></label>
     </div>
-    <p class="hint">Obyvatel domu (vlastník i nájemník) vidí neveřejné dokumenty, diskuzi a hlášení závad. Správce webu navíc upravuje obsah a účty.</p>
+    <p class="hint">Obyvatel domu (vlastník i nájemník) vidí neveřejné dokumenty, diskuzi a hlášení závad a požadavků. Správce webu navíc upravuje obsah a účty.</p>
     <fieldset>
       <legend>Jednotky</legend>
       <?php if (!$units): ?><p class="hint">Zatím nejsou založené žádné jednotky. Přidáte je v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a>.</p><?php else: ?>

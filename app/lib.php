@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 date_default_timezone_set('Europe/Prague');
+putenv('TZ=Europe/Prague');   // stejný čas používá i SQLite pro výchozí hodnoty sloupců, ať je server v jakémkoli pásmu
 
 const STORAGE_DIR = __DIR__ . '/../storage';
 const UPLOAD_DIR = STORAGE_DIR . '/uploads';
@@ -44,16 +45,17 @@ function db_driver(): string
 /** Dotazy jsou psané pro SQLite; pro MySQL/MariaDB se těch několik odlišných zápisů převede zde. */
 function sql(string $sql): string
 {
+    // Aktuální čas dosazuje PHP (český čas), aby výsledek nezávisel na časovém pásmu serveru ani databáze.
+    $sql = strtr($sql, [
+        "datetime('now','localtime','-1 day')" => "'" . date('Y-m-d H:i:s', time() - 86400) . "'",
+        "datetime('now','localtime','-1 year')" => "'" . date('Y-m-d H:i:s', strtotime('-1 year')) . "'",
+        "datetime('now','localtime')" => "'" . date('Y-m-d H:i:s') . "'",
+        "date('now','localtime')" => "'" . date('Y-m-d') . "'",
+    ]);
     if (db_driver() !== 'mysql') {
         return $sql;
     }
-    $sql = strtr($sql, [
-        "datetime('now','localtime','-1 day')" => '(NOW() - INTERVAL 1 DAY)',
-        "datetime('now','localtime','-1 year')" => '(NOW() - INTERVAL 1 YEAR)',
-        "datetime('now','localtime')" => 'NOW()',
-        "date('now','localtime')" => 'CURDATE()',
-        'INSERT OR IGNORE' => 'INSERT IGNORE',
-    ]);
+    $sql = str_replace('INSERT OR IGNORE', 'INSERT IGNORE', $sql);
     $sql = preg_replace('/ON CONFLICT\s*\([^)]*\)\s*DO UPDATE SET/', 'ON DUPLICATE KEY UPDATE', $sql);
     return preg_replace('/\bexcluded\.(\w+)/', 'VALUES($1)', $sql);
 }
@@ -74,8 +76,12 @@ function db_mysql(): PDO
         require __DIR__ . '/seed.php';
         $pdo->beginTransaction();
         seed_database($pdo);
-        $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '4')");
+        $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '5')");
         $pdo->commit();
+    } elseif ((int) $pdo->query("SELECT value FROM settings WHERE `key` = 'schema_version'")->fetchColumn() < 5) {
+        $pdo->exec("ALTER TABLE audit_log ADD COLUMN user_name VARCHAR(191) NOT NULL DEFAULT '', ADD COLUMN chain CHAR(64) NULL, MODIFY action VARCHAR(100) NOT NULL, MODIFY detail VARCHAR(1000) NOT NULL DEFAULT ''");
+        $pdo->exec("ALTER TABLE forum_posts ADD COLUMN edited_note VARCHAR(191) NOT NULL DEFAULT ''");
+        $pdo->exec("UPDATE settings SET value = '5' WHERE `key` = 'schema_version'");
     }
     return $pdo;
 }
@@ -122,7 +128,7 @@ function db(): PDO
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
         require __DIR__ . '/seed.php';
         seed_database($pdo);
-        $pdo->exec('PRAGMA user_version = 4');
+        $pdo->exec('PRAGMA user_version = 5');
         $pdo->commit();
         return $pdo;
     }
@@ -209,6 +215,15 @@ SQL);
         $pdo->exec('PRAGMA user_version = 4');
         $pdo->commit();
     }
+    if ($version < 5) {
+        // Doplnění starší databáze: jméno a otisk u záznamů činnosti, poznámka o úpravě příspěvku správcem.
+        $pdo->beginTransaction();
+        $pdo->exec("ALTER TABLE audit_log ADD COLUMN user_name TEXT NOT NULL DEFAULT ''");
+        $pdo->exec('ALTER TABLE audit_log ADD COLUMN chain TEXT');
+        $pdo->exec("ALTER TABLE forum_posts ADD COLUMN edited_note TEXT NOT NULL DEFAULT ''");
+        $pdo->exec('PRAGMA user_version = 5');
+        $pdo->commit();
+    }
     return $pdo;
 }
 
@@ -257,6 +272,7 @@ function asset(string $path): string
 }
 function redirect(string $path): never
 {
+    admin_audit_flush();
     header('Location: ' . url($path), true, 303);
     exit;
 }
@@ -277,6 +293,9 @@ function render(string $view, array $data = []): void
 function flash(?string $msg = null, string $type = 'ok'): ?array
 {
     if ($msg !== null) {
+        if ($type === 'error') {
+            unset($GLOBALS['ADMIN_AUDIT']);   // akce se nepovedla, nezapisuje se jako provedená
+        }
         $_SESSION['flash'] = ['msg' => $msg, 'type' => $type];
         return null;
     }
@@ -705,11 +724,46 @@ function login_user(array $u): void
     session_regenerate_id(true);
     $_SESSION = ['uid' => (int) $u['id'], 'pv' => pw_fingerprint($u['password_hash']), 'start' => time(), 'seen' => time()];
 }
+/**
+ * Zapíše událost do záznamů. Záznamy se nikdy nemažou ani neupravují; každý nese otisk navazující na předchozí,
+ * takže dodatečný zásah přímo v databázi je poznat (viz audit_chain_check).
+ */
 function audit(string $action, string $detail = '', ?int $userId = null): void
 {
-    q('INSERT INTO audit_log (user_id, ip, action, detail) VALUES (?,?,?,?)', [$userId ?? ($_SESSION['uid'] ?? null), client_ip(), $action, mb_substr($detail, 0, 300)]);
-    if (random_int(1, 200) === 1) {
-        q("DELETE FROM audit_log WHERE at < datetime('now','localtime','-1 year')");
+    $GLOBALS['AUDITED'] = true;
+    $uid = $userId ?? ($_SESSION['uid'] ?? null);
+    $name = $uid ? (string) val('SELECT name FROM users WHERE id = ?', [$uid]) : '';
+    $detail = mb_substr($detail, 0, 1000);
+    $ip = PHP_SAPI === 'cli' ? 'příkazová řádka' : client_ip();
+    $pdo = db();
+    // Zápisy jdou po jednom, aby otisky navazovaly i při souběžných požadavcích: v MySQL hlídá pořadí zámek,
+    // v SQLite transakce, která začíná zápisem (další zapisující počká).
+    $mysql = db_driver() === 'mysql';
+    $own = !$pdo->inTransaction();
+    if ($mysql) {
+        $pdo->query("SELECT GET_LOCK('svj_audit', 5)");
+    }
+    if ($own) {
+        $pdo->beginTransaction();
+    }
+    try {
+        $at = date('Y-m-d H:i:s');
+        q('INSERT INTO audit_log (at, user_id, user_name, ip, action, detail) VALUES (?,?,?,?,?,?)', [$at, $uid, $name, $ip, $action, $detail]);
+        $id = (int) $pdo->lastInsertId();
+        $prev = (string) val('SELECT chain FROM audit_log WHERE id < ? AND chain IS NOT NULL ORDER BY id DESC LIMIT 1', [$id]);
+        q('UPDATE audit_log SET chain = ? WHERE id = ?', [hash('sha256', implode('|', [$prev, $at, $name, $ip, $action, $detail])), $id]);
+        if ($own) {
+            $pdo->commit();
+        }
+    } catch (Throwable $e) {
+        if ($own && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    } finally {
+        if ($mysql) {
+            $pdo->query("SELECT RELEASE_LOCK('svj_audit')");
+        }
     }
 }
 /** Ochrana proti hádání hesel: nejvýše 8 chyb z jedné adresy a 10 chyb na jeden účet za 15 minut. */
@@ -945,4 +999,161 @@ function send_account_invite(array $user): array
     $link = absolute_url('/pozvanka/' . $token);
     $text = "Dobrý den,\n\nvýbor SVJ Tábor 48 a–d Vám založil účet na webu společenství. Najdete tam oznámení výboru, dokumenty a můžete potvrdit účast na shromáždění.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPřihlašovat se budete tímto e-mailem. Pokud zprávu nečekáte, ignorujte ji prosím.\n";
     return [send_mail($user['email'], 'Váš účet na webu SVJ Tábor 48', $text), $link];
+}
+
+// ---------- Záznam činnosti správců ----------
+
+/** Akce v administraci: vzor adresy → [popis, tabulka, sloupec s názvem záznamu]. Co tu chybí, zapíše se s adresou. */
+const ADMIN_ACTIONS = [
+    '/admin/aktuality/nova' => ['Nová aktualita', null, null],
+    '/admin/aktuality/(\d+)' => ['Úprava aktuality', 'posts', 'title'],
+    '/admin/aktuality/(\d+)/smazat' => ['Smazání aktuality', 'posts', 'title'],
+    '/admin/dokumenty/novy' => ['Nový dokument', null, null],
+    '/admin/dokumenty/(\d+)' => ['Úprava dokumentu', 'documents', 'title'],
+    '/admin/dokumenty/(\d+)/smazat' => ['Smazání dokumentu', 'documents', 'title'],
+    '/admin/kontakty/novy' => ['Nový kontakt', null, null],
+    '/admin/kontakty/(\d+)' => ['Úprava kontaktu', 'contacts', 'name'],
+    '/admin/kontakty/(\d+)/smazat' => ['Smazání kontaktu', 'contacts', 'name'],
+    '/admin/terminy/novy' => ['Nový termín', null, null],
+    '/admin/terminy/(\d+)' => ['Úprava termínu', 'events', 'title'],
+    '/admin/terminy/(\d+)/smazat' => ['Smazání termínu', 'events', 'title'],
+    '/admin/terminy/(\d+)/ucast' => ['Zápis účasti na shromáždění', 'events', 'title'],
+    '/admin/uzivatele/novy' => ['Založení účtu', null, null],
+    '/admin/uzivatele/(\d+)' => ['Úprava účtu', 'users', 'email'],
+    '/admin/uzivatele/(\d+)/smazat' => ['Smazání účtu', 'users', 'email'],
+    '/admin/zavady/(\d+)' => ['Úprava závady / požadavku', 'tickets', 'subject'],
+    '/admin/zavady/(\d+)/smazat' => ['Smazání závady / požadavku', 'tickets', 'subject'],
+    '/admin/jednotky/nova' => ['Nová jednotka', null, null],
+    '/admin/jednotky/(\d+)' => ['Úprava jednotky', 'units', null],
+    '/admin/jednotky/(\d+)/smazat' => ['Smazání jednotky', 'units', null],
+    '/admin/jednotky/hromadne' => ['Hromadné založení jednotek', null, null],
+    '/admin/diskuze/(\d+)' => ['Úprava příspěvku v diskuzi', 'forum_posts', 'title'],
+    '/admin/nastaveni' => ['Změna nastavení', 'settings', null],
+    '/admin/import' => ['Stažení souborů ze starého webu', null, null],
+];
+const AUDIT_FIELDS = ['title' => 'nadpis', 'body' => 'text', 'visibility' => 'viditelnost', 'pinned' => 'připnuto', 'published_at' => 'datum zveřejnění',
+    'name' => 'jméno', 'phone' => 'telefon', 'role' => 'role', 'kind' => 'typ', 'active' => 'aktivní', 'email_notify' => 'zasílání e-mailů',
+    'share' => 'podíl', 'owner_note' => 'vlastník dle evidence', 'floor' => 'patro', 'entrance' => 'vchod', 'number' => 'číslo', 'note' => 'poznámka',
+    'status' => 'stav', 'admin_note' => 'odpověď výboru', 'subject' => 'předmět', 'location' => 'místo', 'category' => 'kategorie', 'doc_date' => 'datum',
+    'original_name' => 'soubor', 'event_date' => 'datum', 'event_time' => 'čas', 'place' => 'místo', 'rsvp' => 'sbírat účast', 'grp' => 'skupina', 'sort' => 'pořadí',
+    'must_change_password' => 'vynucená změna hesla', 'totp_enabled' => 'dvoufázové ověření', 'email' => 'e-mail',
+    // nastavení webu
+    'site_url' => 'adresa webu', 'intro' => 'úvodní text', 'address' => 'adresa domu', 'ico' => 'IČ', 'account' => 'číslo účtu', 'emergency_note' => 'pravidla havarijního servisu',
+    'forum_note' => 'úvodní text diskuze', 'webmaster_email' => 'e-mail správce webu', 'mail_from' => 'adresa odesílatele', 'mail_from_name' => 'jméno odesílatele',
+    'mail_tracking' => 'sledování e-mailů', 'invite_enabled' => 'pozvánky vlastníků', 'invite_by_tenants' => 'pozvánky od nájemníků', 'invite_kind' => 'pozvaný je veden jako',
+    'invite_max' => 'nejvíc účtů na jednotku', 'invite_days' => 'platnost pozvánky (dní)', 'quorum_percent' => 'hranice usnášeníschopnosti (%)'];
+const AUDIT_SKIP = ['id', 'password_hash', 'totp_secret', 'totp_last', 'invite_hash', 'invite_expires', 'last_login_at', 'created_at', 'updated_at', 'filename', 'size', 'external_url', 'edited_note', 'last_activity_at', 'author_id', 'user_id', 'invited_by'];
+
+function audit_row(?string $table, int $id): ?array
+{
+    if ($table === 'settings') {
+        return array_column(all('SELECT `key`, value FROM settings'), 'value', 'key');
+    }
+    return $table && $id ? one("SELECT * FROM $table WHERE id = ?", [$id]) : null;
+}
+function audit_value(mixed $v, string $col = ''): string
+{
+    $v = trim(preg_replace('/\s+/u', ' ', (string) $v));
+    $named = match ($col) {
+        'kind' => KINDS, 'role' => ROLES, 'status' => TICKET_STATUS, 'visibility' => VISIBILITY, 'category' => CATEGORIES, 'grp' => CONTACT_GROUPS, 'invite_kind' => KINDS,
+        'pinned', 'active', 'email_notify', 'rsvp', 'must_change_password', 'totp_enabled', 'mail_tracking', 'invite_enabled', 'invite_by_tenants' => ['0' => 'ne', '1' => 'ano'],
+        default => [],
+    };
+    if (isset($named[$v])) {
+        return mb_strtolower($named[$v]);
+    }
+    return $v === '' ? '(prázdné)' : '„' . (mb_strlen($v) > 40 ? mb_substr($v, 0, 40) . '…' : $v) . '“';
+}
+/** Zavolá se před obsluhou požadavku správce: zapamatuje si akci a stav záznamu před změnou. */
+function admin_audit_begin(string $pattern, array $args): void
+{
+    [$label, $table, $nameCol] = ADMIN_ACTIONS[$pattern] ?? ['Akce v administraci (' . ($GLOBALS['PATH'] ?? '') . ')', null, null];
+    $id = isset($args[0]) && is_int($args[0]) ? $args[0] : 0;
+    $GLOBALS['ADMIN_AUDIT'] = ['label' => $label, 'table' => $table, 'id' => $id, 'nameCol' => $nameCol, 'before' => audit_row($table, $id)];
+}
+/** Zavolá se po úspěšném dokončení akce (před přesměrováním): zapíše, co se změnilo. */
+function admin_audit_flush(): void
+{
+    $a = $GLOBALS['ADMIN_AUDIT'] ?? null;
+    unset($GLOBALS['ADMIN_AUDIT']);
+    if (!$a || !empty($GLOBALS['AUDITED'])) {
+        return;   // nic nečeká, nebo akce už zapsala vlastní podrobnější záznam
+    }
+    $before = $a['before'];
+    $after = audit_row($a['table'], $a['id']);
+    $row = $after ?? $before ?? [];
+    $name = match (true) {
+        $a['table'] === 'units' && $row => unit_name($row),
+        $a['table'] === 'settings' => '',
+        $a['nameCol'] && !empty($row[$a['nameCol']]) => (string) $row[$a['nameCol']],
+        $a['table'] === 'forum_posts' => 'příspěvek č. ' . $a['id'],
+        default => (string) ($_POST['title'] ?? $_POST['name'] ?? $_POST['subject'] ?? (isset($_POST['number']) ? '48' . ($_POST['entrance'] ?? '') . '/' . $_POST['number'] : '')),
+    };
+    $changes = [];
+    if ($before && $after) {
+        foreach ($after as $col => $new) {
+            $old = $before[$col] ?? '';
+            $same = fn($x) => trim(str_replace("\r\n", "\n", (string) $x));   // formulář vrací jiné konce řádků, to změna není
+            if ($same($old) === $same($new) || in_array($col, AUDIT_SKIP, true)) {
+                continue;
+            }
+            $field = AUDIT_FIELDS[$col] ?? $col;
+            $changes[] = mb_strlen((string) $old . (string) $new) > 160 ? "$field: text změněn" : $field . ': ' . audit_value($old, $col) . ' → ' . audit_value($new, $col);
+        }
+        foreach (array_diff_key($before, $after) as $col => $old) {
+            $changes[] = (AUDIT_FIELDS[$col] ?? $col) . ': odstraněno';
+        }
+    }
+    if ($a['label'] === 'Zápis účasti na shromáždění') {
+        $unit = one('SELECT * FROM units WHERE id = ?', [(int) ($_POST['unit_id'] ?? 0)]);
+        $changes[] = ($unit ? unit_name($unit) : 'jednotka') . ': ' . (RSVP[$_POST['status'] ?? ''] ?? 'bez odpovědi');
+    }
+    if ($a['table'] === 'users' && $before && $after) {
+        $units = (string) val('SELECT ' . units_sql('u') . ' FROM users u WHERE u.id = ?', [$a['id']]);
+        $changes[] = 'jednotky: ' . ($units !== '' ? $units : 'žádné');
+    }
+    audit($a['label'], ltrim($name . ($changes ? ' · ' . implode('; ', $changes) : ($before && $after ? ' · beze změny údajů' : '')), ' ·'));
+}
+/** Ověří, že do záznamů nikdo nezasáhl: každý záznam nese otisk navazující na předchozí. Vrací [v pořádku?, id prvního vadného, počet ověřených]. */
+function audit_chain_check(): array
+{
+    $prev = null;
+    $checked = 0;
+    $st = q('SELECT id, at, user_name, ip, action, detail, chain FROM audit_log ORDER BY id');
+    while ($r = $st->fetch()) {
+        if ($r['chain'] === null && $prev === null) {
+            continue;   // starší záznamy z doby před zavedením otisků
+        }
+        $expected = hash('sha256', implode('|', [$prev ?? '', $r['at'], $r['user_name'], $r['ip'], $r['action'], $r['detail']]));
+        if ($r['chain'] === null || !hash_equals($expected, $r['chain'])) {
+            // První záznam s otiskem může navazovat na starší záznam bez otisku.
+            if ($prev !== null || $r['chain'] === null) {
+                return [false, (int) $r['id'], $checked];
+            }
+        }
+        $prev = $r['chain'];
+        $checked++;
+    }
+    return [true, 0, $checked];
+}
+
+// ---------- Zapomenuté heslo ----------
+
+/** Pošle odkaz na nastavení nového hesla (platí hodinu). Účtu, který heslo ještě nemá, pošle znovu pozvánku. */
+function send_password_reset(array $user): bool
+{
+    if ($user['password_hash'] === NO_PASSWORD) {
+        return send_account_invite($user)[0];
+    }
+    $token = bin2hex(random_bytes(32));
+    q('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', time() + 3600), $user['id']]);
+    $text = "Dobrý den,\n\nna webu SVJ Tábor 48 a–d někdo požádal o nové heslo k Vašemu účtu. Nové heslo si nastavíte na této adrese (platí 1 hodinu):\n"
+        . absolute_url('/obnova-hesla/' . $token) . "\n\nPokud jste o to nežádali, zprávu ignorujte – heslo zůstává beze změny.\n";
+    return send_mail($user['email'], 'Nové heslo na webu SVJ Tábor 48', $text);
+}
+/** Krátké označení přihlášeného pod jeho jménem: vlastník/nájemník a jednotky. */
+function user_badge(array $u): string
+{
+    $units = (string) val('SELECT ' . units_sql('u') . ' FROM users u WHERE u.id = ?', [$u['id']]);
+    return mb_strtolower(KINDS[$u['kind']] ?? '') . ($units !== '' ? ' · ' . $units : '');
 }

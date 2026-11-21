@@ -9,6 +9,7 @@
       <label>Heslo <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn btn-big" type="submit">Přihlásit se</button>
     </form>
-    <p class="hint">Nemáte účet nebo jste zapomněli heslo? Přístup vám založí či obnoví výbor SVJ – viz <a href="<?= url('/kontakty') ?>">Kontakty</a>.</p>
+    <p class="hint"><a href="<?= url('/zapomenute-heslo') ?>">Zapomněli jste heslo?</a></p>
+    <p class="hint">Nemáte účet? Přístup Vám založí výbor SVJ – viz <a href="<?= url('/kontakty') ?>">Kontakty</a>.</p>
   </div>
 </div>

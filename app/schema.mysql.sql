@@ -95,6 +95,7 @@ CREATE TABLE forum_posts (
   author_id INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  edited_note VARCHAR(191) NOT NULL DEFAULT '',
   KEY idx_forum_parent (parent_id),
   FOREIGN KEY (parent_id) REFERENCES forum_posts(id) ON DELETE CASCADE,
   FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
@@ -164,8 +165,10 @@ CREATE TABLE audit_log (
   at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   user_id INT NULL,
   ip VARCHAR(45) NOT NULL DEFAULT '',
-  action VARCHAR(40) NOT NULL,
-  detail VARCHAR(400) NOT NULL DEFAULT '',
+  action VARCHAR(100) NOT NULL,
+  detail VARCHAR(1000) NOT NULL DEFAULT '',
+  user_name VARCHAR(191) NOT NULL DEFAULT '',
+  chain CHAR(64) NULL,
   KEY idx_audit_at (at),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci

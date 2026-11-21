@@ -15,8 +15,9 @@ a administrace pro výbor.
 **Po přihlášení (obyvatel domu – vlastník i nájemník)**
 - Neveřejné aktuality a dokumenty
 - Diskuze se sousedy
-- Hlášení závad výboru a sledování stavu řešení
-- Vlastní účet (kontakt, změna hesla)
+- Hlášení závad a požadavků výboru a sledování stavu řešení
+- Vlastní účet (kontakt, změna hesla); zapomenuté heslo si obnoví sám
+  odkazem z e-mailu
 - Vlastník může pozvat manžela, manželku nebo dalšího spoluvlastníka –
   pozvaný si přes odkaz z e-mailu nastaví heslo a účet se přiřadí k téže
   jednotce
@@ -39,7 +40,11 @@ a administrace pro výbor.
 - Jednotky: seznam jednotek s vlastníkem dle evidence, patrem a podílem,
   přiřazení účtů k jednotkám, hromadné založení jednotek, import
   vlastníků a podílů vložením textu z Nahlížení do katastru nemovitostí
-- Závady: stav a odpověď obyvateli, moderace diskuze
+- Závady a požadavky: stav, odpověď obyvateli a úprava textu; úprava
+  a mazání příspěvků v diskuzi
+- Záznamy: každá změna v administraci se zapíše (kdo, kdy, co a co se
+  změnilo); záznamy nejdou z webu upravit ani smazat a web hlídá, že do
+  nich nikdo nezasáhl přímo v databázi
 
 ## Požadavky
 

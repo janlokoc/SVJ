@@ -112,6 +112,12 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
     redirect('/muj-ucet');
 }
 
+// Ikonu webu žádají některé prohlížeče na pevné adrese.
+if ($PATH === '/favicon.ico') {
+    header('Location: ' . asset('favicon.svg'), true, 302);
+    exit;
+}
+
 $routes = [];
 $route = function (string $method, string $pattern, callable $handler) use (&$routes): void {
     $routes[] = [$method, $pattern, $handler];
@@ -122,7 +128,12 @@ require __DIR__ . '/app/routes_admin.php';
 
 foreach ($routes as [$m, $pattern, $handler]) {
     if ($m === $METHOD && preg_match('#^' . $pattern . '$#', $PATH, $mm)) {
-        $handler(...array_map(fn($v) => ctype_digit($v) ? (int) $v : $v, array_slice($mm, 1)));
+        $args = array_map(fn($v) => ctype_digit($v) ? (int) $v : $v, array_slice($mm, 1));
+        // Každá úspěšná změna provedená správcem v administraci se zapisuje do záznamů (kdo, co, co se změnilo).
+        if ($METHOD === 'POST' && str_starts_with($PATH, '/admin') && is_admin()) {
+            admin_audit_begin($pattern, $args);
+        }
+        $handler(...$args);
         exit;
     }
 }

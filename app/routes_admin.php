@@ -104,7 +104,6 @@ $route('GET', '/admin/aktuality/(\d+)', $postForm);
 $route('POST', '/admin/aktuality/(\d+)', $postForm);
 $route('POST', '/admin/aktuality/(\d+)/smazat', function (int $id) {
     require_admin();
-    audit('post_deleted', (string) val('SELECT title FROM posts WHERE id = ?', [$id]));
     q('DELETE FROM posts WHERE id = ?', [$id]);
     flash('Aktualita byla smazána. Přiložené dokumenty zůstaly v sekci Dokumenty.');
     redirect('/admin/aktuality');
@@ -176,7 +175,6 @@ $route('GET', '/admin/dokumenty/(\d+)', $docForm);
 $route('POST', '/admin/dokumenty/(\d+)', $docForm);
 $route('POST', '/admin/dokumenty/(\d+)/smazat', function (int $id) {
     require_admin();
-    audit('document_deleted', (string) val('SELECT title FROM documents WHERE id = ?', [$id]));
     delete_document($id);
     flash('Dokument byl smazán.');
     redirect('/admin/dokumenty');
@@ -307,7 +305,6 @@ $userForm = function (int $id = 0) {
             if ($id) {
                 q('UPDATE users SET name = ?, email = ?, role = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
                 $userId = $id;
-                audit('user_updated', $u['email'] . ' · ' . $u['role'] . ($u['active'] ? '' : ' · vypnutý'));
                 flash('Uživatel byl uložen.');
             } else {
                 $pass = random_password();
@@ -346,7 +343,6 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
     if ($id === (int) $me['id']) {
         flash('Vlastní účet smazat nelze.', 'error');
     } else {
-        audit('user_deleted', (string) val('SELECT email FROM users WHERE id = ?', [$id]));
         q('DELETE FROM users WHERE id = ?', [$id]);
         flash('Uživatel byl smazán.');
     }
@@ -357,15 +353,19 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/admin/zavady', function () {
     require_admin();
-    render('admin/tickets', ['title' => 'Hlášené závady', 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
+    render('admin/tickets', ['title' => 'Závady a požadavky', 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
         FROM tickets t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.status = 'done', t.id DESC")]);
 });
 $route('POST', '/admin/zavady/(\d+)', function (int $id) {
     require_admin();
-    one('SELECT id FROM tickets WHERE id = ?', [$id]) ?? not_found();
+    $t = one('SELECT * FROM tickets WHERE id = ?', [$id]) ?? not_found();
     $status = isset(TICKET_STATUS[post('status')]) ? post('status') : 'new';
-    q("UPDATE tickets SET status = ?, admin_note = ?, updated_at = datetime('now','localtime') WHERE id = ?", [$status, post('admin_note'), $id]);
-    flash('Závada byla aktualizována.');
+    // Správce může opravit i text hlášení; prázdná pole nechávají původní znění.
+    $subject = post('subject') !== '' ? mb_substr(post('subject'), 0, 150) : $t['subject'];
+    $body = post('body') !== '' ? mb_substr(post('body'), 0, 5000) : $t['body'];
+    q("UPDATE tickets SET status = ?, admin_note = ?, subject = ?, location = ?, body = ?, updated_at = datetime('now','localtime') WHERE id = ?",
+        [$status, post('admin_note'), $subject, isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'], $body, $id]);
+    flash('Uloženo.');
     redirect('/admin/zavady');
 });
 $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
@@ -397,7 +397,6 @@ $route('POST', '/admin/nastaveni', function () {
     foreach (SETTING_KEYS as $k) {
         q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', [$k, in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k)]);
     }
-    audit('settings_saved');
     flash('Nastavení bylo uloženo.');
     redirect('/admin/nastaveni');
 });
@@ -552,8 +551,6 @@ $route('GET', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)', $unitForm);
 $route('POST', '/admin/jednotky/(\d+)/smazat', function (int $id) {
     require_admin();
-    $unit = one('SELECT * FROM units WHERE id = ?', [$id]);
-    audit('unit_deleted', $unit ? unit_name($unit) : '');
     q('DELETE FROM units WHERE id = ?', [$id]);
     flash('Jednotka byla smazána. Účty jejích obyvatel zůstaly zachované.');
     redirect('/admin/jednotky');
@@ -607,16 +604,27 @@ const AUDIT_LABELS = [
     'login' => 'Přihlášení', 'login_failed' => 'Neúspěšné přihlášení', 'login_2fa_failed' => 'Chybný ověřovací kód', 'logout' => 'Odhlášení',
     'setup' => 'Vytvoření prvního správce', 'setup_code_failed' => 'Chybný instalační kód', 'password_changed' => 'Změna hesla',
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
-    'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo',
+    'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
     'unit_deleted' => 'Smazání jednotky', 'users_imported' => 'Import uživatelů', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];
 $route('GET', '/admin/zaznamy', function () {
     require_admin();
     $only = isset($_GET['jen-problemy']);
-    $where = $only ? "WHERE a.action IN ('login_failed','login_2fa_failed','setup_code_failed','2fa_disabled','2fa_reset','user_deleted','password_reset')" : '';
-    render('admin/audit', ['title' => 'Záznamy', 'only' => $only,
-        'rows' => all("SELECT a.*, u.name user_name FROM audit_log a LEFT JOIN users u ON u.id = a.user_id $where ORDER BY a.id DESC LIMIT 300"),
+    $who = trim((string) ($_GET['kdo'] ?? ''));
+    $where = [];
+    $params = [];
+    if ($only) {
+        $where[] = "a.action IN ('login_failed','login_2fa_failed','setup_code_failed','2fa_disabled','2fa_reset','password_reset') OR a.action LIKE 'Smazání%'";
+    }
+    if ($who !== '') {
+        $where[] = 'a.user_name = ?';
+        $params[] = $who;
+    }
+    render('admin/audit', ['title' => 'Záznamy', 'only' => $only, 'who' => $who,
+        'rows' => all('SELECT a.* FROM audit_log a' . ($where ? ' WHERE (' . implode(') AND (', $where) . ')' : '') . ' ORDER BY a.id DESC LIMIT 500', $params),
+        'people' => array_column(all("SELECT DISTINCT user_name FROM audit_log WHERE user_name <> '' ORDER BY user_name"), 'user_name'),
+        'chain' => audit_chain_check(),
         'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')")]);
 });
 
@@ -712,3 +720,27 @@ $route('POST', '/admin/uzivatele/(\d+)/pozvanka', function (int $id) {
     }
     redirect('/admin/uzivatele');
 });
+
+// ---------- Úprava příspěvku v diskuzi správcem ----------
+
+$forumEdit = function (int $id) {
+    $admin = require_admin();
+    $p = one('SELECT f.*, u.name author_name FROM forum_posts f LEFT JOIN users u ON u.id = f.author_id WHERE f.id = ?', [$id]) ?? not_found();
+    $errors = [];
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $title = $p['parent_id'] ? '' : post('title');
+        $body = post('body');
+        if ($body === '' || mb_strlen($body) > 5000 || (!$p['parent_id'] && ($title === '' || mb_strlen($title) > 150))) {
+            $errors[] = 'Vyplňte text (nejvýše 5000 znaků)' . ($p['parent_id'] ? '.' : ' a název tématu (nejvýše 150 znaků).');
+        } else {
+            q('UPDATE forum_posts SET title = ?, body = ?, edited_note = ? WHERE id = ?', [$title, $body, 'Upravil správce ' . $admin['name'] . ' ' . date('j. n. Y'), $id]);
+            flash('Příspěvek byl upraven. U příspěvku je vidět, že ho upravil správce.');
+            redirect('/diskuze/' . ($p['parent_id'] ?: $id));
+        }
+        $p = array_merge($p, ['title' => $title, 'body' => $body]);
+        http_response_code(422);
+    }
+    render('admin/forum_form', ['title' => 'Upravit příspěvek', 'p' => $p, 'errors' => $errors]);
+};
+$route('GET', '/admin/diskuze/(\d+)', $forumEdit);
+$route('POST', '/admin/diskuze/(\d+)', $forumEdit);

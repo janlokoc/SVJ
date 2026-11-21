@@ -73,7 +73,7 @@
     <?php if (!user()): ?>
     <div class="card card-soft">
       <h2>Pro obyvatele domu</h2>
-      <p>Po přihlášení uvidíte neveřejné dokumenty, můžete diskutovat se sousedy a nahlásit závadu výboru.</p>
+      <p>Po přihlášení uvidíte neveřejné dokumenty, můžete diskutovat se sousedy a poslat výboru závadu nebo požadavek.</p>
       <a class="btn" href="<?= url('/prihlaseni') ?>"><?= icon('lock') ?> Přihlásit se</a>
     </div>
     <?php endif ?>

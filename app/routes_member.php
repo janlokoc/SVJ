@@ -43,7 +43,8 @@ $route('POST', '/muj-ucet', function () use ($accountData) {
             session_regenerate_id(true);
             $_SESSION['pv'] = pw_fingerprint($hash); // toto přihlášení zůstává, ostatní zařízení se odhlásí
             audit('password_changed');
-            flash('Heslo bylo změněno.');
+            send_mail($u['email'], 'Heslo na webu SVJ Tábor 48 bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu SVJ Tábor 48 a–d bylo právě změněno.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
+            flash('Heslo bylo změněno. Na ostatních zařízeních jsme Vás odhlásili.');
             redirect('/muj-ucet');
         }
     } else {
@@ -212,6 +213,9 @@ $route('POST', '/diskuze/(\d+)/smazat', function (int $id) {
     if ($u['role'] !== 'admin' && (int) $p['author_id'] !== (int) $u['id']) {
         not_found();
     }
+    if ((int) $p['author_id'] !== (int) $u['id']) {
+        audit('Smazání příspěvku v diskuzi', ($p['title'] !== '' ? $p['title'] : 'odpověď č. ' . $id) . ' · autor: ' . ((string) val('SELECT name FROM users WHERE id = ?', [$p['author_id']]) ?: 'neznámý'));
+    }
     q('DELETE FROM forum_posts WHERE id = ?', [$id]);
     flash('Příspěvek byl smazán.');
     redirect($p['parent_id'] ? '/diskuze/' . $p['parent_id'] : '/diskuze');
@@ -221,7 +225,7 @@ $route('POST', '/diskuze/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/zavady', function () {
     $u = require_login();
-    render('tickets', ['title' => 'Hlášení závad', 'tickets' => all('SELECT * FROM tickets WHERE user_id = ? ORDER BY id DESC', [$u['id']])]);
+    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => all('SELECT * FROM tickets WHERE user_id = ? ORDER BY id DESC', [$u['id']])]);
 });
 
 $route('POST', '/zavady', function () {
@@ -229,11 +233,11 @@ $route('POST', '/zavady', function () {
     $subject = post('subject');
     $body = post('body');
     if ($subject === '' || $body === '' || mb_strlen($subject) > 150 || mb_strlen($body) > 5000) {
-        flash('Vyplňte prosím stručný název i popis závady.', 'error');
+        flash('Vyplňte prosím stručný název i popis.', 'error');
         redirect('/zavady');
     }
     q('INSERT INTO tickets (user_id, subject, location, body) VALUES (?,?,?,?)', [$u['id'], $subject, mb_substr(post('location'), 0, 150), $body]);
-    flash('Děkujeme, závada byla nahlášena výboru. Stav řešení uvidíte na této stránce.');
+    flash('Děkujeme, výbor Vaši závadu nebo požadavek dostal. Stav řešení uvidíte na této stránce.');
     redirect('/zavady');
 });
 

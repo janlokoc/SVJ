@@ -245,3 +245,63 @@ $route('GET', '/e/([a-f0-9]{32})', function ($token) {
     $to = $_GET['u'] ?? '/';
     redirect(is_string($to) && preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $to) ? $to : '/');
 });
+
+// ---------- Zapomenuté heslo ----------
+
+$forgot = function () {
+    if (user()) {
+        redirect('/muj-ucet');
+    }
+    $mailReady = (bool) filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL);
+    $done = false;
+    if ($GLOBALS['METHOD'] === 'POST' && $mailReady) {
+        // Nejvýše 5 žádostí za 15 minut z jedné adresy; odpověď je vždy stejná, aby nešlo zjišťovat, kdo má na webu účet.
+        q('DELETE FROM login_attempts WHERE at < ?', [time() - 900]);
+        if ((int) val("SELECT COUNT(*) FROM login_attempts WHERE ip = ? AND email = '#reset'", [client_ip()]) >= 5) {
+            flash('Příliš mnoho žádostí. Zkuste to prosím znovu za 15 minut.', 'error');
+            redirect('/zapomenute-heslo');
+        }
+        q("INSERT INTO login_attempts (ip, at, email) VALUES (?,?,'#reset')", [client_ip(), time()]);
+        $u = one('SELECT * FROM users WHERE email = ? AND active = 1', [post('email')]);
+        if ($u) {
+            send_password_reset($u);
+            audit('password_reset_requested', $u['email'], (int) $u['id']);
+        }
+        $done = true;
+    }
+    render('forgot', ['title' => 'Zapomenuté heslo', 'mailReady' => $mailReady, 'done' => $done]);
+};
+$route('GET', '/zapomenute-heslo', $forgot);
+$route('POST', '/zapomenute-heslo', $forgot);
+
+$resetPassword = function (string $token) {
+    $u = one("SELECT * FROM users WHERE invite_hash = ? AND password_hash <> ? AND active = 1 AND invite_expires >= datetime('now','localtime')", [hash('sha256', $token), NO_PASSWORD]);
+    if (!$u) {
+        http_response_code(404);
+        render('error', ['title' => 'Odkaz neplatí', 'message' => 'Odkaz na nové heslo už byl použit nebo vypršel (platí jednu hodinu). Požádejte o nový na stránce Zapomenuté heslo.']);
+        return;
+    }
+    $errors = [];
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $pass = (string) ($_POST['password'] ?? '');
+        if ($problem = password_problem($pass, $u['email'], $u['name'])) {
+            $errors[] = $problem;
+        }
+        if ($pass !== (string) ($_POST['password2'] ?? '')) {
+            $errors[] = 'Hesla se neshodují.';
+        }
+        if (!$errors) {
+            // Nové heslo zruší všechna dosavadní přihlášení. Dvoufázové ověření zůstává zapnuté.
+            q('UPDATE users SET password_hash = ?, must_change_password = 0, invite_hash = NULL, invite_expires = NULL WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
+            q('DELETE FROM login_attempts WHERE email = ?', [mb_strtolower($u['email'])]);
+            audit('password_reset_done', $u['email'], (int) $u['id']);
+            send_mail($u['email'], 'Heslo na webu SVJ Tábor 48 bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu SVJ Tábor 48 a–d bylo právě změněno přes odkaz ze zapomenutého hesla.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
+            flash('Heslo je změněno. Přihlaste se novým heslem.');
+            redirect('/prihlaseni');
+        }
+        http_response_code(422);
+    }
+    render('reset', ['title' => 'Nové heslo', 'u' => $u, 'errors' => $errors, 'token' => $token]);
+};
+$route('GET', '/obnova-hesla/([a-f0-9]{64})', $resetPassword);
+$route('POST', '/obnova-hesla/([a-f0-9]{64})', $resetPassword);

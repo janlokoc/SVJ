@@ -1,6 +1,6 @@
 <div class="wrap page narrow">
-  <header class="page-head"><h1>Hlášené závady</h1></header>
-  <?php if (!$tickets): ?><p class="empty">Zatím nebyla nahlášena žádná závada.</p><?php endif ?>
+  <header class="page-head"><h1>Závady a požadavky</h1></header>
+  <?php if (!$tickets): ?><p class="empty">Zatím nikdo nenahlásil žádnou závadu ani požadavek.</p><?php endif ?>
   <div class="ticket-list">
   <?php foreach ($tickets as $t): ?>
     <article class="ticket" id="z<?= $t['id'] ?>">
@@ -11,6 +11,13 @@
       <div class="prose"><?= format_text($t['body']) ?></div>
       <form method="post" action="<?= url('/admin/zavady/' . $t['id']) ?>" class="form ticket-form">
         <?= csrf_field() ?>
+        <details class="ticket-edit"><summary>Upravit text hlášení</summary>
+          <div class="form">
+            <label>Co se stalo <input type="text" name="subject" value="<?= e($t['subject']) ?>" maxlength="150"></label>
+            <label>Kde <input type="text" name="location" value="<?= e($t['location']) ?>" maxlength="150"></label>
+            <label>Popis <textarea name="body" rows="3" maxlength="5000"><?= e($t['body']) ?></textarea></label>
+          </div>
+        </details>
         <label>Odpověď pro obyvatele <textarea name="admin_note" rows="2"><?= e($t['admin_note']) ?></textarea></label>
         <div class="form-row">
           <label>Stav <select name="status"><?php foreach (TICKET_STATUS as $k => $label): ?><option value="<?= $k ?>"<?= $t['status'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>
