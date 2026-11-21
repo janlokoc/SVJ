@@ -5,7 +5,7 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <div class="form-row">
-      <label>Vchod <select name="entrance"><?php foreach (ENTRANCES as $en): ?><option value="<?= $en ?>"<?= $unit['entrance'] === $en ? ' selected' : '' ?>><?= $en === '' ? '—' : '48 ' . $en ?></option><?php endforeach ?></select></label>
+      <label>Vchod <select name="entrance"><?php foreach (entrances() as $en): ?><option value="<?= e($en) ?>"<?= $unit['entrance'] === $en ? ' selected' : '' ?>><?= $en === '' ? '—' : e(unit_prefix() . ' ' . $en) ?></option><?php endforeach ?></select></label>
       <label>Číslo jednotky <input type="text" name="number" value="<?= e($unit['number']) ?>" maxlength="10" required></label>
       <label>Patro <input type="text" name="floor" value="<?= e($unit['floor']) ?>" maxlength="10"></label>
     </div>

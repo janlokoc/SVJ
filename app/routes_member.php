@@ -43,7 +43,7 @@ $route('POST', '/muj-ucet', function () use ($accountData) {
             session_regenerate_id(true);
             $_SESSION['pv'] = pw_fingerprint($hash); // toto přihlášení zůstává, ostatní zařízení se odhlásí
             audit('password_changed');
-            send_mail($u['email'], 'Heslo na webu SVJ Tábor 48 bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu SVJ Tábor 48 a–d bylo právě změněno.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
+            send_mail($u['email'], 'Heslo na webu ' . site('name') . ' bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu " . site('name') . " bylo právě změněno.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
             flash('Heslo bylo změněno. Na ostatních zařízeních jsme Vás odhlásili.');
             redirect('/muj-ucet');
         }
@@ -111,8 +111,8 @@ $route('POST', '/muj-ucet/pozvat', function () use ($accountData) {
     }
     audit('invite_sent', $email);
     $link = absolute_url('/pozvanka/' . $token);
-    $text = "Dobrý den,\n\n" . $u['name'] . " Vás zve na web SVJ Tábor 48 a–d jako dalšího člena domácnosti.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPokud pozvánku nečekáte, zprávu prosím ignorujte.\n";
-    if (send_mail($email, 'Pozvánka na web SVJ Tábor 48', $text)) {
+    $text = "Dobrý den,\n\n" . $u['name'] . " Vás zve na web " . site('name') . " jako dalšího člena domácnosti.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPokud pozvánku nečekáte, zprávu prosím ignorujte.\n";
+    if (send_mail($email, 'Pozvánka na web ' . site('name'), $text)) {
         flash('Pozvánka byla odeslána na ' . $email . '. Platí ' . $days . ' dní.');
     } else {
         $_SESSION['invite_link'] = ['name' => $name, 'link' => $link];

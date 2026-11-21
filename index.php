@@ -11,6 +11,7 @@ if (PHP_SAPI === 'cli-server') {
 
 require __DIR__ . '/app/lib.php';
 require __DIR__ . '/app/extra_lib.php';
+require __DIR__ . '/app/platform_lib.php';
 
 // Chyby se návštěvníkům nikdy nevypisují (prozradily by cesty a strukturu webu); zapisují se do protokolu serveru.
 ini_set('display_errors', '0');
@@ -37,17 +38,54 @@ if ($PATH === '/index.php') {
     $PATH = '/';
 }
 
+// Provoz pro více SVJ: podle adresy v prohlížeči se určí, zda jde o konzoli platformy, nebo o web konkrétního společenství.
+$IS_PLATFORM = false;
+if (platform_enabled()) {
+    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+    if ($host === platform_domain() || $host === 'www.' . platform_domain()) {
+        $IS_PLATFORM = true;
+        boot_tenant('');
+    } else {
+        $tenantRow = tenant_by_host($host);
+        if (!$tenantRow || !$tenantRow['active']) {
+            http_response_code($tenantRow ? 503 : 404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!doctype html><html lang="cs"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Web není dostupný</title><p>'
+                . ($tenantRow ? 'Tento web je dočasně pozastaven. Obraťte se prosím na výbor svého společenství.' : 'Na této adrese žádný web společenství není.') . '</p></html>';
+            exit;
+        }
+        boot_tenant($tenantRow['slug']);
+    }
+} else {
+    boot_tenant('');
+}
+
 $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 ini_set('session.use_trans_sid', '0');
 ini_set('session.gc_maxlifetime', (string) SESSION_LIMIT);
+// Přihlášení se ukládají do složky daného společenství (ne do společné složky serveru): relace jednoho webu na jiném vůbec neexistuje.
+$sessionDir = ($IS_PLATFORM ? ROOT_STORAGE . '/platform-sessions' : STORAGE_DIR . '/sessions');
+if (!is_dir($sessionDir)) {
+    mkdir($sessionDir, 0700, true);
+}
+session_save_path($sessionDir);
+ini_set('session.gc_probability', '1');
+ini_set('session.gc_divisor', '100');
 session_name('svj_session');
 session_set_cookie_params(['lifetime' => 0, 'path' => $BASE . '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
 session_start();
+// Přihlášení platí jen pro web, na kterém vzniklo: relaci nejde přenést na web jiného společenství ani do konzole platformy.
+$sessionOwner = $IS_PLATFORM ? '#platform' : TENANT;
+if (($_SESSION['t'] ?? $sessionOwner) !== $sessionOwner) {
+    $_SESSION = [];
+    session_regenerate_id(false);   // původní relaci nemažeme, patří jinému webu
+}
+$_SESSION['t'] = $sessionOwner;
 
 // Automatické odhlášení po delší nečinnosti a nejdéle po 12 hodinách.
-if (!empty($_SESSION['uid'])) {
+if (!$IS_PLATFORM && !empty($_SESSION['uid'])) {
     if (time() - ($_SESSION['seen'] ?? 0) > IDLE_LIMIT || time() - ($_SESSION['start'] ?? 0) > SESSION_LIMIT) {
         audit('session_expired');
         $_SESSION = [];
@@ -72,6 +110,16 @@ if ($https) {
 if (!empty($_SESSION['uid']) || !empty($_SESSION['pending'])) {
     // Stránky přihlášených se neukládají v prohlížeči ani po cestě – na sdíleném počítači je po odhlášení nejde vrátit tlačítkem Zpět.
     header('Cache-Control: no-store, private');
+}
+
+if ($IS_PLATFORM) {
+    $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
+    $GLOBALS['LAYOUT'] = 'platform/layout';
+    if ($METHOD === 'POST') {
+        check_csrf();
+    }
+    require __DIR__ . '/app/platform.php';
+    exit;
 }
 
 // Srozumitelná hláška, když na hostingu chybí databáze nebo k ní nesedí přihlašovací údaje.
@@ -132,6 +180,17 @@ require __DIR__ . '/app/routes_public.php';
 require __DIR__ . '/app/routes_member.php';
 require __DIR__ . '/app/routes_admin.php';
 require __DIR__ . '/app/routes_extra.php';
+
+// Části webu, které správce společenství schoval, nejsou dostupné ani přímou adresou.
+foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
+    if (!feature_on($key)) {
+        foreach ([...$public, ...$adminPaths] as $prefix) {
+            if ($PATH === $prefix || str_starts_with($PATH, $prefix . '/')) {
+                not_found();
+            }
+        }
+    }
+}
 
 foreach ($routes as [$m, $pattern, $handler]) {
     if ($m === $METHOD && preg_match('#^' . $pattern . '$#', $PATH, $mm)) {

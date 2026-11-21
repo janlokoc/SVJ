@@ -24,7 +24,7 @@
     <h2>Přidat více jednotek najednou</h2>
     <?= csrf_field() ?>
     <div class="form-row">
-      <label>Vchod <select name="entrance" id="bulk-entrance"><?php foreach (ENTRANCES as $en): if ($en === '') continue; ?><option value="<?= $en ?>">48 <?= $en ?></option><?php endforeach ?></select></label>
+      <label>Vchod <select name="entrance" id="bulk-entrance"><?php foreach (entrances() as $en): if ($en === '') continue; ?><option value="<?= e($en) ?>"><?= e(unit_prefix() . ' ' . $en) ?></option><?php endforeach ?></select></label>
       <label>Čísla od <input type="number" name="from" id="bulk-from" min="1" required></label>
       <label>do <input type="number" name="to" id="bulk-to" min="1" required></label>
       <div class="actions"><button class="btn" type="submit">Přidat</button></div>

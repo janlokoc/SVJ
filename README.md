@@ -109,6 +109,40 @@ rozesláním pošlete zkušební zprávu sami sobě.
 Limit velikosti nahrávaného souboru určuje hosting (`upload_max_filesize`
 a `post_max_size` v nastavení PHP).
 
+## Provoz pro více SVJ (platforma)
+
+Jedna instalace umí obsluhovat stovky společenství. Každé má vlastní
+adresu (`tabor.svj.cz`, `zahradecka.svj.cz`), vlastní správce a úplně
+oddělená data: vlastní databázi, soubory i přihlášení ve složce
+`storage/tenants/<adresa>/`.
+
+1. V `storage/config.php` nastavte hlavní doménu:
+   `'platform' => ['domain' => 'svj.cz']` (viz `config.example.php`).
+2. U domény nastavte zástupný DNS záznam `*.svj.cz` na server a pořiďte
+   certifikát HTTPS pro `svj.cz` i `*.svj.cz`. Server musí všechny tyto
+   adresy směrovat do téže složky s webem. Běžný sdílený hosting to
+   zpravidla neumí – počítejte s vlastním serverem (VPS) nebo hostingem,
+   který zástupné subdomény podporuje.
+3. Na adrese hlavní domény se zobrazí konzole **hlavního správce**:
+   první účet se vytvoří instalačním kódem ze souboru
+   `storage/instalacni-kod-platformy-….txt`.
+4. Hlavní správce zakládá weby společenství (adresa, název, vzhled,
+   jazyk, značení jednotek), pozastavuje je a maže, vytváří jim první
+   správce a vidí základní přehled. Do obsahu webů nevidí.
+
+Každé společenství si v Nastavení samo volí jeden z pěti vzhledů, logo,
+název, jazyk a to, které části menu se zobrazují. Web může běžet i na
+vlastní doméně společenství.
+
+Databáze: doporučena SQLite (každé společenství má vlastní soubor). Pro
+MySQL musí název databáze v `storage/config.php` obsahovat `{tenant}`,
+např. `svj_{tenant}`, a účet musí mít právo databáze zakládat.
+
+Nástroje z příkazové řádky pracují se společenstvím zvoleným proměnnou
+prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
+
+Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
+
 ## Zabezpečení
 
 - Hesla jsou uložena jen jako otisk (bcrypt); slabá a běžná hesla web odmítne.

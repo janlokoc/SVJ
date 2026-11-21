@@ -1,6 +1,6 @@
 <div class="wrap page">
   <header class="page-head"><h1>Kontakty</h1>
-    <p class="lead">Správu domu Tábor 48 a–d zajišťuje výbor SVJ. IČ <?= e(setting('ico')) ?>, číslo účtu <?= e(setting('account')) ?>.</p></header>
+    <p class="lead">Správu domu zajišťuje výbor SVJ. IČ <?= e(setting('ico')) ?>, číslo účtu <?= e(setting('account')) ?>.</p></header>
   <?php foreach (CONTACT_GROUPS as $k => $label): if (empty($groups[$k])) continue; ?>
     <section class="contact-group<?= $k === 'havarie' ? ' is-alert' : '' ?>" id="<?= $k ?>">
       <h2><?= $k === 'havarie' ? icon('alert') . ' ' : '' ?><?= $label ?></h2>

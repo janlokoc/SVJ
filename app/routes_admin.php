@@ -395,7 +395,7 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 
 // ---------- Nastavení ----------
 
-const SETTING_KEYS = ['site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
+const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
     'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent', 'privacy_text'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
 $route('GET', '/admin/nastaveni', function () {
@@ -405,16 +405,47 @@ $route('GET', '/admin/nastaveni', function () {
 $route('POST', '/admin/nastaveni', function () {
     require_admin();
     if (post('site_url') !== '' && !preg_match('~^https?://[A-Za-z0-9.\-]+(:\d+)?(/[^\s]*)?$~', post('site_url'))) {
-        flash('Adresa webu musí začínat https:// (např. https://www.svjtabor48.cz). Nastavení nebylo uloženo.', 'error');
+        flash('Adresa webu musí začínat https:// (např. https://www.vase-svj.cz). Nastavení nebylo uloženo.', 'error');
         redirect('/admin/nastaveni');
     }
     if (post('mail_from') !== '' && !filter_var(post('mail_from'), FILTER_VALIDATE_EMAIL)) {
         flash('Adresa odesílatele e-mailů nemá správný tvar. Nastavení nebylo uloženo.', 'error');
         redirect('/admin/nastaveni');
     }
-    foreach (SETTING_KEYS as $k) {
-        q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', [$k, in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k)]);
+    if (post('site_name') === '' || post('site_title') === '') {
+        flash('Název společenství a krátký název na web nesmí být prázdné. Nastavení nebylo uloženo.', 'error');
+        redirect('/admin/nastaveni');
     }
+    $save = fn(string $k, string $v) => q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', [$k, $v]);
+    // Logo: obrázek PNG nebo JPG; staré se při výměně smaže.
+    if (($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+        $ext = strtolower(pathinfo((string) $_FILES['logo']['name'], PATHINFO_EXTENSION));
+        $up = in_array($ext, ['png', 'jpg', 'jpeg'], true) && (int) $_FILES['logo']['size'] <= 1048576 ? store_upload($_FILES['logo']) : 'Logo musí být obrázek PNG nebo JPG do 1 MB.';
+        if (is_string($up)) {
+            flash($up . ' Nastavení nebylo uloženo.', 'error');
+            redirect('/admin/nastaveni');
+        }
+        if (preg_match('/^[a-f0-9]{32}\.[a-z]+$/', setting('logo'))) {
+            @unlink(UPLOAD_DIR . '/' . setting('logo'));
+        }
+        $save('logo', $up[0]);
+    } elseif (isset($_POST['logo_remove']) && preg_match('/^[a-f0-9]{32}\.[a-z]+$/', setting('logo'))) {
+        @unlink(UPLOAD_DIR . '/' . setting('logo'));
+        $save('logo', '');
+    }
+    foreach (SETTING_KEYS as $k) {
+        $v = in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k);
+        if ($k === 'site_look' && !isset(LOOKS[$v])) {
+            $v = 'les';
+        }
+        if ($k === 'site_lang' && !isset(LANGS[$v])) {
+            $v = 'cs';
+        }
+        $save($k, $v);
+    }
+    // Menu: zaškrtnuté části se zobrazují, ostatní se schovají.
+    $shown = (array) ($_POST['features'] ?? []);
+    $save('hidden_features', implode(',', array_values(array_diff(array_keys(FEATURES), $shown))));
     flash('Nastavení bylo uloženo.');
     redirect('/admin/nastaveni');
 });
@@ -509,7 +540,7 @@ $route('GET', '/admin/jednotky', function () {
 
 $route('POST', '/admin/jednotky/hromadne', function () {
     require_admin();
-    $entrance = in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '';
+    $entrance = in_array(post('entrance'), entrances(), true) ? post('entrance') : '';
     $from = (int) post('from');
     $to = (int) post('to');
     if ($from < 1 || $to < $from || $to - $from >= 200) {
@@ -532,7 +563,7 @@ $unitForm = function (int $id = 0) {
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $unit = array_merge($unit, [
-            'entrance' => in_array(post('entrance'), ENTRANCES, true) ? post('entrance') : '',
+            'entrance' => in_array(post('entrance'), entrances(), true) ? post('entrance') : '',
             'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'), 'owner_contact' => mb_substr(post('owner_contact'), 0, 2000),
         ]);
         $userIds = array_map('intval', (array) ($_POST['users'] ?? []));

@@ -166,7 +166,7 @@ function daily_tasks(): void
     $lines = array_map(fn($m) => '- ' . $m['title'] . ': ' . cz_date($m['next_date']) . ($m['next_date'] < date('Y-m-d') ? ' (PO TERMÍNU)' : '') . ($m['contractor'] ? ', ' . $m['contractor'] : ''), $due);
     $text = "Dobrý den,\n\nblíží se termín těchto revizí a kontrol v domě:\n\n" . implode("\n", $lines) . "\n\nPřehled a zápis provedení: " . absolute_url('/admin/revize') . "\n";
     foreach (all("SELECT email FROM users WHERE role = 'admin' AND active = 1") as $admin) {
-        send_mail($admin['email'], 'Blíží se termín revize – SVJ Tábor 48', $text);
+        send_mail($admin['email'], 'Blíží se termín revize – ' . site('name'), $text);
     }
     foreach ($due as $m) {
         q('UPDATE maintenance SET reminded_for = next_date WHERE id = ?', [$m['id']]);
@@ -223,7 +223,7 @@ function restore_data(array $data): array
 
 const PRIVACY_DEFAULT = <<<'TXT'
 ## Kdo údaje zpracovává
-Správcem osobních údajů je Společenství vlastníků jednotek Tábor 48 a–d, Brno. Kontakt na výbor najdete na stránce Kontakty.
+Správcem osobních údajů je společenství vlastníků jednotek, kterému tento web patří. Kontakt na výbor najdete na stránce Kontakty.
 
 ## Jaké údaje web ukládá
 - U účtů obyvatel: jméno, e-mail, telefon (pokud ho uvedete), zda jste vlastník nebo nájemník a ke které jednotce patříte.

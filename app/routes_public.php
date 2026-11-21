@@ -118,7 +118,7 @@ $route('POST', '/prihlaseni', function () {
     $after = $_SESSION['after_login'] ?? null;
     if ($u['totp_enabled']) {
         session_regenerate_id(true);
-        $_SESSION = ['pending' => ['uid' => (int) $u['id'], 'at' => time(), 'after' => $after]];
+        $_SESSION = ['t' => TENANT, 'pending' => ['uid' => (int) $u['id'], 'at' => time(), 'after' => $after]];
         redirect('/prihlaseni/overeni');
     }
     finish_login($u, $after);
@@ -298,7 +298,7 @@ $resetPassword = function (string $token) {
             q('UPDATE users SET password_hash = ?, must_change_password = 0, invite_hash = NULL, invite_expires = NULL WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $u['id']]);
             q('DELETE FROM login_attempts WHERE email = ?', [mb_strtolower($u['email'])]);
             audit('password_reset_done', $u['email'], (int) $u['id']);
-            send_mail($u['email'], 'Heslo na webu SVJ Tábor 48 bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu SVJ Tábor 48 a–d bylo právě změněno přes odkaz ze zapomenutého hesla.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
+            send_mail($u['email'], 'Heslo na webu ' . site('name') . ' bylo změněno', "Dobrý den,\n\nheslo k Vašemu účtu na webu " . site('name') . " bylo právě změněno přes odkaz ze zapomenutého hesla.\n\nPokud jste to nebyli Vy, obraťte se hned na výbor SVJ.\n");
             flash('Heslo je změněno. Přihlaste se novým heslem.');
             redirect('/prihlaseni');
         }
@@ -308,3 +308,16 @@ $resetPassword = function (string $token) {
 };
 $route('GET', '/obnova-hesla/([a-f0-9]{64})', $resetPassword);
 $route('POST', '/obnova-hesla/([a-f0-9]{64})', $resetPassword);
+
+// ---------- Logo společenství ----------
+
+$route('GET', '/logo', function () {
+    $file = setting('logo');
+    if (!preg_match('/^[a-f0-9]{32}\.(png|jpe?g)$/', $file) || !is_file(UPLOAD_DIR . '/' . $file)) {
+        not_found();
+    }
+    header_remove('Content-Security-Policy');
+    header('Content-Type: ' . (str_ends_with($file, 'png') ? 'image/png' : 'image/jpeg'));
+    header('Cache-Control: public, max-age=86400');
+    readfile(UPLOAD_DIR . '/' . $file);
+});

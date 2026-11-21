@@ -53,3 +53,38 @@ function seed_database(PDO $pdo): void
         $st->execute([$k, $v]);
     }
 }
+
+/** Naplní novou databázi: jediný web dostane obsah SVJ Tábor 48, nové společenství na platformě začíná prázdné s vlastním názvem. */
+function seed_for(PDO $pdo, string $tenant): void
+{
+    if ($tenant === '') {
+        seed_database($pdo);
+        return;
+    }
+    $row = function_exists('tenant_row') ? (tenant_row($tenant) ?? []) : [];
+    if (($row['seed'] ?? '') === 'tabor') {
+        seed_database($pdo);
+    } else {
+        $st = $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)');
+        foreach ([
+            'intro' => 'Web našeho společenství vlastníků jednotek. Najdete tu oznámení výboru, dokumenty a kontakty.',
+            'address' => '', 'ico' => '', 'account' => '', 'webmaster_email' => '',
+            'emergency_note' => 'V případě havárie volejte uvedená čísla.',
+            'forum_note' => 'Diskuze není oficiální komunikační kanál s výborem. Vulgární a urážlivé příspěvky správce maže.',
+        ] as $k => $v) {
+            $st->execute([$k, $v]);
+        }
+        $pdo->prepare('INSERT INTO posts (title, body, pinned, published_at) VALUES (?,?,1,?)')
+            ->execute(['Vítejte na novém webu', 'Web je připraven. Výbor zde bude zveřejňovat oznámení, dokumenty a termíny shromáždění.', date('Y-m-d')]);
+    }
+    // Název, vzhled a značení jednotek podle toho, co zadal správce platformy při založení.
+    $st = $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)');
+    foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'lang'] as $k) {
+        if (isset($row[$k])) {
+            $st->execute(['site_' . $k, (string) $row[$k]]);
+        }
+    }
+    if (!empty($row['address'])) {
+        $pdo->prepare('UPDATE settings SET value = ? WHERE `key` = ?')->execute([$row['address'], 'address']);
+    }
+}

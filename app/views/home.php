@@ -1,8 +1,8 @@
 <section class="hero">
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <p class="eyebrow">Společenství vlastníků jednotek · Brno</p>
-      <h1>Tábor 48 <span class="h1-sub">a–d</span></h1>
+      <p class="eyebrow"><?= e(site('tagline')) ?></p>
+      <h1><?= e(site('title')) ?><?php if (site('accent') !== ''): ?> <span class="h1-sub"><?= e(site('accent')) ?></span><?php endif ?></h1>
       <p class="lead"><?= e(setting('intro')) ?></p>
       <div class="actions">
         <a class="btn btn-big" href="<?= url('/aktuality') ?>">Aktuální oznámení <?= icon('arrow') ?></a>
@@ -10,23 +10,24 @@
       </div>
     </div>
     <div class="hero-side">
-      <svg class="house" viewBox="0 0 420 210" role="img" aria-label="Ilustrace domu se čtyřmi vchody a, b, c, d">
+      <?php $doors = array_slice(array_values(array_filter(entrances())), 0, 6) ?: ['']; $hw = count($doors) * 100 + 20; ?>
+      <svg class="house" viewBox="0 0 <?= $hw ?> 210" role="img" aria-label="Ilustrace domu">
         <g class="house-body">
-          <?php foreach (['a', 'b', 'c', 'd'] as $i => $l): $x = 10 + $i * 100; $top = $i % 2 ? 22 : 40; ?>
+          <?php foreach ($doors as $i => $l): $x = 10 + $i * 100; $top = $i % 2 ? 22 : 40; ?>
             <rect x="<?= $x ?>" y="<?= $top ?>" width="96" height="<?= 190 - $top ?>" rx="4"/>
           <?php endforeach ?>
         </g>
         <g class="house-win">
-          <?php foreach ([0, 1, 2, 3] as $i): $x = 10 + $i * 100; $top = $i % 2 ? 22 : 40; for ($y = $top + 14; $y < 140; $y += 26): ?>
+          <?php foreach (array_keys($doors) as $i): $x = 10 + $i * 100; $top = $i % 2 ? 22 : 40; for ($y = $top + 14; $y < 140; $y += 26): ?>
             <rect x="<?= $x + 12 ?>" y="<?= $y ?>" width="20" height="14" rx="2"/><rect x="<?= $x + 38 ?>" y="<?= $y ?>" width="20" height="14" rx="2"/><rect x="<?= $x + 64 ?>" y="<?= $y ?>" width="20" height="14" rx="2"/>
           <?php endfor; endforeach ?>
         </g>
         <g class="house-door">
-          <?php foreach (['a', 'b', 'c', 'd'] as $i => $l): $x = 10 + $i * 100; ?>
-            <rect x="<?= $x + 36 ?>" y="152" width="24" height="38" rx="3"/><text x="<?= $x + 48 ?>" y="178" text-anchor="middle"><?= $l ?></text>
+          <?php foreach ($doors as $i => $l): $x = 10 + $i * 100; ?>
+            <rect x="<?= $x + 36 ?>" y="152" width="24" height="38" rx="3"/><text x="<?= $x + 48 ?>" y="178" text-anchor="middle"><?= e(mb_strtolower($l)) ?></text>
           <?php endforeach ?>
         </g>
-        <rect class="house-ground" x="0" y="190" width="420" height="4" rx="2"/>
+        <rect class="house-ground" x="0" y="190" width="<?= $hw ?>" height="4" rx="2"/>
       </svg>
       <?php if ($event): $t = strtotime($event['event_date']); ?>
       <div class="event-card">

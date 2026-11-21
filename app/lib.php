@@ -4,8 +4,35 @@ declare(strict_types=1);
 date_default_timezone_set('Europe/Prague');
 putenv('TZ=Europe/Prague');   // stejný čas používá i SQLite pro výchozí hodnoty sloupců, ať je server v jakémkoli pásmu
 
-const STORAGE_DIR = __DIR__ . '/../storage';
-const UPLOAD_DIR = STORAGE_DIR . '/uploads';
+// Kořen úložiště. Při provozu pro více SVJ má každé společenství vlastní podsložku (data, databázi i soubory zcela oddělené).
+const ROOT_STORAGE = __DIR__ . '/../storage';
+
+/** Určí, pro které společenství tento požadavek běží ('' = jediný web bez platformy), a nastaví cesty k jeho datům. */
+function boot_tenant(string $slug): void
+{
+    define('TENANT', $slug);
+    define('STORAGE_DIR', $slug === '' ? ROOT_STORAGE : ROOT_STORAGE . '/tenants/' . $slug);
+    define('UPLOAD_DIR', STORAGE_DIR . '/uploads');
+}
+// Nástroje z příkazové řádky: společenství se volí proměnnou prostředí, např. SVJ_TENANT=tabor php tools/…
+if (PHP_SAPI === 'cli') {
+    $cliTenant = (string) getenv('SVJ_TENANT');
+    boot_tenant(preg_match('/^[a-z0-9][a-z0-9-]{1,38}$/', $cliTenant) ? $cliTenant : '');
+}
+
+const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська'];
+const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá'];
+/** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
+const FEATURES = [
+    'aktuality' => ['Aktuality', ['/aktuality'], ['/admin/aktuality']],
+    'dokumenty' => ['Dokumenty', ['/dokumenty'], []],
+    'kontakty' => ['Kontakty', ['/kontakty'], ['/admin/kontakty']],
+    'diskuze' => ['Diskuze', ['/diskuze'], ['/admin/diskuze']],
+    'zavady' => ['Závady a požadavky', ['/zavady'], ['/admin/zavady']],
+    'hlasovani' => ['Hlasování', ['/hlasovani'], ['/admin/hlasovani']],
+    'odecty' => ['Odečty měřidel', ['/odecty'], ['/admin/odecty']],
+    'rezervace' => ['Rezervace', ['/rezervace'], ['/admin/rezervace', '/admin/prostory']],
+];
 const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'odt', 'ods', 'jpg', 'jpeg', 'png'];
 
 const CATEGORIES = [
@@ -24,7 +51,6 @@ const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
 const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
 const NO_PASSWORD = '!'; // účet čeká na přijetí pozvánky, přihlásit se zatím nejde
 const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu'];
-const ENTRANCES = ['', 'A', 'B', 'C', 'D'];
 
 // ---------- Databáze ----------
 
@@ -33,7 +59,7 @@ function app_config(): array
 {
     static $config = null;
     if ($config === null) {
-        $file = STORAGE_DIR . '/config.php';
+        $file = ROOT_STORAGE . '/config.php';
         $config = is_file($file) ? (array) require $file : [];
     }
     return $config;
@@ -59,23 +85,33 @@ function sql(string $sql): string
     $sql = preg_replace('/ON CONFLICT\s*\([^)]*\)\s*DO UPDATE SET/', 'ON DUPLICATE KEY UPDATE', $sql);
     return preg_replace('/\bexcluded\.(\w+)/', 'VALUES($1)', $sql);
 }
-function db_mysql(): PDO
+function db_mysql(string $tenant): PDO
 {
     $c = app_config()['db'];
-    $pdo = new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $c['host'] ?? 'localhost', (int) ($c['port'] ?? 3306), $c['name'] ?? ''),
-        (string) ($c['user'] ?? ''), (string) ($c['password'] ?? ''), [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false,
-        ]);
+    $name = (string) ($c['name'] ?? '');
+    $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false];
+    $dsn = sprintf('mysql:host=%s;port=%d;charset=utf8mb4', $c['host'] ?? 'localhost', (int) ($c['port'] ?? 3306));
+    if ($tenant !== '') {
+        // Každé společenství má vlastní databázi; v názvu musí být zástupný text {tenant}, jinak by se data smíchala.
+        if (!str_contains($name, '{tenant}')) {
+            throw new RuntimeException('Pro provoz více SVJ na MySQL musí název databáze v storage/config.php obsahovat {tenant}, např. svj_{tenant}.');
+        }
+        $name = str_replace('{tenant}', str_replace('-', '_', $tenant), $name);
+        try {
+            (new PDO($dsn, (string) ($c['user'] ?? ''), (string) ($c['password'] ?? ''), $options))->exec("CREATE DATABASE IF NOT EXISTS `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+        } catch (PDOException $e) {
+            // Bez práva zakládat databáze ji musí předem založit správce serveru; připojení níže pak buď projde, nebo ohlásí chybu.
+        }
+    }
+    $pdo = new PDO($dsn . ';dbname=' . $name, (string) ($c['user'] ?? ''), (string) ($c['password'] ?? ''), $options);
     $pdo->exec("SET time_zone = '" . date('P') . "'");
     if (!$pdo->query("SHOW TABLES LIKE 'users'")->fetch()) {
         foreach (array_filter(array_map('trim', explode(";\n", file_get_contents(__DIR__ . '/schema.mysql.sql')))) as $statement) {
             $pdo->exec($statement);
         }
-        require __DIR__ . '/seed.php';
+        require_once __DIR__ . '/seed.php';
         $pdo->beginTransaction();
-        seed_database($pdo);
+        seed_for($pdo, $tenant);
         $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '6')");
         $pdo->commit();
         return $pdo;
@@ -102,35 +138,29 @@ function db_mysql(): PDO
 function db(): PDO
 {
     static $pdo = null;
-    if ($pdo) {
-        return $pdo;
+    return $pdo ??= open_database(STORAGE_DIR, TENANT);
+}
+/** Otevře databázi jednoho společenství ve složce $storage; při prvním otevření ji založí a naplní, starší doplní. */
+function open_database(string $storage, string $tenant): PDO
+{
+    if (!is_dir($storage . '/uploads')) {
+        mkdir($storage . '/uploads', 0775, true);
+    }
+    foreach (['', '/uploads'] as $dir) {
+        if (!is_file($storage . $dir . '/index.html')) {
+            @file_put_contents($storage . $dir . '/index.html', '');
+        }
     }
     if (db_driver() === 'mysql') {
-        if (!is_dir(UPLOAD_DIR)) {
-            mkdir(UPLOAD_DIR, 0775, true);
-        }
-        foreach (['', '/uploads'] as $dir) {
-            if (!is_file(STORAGE_DIR . $dir . '/index.html')) {
-                @file_put_contents(STORAGE_DIR . $dir . '/index.html', '');
-            }
-        }
-        return $pdo = db_mysql();
-    }
-    if (!is_dir(UPLOAD_DIR)) {
-        mkdir(UPLOAD_DIR, 0775, true);
+        return db_mysql($tenant);
     }
     // Databáze má náhodný název, aby ji nešlo stáhnout ani na serveru, který by nerespektoval zákaz přístupu do složky storage.
-    if (is_file(STORAGE_DIR . '/svj.sqlite')) {
-        rename(STORAGE_DIR . '/svj.sqlite', STORAGE_DIR . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite');
+    if (is_file($storage . '/svj.sqlite')) {
+        rename($storage . '/svj.sqlite', $storage . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite');
     }
-    $found = glob(STORAGE_DIR . '/svj-*.sqlite');
-    $file = $found ? $found[0] : STORAGE_DIR . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite';
+    $found = glob($storage . '/svj-*.sqlite');
+    $file = $found ? $found[0] : $storage . '/svj-' . bin2hex(random_bytes(12)) . '.sqlite';
     $fresh = !$found;
-    foreach (['', '/uploads'] as $dir) {
-        if (!is_file(STORAGE_DIR . $dir . '/index.html')) {
-            @file_put_contents(STORAGE_DIR . $dir . '/index.html', '');
-        }
-    }
     $pdo = new PDO('sqlite:' . $file, null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -140,8 +170,8 @@ function db(): PDO
     if ($fresh) {
         $pdo->beginTransaction();
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
-        require __DIR__ . '/seed.php';
-        seed_database($pdo);
+        require_once __DIR__ . '/seed.php';
+        seed_for($pdo, $tenant);
         $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
         return $pdo;
@@ -271,6 +301,28 @@ function val(string $sql, array $params = []): mixed
 {
     return q($sql, $params)->fetchColumn();
 }
+/** Pojmenování webu daného společenství (nastavuje se v Nastavení → Vzhled a název). */
+function site(string $key): string
+{
+    static $defaults = ['name' => 'SVJ Tábor 48', 'title' => 'Tábor 48', 'accent' => 'a–d', 'tagline' => 'Společenství vlastníků jednotek · Brno',
+        'full' => 'Společenství vlastníků jednotek Tábor 48', 'unit_prefix' => '48', 'entrances' => 'A,B,C,D', 'look' => 'les', 'lang' => 'cs'];
+    $v = setting('site_' . $key, "\0");
+    return $v === "\0" ? $defaults[$key] : $v;
+}
+/** Označení vchodů v domě; první prázdná položka znamená „bez vchodu“. */
+function entrances(): array
+{
+    $list = array_values(array_unique(array_filter(array_map(fn($x) => mb_strtoupper(trim($x)), explode(',', site('entrances'))), fn($x) => preg_match('/^[\p{L}\p{N}]{1,3}$/u', $x))));
+    return ['', ...array_slice($list, 0, 26)];
+}
+function unit_prefix(): string
+{
+    return mb_substr(preg_replace('/[^\p{L}\p{N} .\-]/u', '', site('unit_prefix')), 0, 10);
+}
+function feature_on(string $key): bool
+{
+    return !in_array($key, array_filter(explode(',', setting('hidden_features'))), true);
+}
 function setting(string $key, string $default = ''): string
 {
     static $cache = null;
@@ -313,7 +365,7 @@ function render(string $view, array $data = []): void
     ob_start();
     require __DIR__ . '/views/' . $view . '.php';
     $content = ob_get_clean();
-    require __DIR__ . '/views/layout.php';
+    require __DIR__ . '/views/' . ($GLOBALS['LAYOUT'] ?? 'layout') . '.php';
 }
 function flash(?string $msg = null, string $type = 'ok'): ?array
 {
@@ -617,7 +669,7 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
     if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
-    $name = trim(preg_replace('/[\r\n"<>]+/', ' ', setting('mail_from_name', 'SVJ Tábor 48')));
+    $name = trim(preg_replace('/[\r\n"<>]+/', ' ', setting('mail_from_name', site('name'))));
     $subject = trim(preg_replace('/\s+/u', ' ', $subject));
     $headers = [
         'From' => mb_encode_mimeheader($name, 'UTF-8', 'B', "\r\n") . ' <' . $from . '>',
@@ -644,12 +696,13 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
 /** SQL výraz: označení jednotek uživatele (např. „48C/12“), pro tabulku s aliasem $alias. */
 function units_sql(string $alias): string
 {
-    $names = db_driver() === 'mysql' ? "GROUP_CONCAT(CONCAT('48', un.entrance, '/', un.number) ORDER BY un.entrance, un.number SEPARATOR ', ')" : "group_concat('48' || un.entrance || '/' || un.number, ', ')";
+    $prefix = db()->quote(unit_prefix());
+    $names = db_driver() === 'mysql' ? "GROUP_CONCAT(CONCAT($prefix, un.entrance, '/', un.number) ORDER BY un.entrance, un.number SEPARATOR ', ')" : "group_concat($prefix || un.entrance || '/' || un.number, ', ')";
     return "(SELECT $names FROM user_units uu JOIN units un ON un.id = uu.unit_id WHERE uu.user_id = $alias.id)";
 }
 function unit_name(array $unit): string
 {
-    return '48' . $unit['entrance'] . '/' . $unit['number'];
+    return unit_prefix() . $unit['entrance'] . '/' . $unit['number'];
 }
 function user_unit_ids(int $userId): array
 {
@@ -722,7 +775,7 @@ function build_mail(string $body, ?string $token): array
     $track = fn(string $url): string => $token === null ? $url
         : $base . '/e/' . $token . '?u=' . rawurlencode(substr($url, strlen($base)) ?: '/');
     $pattern = '~' . preg_quote($base, '~') . '(?:/[^\s<"]*[^\s<".,;:!?)])?~u';
-    $footer = 'Zprávu posílá výbor SVJ Tábor 48 a–d obyvatelům domu s účtem na webu.';
+    $footer = 'Zprávu posílá výbor ' . site('name') . ' obyvatelům domu s účtem na webu.';
     $notice = $token === null ? '' : ' Web eviduje otevření zprávy a odkazů v ní, aby výbor věděl, ke komu se informace dostala.';
     $text = preg_replace_callback($pattern, fn($m) => $track($m[0]), trim(str_replace('**', '', $body)))
         . "\n\n-- \n" . $footer . $notice . "\nZasílání zpráv si můžete vypnout ve svém účtu: " . absolute_url('/muj-ucet') . "\n";
@@ -747,7 +800,8 @@ function pw_fingerprint(string $hash): string
 function login_user(array $u): void
 {
     session_regenerate_id(true);
-    $_SESSION = ['uid' => (int) $u['id'], 'pv' => pw_fingerprint($u['password_hash']), 'start' => time(), 'seen' => time()];
+    // 't' váže přihlášení ke konkrétnímu společenství: relaci nejde přenést na web jiného SVJ.
+    $_SESSION = ['t' => TENANT, 'uid' => (int) $u['id'], 'pv' => pw_fingerprint($u['password_hash']), 'start' => time(), 'seen' => time()];
 }
 /**
  * Zapíše událost do záznamů. Záznamy se nikdy nemažou ani neupravují; každý nese otisk navazující na předchozí,
@@ -833,14 +887,15 @@ function password_problem(string $pass, string $email = '', string $name = ''): 
     return null;
 }
 /** Instalační kód pro první spuštění; leží v souboru s náhodným názvem ve složce storage, kam se dostane jen ten, kdo web nahrál. */
-function setup_code(): string
+function setup_code(?string $storage = null): string
 {
-    $files = glob(STORAGE_DIR . '/instalacni-kod-*.txt');
+    $storage ??= STORAGE_DIR;
+    $files = glob($storage . '/instalacni-kod-*.txt');
     if ($files) {
         return trim((string) file_get_contents($files[0]));
     }
     $code = strtoupper(bin2hex(random_bytes(6)));
-    file_put_contents(STORAGE_DIR . '/instalacni-kod-' . bin2hex(random_bytes(8)) . '.txt', $code . "\n");
+    file_put_contents($storage . '/instalacni-kod-' . bin2hex(random_bytes(8)) . '.txt', $code . "\n");
     return $code;
 }
 
@@ -952,7 +1007,7 @@ function parse_cadastre(string $text): array
     // Čísla popisná → vchody A, B, C, D podle pořadí.
     $cps = array_values(array_unique(array_column($units, 'cp')));
     sort($cps);
-    $letters = array_values(array_filter(ENTRANCES));
+    $letters = array_values(array_filter(entrances()));
     $total = 0.0;
     foreach ($units as &$u) {
         $u['entrance'] = $letters[array_search($u['cp'], $cps, true)] ?? '';
@@ -982,7 +1037,7 @@ function parse_user_import(string $text): array
     $seen = [];
     $unitIndex = [];
     foreach (all_units() as $un) {
-        $unitIndex[strtoupper($un['entrance']) . '/' . $un['number']] = $un;
+        $unitIndex[mb_strtoupper($un['entrance']) . '/' . $un['number']] = $un;
     }
     foreach ($lines as $n => $line) {
         $delimiter = str_contains($line, "\t") ? "\t" : (substr_count($line, ';') >= substr_count($line, ',') && str_contains($line, ';') ? ';' : ',');
@@ -1009,10 +1064,10 @@ function parse_user_import(string $text): array
         }
         $seen[mb_strtolower($row['email'])] = true;
         if ($c[5] !== '') {
-            preg_match_all('~(?:48\s*)?([A-Da-d])\s*/?\s*(\d+)~u', $c[5], $m, PREG_SET_ORDER);
+            preg_match_all('~(?:' . preg_quote(unit_prefix(), '~') . '\s*)?([\p{L}])\s*/?\s*(\d+)~u', $c[5], $m, PREG_SET_ORDER);
             foreach ($m as $hit) {
-                $key = strtoupper($hit[1]) . '/' . $hit[2];
-                isset($unitIndex[$key]) ? $row['units'][] = $unitIndex[$key] : $row['message'] = trim($row['message'] . ' Jednotka 48' . $key . ' v seznamu jednotek není.');
+                $key = mb_strtoupper($hit[1]) . '/' . $hit[2];
+                isset($unitIndex[$key]) ? $row['units'][] = $unitIndex[$key] : $row['message'] = trim($row['message'] . ' Jednotka ' . unit_prefix() . $key . ' v seznamu jednotek není.');
             }
             if (!$m) {
                 $row['message'] = trim($row['message'] . ' Jednotku „' . $c[5] . '“ se nepodařilo přečíst (pište např. 48A/9).');
@@ -1029,8 +1084,8 @@ function send_account_invite(array $user): array
     $token = bin2hex(random_bytes(32));
     q('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', time() + $days * 86400), $user['id']]);
     $link = absolute_url('/pozvanka/' . $token);
-    $text = "Dobrý den,\n\nvýbor SVJ Tábor 48 a–d Vám založil účet na webu společenství. Najdete tam oznámení výboru, dokumenty a můžete potvrdit účast na shromáždění.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPřihlašovat se budete tímto e-mailem. Pokud zprávu nečekáte, ignorujte ji prosím.\n";
-    return [send_mail($user['email'], 'Váš účet na webu SVJ Tábor 48', $text), $link];
+    $text = "Dobrý den,\n\nvýbor " . site('name') . " Vám založil účet na webu společenství. Najdete tam oznámení výboru, dokumenty a můžete potvrdit účast na shromáždění.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPřihlašovat se budete tímto e-mailem. Pokud zprávu nečekáte, ignorujte ji prosím.\n";
+    return [send_mail($user['email'], 'Váš účet na webu ' . site('name'), $text), $link];
 }
 
 // ---------- Záznam činnosti správců ----------
@@ -1132,7 +1187,7 @@ function admin_audit_flush(): void
         $a['table'] === 'settings' => '',
         $a['nameCol'] && !empty($row[$a['nameCol']]) => (string) $row[$a['nameCol']],
         $a['table'] === 'forum_posts' => 'příspěvek č. ' . $a['id'],
-        default => (string) ($_POST['title'] ?? $_POST['name'] ?? $_POST['subject'] ?? (isset($_POST['number']) ? '48' . ($_POST['entrance'] ?? '') . '/' . $_POST['number'] : '')),
+        default => (string) ($_POST['title'] ?? $_POST['name'] ?? $_POST['subject'] ?? (isset($_POST['number']) ? unit_prefix() . ($_POST['entrance'] ?? '') . '/' . $_POST['number'] : '')),
     };
     $changes = [];
     if ($before && $after) {
@@ -1192,9 +1247,9 @@ function send_password_reset(array $user): bool
     }
     $token = bin2hex(random_bytes(32));
     q('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', time() + 3600), $user['id']]);
-    $text = "Dobrý den,\n\nna webu SVJ Tábor 48 a–d někdo požádal o nové heslo k Vašemu účtu. Nové heslo si nastavíte na této adrese (platí 1 hodinu):\n"
+    $text = "Dobrý den,\n\nna webu " . site('name') . " někdo požádal o nové heslo k Vašemu účtu. Nové heslo si nastavíte na této adrese (platí 1 hodinu):\n"
         . absolute_url('/obnova-hesla/' . $token) . "\n\nPokud jste o to nežádali, zprávu ignorujte – heslo zůstává beze změny.\n";
-    return send_mail($user['email'], 'Nové heslo na webu SVJ Tábor 48', $text);
+    return send_mail($user['email'], 'Nové heslo na webu ' . site('name'), $text);
 }
 /** Krátké označení přihlášeného pod jeho jménem: vlastník/nájemník a jednotky. */
 function user_badge(array $u): string

@@ -403,7 +403,7 @@ $bulkDocs = function () {
         }
         $index = [];
         foreach (all_units() as $un) {
-            $index[strtoupper($un['entrance']) . '/' . $un['number']] = $un;
+            $index[mb_strtoupper($un['entrance']) . '/' . $un['number']] = $un;
         }
         $files = uploaded_list('files');
         if (!$files) {
@@ -413,11 +413,11 @@ $bulkDocs = function () {
             $report = ['ok' => [], 'skipped' => []];
             foreach ($files as $f) {
                 // Jednotka se pozná z názvu souboru: 48A-5.pdf, A5.pdf, vyuctovani_48B_10.pdf …
-                if (!preg_match('~(?<![A-Za-z])(?:48)?([A-Da-d])[ _.\-/]?(\d{1,3})(?!\d)~', pathinfo((string) $f['name'], PATHINFO_FILENAME), $m) || !isset($index[strtoupper($m[1]) . '/' . $m[2]])) {
+                if (!preg_match('~(?<![\p{L}])(?:' . preg_quote(unit_prefix(), '~') . ')?([\p{L}])[ _.\-/]?(\d{1,3})(?!\d)~u', pathinfo((string) $f['name'], PATHINFO_FILENAME), $m) || !isset($index[mb_strtoupper($m[1]) . '/' . $m[2]])) {
                     $report['skipped'][] = $f['name'] . ' – v názvu není jednotka, kterou web zná';
                     continue;
                 }
-                $un = $index[strtoupper($m[1]) . '/' . $m[2]];
+                $un = $index[mb_strtoupper($m[1]) . '/' . $m[2]];
                 $up = store_upload($f);
                 if (is_string($up)) {
                     $report['skipped'][] = $f['name'] . ' – ' . $up;
@@ -462,7 +462,7 @@ $route('POST', '/admin/zaloha', function () {
     $zip = new ZipArchive();
     $zip->open($tmp, ZipArchive::OVERWRITE);
     $zip->addFromString('data.json', json_encode(backup_data(), JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE));
-    $zip->addFromString('CTI-ME.txt', "Záloha webu SVJ Tábor 48 ze dne " . date('j. n. Y H:i') . ".\n\ndata.json  – všechna data webu (účty, jednotky, aktuality, hlasování, záznamy…)\nuploads/   – nahrané dokumenty\n\nObnova: na serveru s nainstalovaným webem spusťte\n  php tools/restore-backup.php cesta/k/teto-zaloze.zip\nStávající obsah webu se nahradí obsahem zálohy.\n\nZáloha obsahuje osobní údaje. Uchovávejte ji bezpečně.\n");
+    $zip->addFromString('CTI-ME.txt', "Záloha webu " . site('name') . " ze dne " . date('j. n. Y H:i') . ".\n\ndata.json  – všechna data webu (účty, jednotky, aktuality, hlasování, záznamy…)\nuploads/   – nahrané dokumenty\n\nObnova: na serveru s nainstalovaným webem spusťte\n  php tools/restore-backup.php cesta/k/teto-zaloze.zip\nStávající obsah webu se nahradí obsahem zálohy.\n\nZáloha obsahuje osobní údaje. Uchovávejte ji bezpečně.\n");
     foreach (glob(UPLOAD_DIR . '/*') as $file) {
         if (is_file($file) && basename($file) !== 'index.html') {
             $zip->addFile($file, 'uploads/' . basename($file));
