@@ -1,0 +1,60 @@
+<?php $per = period_label(); ?>
+<div class="wrap page narrow">
+  <h1>Předplatné</h1>
+  <?php if ($state['mode'] === 'free'): ?>
+    <p class="lead">Tento web běží bez placení – provoz je domluven přímo s provozovatelem služby.</p>
+  <?php else: ?>
+  <div class="card bill-state bill-<?= e($state['mode']) ?>">
+    <?php if ($state['mode'] === 'trial'): ?>
+      <h2>Zkušební doba zdarma</h2><p>Běží do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Potom je potřeba provoz uhradit, jinak se web pozastaví.</p>
+    <?php elseif ($state['mode'] === 'paid'): ?>
+      <h2>Zaplaceno</h2><p>Provoz webu je uhrazen do <strong><?= cz_date($state['until']) ?></strong>.</p>
+    <?php elseif ($state['mode'] === 'grace'): ?>
+      <h2>Po splatnosti</h2><p><?= $t['paid_until'] === '' ? 'Zkušební doba skončila' : 'Předplatné skončilo' ?> <strong><?= cz_date($state['until']) ?></strong>. Web zatím běží; bez úhrady bude za <?= max(0, pset_int('grace_days', 0, 365) + $state['days']) ?> dní pozastaven.</p>
+    <?php else: ?>
+      <h2>Web je pozastaven</h2><p><?= $t['paid_until'] === '' ? 'Zkušební doba skončila' : 'Předplatné skončilo' ?> <strong><?= cz_date($state['until']) ?></strong> a platba nedorazila. Obyvatelé web nevidí, data zůstávají uložena. Po úhradě web znovu zprovozníme. <a href="<?= url('/admin/zaloha') ?>">Zálohu dat</a> si můžete stáhnout i teď.</p>
+    <?php endif ?>
+  </div>
+
+  <div class="card">
+    <h2>Platba za další <?= $per ?></h2>
+    <?php if ($payment['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($payment['claimed_at']) ?>. Čeká na potvrzení provozovatelem – obvykle do dvou pracovních dnů.</div><?php endif ?>
+    <?php if ($iban): ?>
+    <div class="pay">
+      <div class="pay-qr"><?= $qr ?><small>Načtěte v bankovní aplikaci</small></div>
+      <dl class="pay-data">
+        <dt>Částka</dt><dd><strong><?= money_czk((int) $payment['amount']) ?></strong></dd>
+        <dt>Číslo účtu</dt><dd><?= e(str_starts_with(strtoupper(trim(pset('account'))), 'CZ') ? $iban : pset('account')) ?></dd>
+        <dt>IBAN</dt><dd><?= e(trim(chunk_split($iban, 4, ' '))) ?></dd>
+        <dt>Variabilní symbol</dt><dd><code><?= e($payment['vs']) ?></code></dd>
+        <?php if (pset('recipient') !== ''): ?><dt>Příjemce</dt><dd><?= e(pset('recipient')) ?></dd><?php endif ?>
+      </dl>
+    </div>
+    <p class="hint">Platba se páruje podle variabilního symbolu. Po připsání na účet prodloužíme předplatné o <?= (int) $payment['months'] === 12 ? 'rok' : 'měsíc' ?><?= $state['days'] >= 0 ? ' od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : '' ?>.</p>
+    <?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/zaplaceno') ?>"><?= csrf_field() ?><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form><?php endif ?>
+    <?php else: ?>
+      <p>Částka: <strong><?= money_czk((int) $payment['amount']) ?></strong>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
+      <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>
+    <?php endif ?>
+  </div>
+
+  <div class="card card-soft">
+    <h2>Ceník</h2>
+    <ul class="price-rows">
+      <li><span>První rok</span><strong><?= money_czk(pset_int('price_first', 0, 1000000)) ?> <small>/ <?= $per ?></small></strong></li>
+      <li><span>Další roky</span><strong><?= money_czk(pset_int('price_next', 0, 1000000)) ?> <small>/ <?= $per ?></small></strong></li>
+      <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '') { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
+        <li><span><?= e($item) ?></span><strong><?= e($price) ?></strong></li>
+      <?php endforeach ?>
+    </ul>
+    <?php if (pset('contact_email') !== ''): ?><p class="hint">Podporu a úpravy objednáte na <a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a>.</p><?php endif ?>
+  </div>
+
+  <?php if ($history): ?>
+  <h2>Přijaté platby</h2>
+  <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th></tr></thead><tbody>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?></td></tr><?php endforeach ?>
+  </tbody></table>
+  <?php endif ?>
+  <?php endif ?>
+</div>

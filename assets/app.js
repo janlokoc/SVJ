@@ -48,3 +48,31 @@ if (probe) {
 document.querySelectorAll('[data-print]').forEach((b) => b.addEventListener('click', () => window.print()));
 // Rozbalovací nabídka „Pro obyvatele“ se zavře kliknutím mimo ni
 document.addEventListener('click', (e) => { document.querySelectorAll('.nav-more details[open]').forEach((d) => { if (!d.contains(e.target)) d.open = false; }); });
+
+// Registrace: adresa webu se navrhne z názvu společenství a průběžně se ověřuje, zda je volná
+document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
+  const name = document.querySelector(slug.dataset.slugFrom);
+  const status = document.querySelector(slug.dataset.slugStatus);
+  const hint = status ? status.textContent : '';
+  let own = slug.value !== '';
+  let timer;
+  const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    .replace(/^(svj|spolecenstvi-vlastniku(-jednotek)?)-(?=.{2})/, '').slice(0, 30).replace(/-+$/, '');
+  const check = () => {
+    clearTimeout(timer);
+    if (!status) return;
+    status.className = 'hint';
+    if (slug.value.length < 2) { status.textContent = hint; return; }
+    timer = setTimeout(() => {
+      const asked = slug.value;
+      fetch(slug.dataset.slugCheck + '?adresa=' + encodeURIComponent(asked), { headers: { Accept: 'application/json' } }).then((r) => r.json()).then((d) => {
+        if (asked !== slug.value) return;
+        status.textContent = d.message;
+        status.className = 'hint ' + (d.ok ? 'is-ok' : 'is-bad');
+      }).catch(() => {});
+    }, 300);
+  };
+  slug.addEventListener('input', () => { own = slug.value !== ''; slug.value = slug.value.toLowerCase(); check(); });
+  if (name) name.addEventListener('input', () => { if (!own) { slug.value = slugify(name.value); check(); } });
+  if (slug.value) check();
+});

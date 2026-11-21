@@ -345,7 +345,7 @@ function url(string $path = '/'): string
 function asset(string $path): string
 {
     $f = __DIR__ . '/../assets/' . $path;
-    return url('/assets/' . $path) . (is_file($f) ? '?v=' . filemtime($f) : '');
+    return ($GLOBALS['ASSET_BASE'] ?? $GLOBALS['BASE'] ?? '') . '/assets/' . $path . (is_file($f) ? '?v=' . filemtime($f) : '');
 }
 function redirect(string $path): never
 {
@@ -689,13 +689,13 @@ function mail_recipients(string $audience): array
     return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND (password_hash <> '!' OR invited_by IS NULL)" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
 }
 /** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
-function send_mail(string $to, string $subject, string $text, ?string $html = null): bool
+function send_mail(string $to, string $subject, string $text, ?string $html = null, ?string $from = null, ?string $fromName = null): bool
 {
-    $from = setting('mail_from');
+    $from ??= setting('mail_from');
     if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
-    $name = trim(preg_replace('/[\r\n"<>]+/', ' ', setting('mail_from_name', site('name'))));
+    $name = trim(preg_replace('/[\r\n"<>]+/', ' ', $fromName ?? setting('mail_from_name', site('name'))));
     $subject = trim(preg_replace('/\s+/u', ' ', $subject));
     $headers = [
         'From' => mb_encode_mimeheader($name, 'UTF-8', 'B', "\r\n") . ' <' . $from . '>',
@@ -1287,4 +1287,5 @@ function user_badge(array $u): string
 // Části aplikace, které knihovna potřebuje vždy (i v nástrojích z příkazové řádky).
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
+require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/extra_lib.php';

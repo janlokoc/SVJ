@@ -110,6 +110,9 @@ if (!empty($_SESSION['uid']) || !empty($_SESSION['pending'])) {
     header('Cache-Control: no-store, private');
 }
 
+if (platform_enabled() && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
+    platform_daily();   // připomenutí plateb, jednou denně
+}
 if ($IS_PLATFORM) {
     $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
     $GLOBALS['LAYOUT'] = 'platform/layout';
@@ -160,6 +163,19 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
     redirect('/muj-ucet');
 }
 
+// Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
+$GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
+if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
+    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet'], true)
+    && !preg_match('~^/(obnova-hesla|jazyk|vitejte)/~', $PATH)) {
+    if (is_admin()) {
+        redirect('/admin/predplatne');
+    }
+    http_response_code(503);
+    render('locked', ['title' => 'Web je pozastaven']);
+    exit;
+}
+
 // Ikonu webu žádají některé prohlížeče na pevné adrese.
 if ($PATH === '/favicon.ico') {
     header('Location: ' . asset('favicon.svg'), true, 302);
@@ -179,6 +195,9 @@ require __DIR__ . '/app/routes_public.php';
 require __DIR__ . '/app/routes_member.php';
 require __DIR__ . '/app/routes_admin.php';
 require __DIR__ . '/app/routes_extra.php';
+if (TENANT !== '') {
+    require __DIR__ . '/app/routes_billing.php';
+}
 
 // Části webu, které správce společenství schoval, nejsou dostupné ani přímou adresou.
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {

@@ -123,8 +123,9 @@ oddělená data: vlastní databázi, soubory i přihlášení ve složce
    adresy směrovat do téže složky s webem. Běžný sdílený hosting to
    zpravidla neumí – počítejte s vlastním serverem (VPS) nebo hostingem,
    který zástupné subdomény podporuje.
-3. Na adrese hlavní domény se zobrazí konzole **hlavního správce**:
-   první účet se vytvoří instalačním kódem ze souboru
+3. Na adrese hlavní domény je veřejná úvodní stránka služby s ceníkem
+   a registrací; konzole **hlavního správce** je na adrese `/sprava`.
+   První účet se vytvoří instalačním kódem ze souboru
    `storage/instalacni-kod-platformy-….txt`.
 4. Hlavní správce zakládá weby společenství (adresa, název, vzhled,
    jazyk, značení jednotek), pozastavuje je a maže, vytváří jim první
@@ -140,6 +141,28 @@ např. `svj_{tenant}`, a účet musí mít právo databáze zakládat.
 
 Nástroje z příkazové řádky pracují se společenstvím zvoleným proměnnou
 prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
+
+### Registrace, zkušební doba a předplatné
+
+- Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →
+  účet správce. Web hned běží ve zkušební době (výchozí 30 dní).
+- V konzoli v části **Nastavení služby** se nastavují ceny (výchozí
+  999 Kč v prvním roce, potom 1 499 Kč), zda se platí měsíčně nebo
+  ročně, délka zkušební doby, lhůta po splatnosti, číslo účtu, ceník
+  podpory a úprav, kontakt a odesílatel e-mailů. Registraci lze vypnout.
+- Správce společenství vidí v administraci stránku **Předplatné**
+  s QR platbou (částka, účet, variabilní symbol). Platba kartou není
+  zapojena – vyžaduje smlouvu s platební bránou.
+- Platby se nepárují s bankou automaticky: hlavní správce po připsání
+  na účet platbu v konzoli v části **Platby** potvrdí a předplatné se
+  prodlouží.
+- Před koncem období chodí připomenutí e-mailem. Po splatnosti web běží
+  ještě nastavenou lhůtu, potom se pozastaví: obyvatelé vidí oznámení,
+  správce se dostane jen na Předplatné a Zálohu. Data zůstávají.
+- Weby založené hlavním správcem v konzoli jsou bez placení, dokud jim
+  placení nezapne.
+- Ochrana proti zneužití registrace: nejvýše tři weby z jedné adresy za
+  den a skryté pole proti robotům. E-mail se při registraci neověřuje.
 
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
 

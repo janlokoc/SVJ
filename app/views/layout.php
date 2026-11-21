@@ -18,6 +18,20 @@ $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/
     '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Rezervace', '/admin/prostory' => 'Prostory', '/admin/klice' => 'Klíče a čipy',
     '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
 $adminNav = array_diff_key($adminNav, array_flip($hiddenPaths));
+$billing = $GLOBALS['BILLING'] ?? ['mode' => 'free', 'until' => '', 'days' => 0];
+if ($billing['mode'] !== 'free') {
+    $adminNav['/admin/predplatne'] = 'Předplatné';
+}
+if ($billing['mode'] === 'locked') {
+    $nav = $more = [];
+    $adminNav = array_intersect_key($adminNav, ['/admin/predplatne' => 1, '/admin/zaloha' => 1]);
+}
+$billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
+    $billing['mode'] === 'grace' => 'Provoz webu není uhrazen. Bez platby bude web brzy pozastaven.',
+    $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Zkušební doba končí ' . cz_date($billing['until']) . '.',
+    $billing['mode'] === 'paid' && $billing['days'] <= 7 => 'Předplatné končí ' . cz_date($billing['until']) . '.',
+    default => '',
+};
 $inAdmin = str_starts_with($path, '/admin') && is_admin();
 // Hláška se zobrazí jen na skutečné stránce; požadavek prohlížeče na neexistující soubor (např. /favicon.ico) ji nesmí spotřebovat.
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
@@ -80,6 +94,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <?php endif ?>
 
 <main id="obsah">
+  <?php if ($billingNote !== ''): ?><div class="wrap"><div class="flash flash-info bill-note" translate="no"><?= e($billingNote) ?> <a href="<?= url('/admin/predplatne') ?>">Zobrazit platební údaje</a></div></div><?php endif ?>
   <?php if ($flash): ?>
     <div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div>
   <?php endif ?>

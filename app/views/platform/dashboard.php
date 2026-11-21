@@ -4,7 +4,7 @@
   <?php if (!$tenants): ?><p class="empty">Zatím tu není žádné společenství. Založte první.</p><?php else: ?>
   <label class="table-filter">Hledat <input type="search" data-filter="#tenants tbody" data-filter-rows="tr" placeholder="Název nebo adresa…"></label>
   <table class="table" id="tenants">
-    <thead><tr><th>Společenství</th><th>Adresa webu</th><th>Vzhled</th><th>Účty</th><th>Jednotky</th><th>Poslední přihlášení</th><th>Stav</th></tr></thead>
+    <thead><tr><th>Společenství</th><th>Adresa webu</th><th>Vzhled</th><th>Účty</th><th>Jednotky</th><th>Poslední přihlášení</th><th>Předplatné</th><th>Stav</th></tr></thead>
     <tbody><?php foreach ($tenants as $t): $s = $t['stats']; ?>
       <tr<?= $t['active'] ? '' : ' class="is-off"' ?>>
         <td data-label="Společenství"><a href="<?= url('/svj/' . $t['slug']) ?>"><strong><?= e($t['name']) ?></strong></a><?= $t['note'] ? '<br><small class="muted">' . e($t['note']) . '</small>' : '' ?></td>
@@ -13,6 +13,8 @@
         <td data-label="Účty"><?= $s['ready'] ? $s['users'] . ($s['admins'] ? '' : ' <span class="tag tag-pin">bez správce</span>') : '—' ?></td>
         <td data-label="Jednotky"><?= $s['ready'] ? $s['units'] : '—' ?></td>
         <td data-label="Poslední přihlášení"><?= $s['ready'] && $s['last_login'] ? cz_datetime($s['last_login']) : '—' ?></td>
+        <td data-label="Předplatné"><?php $b = $t['billing_state']; echo match ($b['mode']) { 'free' => '<span class="muted">bez placení</span>', 'trial' => 'zkušební do ' . cz_date($b['until']), 'paid' => 'zaplaceno do ' . cz_date($b['until']),
+          'grace' => '<span class="tag tag-pin">po splatnosti ' . -$b['days'] . ' d</span>', 'locked' => '<span class="tag tag-pin">pozastaveno pro neplacení</span>' }; ?></td>
         <td data-label="Stav"><span class="status status-<?= $t['active'] ? 'done' : 'new' ?>"><?= $t['active'] ? 'běží' : 'pozastaveno' ?></span></td>
       </tr>
     <?php endforeach ?></tbody>

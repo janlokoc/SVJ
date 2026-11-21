@@ -12,7 +12,7 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <?php if ($new): ?>
-      <label>Adresa webu <span class="slug-row"><input type="text" name="slug" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9-]{1,38}" required placeholder="zahradecka"><span>.<?= e(platform_domain()) ?></span></span></label>
+      <label>Adresa webu <span class="slug-row"><input type="text" name="slug" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><span>.<?= e(platform_domain()) ?></span></span></label>
       <p class="hint">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
     <?php endif ?>
     <label>Název společenství <input type="text" name="name" value="<?= e($t['name']) ?>" required placeholder="SVJ Zahrádecká 372"></label>
@@ -36,10 +36,29 @@
     <p class="hint">Doménu musí její majitel nasměrovat na tento server; web pak poběží na ní i na adrese platformy.</p>
     <label>Interní poznámka <input type="text" name="note" value="<?= e($t['note']) ?>"></label>
     <?php if ($new): ?><label class="check"><input type="checkbox" name="seed_tabor"> <span>Naplnit ukázkovým obsahem SVJ Tábor 48 <small>Dokumenty, kontakty a aktuality z původního webu svjtabor48.webnode.cz. Pro ostatní společenství nechte vypnuté.</small></span></label><?php endif ?>
+    <h2>Předplatné</h2>
+    <label class="check"><input type="checkbox" name="billing"<?= $t['billing'] ? ' checked' : '' ?>> <span>Web je placený <small>Správce společenství uvidí stránku Předplatné s výzvou k platbě. Po skončení zkušební doby nebo předplatného a lhůtě po splatnosti se web sám pozastaví. Vypnuté = web běží bez placení.</small></span></label>
+    <div class="form-row">
+      <label>Zkušební doba do <input type="date" name="trial_ends" value="<?= e($t['trial_ends']) ?>"></label>
+      <label>Zaplaceno do <input type="date" name="paid_until" value="<?= e($t['paid_until']) ?>"></label>
+    </div>
+    <div class="form-row">
+      <label>Kontaktní osoba <input type="text" name="owner_name" value="<?= e($t['owner_name']) ?>"></label>
+      <label>E-mail pro připomenutí plateb <input type="email" name="owner_email" value="<?= e($t['owner_email']) ?>"></label>
+    </div>
     <label class="check"><input type="checkbox" name="active"<?= $t['active'] ? ' checked' : '' ?>> <span>Web běží <small>Pozastavený web se návštěvníkům nezobrazí; data zůstávají.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit"><?= $new ? 'Založit web' : 'Uložit' ?></button><a class="btn btn-ghost" href="<?= url('/') ?>">Zrušit</a></div>
   </form>
   <?php if (!$new): ?>
+  <?php if ($payments): ?>
+  <div class="card"><h2>Platby tohoto společenství</h2>
+    <table class="table"><thead><tr><th>Var. symbol</th><th>Částka</th><th>Období</th><th>Stav</th></tr></thead><tbody>
+    <?php foreach ($payments as $p): ?><tr><td data-label="Var. symbol"><code><?= e($p['vs']) ?></code></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td>
+      <td data-label="Období"><?= $p['period_from'] ? cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '—' ?></td><td data-label="Stav"><?= e(PAYMENT_STATUS[$p['status']]) ?></td></tr><?php endforeach ?>
+    </tbody></table>
+    <p><a href="<?= url('/platby') ?>">Potvrdit nebo zrušit platbu →</a></p>
+  </div>
+  <?php endif ?>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/spravce') ?>" class="card form">
     <h2>Přidat správce tohoto webu</h2>
     <?= csrf_field() ?>
