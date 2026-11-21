@@ -15,6 +15,18 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open]);
     exit;
 }
+if ($PATH === '/hlaseni') {
+    $errors = $METHOD === 'POST' ? report_submit(report_who()) : [];
+    if ($METHOD === 'POST' && !$errors) {
+        flash('Děkujeme, hlášení jsme přijali. Odpovíme Vám e-mailem.');
+        redirect(report_back(post('z', '/')));
+    }
+    if ($errors) {
+        http_response_code(422);
+    }
+    render('reports/page', ['title' => 'Nahlásit problém nebo nápad', 'errors' => $errors, 'mine' => [], 'back' => report_back((string) ($_GET['z'] ?? post('z', '/')))]);
+    exit;
+}
 if ($PATH === '/registrace/adresa' && $METHOD === 'GET') {
     $slug = strtolower(trim((string) ($_GET['adresa'] ?? '')));
     header('Content-Type: application/json; charset=utf-8');

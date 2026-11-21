@@ -559,3 +559,24 @@ div.stat:hover { border-color: var(--line); }
 .bill-note a { font-weight: 700; }
 @media (max-width: 800px) { .lp-pricing { grid-template-columns: minmax(0, 1fr); } .lp-stack { padding: 0 0 2rem; } .lp-stack .mini:last-child { right: 0; } }
 @media print { .bill-note { display: none; } }
+
+/* ===== Hlášení problémů a nápadů ===== */
+.report-link { display: inline-flex; align-items: center; gap: .3rem; padding: .35rem .7rem; border-radius: 999px; border: 1.5px dashed var(--line); color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: 600; white-space: nowrap; }
+.report-link:hover { color: var(--accent); border-color: var(--accent); }
+@media (min-width: 1101px) and (max-width: 1500px) { .report-link span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .report-link { padding: .45rem; } }
+.report-dialog { width: min(560px, calc(100% - 1.5rem)); max-height: calc(100dvh - 1.5rem); overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); padding: clamp(1.1rem, 4vw, 1.75rem); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .45); }
+.report-dialog::backdrop { background: rgba(10, 15, 13, .55); }
+.report-dialog h2 { margin-bottom: .25rem; }
+.report-types { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.report-shot { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; }
+.form .report-file { display: flex; grid-template-columns: none; flex-wrap: wrap; align-items: center; gap: .5rem; font-weight: 500; font-size: .92rem; color: var(--muted); min-width: 0; }
+.report-file input { max-width: 100%; min-width: 0; font-size: .85rem; }
+.report-preview { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; font-weight: 600; color: var(--ok); }
+.report-preview canvas { width: 240px; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.report-reply { margin-top: .75rem; }
+.report-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+.report-meta { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.report-meta dd { font-weight: 400; }
+.report-trace { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .88rem; background: var(--surface-2); padding: .8rem; border-radius: 8px; margin: 0; }
+.chips a.is-active, .chip.is-active { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+@media print { .report-link, .report-dialog { display: none; } }

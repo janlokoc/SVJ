@@ -20,6 +20,7 @@
       <ul>
         <li><a href="<?= url('/') ?>"<?= $path === '/' || str_starts_with($path, '/svj') ? ' aria-current="page"' : '' ?>>Společenství</a></li>
         <li><a href="<?= url('/platby') ?>"<?= str_starts_with($path, '/platby') ? ' aria-current="page"' : '' ?>>Platby<?php $claimed = (int) pq("SELECT COUNT(*) FROM payments WHERE status = 'claimed'")->fetchColumn(); if ($claimed): ?> <span class="count"><?= $claimed ?></span><?php endif ?></a></li>
+        <li><a href="<?= url('/hlaseni') ?>"<?= str_starts_with($path, '/hlaseni') ? ' aria-current="page"' : '' ?>>Hlášení<?php $newReports = reports_open_count(); if ($newReports): ?> <span class="count"><?= $newReports ?></span><?php endif ?></a></li>
         <li><a href="<?= url('/nastaveni') ?>"<?= $path === '/nastaveni' ? ' aria-current="page"' : '' ?>>Nastavení služby</a></li>
         <li><a href="<?= url('/zaznamy') ?>"<?= $path === '/zaznamy' ? ' aria-current="page"' : '' ?>>Záznamy</a></li>
       </ul>

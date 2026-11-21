@@ -301,6 +301,10 @@ if ($PATH === '/nastaveni') {
     render('platform/settings', ['title' => 'Nastavení služby', 'errors' => $errors, 'v' => $values]);
     exit;
 }
+if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
+    report_admin_page('/hlaseni', substr($PATH, 8), $METHOD, $super['email']);
+    exit;
+}
 if ($PATH === '/zaznamy') {
     render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll()]);
     exit;

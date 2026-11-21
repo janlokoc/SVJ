@@ -16,6 +16,7 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 set_exception_handler(function (Throwable $e) {
     error_log('SVJ web: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    report_auto($e);
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: text/html; charset=utf-8');
@@ -166,7 +167,7 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
 // Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
-    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet'], true)
+    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
     && !preg_match('~^/(obnova-hesla|jazyk|vitejte)/~', $PATH)) {
     if (is_admin()) {
         redirect('/admin/predplatne');
@@ -195,6 +196,7 @@ require __DIR__ . '/app/routes_public.php';
 require __DIR__ . '/app/routes_member.php';
 require __DIR__ . '/app/routes_admin.php';
 require __DIR__ . '/app/routes_extra.php';
+require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';
 }

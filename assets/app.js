@@ -76,3 +76,57 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
   if (name) name.addEventListener('input', () => { if (!own) { slug.value = slugify(name.value); check(); } });
   if (slug.value) check();
 });
+
+// Hlášení problému nebo nápadu: okno přímo na stránce, s adresou stránky a volitelným snímkem obrazovky
+(() => {
+  const dlg = document.getElementById('report-dialog');
+  document.querySelectorAll('.report-form').forEach((form) => {
+    const set = (sel, v) => { const el = form.querySelector(sel); if (el && (!el.value || dlg && dlg.contains(form))) el.value = v; };
+    const fill = () => { if (!dlg || !dlg.contains(form)) return; set('[data-report-url]', location.href); set('[data-report-title]', document.title); set('[data-report-viewport]', innerWidth + '×' + innerHeight); };
+    const file = form.querySelector('[data-report-file]');
+    const preview = form.querySelector('[data-report-preview]');
+    const capture = form.querySelector('[data-report-capture]');
+    const clear = () => { file.value = ''; preview.hidden = true; const c = preview.querySelector('canvas'); if (c) c.remove(); };
+    form.querySelector('[data-report-clear]').addEventListener('click', clear);
+    file.addEventListener('change', () => { const c = preview.querySelector('canvas'); if (c) c.remove(); preview.hidden = !file.files.length; });
+    const close = form.querySelector('[data-report-close]');
+    if (close) close.addEventListener('click', () => dlg.close());
+    form.addEventListener('submit', fill);
+    // Snímek pořídí prohlížeč sám (zeptá se, co smí zachytit); v prohlížečích, které to neumějí, zůstane jen přiložení obrázku.
+    if (capture && dlg && dlg.contains(form) && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia && typeof DataTransfer === 'function') {
+      capture.hidden = false;
+      capture.addEventListener('click', async () => {
+        dlg.close();
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: false, preferCurrentTab: true });
+          const video = document.createElement('video');
+          video.srcObject = stream; video.muted = true;
+          await video.play();
+          await new Promise((r) => setTimeout(r, 400));
+          const scale = Math.min(1, 1600 / video.videoWidth);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(video.videoWidth * scale); canvas.height = Math.round(video.videoHeight * scale);
+          canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.85));
+          const dt = new DataTransfer();
+          dt.items.add(new File([blob], 'snimek.jpg', { type: 'image/jpeg' }));
+          file.files = dt.files;
+          const old = preview.querySelector('canvas'); if (old) old.remove();
+          preview.appendChild(canvas); preview.hidden = false;
+        } catch (e) { /* uživatel snímek odmítl – hlášení jde odeslat i bez něj */ }
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        dlg.showModal();
+      });
+    }
+    form._fill = fill;
+  });
+  if (!dlg || typeof dlg.showModal !== 'function') return;
+  document.querySelectorAll('[data-report-open]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const form = dlg.querySelector('.report-form');
+    form._fill();
+    dlg.showModal();
+    form.querySelector('textarea').focus();
+  }));
+})();

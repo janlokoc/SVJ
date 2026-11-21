@@ -25,7 +25,7 @@
         <li><a href="<?= url('/') ?>#cenik">Ceník</a></li>
         <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
       </ul>
-      <div class="nav-user"><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
+      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit problém nebo nápad"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
     </nav>
   </div>
 </header>
@@ -47,5 +47,6 @@
     </ul>
   </div>
 </footer>
+<?php require __DIR__ . '/../reports/_widget.php'; ?>
 </body>
 </html>

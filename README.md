@@ -164,7 +164,40 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
 - Ochrana proti zneužití registrace: nejvýše tři weby z jedné adresy za
   den a skryté pole proti robotům. E-mail se při registraci neověřuje.
 
+### Převod stávajícího webu jednoho SVJ pod platformu
+
+Když už web běží pro jedno společenství (SQLite) a chcete zapnout
+platformu, přesuňte jeho data pod vlastní adresu:
+
+1. Udělejte zálohu složky `storage`.
+2. Do `storage/config.php` doplňte `'platform' => ['domain' => '…']`
+   (pro zkoušku na vlastním počítači `localhost`).
+3. Spusťte `php tools/move-to-platform.php tabor`.
+
+Web pak běží na `tabor.<doména>` se stejnými účty a hesly; hlavní doména
+zobrazuje úvodní stránku služby a `/sprava` konzoli hlavního správce.
+Na vlastním počítači fungují adresy `tabor.localhost:8080` v běžných
+prohlížečích bez dalšího nastavení.
+
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
+
+## Hlášení problémů a nápadů
+
+Každá stránka má v hlavičce tlačítko **Nahlásit**. Uživatel vybere, zda
+jde o problém nebo nápad, napíše text a může přiložit snímek stránky –
+buď ho pořídí prohlížeč (zeptá se na svolení; funguje v počítačových
+prohlížečích), nebo se přiloží obrázek. S hlášením se uloží adresa
+stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí e-mail.
+
+- Na platformě hlášení ze všech webů vyřizuje hlavní správce v konzoli
+  v části **Hlášení**; na webu jednoho SVJ jeho správci v administraci.
+- Správce nastaví stav (nové, řeší se, plánujeme, vyřešeno, nebudeme
+  řešit), napíše odpověď a interní poznámku. Stav a odpověď vidí autor
+  v části **Moje hlášení** a přijdou mu e-mailem.
+- Mezi hlášení se samy zapisují i chyby, které web zachytil (stejná
+  chyba se nezapisuje znovu, jen se zvyšuje počet).
+- Snímky jsou ve složce `storage/reports` a vidí je jen autor a ten,
+  kdo hlášení vyřizuje. Hlášení nejsou součástí zálohy webu.
 
 ## Jazyky
 

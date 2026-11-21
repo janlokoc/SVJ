@@ -17,6 +17,9 @@ $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/
     '/admin/hlasovani' => 'Hlasování', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
     '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Rezervace', '/admin/prostory' => 'Prostory', '/admin/klice' => 'Klíče a čipy',
     '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
+if (!reports_central()) {
+    $adminNav['/admin/hlaseni'] = 'Hlášení';
+}
 $adminNav = array_diff_key($adminNav, array_flip($hiddenPaths));
 $billing = $GLOBALS['BILLING'] ?? ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($billing['mode'] !== 'free') {
@@ -69,6 +72,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <?php endif ?>
       </ul>
       <div class="nav-user">
+        <a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit problém nebo nápad"><?= icon('flag') ?><span>Nahlásit</span></a>
         <?php if ($u): ?>
           <?php if ($u['role'] === 'admin'): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>
           <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($u['name']) ?></strong><small><?= e(user_badge($u)) ?></small></span></a>
@@ -117,5 +121,6 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     </ul>
   </div>
 </footer>
+<?php require __DIR__ . '/reports/_widget.php'; ?>
 </body>
 </html>

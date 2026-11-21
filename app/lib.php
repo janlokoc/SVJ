@@ -482,6 +482,7 @@ function icon(string $name): string
         'menu' => '<path d="M4 7h16M4 12h16M4 17h16"/>',
         'alert' => '<path d="M12 3 2 20h20zM12 10v4M12 17.5v.5"/>',
         'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        'flag' => '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
         'chat' => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
         'wrench' => '<path d="M14.5 6.5a4 4 0 0 0 5 5L11 20a2.1 2.1 0 0 1-3-3l8.5-8.5a4 4 0 0 1-2-2z"/><path d="m14.5 6.5 3-3"/>',
         'download' => '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>',
@@ -1288,4 +1289,5 @@ function user_badge(array $u): string
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
 require_once __DIR__ . '/qr.php';
+require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/extra_lib.php';
