@@ -33,7 +33,9 @@ a administrace pro výbor.
   spoluvlastnických podílů; odpověď může zapsat i za vlastníka bez účtu
 - Nastavení: odesílatel e-mailů, pravidla pozvánek členů domácnosti,
   hranice usnášeníschopnosti
-- Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu
+- Uživatelé: zakládání účtů, dočasná hesla, vypnutí účtu, hromadný import
+  ze seznamu (jméno, příjmení, telefon, e-mail, vlastník/nájemník,
+  volitelně jednotka) s rozesláním pozvánek k nastavení hesla
 - Jednotky: seznam jednotek s vlastníkem dle evidence, patrem a podílem,
   přiřazení účtů k jednotkám, hromadné založení jednotek, import
   vlastníků a podílů vložením textu z Nahlížení do katastru nemovitostí

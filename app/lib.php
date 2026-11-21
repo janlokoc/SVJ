@@ -563,7 +563,8 @@ function absolute_url(string $path = '/'): string
 }
 function mail_recipients(string $audience): array
 {
-    return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND password_hash <> '!'" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
+    // Účty založené správcem dostávají zprávy i před prvním přihlášením; lidé pozvaní jiným obyvatelem až po přijetí pozvánky.
+    return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND (password_hash <> '!' OR invited_by IS NULL)" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
 }
 /** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
 function send_mail(string $to, string $subject, string $text, ?string $html = null): bool
@@ -880,4 +881,68 @@ function parse_cadastre(string $text): array
     }
     uasort($units, fn($a, $b) => [$a['cp'], (int) $a['number']] <=> [$b['cp'], (int) $b['number']]);
     return ['units' => $units, 'warnings' => $warnings, 'total' => $total];
+}
+
+// ---------- Import uživatelů a pozvánky od správce ----------
+
+/**
+ * Zpracuje seznam uživatelů vložený z tabulky (sloupce: jméno, příjmení, telefon, e-mail, vlastník/nájemník, volitelně jednotka).
+ * Oddělovačem může být tabulátor (kopie z Excelu), středník nebo čárka. Vrací řádky se stavem „ok“, „exists“ nebo „error“.
+ */
+function parse_user_import(string $text): array
+{
+    $lines = array_values(array_filter(preg_split('/\R/u', $text), fn($l) => trim($l) !== ''));
+    $rows = [];
+    $seen = [];
+    $unitIndex = [];
+    foreach (all_units() as $un) {
+        $unitIndex[strtoupper($un['entrance']) . '/' . $un['number']] = $un;
+    }
+    foreach ($lines as $n => $line) {
+        $delimiter = str_contains($line, "\t") ? "\t" : (substr_count($line, ';') >= substr_count($line, ',') && str_contains($line, ';') ? ';' : ',');
+        $c = array_map(fn($v) => trim((string) $v), str_getcsv($line, $delimiter, '"', ''));
+        $c = array_pad($c, 6, '');
+        // Záhlaví tabulky (první řádek bez e-mailové adresy) se přeskočí.
+        if ($n === 0 && !str_contains($line, '@')) {
+            continue;
+        }
+        $row = ['line' => $n + 1, 'name' => trim($c[0] . ' ' . $c[1]), 'phone' => $c[2], 'email' => $c[3],
+            'kind' => preg_match('/^(n|t)/iu', $c[4]) ? 'tenant' : 'owner', 'units' => [], 'status' => 'ok', 'message' => ''];
+        if ($row['name'] === '') {
+            $row['status'] = 'error';
+            $row['message'] = 'Chybí jméno.';
+        } elseif (!filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
+            $row['status'] = 'error';
+            $row['message'] = 'E-mail nemá správný tvar.';
+        } elseif (isset($seen[mb_strtolower($row['email'])])) {
+            $row['status'] = 'error';
+            $row['message'] = 'Stejný e-mail je v seznamu dvakrát.';
+        } elseif (val('SELECT 1 FROM users WHERE email = ?', [$row['email']])) {
+            $row['status'] = 'exists';
+            $row['message'] = 'Účet s tímto e-mailem už existuje – přeskočí se.';
+        }
+        $seen[mb_strtolower($row['email'])] = true;
+        if ($c[5] !== '') {
+            preg_match_all('~(?:48\s*)?([A-Da-d])\s*/?\s*(\d+)~u', $c[5], $m, PREG_SET_ORDER);
+            foreach ($m as $hit) {
+                $key = strtoupper($hit[1]) . '/' . $hit[2];
+                isset($unitIndex[$key]) ? $row['units'][] = $unitIndex[$key] : $row['message'] = trim($row['message'] . ' Jednotka 48' . $key . ' v seznamu jednotek není.');
+            }
+            if (!$m) {
+                $row['message'] = trim($row['message'] . ' Jednotku „' . $c[5] . '“ se nepodařilo přečíst (pište např. 48A/9).');
+            }
+        }
+        $rows[] = $row;
+    }
+    return $rows;
+}
+/** Vystaví účtu, který ještě nemá heslo, pozvánku a pošle ji e-mailem. Vrací [odesláno?, odkaz]. */
+function send_account_invite(array $user): array
+{
+    $days = setting_int('invite_days', 14, 1, 90);
+    $token = bin2hex(random_bytes(32));
+    q('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', time() + $days * 86400), $user['id']]);
+    $link = absolute_url('/pozvanka/' . $token);
+    $text = "Dobrý den,\n\nvýbor SVJ Tábor 48 a–d Vám založil účet na webu společenství. Najdete tam oznámení výboru, dokumenty a můžete potvrdit účast na shromáždění.\n\nÚčet si aktivujete nastavením hesla na této adrese (platí $days dní):\n$link\n\nPřihlašovat se budete tímto e-mailem. Pokud zprávu nečekáte, ignorujte ji prosím.\n";
+    return [send_mail($user['email'], 'Váš účet na webu SVJ Tábor 48', $text), $link];
 }

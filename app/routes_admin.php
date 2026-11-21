@@ -609,7 +609,7 @@ const AUDIT_LABELS = [
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
     'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
-    'unit_deleted' => 'Smazání jednotky', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
+    'unit_deleted' => 'Smazání jednotky', 'users_imported' => 'Import uživatelů', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];
 $route('GET', '/admin/zaznamy', function () {
     require_admin();
@@ -657,3 +657,58 @@ $cadastreImport = function () {
 };
 $route('GET', '/admin/jednotky/import', $cadastreImport);
 $route('POST', '/admin/jednotky/import', $cadastreImport);
+
+// ---------- Import uživatelů ----------
+
+$userImport = function () {
+    require_admin();
+    $text = (string) ($_POST['text'] ?? '');
+    $rows = null;
+    if ($GLOBALS['METHOD'] === 'POST') {
+        if (strlen($text) > 200000) {
+            flash('Vložený text je příliš dlouhý.', 'error');
+            redirect('/admin/uzivatele/import');
+        }
+        $rows = parse_user_import($text);
+        if (count($rows) > 500) {
+            flash('Najednou lze importovat nejvýše 500 uživatelů.', 'error');
+            redirect('/admin/uzivatele/import');
+        }
+        $ok = array_filter($rows, fn($r) => $r['status'] === 'ok');
+        if ($ok && post('action') === 'save') {
+            @set_time_limit(600);
+            $invite = isset($_POST['invite']);
+            $sent = $notSent = 0;
+            foreach ($ok as $r) {
+                q("INSERT INTO users (name, email, phone, kind, role, password_hash) VALUES (?,?,?,?,'resident',?)", [$r['name'], $r['email'], $r['phone'], $r['kind'], NO_PASSWORD]);
+                $id = (int) db()->lastInsertId();
+                foreach ($r['units'] as $un) {
+                    q('INSERT OR IGNORE INTO user_units (user_id, unit_id) VALUES (?,?)', [$id, $un['id']]);
+                }
+                if ($invite) {
+                    send_account_invite(['id' => $id, 'email' => $r['email']])[0] ? $sent++ : $notSent++;
+                }
+            }
+            audit('users_imported', count($ok) . ' účtů' . ($invite ? ", pozvánek odesláno $sent" : ''));
+            flash('Založeno účtů: ' . count($ok) . '.' . ($invite ? " Pozvánek odesláno: $sent" . ($notSent ? ", nepodařilo se: $notSent (pošlete je znovu u jednotlivých účtů)." : '.') : ' Pozvánky jste neposílali – pošlete je u jednotlivých účtů odkazem „Poslat pozvánku“.'), $notSent ? 'info' : 'ok');
+            redirect('/admin/uzivatele');
+        }
+    }
+    render('admin/users_import', ['title' => 'Import uživatelů', 'text' => $text, 'rows' => $rows,
+        'mailReady' => (bool) filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)]);
+};
+$route('GET', '/admin/uzivatele/import', $userImport);
+$route('POST', '/admin/uzivatele/import', $userImport);
+
+$route('POST', '/admin/uzivatele/(\d+)/pozvanka', function (int $id) {
+    require_admin();
+    $u = one('SELECT * FROM users WHERE id = ? AND password_hash = ?', [$id, NO_PASSWORD]) ?? not_found();
+    [$sent, $link] = send_account_invite($u);
+    audit('invite_sent', $u['email']);
+    if ($sent) {
+        flash('Pozvánka byla odeslána na ' . $u['email'] . '.');
+    } else {
+        $_SESSION['admin_invite_link'] = ['name' => $u['name'], 'link' => $link];
+    }
+    redirect('/admin/uzivatele');
+});
