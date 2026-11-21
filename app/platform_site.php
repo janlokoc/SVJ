@@ -12,7 +12,13 @@ $signup = $_SESSION['signup'] ?? [];
 $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '/registrace/spravce' => 'Účet správce'];
 
 if ($PATH === '/' && $METHOD === 'GET') {
-    render('platform/landing', ['title' => '', 'open' => $open]);
+    render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
+    exit;
+}
+if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju')) {
+    $terms = $PATH === '/podminky';
+    render('platform/text', ['title' => $terms ? 'Obchodní podmínky' : 'Smlouva o zpracování osobních údajů', 'body' => pset($terms ? 'terms' : 'dpa'),
+        'also' => $terms ? ['/zpracovani-udaju', 'Smlouva o zpracování osobních údajů'] : ['/podminky', 'Obchodní podmínky']]);
     exit;
 }
 if ($PATH === '/hlaseni') {
@@ -99,7 +105,7 @@ if (isset($steps[$PATH])) {
             $title = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $signup['name'])) ?: $signup['name'];
             $trialEnds = date('Y-m-d', time() + pset_int('trial_days', 0, 365) * 86400);
             tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'],
-                'billing' => 1, 'trial_ends' => $trialEnds, 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
+                'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => $trialEnds, 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
             $pdo = tenant_pdo($slug);
             $pdo->prepare("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)")->execute([$person, $email, password_hash($pass, PASSWORD_DEFAULT)]);
             tenant_set($slug, 'webmaster_email', $email);

@@ -61,6 +61,16 @@ CREATE TABLE signups (ip TEXT NOT NULL, at INTEGER NOT NULL);
 PRAGMA user_version = 1;
 SQL);
     }
+    // Ukázkový web, souhlas s podmínkami a faktury.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 2) {
+        $pdo->exec(<<<'SQL'
+ALTER TABLE tenants ADD COLUMN demo INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE tenants ADD COLUMN terms_at TEXT NOT NULL DEFAULT '';
+ALTER TABLE payments ADD COLUMN invoice_no TEXT NOT NULL DEFAULT '';
+ALTER TABLE payments ADD COLUMN invoice_data TEXT NOT NULL DEFAULT '';
+PRAGMA user_version = 2;
+SQL);
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -160,10 +170,77 @@ function tenant_delete_storage(string $slug): void
 
 // ---------- Nastavení služby, registrace a předplatné ----------
 
+const PLATFORM_TERMS = <<<'TXT'
+## 1. Úvodní ustanovení
+Tyto podmínky upravují poskytování služby, která společenstvím vlastníků jednotek (dále „zákazník“) umožňuje provozovat vlastní web s částí pro obyvatele domu a s administrací. Poskytovatelem je provozovatel uvedený v záhlaví této stránky.
+Smlouva vzniká dokončením registrace, při které osoba jednající za zákazníka potvrdí souhlas s těmito podmínkami. Tato osoba prohlašuje, že je oprávněna za společenství jednat.
+
+## 2. Zkušební doba a cena
+Po registraci běží bezplatná zkušební doba v délce uvedené v ceníku. Během ní ani po ní nevzniká povinnost službu dále využívat.
+Cena služby a doplňkových služeb je uvedena v ceníku na webu poskytovatele. Platí se předem za zvolené období bankovním převodem na základě zálohové faktury (výzvy k platbě) dostupné v administraci. Po připsání platby vystaví poskytovatel fakturu.
+Nic se nestrhává automaticky. Cenu může poskytovatel změnit s účinností od dalšího období; novou cenu oznámí nejméně 30 dní předem.
+
+## 3. Neuhrazení a pozastavení
+Není-li služba po skončení zkušební doby nebo zaplaceného období uhrazena, běží web ještě po lhůtu uvedenou v administraci a poté je pozastaven. Správce zákazníka má i po pozastavení přístup ke stránce Předplatné a ke stažení zálohy dat.
+Data pozastaveného webu poskytovatel uchovává nejméně 6 měsíců od pozastavení; poté je může smazat.
+
+## 4. Práva a povinnosti zákazníka
+Zákazník odpovídá za obsah, který na web vloží on nebo jeho uživatelé, a za to, že má k uveřejnění a ke zpracování údajů právní důvod.
+Zákazník chrání přístupové údaje svých správců a bez zbytečného odkladu oznámí poskytovateli podezření na jejich zneužití.
+Službu není dovoleno používat k rozesílání nevyžádaných sdělení, k šíření protiprávního obsahu ani způsobem, který ohrožuje její provoz.
+
+## 5. Práva a povinnosti poskytovatele
+Poskytovatel zajišťuje provoz služby, její zabezpečení a pravidelné zálohování. Krátkodobé odstávky kvůli údržbě oznamuje předem, je-li to možné.
+Poskytovatel do obsahu webu zákazníka nenahlíží, ledaže o to zákazník požádá při řešení podpory nebo to vyžaduje odstranění závady či plnění právní povinnosti.
+Poskytovatel může službu měnit a rozšiřovat. Podstatné omezení funkcí oznámí předem.
+
+## 6. Odpovědnost
+Služba je poskytována v podobě, v jaké je popsána na webu poskytovatele. Poskytovatel neodpovídá za škodu způsobenou obsahem vloženým zákazníkem, nesprávným použitím služby ani výpadky mimo jeho vliv (připojení, služby třetích stran).
+Odpovědnost poskytovatele za škodu je omezena částkou, kterou zákazník za službu zaplatil za posledních 12 měsíců. Omezení se neuplatní tam, kde to zákon nepřipouští.
+
+## 7. Ukončení
+Zákazník může službu kdykoli přestat používat; smlouva zaniká uplynutím zaplaceného období, není-li uhrazeno další. Před ukončením si může stáhnout úplnou zálohu dat.
+Poskytovatel může smlouvu vypovědět, porušuje-li zákazník tyto podmínky závažně nebo opakovaně. Poměrnou část předplatného za nevyužité období v takovém případě nevrací jen tehdy, bylo-li porušení úmyslné.
+
+## 8. Osobní údaje
+Při provozu webu zpracovává poskytovatel osobní údaje obyvatel domu jako zpracovatel pro zákazníka, který je jejich správcem. Podmínky upravuje Smlouva o zpracování osobních údajů, která je součástí těchto podmínek.
+
+## 9. Závěrečná ustanovení
+Právní vztahy se řídí českým právem. Poskytovatel může podmínky změnit; změnu oznámí správcům zákazníka nejméně 30 dní předem a zákazník ji může odmítnout ukončením služby.
+TXT;
+const PLATFORM_DPA = <<<'TXT'
+## 1. Strany a předmět
+Správcem osobních údajů je společenství vlastníků, které si založilo web (dále „správce“). Zpracovatelem je provozovatel služby uvedený v záhlaví této stránky (dále „zpracovatel“).
+Tato smlouva podle čl. 28 nařízení (EU) 2016/679 (GDPR) upravuje zpracování osobních údajů, které správce nebo jeho uživatelé do služby vloží.
+
+## 2. Rozsah zpracování
+**Účel:** provoz webu společenství, komunikace s vlastníky a obyvateli, organizace shromáždění a hlasování, evidence jednotek a správa domu.
+**Subjekty údajů:** vlastníci jednotek, členové jejich domácností, nájemníci, členové výboru a kontaktní osoby dodavatelů.
+**Kategorie údajů:** jméno a příjmení, e-mail, telefon, adresa, označení jednotky a spoluvlastnický podíl, údaje o účasti a hlasování, obsah vložených zpráv, hlášení a dokumentů, technické údaje o přihlášení (čas, IP adresa).
+**Doba:** po dobu trvání smlouvy o poskytování služby a nejdéle 6 měsíců po jejím skončení.
+
+## 3. Povinnosti zpracovatele
+Zpracovatel zpracovává údaje jen na základě doložených pokynů správce, kterými jsou tato smlouva a nastavení provedená správcem ve službě.
+Zajišťuje, že osoby s přístupem k údajům jsou vázány mlčenlivostí.
+Přijal technická a organizační opatření: šifrovaný přenos, hesla ukládaná jen jako otisk, oddělená databáze každého společenství, řízení přístupů, záznamy o činnosti správců a pravidelné zálohy.
+Je správci nápomocen při vyřizování žádostí subjektů údajů a při plnění povinností podle čl. 32–36 GDPR.
+Porušení zabezpečení osobních údajů oznámí správci bez zbytečného odkladu poté, co se o něm dozví.
+Na žádost poskytne správci informace potřebné k doložení splnění povinností a umožní audit v přiměřeném rozsahu.
+
+## 4. Další zpracovatelé
+Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pro provoz služby (zejména poskytovatel serverů a služba pro odesílání e-mailů). Zpracovatel je zaváže ke stejné ochraně údajů a správce o zamýšlené změně informuje předem.
+Údaje jsou uloženy na serverech v Evropské unii a nepředávají se do třetích zemí.
+
+## 5. Skončení zpracování
+Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
+TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'trial_days' => '30', 'grace_days' => '14',
-    'period' => 'month', 'price_first' => '999', 'price_next' => '1499',
-    'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '', 'operator' => '',
+    'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
+    'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
+    'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
+    'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
+    'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nPřevod obsahu ze stávajícího webu | 1 500 Kč jednorázově\nVlastní doména (např. www.svj-vasdum.cz) | 500 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno'];
@@ -222,13 +299,13 @@ function slug_problem(string $slug): ?string
 function tenant_create(array $t): void
 {
     $t += ['accent' => '', 'tagline' => 'Společenství vlastníků jednotek', 'full' => '', 'address' => '', 'unit_prefix' => '', 'entrances' => 'A', 'look' => 'les', 'lang' => 'cs', 'custom_domain' => '',
-        'seed' => '', 'note' => '', 'active' => 1, 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => ''];
+        'seed' => '', 'note' => '', 'active' => 1, 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => '', 'demo' => 0, 'terms_at' => ''];
     if ($t['full'] === '') {
         $t['full'] = $t['name'];
     }
-    pq('INSERT INTO tenants (slug, name, title, accent, tagline, "full", address, unit_prefix, entrances, look, lang, custom_domain, seed, note, active, created_at, billing, trial_ends, paid_until, owner_name, owner_email) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    pq('INSERT INTO tenants (slug, name, title, accent, tagline, "full", address, unit_prefix, entrances, look, lang, custom_domain, seed, note, active, created_at, billing, trial_ends, paid_until, owner_name, owner_email, demo, terms_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$t['slug'], $t['name'], $t['title'], $t['accent'], $t['tagline'], $t['full'], $t['address'], $t['unit_prefix'], $t['entrances'], $t['look'], $t['lang'], $t['custom_domain'], $t['seed'], $t['note'], $t['active'],
-            date('Y-m-d H:i:s'), $t['billing'], $t['trial_ends'], $t['paid_until'], $t['owner_name'], $t['owner_email']]);
+            date('Y-m-d H:i:s'), $t['billing'], $t['trial_ends'], $t['paid_until'], $t['owner_name'], $t['owner_email'], $t['demo'], $t['terms_at']]);
     tenant_pdo($t['slug']);   // založí databázi a naplní ji výchozím obsahem
 }
 
@@ -295,11 +372,15 @@ function billing_confirm(array $p, string $by): ?array
     }
     $from = max(date('Y-m-d', strtotime(billing_state($t)['until'] . ' +1 day')), date('Y-m-d'));
     $to = date('Y-m-d', strtotime($from . ' +' . (int) $p['months'] . ' month -1 day'));
-    pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ? WHERE id = ?", [date('Y-m-d H:i:s'), $from, $to, $by, $p['id']]);
+    // Faktura dostane pořadové číslo v roce a otisk údajů dodavatele a odběratele platných v den vystavení.
+    $year = date('Y');
+    $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+    pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+        [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
     pq("UPDATE tenants SET paid_until = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $t['slug']]);
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nPředplatné webu " . $t['name']
-            . " je uhrazeno do " . cz_date($to) . ".\n\nDěkujeme.");
+            . " je uhrazeno do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
     }
     return ['from' => $from, 'to' => $to];
 }
@@ -371,4 +452,44 @@ function platform_daily(): void
         platform_mail($t['owner_email'], $subject, "Dobrý den,\n\n" . $body . "\n\nPlatební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
+}
+
+// ---------- Provozovatel, doklady, ukázkový web ----------
+
+function operator(): array
+{
+    return ['name' => pset('op_name'), 'ico' => pset('op_ico'), 'dic' => pset('op_dic'), 'address' => pset('op_address'), 'register' => pset('op_register'), 'phone' => pset('op_phone'),
+        'email' => pset('contact_email'), 'account' => pset('account'), 'iban' => (string) cz_iban(pset('account'))];
+}
+/** Dodavatel a odběratel pro doklad: odběratelem je společenství s údaji ze svého webu. */
+function invoice_parties(array $t): array
+{
+    $s = tenant_settings($t['slug']);
+    return ['supplier' => operator(), 'note' => pset('invoice_note'),
+        'customer' => ['name' => $s['site_full'] ?? $t['full'], 'address' => $s['address'] ?? $t['address'], 'ico' => $s['ico'] ?? '']];
+}
+/** Podklady pro tisk dokladu: u čekající platby zálohová faktura, u zaplacené faktura s údaji uloženými při vystavení. */
+function invoice_view(array $p): ?array
+{
+    $t = tenant_row($p['tenant']);
+    $paid = $p['status'] === 'paid';
+    $parties = $paid && $p['invoice_data'] !== '' ? (array) json_decode($p['invoice_data'], true) : ($t ? invoice_parties($t) : null);
+    if (!$parties || $p['status'] === 'cancelled') {
+        return null;
+    }
+    $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
+    $iban = (string) ($parties['supplier']['iban'] ?? '');
+    return ['p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+        'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
+        'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
+}
+function demo_tenant(): ?array
+{
+    $r = pq('SELECT * FROM tenants WHERE demo = 1 AND active = 1 LIMIT 1')->fetch();
+    return $r ?: null;
+}
+function demo_create(): void
+{
+    tenant_create(['slug' => 'demo', 'name' => 'SVJ Zahradní 12', 'title' => 'Zahradní 12', 'tagline' => 'Společenství vlastníků jednotek · ukázkový web', 'full' => 'Společenství vlastníků jednotek Zahradní 12',
+        'address' => 'Zahradní 12, Brno', 'unit_prefix' => '12', 'entrances' => 'A,B', 'look' => 'more', 'seed' => 'demo', 'demo' => 1, 'note' => 'ukázkový web, jen pro čtení']);
 }

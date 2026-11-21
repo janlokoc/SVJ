@@ -138,7 +138,7 @@ if ($PATH === '/') {
         $t['billing_state'] = billing_state($t);
     }
     unset($t);
-    render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants]);
+    render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants, 'hasDemo' => (bool) demo_tenant()]);
     exit;
 }
 if ($PATH === '/svj/nove') {
@@ -231,6 +231,32 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat)?$~', $PATH, $
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll()]);
     exit;
 }
+if ($METHOD === 'POST' && $PATH === '/demo') {
+    // Ukázkový web: založí se (nebo znovu naplní čerstvými daty) pod adresou demo; je jen pro čtení.
+    if ($old = tenant_row('demo')) {
+        if (!$old['demo']) {
+            flash('Adresu demo už používá běžné společenství.', 'error');
+            redirect('/');
+        }
+        tenant_delete_storage('demo');
+        pq('DELETE FROM tenants WHERE slug = ?', ['demo']);
+    }
+    demo_create();
+    platform_log($old ? 'Obnovení ukázkového webu' : 'Založení ukázkového webu', 'demo');
+    flash('Ukázkový web je připraven a úvodní stránka na něj odkazuje.');
+    redirect('/');
+}
+if (preg_match('~^/platby/(\d+)/doklad$~', $PATH, $m)) {
+    $p = pq('SELECT * FROM payments WHERE id = ?', [$m[1]])->fetch();
+    $d = $p ? invoice_view($p) : null;
+    if (!$d) {
+        http_response_code(404);
+        render('platform/message', ['title' => 'Doklad nenalezen', 'message' => 'K této platbě doklad není.']);
+        exit;
+    }
+    render('billing_doc', ['title' => $d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs'], 'd' => $d, 'backUrl' => url('/platby')]);
+    exit;
+}
 if ($PATH === '/platby' || preg_match('~^/platby/(\d+)/(potvrdit|zrusit)$~', $PATH, $m)) {
     if ($METHOD === 'POST' && !empty($m)) {
         $p = pq('SELECT * FROM payments WHERE id = ?', [$m[1]])->fetch();
@@ -264,7 +290,7 @@ if ($PATH === '/nastaveni') {
         }
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
-        foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
+        foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }

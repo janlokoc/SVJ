@@ -64,6 +64,9 @@ function seed_for(PDO $pdo, string $tenant): void
     $row = function_exists('tenant_row') ? (tenant_row($tenant) ?? []) : [];
     if (($row['seed'] ?? '') === 'tabor') {
         seed_database($pdo);
+    } elseif (($row['seed'] ?? '') === 'demo') {
+        require_once __DIR__ . '/seed_demo.php';
+        seed_demo($pdo, tenant_storage($tenant) . '/uploads');
     } else {
         $st = $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)');
         foreach ([

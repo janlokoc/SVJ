@@ -37,11 +37,13 @@
   <div class="wrap footer-grid">
     <div>
       <strong class="footer-title"><?= e($service) ?></strong>
-      <?php if (pset('operator') !== ''): ?><div class="prose"><?= format_text(pset('operator')) ?></div><?php endif ?>
+      <?php $op = operator(); if ($op['name'] !== ''): ?><p><?= e($op['name']) ?><?= $op['address'] !== '' ? ', ' . e($op['address']) : '' ?><?= $op['ico'] !== '' ? '<br>IČO ' . e($op['ico']) : '' ?><?= $op['phone'] !== '' ? ' · ' . e($op['phone']) : '' ?></p><?php endif ?>
     </div>
     <ul class="footer-links">
       <li><a href="<?= url('/') ?>#cenik">Ceník</a></li>
       <li><a href="<?= url('/registrace') ?>">Založit web</a></li>
+      <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
+      <li><a href="<?= url('/zpracovani-udaju') ?>">Zpracování osobních údajů</a></li>
       <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
       <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>
     </ul>

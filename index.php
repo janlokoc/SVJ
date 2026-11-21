@@ -164,11 +164,26 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
     redirect('/muj-ucet');
 }
 
+// Ukázkový web je jen pro čtení: přihlašuje se tlačítkem a žádná změna se neuloží.
+$GLOBALS['DEMO'] = TENANT !== '' && !empty($tenantRow['demo']);
+if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
+    if ($PATH === '/demo-prihlaseni') {
+        $role = post('jako') === 'admin' ? 'admin' : 'resident';
+        if ($demoUser = one('SELECT * FROM users WHERE role = ? AND active = 1 ORDER BY id LIMIT 1', [$role])) {
+            login_user($demoUser);
+        }
+        redirect($role === 'admin' ? '/admin' : '/');
+    }
+    flash('V ukázce se změny neukládají. Na Vašem vlastním webu by se tato akce provedla.', 'info');
+    $ref = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    redirect(preg_match('~^/(?![/\\\\])~', $ref) ? $ref : '/');
+}
+
 // Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
     && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
-    && !preg_match('~^/(obnova-hesla|jazyk|vitejte)/~', $PATH)) {
+    && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad)/~', $PATH)) {
     if (is_admin()) {
         redirect('/admin/predplatne');
     }

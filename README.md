@@ -150,6 +150,7 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
   999 Kč v prvním roce, potom 1 499 Kč), zda se platí měsíčně nebo
   ročně, délka zkušební doby, lhůta po splatnosti, číslo účtu, ceník
   podpory a úprav, kontakt a odesílatel e-mailů. Registraci lze vypnout.
+  Výchozí je roční platba.
 - Správce společenství vidí v administraci stránku **Předplatné**
   s QR platbou (částka, účet, variabilní symbol). Platba kartou není
   zapojena – vyžaduje smlouvu s platební bránou.
@@ -161,6 +162,21 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
   správce se dostane jen na Předplatné a Zálohu. Data zůstávají.
 - Weby založené hlavním správcem v konzoli jsou bez placení, dokud jim
   placení nezapne.
+- **Faktury:** správce společenství si v Předplatném vytiskne zálohovou
+  fakturu (výzvu k platbě s QR kódem). Potvrzením platby v konzoli se
+  vystaví faktura s pořadovým číslem; údaje dodavatele a odběratele se
+  na ni uloží tak, jak platily v den vystavení. Doklady počítají
+  s dodavatelem, který není plátcem DPH.
+- **Provozovatel a podmínky:** v Nastavení služby se vyplňuje název,
+  sídlo, IČO a kontakt provozovatele a texty obchodních podmínek a
+  smlouvy o zpracování osobních údajů (stránky `/podminky` a
+  `/zpracovani-udaju`). Výchozí texty jsou návrh – před otevřením
+  registrace je nechte projít právníkem.
+- **Ukázkový web:** tlačítkem v konzoli se založí web `demo` se
+  smyšleným společenstvím. Návštěvník si ho z úvodní stránky prohlédne
+  jako obyvatel i jako správce; je jen pro čtení, žádná změna se
+  neuloží. Tlačítkem Obnovit ukázkový web se naplní čerstvými daty
+  (termíny v ukázce jsou počítané ode dne založení).
 - Ochrana proti zneužití registrace: nejvýše tři weby z jedné adresy za
   den a skryté pole proti robotům. E-mail se při registraci neověřuje.
 

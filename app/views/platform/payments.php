@@ -13,7 +13,7 @@
         <td data-label="Období"><?= $p['period_from'] ? cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?></td>
         <td data-label="Stav"><span class="status status-<?= ['pending' => 'in_progress', 'claimed' => 'new', 'paid' => 'done', 'cancelled' => 'rsvp-no'][$p['status']] ?>"><?= e(PAYMENT_STATUS[$p['status']]) ?></span><?= $p['paid_at'] ? '<br><small class="muted">' . cz_datetime($p['paid_at']) . ' · ' . e($p['confirmed_by']) . '</small>' : '' ?></td>
         <td data-label="Vytvořeno"><?= cz_date($p['created_at']) ?></td>
-        <td class="t-actions"><?php if ($open): ?>
+        <td class="t-actions"><a href="<?= url('/platby/' . $p['id'] . '/doklad') ?>"><?= $p['status'] === 'paid' ? 'Faktura ' . e($p['invoice_no']) : ($p['status'] === 'cancelled' ? '' : 'Zálohová faktura') ?></a> <?php if ($open): ?>
           <form method="post" action="<?= url('/platby/' . $p['id'] . '/potvrdit') ?>" class="inline-form" data-confirm="Potvrdit, že platba <?= money_czk((int) $p['amount']) ?> s variabilním symbolem <?= e($p['vs']) ?> dorazila na účet?"><?= csrf_field() ?><button class="btn btn-small" type="submit">Platba dorazila</button></form>
           <form method="post" action="<?= url('/platby/' . $p['id'] . '/zrusit') ?>" class="inline-form" data-confirm="Zrušit tuto výzvu k platbě?"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Zrušit</button></form>
         <?php endif ?></td>

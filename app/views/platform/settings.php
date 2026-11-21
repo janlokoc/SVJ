@@ -28,7 +28,26 @@
       <label>Odesílatel e-mailů služby <input type="email" name="mail_from" value="<?= e($v['mail_from']) ?>"></label>
     </div>
     <p class="hint">Z adresy odesílatele chodí potvrzení registrace, připomenutí konce zkušební doby a potvrzení plateb. Bez ní se tyto e-maily neposílají. Nově založené weby ji dostanou jako výchozího odesílatele.</p>
-    <label>Provozovatel (patička úvodní stránky: název, IČO, sídlo) <textarea name="operator" rows="3"><?= e($v['operator']) ?></textarea></label>
+    <h2>Provozovatel</h2>
+    <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
+    <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
+    <label>Sídlo <input type="text" name="op_address" value="<?= e($v['op_address']) ?>" placeholder="Ulice 1, 602 00 Brno"></label>
+    <div class="form-row">
+      <label>IČO <input type="text" name="op_ico" value="<?= e($v['op_ico']) ?>"></label>
+      <label>DIČ (nepovinné) <input type="text" name="op_dic" value="<?= e($v['op_dic']) ?>"></label>
+      <label>Telefon <input type="text" name="op_phone" value="<?= e($v['op_phone']) ?>"></label>
+    </div>
+    <label>Zápis v rejstříku <input type="text" name="op_register" value="<?= e($v['op_register']) ?>" placeholder="Zapsáno u Krajského soudu v Brně, oddíl C, vložka 12345"></label>
+    <h2>Faktury</h2>
+    <div class="form-row">
+      <label>Splatnost zálohové faktury (dní) <input type="number" name="invoice_due_days" value="<?= e($v['invoice_due_days']) ?>" min="0" max="90" required></label>
+      <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
+    </div>
+    <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby. Doklady počítají s dodavatelem, který není plátcem DPH; jste-li plátce, nechte si podobu faktury upravit.</p>
+    <h2>Obchodní podmínky</h2>
+    <p class="hint">Výchozí text je návrh. Před otevřením registrace ho nechte projít právníkem. Formátování: řádek začínající ## je nadpis, **tučně**.</p>
+    <label>Obchodní podmínky <textarea name="terms" rows="12"><?= e($v['terms']) ?></textarea></label>
+    <label>Smlouva o zpracování osobních údajů <textarea name="dpa" rows="12"><?= e($v['dpa']) ?></textarea></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
   </form>
 </div>

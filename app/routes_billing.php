@@ -29,6 +29,15 @@ $route('GET', '/admin/predplatne', function () {
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
 });
+$route('GET', '/admin/predplatne/doklad/(\d+)', function (int $id) {
+    require_admin();
+    $p = pq('SELECT * FROM payments WHERE id = ? AND tenant = ?', [$id, TENANT])->fetch();
+    $d = $p ? invoice_view($p) : null;
+    if (!$d) {
+        not_found();
+    }
+    render('billing_doc', ['title' => $d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs'], 'd' => $d, 'backUrl' => url('/admin/predplatne')]);
+});
 $route('POST', '/admin/predplatne/zaplaceno', function () {
     require_admin();
     $p = pq("SELECT * FROM payments WHERE tenant = ? AND status = 'pending' ORDER BY id DESC LIMIT 1", [TENANT])->fetch();

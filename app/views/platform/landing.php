@@ -19,7 +19,7 @@ $features = [
       <p class="eyebrow">Pro výbory a správce SVJ</p>
       <h1>Web Vašeho SVJ <span class="h1-sub">za pět minut</span></h1>
       <p class="lead">Aktuality, dokumenty, e-maily vlastníkům, shromáždění, hlasování i hlášení závad. Zvolíte adresu a vzhled, vytvoříte si účet a web běží.</p>
-      <div class="actions"><?= $cta() ?><a class="btn btn-big btn-ghost" href="#cenik">Ceník</a></div>
+      <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout ukázkový web</a><?php else: ?><a class="btn btn-big btn-ghost" href="#cenik">Ceník</a><?php endif ?></div>
       <?php if ($open): ?><p class="lp-note"><?= $trial ? 'Prvních ' . $trial . ' dní zdarma, bez platební karty. ' : '' ?>Potom <?= $first ?> za <?= $per ?>.</p>
       <?php else: ?><p class="lp-note">Nová společenství teď zakládáme po domluvě<?= pset('contact_email') !== '' ? ' – napište na ' . e(pset('contact_email')) : '' ?>.</p><?php endif ?>
     </div>
@@ -44,7 +44,7 @@ $features = [
     <li><strong>Vyberte vzhled</strong><span>Pět barevných návrhů; kdykoli ho změníte a nahrajete vlastní logo.</span></li>
     <li><strong>Vytvořte si účet správce</strong><span>Hned potom jste v administraci a můžete zvát vlastníky.</span></li>
   </ol>
-  <div class="actions"><?= $cta() ?></div>
+  <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Nejdřív si prohlédnout ukázku</a><?php endif ?></div>
 </div></section>
 
 <section class="wrap lp-section" id="vzhledy">
@@ -65,7 +65,7 @@ $features = [
         <li><span>První rok</span><strong><?= $first ?> <small>/ <?= $per ?></small></strong></li>
         <li><span>Další roky</span><strong><?= $next ?> <small>/ <?= $per ?></small></strong></li>
       </ul>
-      <p class="hint">Jedna cena za celé společenství, bez omezení počtu jednotek a účtů. Platí se převodem přes QR kód.</p>
+      <p class="hint">Jedna cena za celé společenství, bez omezení počtu jednotek a účtů. Platí se převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
       <div class="actions"><?= $cta('btn') ?></div>
     </div>
     <div>
@@ -79,10 +79,21 @@ $features = [
   </div>
 </div></section>
 
+<?php $op = operator(); if ($op['name'] !== ''): ?>
+<section class="wrap lp-section" id="provozovatel">
+  <h2>Kdo službu provozuje</h2>
+  <div class="lp-operator">
+    <p><strong><?= e($op['name']) ?></strong><br><?= e($op['address']) ?><?= $op['ico'] !== '' ? '<br>IČO ' . e($op['ico']) : '' ?><?= $op['register'] !== '' ? '<br><small class="muted">' . e($op['register']) . '</small>' : '' ?></p>
+    <p><?= $op['email'] !== '' ? '<a href="mailto:' . e($op['email']) . '">' . e($op['email']) . '</a><br>' : '' ?><?= $op['phone'] !== '' ? e($op['phone']) . '<br>' : '' ?>
+      <a href="<?= url('/podminky') ?>">Obchodní podmínky</a> · <a href="<?= url('/zpracovani-udaju') ?>">Zpracování osobních údajů</a></p>
+  </div>
+</section>
+<?php endif ?>
+
 <section class="wrap lp-section narrow" id="otazky">
   <h2>Časté otázky</h2>
   <details class="lp-faq"><summary>Co se stane po zkušební době?</summary><p>V administraci najdete platební údaje s QR kódem a před koncem zkušební doby Vám přijde připomenutí e-mailem. Když se rozhodnete nepokračovat, nic neplatíte – web se po <?= pset_int('grace_days', 0, 365) ?> dnech pozastaví.</p></details>
-  <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. QR kód načtete v bankovní aplikaci, částka i variabilní symbol se vyplní samy. Platba kartou zatím není k dispozici.</p></details>
+  <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. V administraci najdete zálohovou fakturu s QR kódem; po připsání platby vystavíme fakturu. Platba kartou zatím není k dispozici.</p></details>
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
   <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. Správce si kdykoli stáhne úplnou zálohu webu včetně dokumentů – i po skončení předplatného.</p></details>
   <details class="lp-faq"><summary>Můžeme mít vlastní doménu?</summary><p>Ano, web může běžet i na Vaší doméně. Nastavení je v ceníku jako samostatná položka.</p></details>

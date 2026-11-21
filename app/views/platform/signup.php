@@ -35,7 +35,7 @@
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
     <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
-    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s podmínkami služby <small><?= $trial ? 'Prvních ' . $trial . ' dní je zdarma. ' : '' ?>Potom stojí provoz <?= money_czk(pset_int('price_first', 0, 1000000)) ?> za <?= period_label() ?> v prvním roce a <?= money_czk(pset_int('price_next', 0, 1000000)) ?> za <?= period_label() ?> dále. Bez úhrady se web pozastaví; nic se nestrhává automaticky.</small></span></label>
+    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> <small><?= $trial ? 'Prvních ' . $trial . ' dní je zdarma. ' : '' ?>Potom stojí provoz <?= money_czk(pset_int('price_first', 0, 1000000)) ?> za <?= period_label() ?> v prvním roce a <?= money_czk(pset_int('price_next', 0, 1000000)) ?> za <?= period_label() ?> dále. Bez úhrady se web pozastaví; nic se nestrhává automaticky.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Založit web<?= $trial ? ' a začít zkušební dobu' : '' ?></button><a class="btn btn-ghost" href="<?= url('/registrace/vzhled') ?>">Zpět</a></div>
   </form>
   <?php endif ?>
