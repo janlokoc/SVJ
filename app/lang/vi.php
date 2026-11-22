@@ -343,4 +343,5 @@ return [
     'Web je dočasně pozastaven' => 'Trang web tạm thời bị đình chỉ',
     'Provoz webu tohoto společenství teď není uhrazen. Data zůstávají uložena – obraťte se prosím na svůj výbor.' => 'Phí vận hành trang web của hiệp hội này hiện chưa được thanh toán. Dữ liệu vẫn được lưu – vui lòng liên hệ ban quản trị của bạn.',
     'Přihlášení správce webu' => 'Đăng nhập quản trị viên trang web',
+    'Moje závady a požadavky' => 'Sự cố và yêu cầu của tôi',
 ];

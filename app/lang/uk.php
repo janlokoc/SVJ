@@ -343,4 +343,5 @@ return [
     'Web je dočasně pozastaven' => 'Сайт тимчасово призупинено',
     'Provoz webu tohoto společenství teď není uhrazen. Data zůstávají uložena – obraťte se prosím na svůj výbor.' => 'Роботу сайту цього об\'єднання зараз не оплачено. Дані збережено – зверніться, будь ласка, до свого правління.',
     'Přihlášení správce webu' => 'Вхід адміністратора сайту',
+    'Moje závady a požadavky' => 'Мої несправності та запити',
 ];

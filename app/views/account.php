@@ -1,6 +1,7 @@
 <div class="wrap page narrow">
   <header class="page-head"><h1>Můj účet</h1>
-    <p class="lead"><?= e($u['email']) ?> · <?= KINDS[$u['kind']] ?><?= $units ? ' · jednotka ' . e(implode(', ', array_map('unit_name', $units))) : '' ?></p></header>
+    <p class="lead"><?= e($u['email']) ?> · <?= KINDS[$u['kind']] ?><?= $units ? ' · jednotka ' . e(implode(', ', array_map('unit_name', $units))) : '' ?></p>
+    <p><?php if (feature_on('zavady')): ?><a href="<?= url('/zavady') ?>">Moje závady a požadavky</a> · <?php endif ?><a href="<?= url('/hlaseni') ?>#moje">Moje hlášení</a></p></header>
   <?php require __DIR__ . '/_errors.php'; ?>
   <div class="two-col">
     <form method="post" action="<?= url('/muj-ucet') ?>" class="card form">

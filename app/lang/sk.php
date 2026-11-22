@@ -343,4 +343,5 @@ return [
     'Web je dočasně pozastaven' => 'Web je dočasne pozastavený',
     'Provoz webu tohoto společenství teď není uhrazen. Data zůstávají uložena – obraťte se prosím na svůj výbor.' => 'Prevádzka webu tohto spoločenstva teraz nie je uhradená. Dáta zostávajú uložené – obráťte sa prosím na svoj výbor.',
     'Přihlášení správce webu' => 'Prihlásenie správcu webu',
+    'Moje závady a požadavky' => 'Moje závady a požiadavky',
 ];

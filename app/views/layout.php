@@ -143,6 +143,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
       <li><a href="<?= url('/dokumenty') ?>">Dokumenty</a></li>
       <li><a href="<?= url('/kontakty') ?>">Kontakty</a></li>
       <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
+      <?php if ($u): ?><li><a href="<?= url('/hlaseni') ?>#moje">Moje hlášení</a></li><?php endif ?>
       <li class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></li>
       <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
     </ul>

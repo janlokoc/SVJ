@@ -343,4 +343,5 @@ return [
     'Web je dočasně pozastaven' => 'The website is temporarily suspended',
     'Provoz webu tohoto společenství teď není uhrazen. Data zůstávají uložena – obraťte se prosím na svůj výbor.' => 'The operation of this association\'s website is currently not paid for. The data remain stored – please contact your committee.',
     'Přihlášení správce webu' => 'Website administrator sign-in',
+    'Moje závady a požadavky' => 'My fault reports and requests',
 ];
