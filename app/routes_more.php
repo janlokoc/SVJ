@@ -216,3 +216,15 @@ $adminAccounts = function () {
 };
 $route('GET', '/admin/platby', $adminAccounts);
 $route('POST', '/admin/platby', $adminAccounts);
+
+// ---------- AI pomocník (volitelný) ----------
+
+$route('POST', '/admin/ai', function () {
+    require_admin();
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    @set_time_limit(180);
+    $result = ai_run(post('task'), (string) ($_POST['text'] ?? ''), mb_substr((string) ($_POST['context'] ?? ''), 0, 6000));
+    echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    exit;
+});

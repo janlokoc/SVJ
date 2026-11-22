@@ -142,3 +142,30 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
 document.querySelectorAll('.look-picker input[type=radio]').forEach((radio) => radio.addEventListener('change', () => {
   radio.form.querySelectorAll('.look-cards .mini').forEach((m) => { m.dataset.look = radio.value; });
 }));
+
+// AI pomocník: pošle text z pole na server a výsledek do pole vloží; původní text jde vrátit
+document.querySelectorAll('.ai-box').forEach((box) => {
+  const form = box.closest('form');
+  const field = form && form.querySelector(box.dataset.aiTarget);
+  const status = box.querySelector('.ai-status');
+  const undo = box.querySelector('[data-ai-undo]');
+  if (!field) return;
+  let before = null;
+  undo.addEventListener('click', () => { if (before !== null) { field.value = before; before = null; undo.hidden = true; status.textContent = ''; } });
+  box.querySelectorAll('[data-ai-task]').forEach((btn) => btn.addEventListener('click', async () => {
+    const buttons = box.querySelectorAll('button');
+    buttons.forEach((b) => { b.disabled = true; });
+    status.className = 'ai-status';
+    status.textContent = 'Pomocník píše… může to trvat až minutu.';
+    const body = new URLSearchParams({ _csrf: form.querySelector('[name=_csrf]').value, task: btn.dataset.aiTask, text: field.value, context: box.dataset.aiContext || '' });
+    try {
+      const r = await fetch(box.dataset.aiUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
+      const d = await r.json();
+      if (d.text) {
+        before = field.value; field.value = d.text; undo.hidden = false;
+        status.textContent = d.truncated ? 'Hotovo, ale text byl příliš dlouhý a je uříznutý. Zkontrolujte konec.' : 'Hotovo. Text si přečtěte a upravte, než ho uložíte.';
+      } else { status.className = 'ai-status is-bad'; status.textContent = d.error || 'Nepodařilo se.'; }
+    } catch (e) { status.className = 'ai-status is-bad'; status.textContent = 'Nepodařilo se spojit se serverem.'; }
+    buttons.forEach((b) => { b.disabled = false; });
+  }));
+});

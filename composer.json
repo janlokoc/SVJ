@@ -1,0 +1,14 @@
+{
+    "name": "svj/web",
+    "description": "Web společenství vlastníků. Závislosti jsou potřeba jen pro volitelného AI pomocníka; bez nich web běží celý.",
+    "require": {
+        "php": "^8.1",
+        "anthropic-ai/sdk": "^1.12",
+        "guzzlehttp/guzzle": "^7"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}

@@ -3,3 +3,5 @@
 !/storage/.gitkeep
 !/storage/index.html
 .DS_Store
+/vendor/
+/composer.lock

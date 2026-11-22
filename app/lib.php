@@ -1350,4 +1350,5 @@ require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';
+require_once __DIR__ . '/ai_lib.php';
 require_once __DIR__ . '/extra_lib.php';

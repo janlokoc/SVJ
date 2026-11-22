@@ -294,6 +294,49 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
 - Snímky jsou ve složce `storage/reports` a vidí je jen autor a ten,
   kdo hlášení vyřizuje. Hlášení nejsou součástí zálohy webu.
 
+## Ankety, zápis, úkoly, vývěska a platby na jednotku
+
+- **Ankety** (Pro obyvatele → Ankety): nezávazné zjištění názoru, každý
+  přihlášený odpoví jednou; výsledky vidí po odpovědi. Anketa může být
+  anonymní, nebo se jmény pro výbor.
+- **Zápis ze shromáždění** (Termíny → Zápis): sestaví se z potvrzené
+  účasti, programu a hlasování přiřazených k termínu, včetně otisku
+  odevzdaných hlasů. Průběh jednání se doplní přímo na stránce a zápis se
+  vytiskne nebo uloží jako PDF.
+- **Úkoly a usnesení** a **Dodavatelé**: jednoduché evidence pro výbor;
+  dodavatele jde přiřadit k nahlášené závadě a obyvatel vidí, kdo ji řeší.
+- **Vývěska** (`/vyveska`): veřejná stránka bez přihlášení s veřejnými
+  oznámeními, termíny a havarijními čísly – na obrazovku v hale nebo přes
+  QR kód na cedulce u vchodu (Administrace → Vývěska).
+- **Platby na jednotku**: výbor nahraje z účetnictví měsíční zálohu a stav
+  účtu každé jednotky (řádky `jednotka ; záloha ; stav ; variabilní
+  symbol`). Vlastník vidí jen své jednotky s QR platbou na účet
+  společenství; dlužníkům jde poslat upomínku e-mailem. Web sám neúčtuje.
+- **Web jako aplikace**: na telefonu jde web „přidat na plochu“ a otevírat
+  bez adresního řádku. Upozornění do telefonu zatím neposílá.
+
+## AI pomocník (volitelný)
+
+U textu aktuality, hromadného e-mailu a odpovědi na závadu nabídne
+tlačítka: napsat návrh z poznámek, uhladit, zkrátit, navrhnout odpověď.
+Výsledek pole přepíše a jde jedním kliknutím vrátit.
+
+Zapnutí:
+
+1. ve složce webu spusťte `composer install` (stáhne oficiální knihovnu
+   Anthropic; bez ní web běží celý, jen bez pomocníka),
+2. do `storage/config.php` doplňte
+   `'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 200]`.
+
+Klíč získáte na console.anthropic.com; použití se platí podle spotřeby.
+`monthly_limit` je nejvyšší počet použití na jeden web za měsíc. Na
+platformě pro více SVJ platí jeden klíč pro všechny weby.
+
+Text, který správce pomocníkovi zadá, se odesílá ke zpracování společnosti
+Anthropic – nic se neposílá samo a správce je na to u tlačítek upozorněn.
+Pokud pomocníka zapnete, uveďte Anthropic mezi dalšími zpracovateli ve
+smlouvě o zpracování osobních údajů.
+
 ## Základní dokumenty
 
 V administraci v části Dokumenty → **Základní dokumenty** je přehled

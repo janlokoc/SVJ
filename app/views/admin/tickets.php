@@ -19,6 +19,7 @@
           </div>
         </details>
         <label>Odpověď pro obyvatele <textarea name="admin_note" rows="2"><?= e($t['admin_note']) ?></textarea></label>
+        <?php $aiTarget = 'textarea[name=admin_note]'; $aiTasks = ['reply', 'polish']; $aiContext = 'Hlášení obyvatele: ' . $t['subject'] . ($t['location'] ? ' (' . $t['location'] . ')' : '') . "\n" . $t['body']; require __DIR__ . '/_ai.php'; ?>
         <div class="form-row">
           <?php if ($suppliers): ?><label>Řeší dodavatel <select name="supplier_id"><option value="">—</option><?php foreach ($suppliers as $sp): ?><option value="<?= $sp['id'] ?>"<?= (int) $t['supplier_id'] === (int) $sp['id'] ? ' selected' : '' ?>><?= e($sp['name'] . ($sp['field'] !== '' ? ' (' . $sp['field'] . ')' : '')) ?></option><?php endforeach ?></select></label><?php endif ?>
           <label>Stav <select name="status"><?php foreach (TICKET_STATUS as $k => $label): ?><option value="<?= $k ?>"<?= $t['status'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select></label>

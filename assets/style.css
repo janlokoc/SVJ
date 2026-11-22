@@ -779,3 +779,8 @@ html[data-style="vlidna"] .table { border-width: 2px; }
 .board-qr p { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 800px) { .board-grid { grid-template-columns: minmax(0, 1fr); } .survey-row { grid-template-columns: minmax(0, 1fr) auto; } .survey-row .meter { grid-column: 1 / -1; grid-row: 2; } }
 @media print { .fill-block { border: 0; padding: 0; color: #000; min-height: 0; } .fill { border: 0; } .board-card { break-inside: avoid; } }
+.ai-box { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; padding: .6rem .8rem; border: 1px dashed var(--line); border-radius: 10px; background: var(--soft); }
+.ai-label { font-size: .78rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: .25rem; }
+.ai-status { font-size: .9rem; font-weight: 600; color: var(--ok); }
+.ai-status.is-bad { color: var(--accent); }
+.ai-box .hint { flex-basis: 100%; margin: 0; font-size: .82rem; }

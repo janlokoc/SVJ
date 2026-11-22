@@ -17,6 +17,11 @@ return [
     // pro svj.cz, bez zástupného DNS záznamu i zástupného certifikátu:
     // 'platform' => ['domain' => 'svj.cz', 'mode' => 'path'],
 
+    // AI pomocník pro výbor (volitelný): návrhy oznámení, uhlazení textu, odpovědi na hlášení.
+    // Vyžaduje knihovnu (ve složce webu spusťte: composer install) a klíč ke službě Claude z console.anthropic.com.
+    // Text, který správce pomocníkovi zadá, se odesílá společnosti Anthropic; použití se platí podle spotřeby.
+    // 'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 200],
+
     'db' => [
         'driver' => 'mysql',
         'host' => 'localhost',   // adresu serveru uvádí hosting; někdy to není localhost
