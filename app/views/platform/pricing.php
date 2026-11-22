@@ -29,11 +29,11 @@
   <h2>Časté otázky k ceně</h2>
   <details class="lp-faq"><summary>Je web opravdu zdarma?</summary><p>Ano. Edice Zdarma nemá časové omezení a nechceme po Vás platební kartu. Má limity (počet účtů, správců a hromadných e-mailů) a v patičce odkaz na službu. Když limit vyčerpáte, web běží dál.</p></details>
   <details class="lp-faq"><summary>Jak funguje zkoušení placených funkcí?</summary><p>Každou funkci z vyšší edice si v administraci jedním kliknutím zapnete na <?= PLAN_TRIAL_DAYS ?> dní. Po skončení zkoušky zůstane vše, co jste zapsali, uložené a viditelné; měnit to půjde, až přejdete na edici, která funkci obsahuje.</p></details>
-  <details class="lp-faq"><summary>Co když placenou edici neprodloužíme?</summary><p>Web po <?= pset_int('grace_days', 0, 365) ?> dnech přejde zpět na edici Zdarma. Nic se nemaže a nepozastavuje; účty nad limit fungují dál, jen nejde přidávat nové.</p></details>
+  <details class="lp-faq"><summary>Prodlužuje se předplatné samo?</summary><p>Ano. Před koncem období Vám připravíme zálohovou fakturu na další období a pošleme upozornění. Nic se ale nestrhává automaticky – když nechcete pokračovat, vypnete prodlužování v administraci, nebo fakturu prostě nezaplatíte. Web pak po <?= pset_int('grace_days', 0, 365) ?> dnech přejde zpět na edici Zdarma; nic se nemaže a nevzniká Vám dluh.</p></details>
   <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. V administraci najdete zálohovou fakturu s QR kódem; po připsání platby vystavíme fakturu. Platba kartou zatím není k dispozici.</p></details>
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
   <?php if (pset('hosting_note') !== ''): ?><details class="lp-faq"><summary>Kde jsou data uložena?</summary><p><?= e(pset('hosting_note')) ?></p></details><?php endif ?>
-  <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. Správce si kdykoli stáhne úplnou zálohu webu včetně dokumentů – i po skončení předplatného.</p></details>
+  <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. V placené edici si správce stáhne úplnou zálohu webu včetně dokumentů; v edici Zdarma si zálohu může jednou na 30 dní zdarma zapnout. Každý uživatel si své vlastní údaje stáhne kdykoli a web lze v administraci zrušit.</p></details>
   <details class="lp-faq"><summary>Můžeme mít vlastní doménu?</summary><p>Ano, web může běžet i na Vaší doméně. Nastavení je v ceníku jako samostatná položka.</p></details>
   <div class="actions lp-final"><?= $cta() ?></div>
 </section>

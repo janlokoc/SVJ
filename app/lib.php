@@ -126,6 +126,7 @@ function db_mysql(string $tenant): PDO
         $pdo->commit();
         schema_v7($pdo, true);
         schema_v8($pdo, true);
+        schema_v9($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -152,7 +153,30 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 8) {
         schema_v8($pdo, true);
     }
+    if ($mysqlVersion < 9) {
+        schema_v9($pdo, true);
+    }
     return $pdo;
+}
+/** Devátá verze databáze: přílohy (fotografie, dokumenty) u nahlášených závad. */
+function schema_v9(PDO $pdo, bool $mysql): void
+{
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $pdo->exec('CREATE TABLE ticket_files (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ', ticket_id ' . ($mysql ? 'INT' : 'INTEGER') . ' NOT NULL, filename '
+        . ($mysql ? 'VARCHAR(80) NOT NULL' : 'TEXT NOT NULL') . ', original_name ' . ($mysql ? "VARCHAR(255) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''") . ', size ' . ($mysql ? 'INT' : 'INTEGER')
+        . " NOT NULL DEFAULT 0, FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE)$end");
+    $mysql ? $pdo->exec("UPDATE settings SET value = '9' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 9');
+}
+/** Přílohy závad seskupené podle čísla závady. */
+function ticket_files(array $ticketIds): array
+{
+    $out = [];
+    if ($ticketIds) {
+        foreach (all('SELECT * FROM ticket_files WHERE ticket_id IN (' . implode(',', array_map('intval', $ticketIds)) . ') ORDER BY id') as $f) {
+            $out[(int) $f['ticket_id']][] = $f;
+        }
+    }
+    return $out;
 }
 /** Osmá verze databáze: funkce ve společenství (výbor, kontrolní komise) a zprávy mezi účty. */
 function schema_v8(PDO $pdo, bool $mysql): void
@@ -236,6 +260,7 @@ function open_database(string $storage, string $tenant): PDO
         $pdo->commit();
         schema_v7($pdo, false);
         schema_v8($pdo, false);
+        schema_v9($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -347,6 +372,9 @@ SQL);
     }
     if ($version < 8) {
         schema_v8($pdo, false);
+    }
+    if ($version < 9) {
+        schema_v9($pdo, false);
     }
     return $pdo;
 }

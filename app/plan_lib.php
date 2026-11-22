@@ -37,6 +37,7 @@ const PLAN_FEATURES = [
     'ukoly' => ['standard', 'Úkoly a usnesení', 'Co kdo slíbil zařídit a do kdy – úkoly z jednání výboru a shromáždění.', '~^/admin/ukoly(/|$)~'],
     'dodavatele' => ['standard', 'Dodavatelé', 'Kontakty a smlouvy s dodavateli, přiřazení k závadám.', '~^/admin/dodavatele(/|$)~'],
     'zapis' => ['standard', 'Zápis ze shromáždění', 'Zápis sestavený z účasti, programu a výsledků hlasování, připravený k tisku.', '~^/admin/terminy/\d+/zapis$~'],
+    'zaloha' => ['standard', 'Záloha dat ke stažení', 'Úplná záloha webu včetně dokumentů ke stažení a obnovení.', '~^/admin/zaloha(/|$)~'],
     'sablony' => ['standard', 'Všechny šablony vzhledu', 'Pět šablon webu místo jedné základní.', null],
     'jazyky' => ['premium', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],

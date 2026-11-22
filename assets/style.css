@@ -987,3 +987,11 @@ input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-an
 .btn-danger { background: #a52a2a; border-color: #a52a2a; color: #fff; }
 .btn-danger:hover { background: #8a2222; border-color: #8a2222; }
 .rights { display: grid; gap: .5rem; padding-left: 1.2rem; }
+
+.ticket-files { list-style: none; padding: 0; margin: .6rem 0; display: flex; flex-wrap: wrap; gap: .6rem; }
+.ticket-files img { display: block; width: 120px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.ticket-files a { display: inline-flex; align-items: center; gap: .3rem; }
+.renew-box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); margin: .6rem 0; }
+.renew-box p { margin: 0; flex: 1 1 280px; }
+.renew-box form { margin: 0; }
+.renew-box.is-off { background: var(--warn-soft); }

@@ -225,7 +225,8 @@ $route('POST', '/diskuze/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/zavady', function () {
     $u = require_login();
-    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => all('SELECT t.*, s.name AS supplier_name FROM tickets t LEFT JOIN suppliers s ON s.id = t.supplier_id WHERE t.user_id = ? ORDER BY t.id DESC', [$u['id']])]);
+    $tickets = all('SELECT t.*, s.name AS supplier_name FROM tickets t LEFT JOIN suppliers s ON s.id = t.supplier_id WHERE t.user_id = ? ORDER BY t.id DESC', [$u['id']]);
+    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => $tickets, 'files' => ticket_files(array_column($tickets, 'id'))]);
 });
 
 $route('POST', '/zavady', function () {
@@ -236,9 +237,57 @@ $route('POST', '/zavady', function () {
         flash('Vyplňte prosím stručný název i popis.', 'error');
         redirect('/zavady');
     }
+    // Přílohy (nejvýše 4): fotografie nebo dokument. Nejdřív se ověří všechny, aby se závada neuložila napůl.
+    $uploads = [];
+    $names = (array) ($_FILES['files']['name'] ?? []);
+    foreach ($names as $i => $name) {
+        if ($name === '' || ($_FILES['files']['error'][$i] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            continue;
+        }
+        $uploads[] = ['name' => $name, 'tmp_name' => $_FILES['files']['tmp_name'][$i], 'error' => $_FILES['files']['error'][$i], 'size' => $_FILES['files']['size'][$i]];
+    }
+    if (count($uploads) > 4) {
+        flash('K hlášení lze přiložit nejvýše 4 soubory.', 'error');
+        redirect('/zavady');
+    }
+    $stored = [];
+    foreach ($uploads as $f) {
+        $r = store_upload($f);
+        if (is_string($r)) {
+            foreach ($stored as $done) {
+                @unlink(UPLOAD_DIR . '/' . $done[0]);
+            }
+            flash('Přílohu „' . basename((string) $f['name']) . '“ se nepodařilo nahrát: ' . $r . ' Hlášení nebylo odesláno.', 'error');
+            redirect('/zavady');
+        }
+        $stored[] = $r;
+    }
     q('INSERT INTO tickets (user_id, subject, location, body) VALUES (?,?,?,?)', [$u['id'], $subject, mb_substr(post('location'), 0, 150), $body]);
-    flash('Děkujeme, výbor Vaši závadu nebo požadavek dostal. Stav řešení uvidíte na této stránce.');
+    $ticketId = (int) db()->lastInsertId();
+    foreach ($stored as [$file, $orig, $size]) {
+        q('INSERT INTO ticket_files (ticket_id, filename, original_name, size) VALUES (?,?,?,?)', [$ticketId, $file, mb_substr($orig, 0, 250), $size]);
+    }
+    flash('Děkujeme, výbor Vaši závadu nebo požadavek dostal' . ($stored ? ' i s přílohami (' . count($stored) . ')' : '') . '. Stav řešení uvidíte na této stránce.');
     redirect('/zavady');
+});
+
+// Příloha závady: vidí ji jen ten, kdo závadu nahlásil, a správci.
+$route('GET', '/zavady/priloha/(\d+)', function (int $id) {
+    $u = require_login();
+    $f = one('SELECT f.*, t.user_id FROM ticket_files f JOIN tickets t ON t.id = f.ticket_id WHERE f.id = ?', [$id]) ?? not_found();
+    $path = UPLOAD_DIR . '/' . basename($f['filename']);
+    if (($u['role'] !== 'admin' && (int) $f['user_id'] !== (int) $u['id']) || !is_file($path)) {
+        not_found();
+    }
+    $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $inline = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
+    header_remove('Content-Security-Policy');
+    header('X-Content-Type-Options: nosniff');
+    header('Content-Type: ' . ($inline[$ext] ?? 'application/octet-stream'));
+    header('Content-Disposition: ' . (isset($inline[$ext]) ? 'inline' : 'attachment') . "; filename*=UTF-8''" . rawurlencode($f['original_name'] ?: 'priloha.' . $ext));
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=3600');
+    readfile($path);
 });
 
 // ---------- Účast na shromáždění ----------

@@ -284,6 +284,16 @@ automatické vystavování (viz výše).
   požádat o smazání celého webu (opíše adresu webu a zadá heslo). Web se
   smaže po 7 dnech; do té doby běží, všichni správci dostanou e-mail
   a kterýkoli z nich může žádost vzít zpět. V ukázkovém webu to nejde.
+- **Automatické prodlužování:** před koncem období se připraví zálohová
+  faktura na další období a správci přijde upozornění. Nic se nestrhává –
+  platí se převodem. Správce může prodlužování v Předplatném vypnout;
+  edice pak doběhne a web přejde na edici Zdarma.
+- **Záloha dat ke stažení** je součástí placených edic (v edici Zdarma
+  ji lze jednou na 30 dní vyzkoušet). Vlastní údaje si každý uživatel
+  stáhne v kterékoli edici.
+- **Ukázkový web** nejde smazat a sám se obnovuje s čerstvými daty
+  (výchozí každých 7 dní, Nastavení služby), aby termíny a lhůty vypadaly
+  aktuálně. Obnovit ho lze i ručně v konzoli.
 - **Ruční nastavení předplatného:** hlavní správce může u kteréhokoli
   společenství v konzoli (karta Předplatné) nastavit edici a datum, do
   kdy platí, prodloužit ji o měsíc nebo rok, ukončit ji, nebo placení
@@ -417,6 +427,13 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
   společenství; dlužníkům jde poslat upomínku e-mailem. Web sám neúčtuje.
 - **Web jako aplikace**: na telefonu jde web „přidat na plochu“ a otevírat
   bez adresního řádku. Upozornění do telefonu zatím neposílá.
+
+## Přílohy u závad
+
+K nahlášené závadě lze přiložit až 4 fotografie nebo dokumenty (JPG, PNG,
+PDF). Velké fotografie z telefonu se před odesláním v prohlížeči zmenší.
+Přílohy vidí jen ten, kdo závadu nahlásil, a správci; počítají se do
+limitu úložiště edice. Do souboru zálohy se zatím nezahrnují.
 
 ## Zprávy mezi sousedy a funkce ve společenství
 

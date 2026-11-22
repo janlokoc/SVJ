@@ -10,7 +10,14 @@
     <?php elseif ($state['mode'] === 'trial'): ?>
       <p>Váš web má edici Standard na zkoušku do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Potom přejde na edici Zdarma – poběží dál, jen s jejími limity.</p>
     <?php elseif ($state['mode'] === 'paid'): ?>
-      <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Měsíc před koncem Vám připravíme platbu na další rok a pošleme připomenutí; bez prodloužení web přejde na edici Zdarma.</p>
+      <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní).</p>
+      <?php if (!empty($t['auto_renew'])): ?>
+      <div class="renew-box"><p><strong>Předplatné se prodlužuje automaticky.</strong> <?= ($t['period'] ?? 'year') === 'month' ? 'Každou měsíční platbu z Vašeho trvalého příkazu připíšeme a edici prodloužíme o další měsíc.' : 'Před koncem období Vám připravíme zálohovou fakturu na další rok a pošleme upozornění e-mailem.' ?> Nic se nestrhává bez Vás – platíte převodem.</p>
+        <form method="post" action="<?= url('/admin/predplatne/prodluzovani') ?>" data-confirm="Vypnout automatické prodlužování? Edice doběhne do <?= cz_date($state['until']) ?> a potom web přejde na edici Zdarma."><?= csrf_field() ?><input type="hidden" name="action" value="off"><button class="btn btn-small btn-ghost" type="submit">Zrušit prodlužování</button></form></div>
+      <?php else: ?>
+      <div class="renew-box is-off"><p><strong>Automatické prodlužování je vypnuté.</strong> Edice doběhne do <?= cz_date($state['until']) ?> a potom web přejde na edici Zdarma. Nic se nemaže.<?= ($t['period'] ?? 'year') === 'month' ? ' Nezapomeňte zrušit trvalý příkaz ve své bance.' : '' ?></p>
+        <form method="post" action="<?= url('/admin/predplatne/prodluzovani') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="on"><button class="btn btn-small" type="submit">Znovu zapnout prodlužování</button></form></div>
+      <?php endif ?>
     <?php else: ?>
       <p>Předplatné skončilo <strong><?= cz_date($state['until']) ?></strong>. Web zatím běží beze změny; bez úhrady přejde za <?= max(0, pset_int('grace_days', 0, 365) + $state['days']) ?> dní na edici Zdarma. Nic se nemaže.</p>
     <?php endif ?>
@@ -225,14 +232,14 @@
     <summary><h2>Zrušit web a smazat všechna data</h2></summary>
     <?php if ($t['delete_at'] !== ''): ?>
       <div class="flash flash-error">Web bude nenávratně smazán <strong><?= cz_date($t['delete_at']) ?></strong> na žádost: <?= e($t['delete_by']) ?>.</div>
-      <p>Do té doby web běží normálně. <a href="<?= url('/admin/zaloha') ?>">Stáhněte si zálohu dat</a>, pokud ji budete chtít mít.</p>
+      <p>Do té doby web běží normálně. <a href="<?= url('/admin/zaloha') ?>">Stáhněte si zálohu dat</a>, pokud ji budete chtít mít<?= plan_has('zaloha') ? '' : ' (záloha je součástí placených edic; v edici Zdarma ji lze jednou na ' . PLAN_TRIAL_DAYS . ' dní zdarma zapnout)' ?>.</p>
       <form method="post" action="<?= url('/admin/predplatne/zrusit-web') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn" type="submit">Vzít žádost zpět – web nemazat</button></form>
     <?php else: ?>
       <p>Smaže se celý web společenství: všechny účty, jednotky, dokumenty, hlasování, zprávy i nastavení. <strong>Nejde to vrátit.</strong></p>
       <ul><li>Web se smaže za <?= TENANT_DELETE_WAIT_DAYS ?> dní od žádosti. Do té doby běží normálně a kterýkoli správce může žádost vzít zpět.</li>
         <li>Všem správcům webu pošleme e-mail, aby o žádosti věděli.</li>
         <li>Zaplacené předplatné se nevrací; vystavené faktury uchováváme po dobu danou účetními předpisy.</li>
-        <li>Nejdřív si <a href="<?= url('/admin/zaloha') ?>">stáhněte zálohu dat</a>.</li></ul>
+        <li>Nejdřív si <a href="<?= url('/admin/zaloha') ?>">stáhněte zálohu dat</a><?= plan_has('zaloha') ? '' : ' – je součástí placených edic, v edici Zdarma ji lze jednou na ' . PLAN_TRIAL_DAYS . ' dní zdarma zapnout' ?>.</li></ul>
       <form method="post" action="<?= url('/admin/predplatne/zrusit-web') ?>" class="form" data-confirm="Opravdu požádat o smazání celého webu?">
         <?= csrf_field() ?>
         <label>Pro potvrzení opište adresu webu: <strong><?= e($t['slug']) ?></strong> <input type="text" name="confirm" required autocomplete="off" autocapitalize="none"></label>

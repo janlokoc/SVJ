@@ -250,3 +250,22 @@ document.querySelectorAll('[data-filter-list]').forEach((input) => input.addEven
   });
 }));
 
+// Fotografie z telefonu bývají větší, než server dovolí nahrát: před odesláním se zmenší na rozumnou velikost.
+document.querySelectorAll('input[type=file][data-shrink]').forEach((input) => input.addEventListener('change', async () => {
+  if (typeof DataTransfer !== 'function' || !input.files.length) return;
+  const dt = new DataTransfer();
+  for (const file of input.files) {
+    if (!/^image\/(jpeg|png)$/.test(file.type) || file.size < 900000) { dt.items.add(file); continue; }
+    try {
+      const img = await createImageBitmap(file);
+      const scale = Math.min(1, 1800 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.82));
+      dt.items.add(blob && blob.size < file.size ? new File([blob], file.name.replace(/\.(png|jpe?g)$/i, '') + '.jpg', { type: 'image/jpeg' }) : file);
+    } catch (e) { dt.items.add(file); }
+  }
+  input.files = dt.files;
+}));
+

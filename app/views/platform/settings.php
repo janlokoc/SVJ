@@ -8,6 +8,8 @@
     <label>Název služby <input type="text" name="service_name" value="<?= e($v['service_name']) ?>" required></label>
     <label class="check"><input type="checkbox" name="signup_open"<?= $v['signup_open'] === '1' ? ' checked' : '' ?>> <span>Registrace je otevřená <small>Kdokoli si může z úvodní stránky sám založit web společenství. Po vypnutí zakládáte weby jen Vy.</small></span></label>
     <label class="check"><input type="checkbox" name="demo_auto"<?= $v['demo_auto'] === '1' ? ' checked' : '' ?>> <span>Ukázkový web <small>Na adrese <?= e(tenant_address('demo')) ?> běží smyšlené společenství jen pro čtení a úvodní stránka na něj odkazuje. Pokud neexistuje, založí se sám. Po vypnutí ho můžete smazat v seznamu společenství.</small></span></label>
+    <label>Ukázkový web obnovit s čerstvými daty každých (dní; 0 = neobnovovat) <input type="number" name="demo_refresh_days" value="<?= e($v['demo_refresh_days']) ?>" min="0" max="365" required></label>
+    <p class="hint">Při obnově se ukázka smaže a založí znovu; všechny termíny, ankety, zprávy a lhůty se počítají ode dne obnovy, takže vždy vypadá jako živý web.</p>
     <label>Placená edice běží po splatnosti ještě (dní) <input type="number" name="grace_days" value="<?= e($v['grace_days']) ?>" min="0" max="365" required></label>
     <p class="hint">Potom web přejde na edici Zdarma. Nic se nemaže ani nepozastavuje.</p>
     <label>Nepoužívaný web v edici Zdarma smazat po (dní od posledního přihlášení) <input type="number" name="delete_days" value="<?= e($v['delete_days']) ?>" min="0" max="3650" required></label>

@@ -160,6 +160,14 @@
     <label class="check"><input type="checkbox" name="replace" checked> <span>Nahradit dosavadní aktuality, dokumenty a kontakty <small>Hodí se u nově založeného webu, který obsahuje jen uvítací text. Bez zaškrtnutí se obsah přidá ke stávajícímu.</small></span></label>
     <button class="btn" type="submit" data-confirm-import>Importovat obsah</button>
   </form>
+  <?php if (!empty($t['demo'])): ?>
+  <form method="post" action="<?= url('/demo') ?>" class="card form" data-confirm="Ukázkový web se smaže a založí znovu s čerstvými daty. Pokračovat?">
+    <?= csrf_field() ?>
+    <h2>Obnovit ukázkový web</h2>
+    <p>Ukázkový web smazat nejde. Sám se obnovuje každých <?= pset_int('demo_refresh_days', 0, 365) ?> dní (nastavení služby), aby termíny, zprávy a lhůty vypadaly aktuálně. Obnovit ho můžete i hned.</p>
+    <div class="actions"><button class="btn" type="submit">Obnovit teď</button></div>
+  </form>
+  <?php else: ?>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/smazat') ?>" class="card form" data-confirm="Opravdu nenávratně smazat web „<?= e($t['name']) ?>“ včetně všech dat?">
     <h2>Smazat společenství</h2>
     <?= csrf_field() ?>
@@ -167,5 +175,6 @@
     <label>Pro potvrzení opište adresu: <strong><?= e($t['slug']) ?></strong> <input type="text" name="confirm" id="t-confirm" autocomplete="off" required></label>
     <button class="btn btn-accent" type="submit">Smazat společenství</button>
   </form>
+  <?php endif ?>
   <?php endif ?>
 </div>

@@ -9,6 +9,7 @@
         <?php if (!empty($t['author_phone'])): ?> · <a href="<?= e(tel_href($t['author_phone'])) ?>"><?= e($t['author_phone']) ?></a><?php endif ?>
         <?php if (!empty($t['author_email'])): ?> · <a href="mailto:<?= e($t['author_email']) ?>"><?= e($t['author_email']) ?></a><?php endif ?></p>
       <div class="prose"><?= format_text($t['body']) ?></div>
+      <?php $ticketFiles = $files[(int) $t['id']] ?? []; require __DIR__ . '/../_ticket_files.php'; ?>
       <form method="post" action="<?= url('/admin/zavady/' . $t['id']) ?>" class="form ticket-form">
         <?= csrf_field() ?>
         <details class="ticket-edit"><summary>Upravit text hlášení</summary>

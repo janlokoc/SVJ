@@ -12,7 +12,7 @@ foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
 }
 // Funkce, které nejsou v edici a nikdo je nezkoušel, obyvatelé v menu nevidí; správce je v administraci vidí se štítkem edice.
 $planPublic = ['ankety' => '/ankety', 'platby' => '/platby', 'odecty' => '/odecty', 'rezervace' => '/rezervace'];
-$planAdmin = ['/admin/ankety' => 'ankety', '/admin/platby' => 'platby', '/admin/odecty' => 'odecty', '/admin/rezervace' => 'rezervace', '/admin/prostory' => 'rezervace', '/admin/revize' => 'revize', '/admin/klice' => 'klice', '/admin/ukoly' => 'ukoly', '/admin/dodavatele' => 'dodavatele'];
+$planAdmin = ['/admin/ankety' => 'ankety', '/admin/platby' => 'platby', '/admin/odecty' => 'odecty', '/admin/rezervace' => 'rezervace', '/admin/prostory' => 'rezervace', '/admin/revize' => 'revize', '/admin/klice' => 'klice', '/admin/ukoly' => 'ukoly', '/admin/dodavatele' => 'dodavatele', '/admin/zaloha' => 'zaloha'];
 $planHidden = [];
 foreach ($planPublic as $pf => $pp) {
     if (plan_state($pf) === 'available') {

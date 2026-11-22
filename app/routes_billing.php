@@ -267,6 +267,22 @@ $route('POST', '/admin/predplatne/zkusit', function () {
     flash(plan_state($feature) === 'expired' ? 'Tuto funkci jste už jednou zkoušeli. Dál ji můžete používat s edicí ' . EDITIONS[PLAN_FEATURES[$feature][0]] . '.' : 'Funkce je už zapnutá.', 'info');
     redirect('/admin/predplatne#funkce');
 });
+// Automatické prodlužování: vypnutí zruší i připravenou (ještě nenahlášenou) platbu na další období.
+$route('POST', '/admin/predplatne/prodluzovani', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t || empty($t['billing'])) {
+        redirect('/admin/predplatne');
+    }
+    $on = post('action') === 'on';
+    pq("UPDATE tenants SET auto_renew = ?, reminded = '' WHERE slug = ?", [$on ? 1 : 0, TENANT]);
+    if (!$on) {
+        pq("UPDATE payments SET status = 'cancelled', note = 'automatické prodlužování vypnuto správcem webu' WHERE tenant = ? AND kind = 'service' AND status = 'pending'", [TENANT]);
+    }
+    audit('Předplatné: automatické prodlužování ' . ($on ? 'zapnuto' : 'vypnuto'));
+    flash($on ? 'Automatické prodlužování je zapnuté.' : 'Automatické prodlužování je vypnuté. Edice doběhne do konce zaplaceného období a potom web přejde na edici Zdarma.' . (($t['period'] ?? 'year') === 'month' ? ' Nezapomeňte zrušit trvalý příkaz ve své bance.' : ''), $on ? 'ok' : 'info');
+    redirect('/admin/predplatne');
+});
 // Zrušení celého webu na žádost správce: smaže se po týdnu, do té doby lze žádost vzít zpět. V ukázkovém webu to nejde.
 $route('POST', '/admin/predplatne/zrusit-web', function () {
     $u = require_admin();

@@ -378,7 +378,7 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/admin/zavady', function () {
     require_admin();
-    render('admin/tickets', ['title' => 'Závady a požadavky', 'suppliers' => all('SELECT * FROM suppliers ORDER BY field, name'), 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
+    render('admin/tickets', ['title' => 'Závady a požadavky', 'suppliers' => all('SELECT * FROM suppliers ORDER BY field, name'), 'files' => ticket_files(array_column(all('SELECT id FROM tickets'), 'id')), 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
         FROM tickets t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.status = 'done', t.id DESC")]);
 });
 $route('POST', '/admin/zavady/(\d+)', function (int $id) {
@@ -396,6 +396,9 @@ $route('POST', '/admin/zavady/(\d+)', function (int $id) {
 });
 $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
     require_admin();
+    foreach (all('SELECT filename FROM ticket_files WHERE ticket_id = ?', [$id]) as $tf) {
+        @unlink(UPLOAD_DIR . '/' . basename($tf['filename']));
+    }
     q('DELETE FROM tickets WHERE id = ?', [$id]);
     flash('Hlášení bylo smazáno.');
     redirect('/admin/zavady');

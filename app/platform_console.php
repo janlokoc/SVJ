@@ -172,6 +172,10 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
+        if (!empty($t['demo'])) {
+            flash('Ukázkový web smazat nejde. Můžete ho obnovit s čerstvými daty.', 'error');
+            redirect('/svj/' . $slug);
+        }
         if (post('confirm') !== $slug) {
             flash('Pro smazání opište přesně adresu společenství.', 'error');
             redirect('/svj/' . $slug);
@@ -341,15 +345,12 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
 }
 if ($METHOD === 'POST' && $PATH === '/demo') {
     // Ukázkový web: založí se (nebo znovu naplní čerstvými daty) pod adresou demo; je jen pro čtení.
-    if ($old = tenant_row('demo')) {
-        if (!$old['demo']) {
-            flash('Adresu demo už používá běžné společenství.', 'error');
-            redirect('/');
-        }
-        tenant_delete_storage('demo');
-        pq('DELETE FROM tenants WHERE slug = ?', ['demo']);
+    $old = tenant_row('demo');
+    if ($old && !$old['demo']) {
+        flash('Adresu demo už používá běžné společenství.', 'error');
+        redirect('/');
     }
-    demo_create();
+    demo_refresh();
     platform_log($old ? 'Obnovení ukázkového webu' : 'Založení ukázkového webu', 'demo');
     flash('Ukázkový web je připraven a úvodní stránka na něj odkazuje.');
     redirect('/');
@@ -399,7 +400,7 @@ if ($PATH === '/nastaveni') {
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = 'year';
-        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'monthly_surcharge' => 'Přirážka za měsíční platbu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
+        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'monthly_surcharge' => 'Přirážka za měsíční platbu', 'demo_refresh_days' => 'Obnova ukázkového webu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }

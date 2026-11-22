@@ -158,6 +158,10 @@ SQL);
             ALTER TABLE tenants ADD COLUMN delete_by TEXT NOT NULL DEFAULT '';
             PRAGMA user_version = 10;");
     }
+    // Automatické prodlužování předplatného (lze vypnout) a den poslední obnovy ukázkového webu.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 11) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN auto_renew INTEGER NOT NULL DEFAULT 1; PRAGMA user_version = 11;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -285,7 +289,7 @@ Používáme jen nezbytné cookies: přihlášení, průběh registrace a zvolen
 
 ## Vaše práva
 Máte právo na přístup ke svým údajům, jejich opravu, výmaz, omezení zpracování, přenositelnost a právo vznést námitku. Napište nám na kontakt uvedený v záhlaví; odpovíme do jednoho měsíce. Stížnost můžete podat u Úřadu pro ochranu osobních údajů (www.uoou.cz).
-Správce webu společenství si může data svého webu kdykoli stáhnout (Záloha) a celý web zrušit (Předplatné → Zrušit web).
+Správce webu společenství si může v placené edici data svého webu stáhnout (Záloha) a celý web kdykoli zrušit (Předplatné → Zrušit web). Každý uživatel si své vlastní údaje stáhne v kterékoli edici.
 TXT;
 const PLATFORM_TERMS = <<<'TXT'
 
@@ -296,7 +300,8 @@ Smlouva vzniká dokončením registrace, při které osoba jednající za zákaz
 ## 2. Edice a cena
 Služba se poskytuje v edicích uvedených v ceníku na webu poskytovatele. Edice Zdarma je bezplatná a časově neomezená; má limity uvedené v ceníku a web v ní může obsahovat odkaz na službu.
 Funkce vyšších edic si zákazník může jednou na dobu uvedenou v administraci bezplatně vyzkoušet. Zkoušením nevzniká povinnost placenou edici objednat.
-Placená edice se objednává v administraci a platí předem na rok bankovním převodem na základě zálohové faktury (výzvy k platbě). Po připsání platby vystaví poskytovatel fakturu.
+Placená edice se objednává v administraci a platí předem na rok nebo na měsíc bankovním převodem na základě zálohové faktury (výzvy k platbě). Po připsání platby vystaví poskytovatel fakturu.
+Předplatné se prodlužuje automaticky: před koncem období poskytovatel vystaví zálohovou fakturu na další období a zákazníka na to upozorní. Automatické prodlužování lze kdykoli vypnout v administraci; neuhrazením další faktury zákazníkovi nevzniká dluh.
 Nic se nestrhává automaticky. Ceny a limity může poskytovatel změnit s účinností od dalšího období; změnu oznámí nejméně 30 dní předem.
 
 ## 3. Konec placené edice a nepoužívané weby
@@ -318,7 +323,7 @@ Služba je poskytována v podobě, v jaké je popsána na webu poskytovatele. Po
 Odpovědnost poskytovatele za škodu je omezena částkou, kterou zákazník za službu zaplatil za posledních 12 měsíců. Omezení se neuplatní tam, kde to zákon nepřipouští.
 
 ## 7. Ukončení
-Zákazník může službu kdykoli přestat používat; smlouva zaniká uplynutím zaplaceného období, není-li uhrazeno další. Před ukončením si může stáhnout úplnou zálohu dat.
+Zákazník může službu kdykoli přestat používat; smlouva zaniká uplynutím zaplaceného období, není-li uhrazeno další. Před ukončením si v placené edici může stáhnout úplnou zálohu dat.
 Poskytovatel může smlouvu vypovědět, porušuje-li zákazník tyto podmínky závažně nebo opakovaně. Poměrnou část předplatného za nevyužité období v takovém případě nevrací jen tehdy, bylo-li porušení úmyslné.
 
 ## 8. Osobní údaje
@@ -355,7 +360,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '500', 'lim_standard_ai' => '30', 'lim_standard_polls' => '0',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '1000', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -616,7 +621,7 @@ function billing_confirm(array $p, string $by): ?array
         return ['from' => $from, 'to' => $to];
     }
     $monthly = (int) $p['months'] === 1;
-    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', $t['slug']]);
+    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, auto_renew = 1, reminded = '' WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', $t['slug']]);
     if ($monthly) {
         // Trvalý příkaz posílá každý měsíc stejnou částku se stejným variabilním symbolem – další platbu proto čekáme pod týmž symbolem.
         pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, vs) VALUES (?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
@@ -691,22 +696,26 @@ function platform_daily(): void
         if ($key === '' || $key === $t['reminded']) {
             continue;
         }
+        $renews = !empty($t['auto_renew']);
         $what = $t['paid_until'] === '' ? 'zkušební doba' : 'předplatné edice ' . EDITIONS[$s['edition'] === 'free' ? ($t['plan'] ?: 'standard') : $s['edition']];
         // Před koncem zaplaceného období rovnou připravíme výzvu k platbě na další rok.
-        if ($s['mode'] !== 'basic' && $t['paid_until'] !== '' && !billing_open($t)) {
+        if ($renews && $s['mode'] !== 'basic' && $t['paid_until'] !== '' && !billing_open($t)) {
             billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition'], $monthly ? 'month' : 'year');
         }
         $link = tenant_url($t, '/admin/predplatne');
         [$subject, $body] = match ($s['mode']) {
             'basic' => ['Web přešel na edici Zdarma – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . " a web teď běží v edici Zdarma.\nNic jsme nesmazali a web funguje dál; funkce vyšší edice jsou jen pro čtení a platí limity edice Zdarma."],
             'grace' => ['Skončila ' . $what . ' – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . ". Web zatím běží beze změny; bez úhrady přejde za " . max(0, pset_int('grace_days', 0, 365) + $s['days']) . " dní na edici Zdarma (nic se nemaže)."],
-            default => ['Blíží se konec – ' . $what . ' webu ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . ". Bez prodloužení web přejde na edici Zdarma – poběží dál, jen s jejími limity."],
+            default => $renews && $t['paid_until'] !== ''
+                ? ['Předplatné se prodlužuje – ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . " a prodlužuje se automaticky o další rok. Zálohovou fakturu na další období jsme Vám připravili v administraci.\nNechcete pokračovat? V části Předplatné vypněte automatické prodlužování – web pak po skončení období přejde na edici Zdarma a nic dalšího neplatíte."]
+                : ['Blíží se konec – ' . $what . ' webu ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . " a " . ($t['paid_until'] !== '' ? 'neprodlužuje se (automatické prodlužování je vypnuté)' : 'neprodlužuje se') . ". Potom web přejde na edici Zdarma – poběží dál, jen s jejími limity."],
         };
         tenant_notify($t, explode(':', $key)[0], $subject, "Dobrý den,\n\n" . $body . "\n\nEdice a platební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
     trial_reminders();
     tenant_requested_deletions();
+    demo_auto_refresh();
     platform_cleanup();
     domain_renewals();
     cert_reminders();
@@ -745,6 +754,30 @@ function demo_tenant(): ?array
 {
     $r = pq('SELECT * FROM tenants WHERE demo = 1 AND active = 1 LIMIT 1')->fetch();
     return $r ?: null;
+}
+/** Znovu založí ukázkový web s čerstvými daty (termíny, zprávy a lhůty se počítají ode dneška). */
+function demo_refresh(): void
+{
+    $old = pq('SELECT * FROM tenants WHERE demo = 1 LIMIT 1')->fetch();
+    if ($old) {
+        tenant_delete_storage($old['slug']);
+        pq('DELETE FROM tenants WHERE slug = ?', [$old['slug']]);
+    }
+    demo_create();
+}
+/** Jednou za pár dní ukázku obnoví, aby nepůsobila opuštěně. */
+function demo_auto_refresh(): void
+{
+    $days = pset_int('demo_refresh_days', 0, 365);
+    $demo = pq('SELECT created_at FROM tenants WHERE demo = 1 LIMIT 1')->fetchColumn();
+    if ($days > 0 && $demo && substr((string) $demo, 0, 10) <= date('Y-m-d', strtotime('-' . $days . ' day'))) {
+        try {
+            demo_refresh();
+            pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Obnovení ukázkového webu', 'demo · automaticky po ' . $days . ' dnech']);
+        } catch (Throwable $e) {
+            error_log('SVJ web, obnova ukázky: ' . $e->getMessage());
+        }
+    }
 }
 function demo_create(): void
 {
@@ -818,7 +851,7 @@ function platform_cleanup(): void
         tenant_notify($t, $kind, ($kind === 'del3' ? 'Poslední upozornění: web' : 'Web') . ' bude smazán – ' . $t['name'],
             "Dobrý den,\n\nna web " . $t['name'] . " se od " . cz_date($since) . " nikdo nepřihlásil. Nepoužívané weby v edici Zdarma mažeme, tento nejdříve "
             . cz_date($when) . ".\n\nChcete web zachovat? Stačí se přihlásit: " . tenant_url($t, '/prihlaseni')
-            . "\nChcete si jen odnést data? Zálohu stáhnete zde: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
+            . "\nChcete si jen odnést data? Záloha ke stažení je součástí placených edic a lze ji jednou na 30 dní zdarma vyzkoušet: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
     }
 }
 const TENANT_DELETE_WAIT_DAYS = 7;
