@@ -182,4 +182,15 @@ function seed_demo_more(PDO $pdo): void
     foreach ([[0, 0], [1, 0], [2, 0], [3, 1], [4, 0], [5, 2], [6, 1], [7, 0]] as $n => [$u, $o]) {
         $ins('survey_answers', ['survey_id' => $survey, 'user_id' => $uid[$u], 'option_id' => $opt[$o], 'answered_at' => $at(-40 + $n, '18:1' . $n . ':00')]);
     }
+
+    // Úkoly a usnesení: otevřené, po termínu i splněné
+    foreach ([
+        ['Oslovit tři firmy s poptávkou na výměnu vchodových dveří', 'Nabídky předložit na příštím jednání výboru. Požadujeme bezpečnostní třídu RC2 a samozavírač.', 'Jana Výborová', 21, 0, 'Usnesení shromáždění č. 3/2026', -30],
+        ['Objednat revizi hromosvodu', 'Poslední revize proběhla před čtyřmi lety, lhůta je pět let.', 'Tomáš Dvořák', 45, 0, 'Jednání výboru', -12],
+        ['Vyvěsit nový domovní řád ve vchodech A a B', 'Schválené znění je v Dokumentech.', 'Petr Novák', -5, 0, 'Usnesení shromáždění č. 5/2026', -40],
+        ['Zjistit zájem o kolárnu ve dvoře', 'Anketa na webu, výsledek předložit výboru.', 'Jana Výborová', -25, 1, 'Jednání výboru', -50],
+        ['Uzavřít smlouvu na úklid společných prostor', 'Vybrána nabídka s úklidem dvakrát týdně.', 'Jana Výborová', -60, 1, 'Usnesení shromáždění č. 2/2026', -120],
+    ] as [$title, $note, $who, $due, $done, $source, $created]) {
+        $ins('tasks', ['title' => $title, 'note' => $note, 'assignee' => $who, 'due_date' => $day($due), 'done' => $done, 'source' => $source, 'created_at' => $at($created, '19:00:00')]);
+    }
 }
