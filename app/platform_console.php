@@ -167,7 +167,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -181,6 +181,14 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         platform_log('Smazání společenství', $slug . ' · ' . $t['name']);
         flash('Společenství „' . $t['name'] . '“ bylo smazáno včetně všech dat.');
         redirect('/');
+    }
+    if ($METHOD === 'POST' && $action === '/certifikat') {
+        [$ok, $message, $domain] = cert_upload($t) + [2 => ''];
+        if ($ok) {
+            platform_log('Nahrání certifikátu', $slug . ' · ' . $domain);
+        }
+        flash($message, $ok ? 'ok' : 'error');
+        redirect('/svj/' . $slug);
     }
     if ($METHOD === 'POST' && $action === '/domena') {
         $domain = $t['domain_request'];
@@ -197,6 +205,9 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
             flash('Doména ' . $domain . ' je zprovozněna a kontaktní osoba dostala e-mail. Ověřte, že web na ní odpovídá přes HTTPS.');
         } elseif (post('do') === 'remove' && $t['domain_status'] !== '') {
             pq("UPDATE tenants SET custom_domain = CASE WHEN custom_domain = domain_request THEN '' ELSE custom_domain END, domain_request = '', domain_status = '', domain_until = '' WHERE slug = ?", [$slug]);
+            if ($domain !== '') {
+                cert_remove($domain);
+            }
             pq("UPDATE payments SET status = 'cancelled', note = 'doména odpojena' WHERE tenant = ? AND kind = 'domain' AND status = 'pending'", [$slug]);
             platform_log('Odpojení vlastní domény', $slug . ' · ' . $domain);
             flash('Vlastní doména je odpojena. Web běží dál na adrese platformy.', 'info');
@@ -271,6 +282,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),
         'domainPayment' => pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'domain' ORDER BY id DESC LIMIT 1", [$slug])->fetch() ?: null,
+        'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : (string) (tenant_row($slug)['domain_request'] ?? '')),
         'domainDns' => ($raw = tenant_row($slug)) && $raw['domain_request'] !== '' ? domain_registered($raw['domain_request']) : null, 'raw' => $raw]);
     exit;
 }

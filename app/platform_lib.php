@@ -523,6 +523,7 @@ function platform_daily(): void
     }
     platform_cleanup();
     domain_renewals();
+    cert_reminders();
 }
 
 // ---------- Provozovatel, doklady, ukázkový web ----------
@@ -568,7 +569,7 @@ function demo_create(): void
 // ---------- Upozornění společenstvím a automatické mazání nezaplacených zkušebních webů ----------
 
 const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
-    'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán', 'domain' => 'končí předplatné vlastní domény'];
+    'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán', 'domain' => 'končí předplatné vlastní domény', 'cert' => 'končí platnost nahraného certifikátu'];
 
 /** Pošle upozornění kontaktní osobě společenství a zapíše, komu, kdy a zda se ho podařilo odeslat. */
 function tenant_notify(array $t, string $kind, string $subject, string $text): bool
@@ -707,4 +708,134 @@ function slug_input(string $v): string
     $v = strtolower(trim(preg_replace('~^https?://~i', '', trim($v))));
     $v = preg_replace('~' . preg_quote(platform_domain(), '~') . '(:\d+)?~', '', $v);
     return trim(substr(preg_replace('/-{2,}/', '-', preg_replace('/[^a-z0-9-]/', '', preg_replace('~[\s_./]+~', '-', ascii_text($v)))), 0, 39), '-');
+}
+
+// ---------- Vlastní certifikát HTTPS pro vlastní doménu společenství ----------
+// Aplikace certifikát jen přijme, zkontroluje a uloží do storage/certs/<doména>/. Používat ho musí webový server (viz README).
+
+function cert_dir(string $domain): string
+{
+    return ROOT_STORAGE . '/certs/' . $domain;
+}
+/**
+ * Zkontroluje certifikát a soukromý klíč pro danou doménu. Vrací údaje o certifikátu, nebo text chyby.
+ * Klíč chráněný heslem se nepřijímá – server by ho neuměl načíst.
+ */
+function cert_check(string $certPem, string $keyPem, string $domain): array|string
+{
+    if (!function_exists('openssl_x509_read')) {
+        return 'Na serveru chybí rozšíření OpenSSL, certifikát nejde zkontrolovat.';
+    }
+    $certPem = trim(str_replace("\r", '', $certPem)) . "\n";
+    $keyPem = trim(str_replace("\r", '', $keyPem)) . "\n";
+    if (!str_contains($certPem, '-----BEGIN CERTIFICATE-----') || !($cert = @openssl_x509_read($certPem))) {
+        return 'Certifikát se nepodařilo přečíst. Vložte ho ve formátu PEM (začíná řádkem -----BEGIN CERTIFICATE-----), nejlépe celý řetězec včetně mezilehlých certifikátů.';
+    }
+    if (str_contains($keyPem, 'ENCRYPTED')) {
+        return 'Soukromý klíč je chráněný heslem. Nahrajte klíč bez hesla.';
+    }
+    if (!preg_match('/-----BEGIN (RSA |EC )?PRIVATE KEY-----/', $keyPem) || !($key = @openssl_pkey_get_private($keyPem))) {
+        return 'Soukromý klíč se nepodařilo přečíst. Vložte ho ve formátu PEM (začíná řádkem -----BEGIN PRIVATE KEY-----).';
+    }
+    if (!openssl_x509_check_private_key($cert, $key)) {
+        return 'Soukromý klíč nepatří k tomuto certifikátu.';
+    }
+    $info = openssl_x509_parse($cert) ?: [];
+    $names = [];
+    foreach (explode(',', (string) ($info['extensions']['subjectAltName'] ?? '')) as $part) {
+        if (preg_match('/^\s*DNS:(.+)$/', $part, $m)) {
+            $names[] = strtolower(trim($m[1]));
+        }
+    }
+    if (!$names && !empty($info['subject']['CN'])) {
+        $names[] = strtolower((string) $info['subject']['CN']);
+    }
+    $covers = function (string $host) use ($names): bool {
+        foreach ($names as $n) {
+            if ($n === $host || (str_starts_with($n, '*.') && substr($host, strpos($host, '.') + 1) === substr($n, 2))) {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (!$covers($domain)) {
+        return 'Certifikát není vydaný pro doménu ' . $domain . ' (je pro: ' . implode(', ', array_slice($names, 0, 6)) . ').';
+    }
+    $to = (int) ($info['validTo_time_t'] ?? 0);
+    if ($to < time()) {
+        return 'Platnost certifikátu skončila ' . date('j. n. Y', $to) . '.';
+    }
+    if ((int) ($info['validFrom_time_t'] ?? 0) > time() + 86400) {
+        return 'Certifikát ještě nezačal platit.';
+    }
+    return ['cert' => $certPem, 'key' => $keyPem, 'valid_to' => date('Y-m-d', $to), 'names' => $names, 'www' => $covers('www.' . $domain),
+        'issuer' => (string) ($info['issuer']['O'] ?? $info['issuer']['CN'] ?? ''), 'self_signed' => ($info['subject'] ?? []) == ($info['issuer'] ?? [])];
+}
+function cert_store(string $domain, array $checked): void
+{
+    $dir = cert_dir($domain);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0750, true);
+    }
+    @file_put_contents(ROOT_STORAGE . '/certs/index.html', '');
+    // Nejdřív do dočasných souborů a pak přejmenovat, aby server nikdy nenačetl napůl zapsaný soubor nebo nový certifikát se starým klíčem.
+    foreach (['fullchain.pem' => $checked['cert'], 'privkey.pem' => $checked['key']] as $name => $content) {
+        $tmp = $dir . '/.' . $name . '.' . bin2hex(random_bytes(4));
+        file_put_contents($tmp, $content);
+        chmod($tmp, $name === 'privkey.pem' ? 0640 : 0644);
+        rename($tmp, $dir . '/' . $name);
+    }
+}
+/** Údaje o uloženém certifikátu domény (bez klíče), nebo null. */
+function cert_info(string $domain): ?array
+{
+    $file = cert_dir($domain) . '/fullchain.pem';
+    if ($domain === '' || !is_file($file) || !function_exists('openssl_x509_parse') || !($info = @openssl_x509_parse((string) file_get_contents($file)))) {
+        return null;
+    }
+    $to = (int) ($info['validTo_time_t'] ?? 0);
+    return ['valid_to' => date('Y-m-d', $to), 'days' => (int) floor(($to - time()) / 86400), 'issuer' => (string) ($info['issuer']['O'] ?? $info['issuer']['CN'] ?? ''),
+        'uploaded' => date('Y-m-d H:i', (int) filemtime($file)), 'self_signed' => ($info['subject'] ?? []) == ($info['issuer'] ?? [])];
+}
+function cert_remove(string $domain): void
+{
+    foreach (glob(cert_dir($domain) . '/{,.}*.pem*', GLOB_BRACE) ?: [] as $f) {
+        @unlink($f);
+    }
+    @rmdir(cert_dir($domain));
+}
+/** Přijme certifikát z formuláře (soubory nebo vložený text) pro doménu společenství. Vrací zprávu pro uživatele a zda se povedlo. */
+function cert_upload(array $t): array
+{
+    $domain = $t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request'];
+    if ($domain === '') {
+        return [false, 'Společenství nemá nastavenou vlastní doménu.'];
+    }
+    $read = function (string $field): string {
+        $f = $_FILES[$field . '_file'] ?? null;
+        if ($f && ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK && $f['size'] <= 200000) {
+            return (string) file_get_contents($f['tmp_name']);
+        }
+        return mb_substr((string) ($_POST[$field] ?? ''), 0, 200000);
+    };
+    $checked = cert_check($read('cert'), $read('key'), $domain);
+    if (is_string($checked)) {
+        return [false, $checked];
+    }
+    cert_store($domain, $checked);
+    return [true, 'Certifikát pro ' . $domain . ' je uložen, platí do ' . cz_date($checked['valid_to']) . '.'
+        . ($checked['www'] ? '' : ' Pozor: nepokrývá adresu www.' . $domain . '.') . ($checked['self_signed'] ? ' Je podepsaný sám sebou, prohlížeče před ním budou varovat.' : ''), $domain];
+}
+/** Tři týdny před koncem platnosti nahraného certifikátu upozorní kontaktní osobu (nejvýše jednou za 10 dní). */
+function cert_reminders(): void
+{
+    foreach (pq("SELECT * FROM tenants WHERE custom_domain <> ''")->fetchAll() as $t) {
+        $c = cert_info($t['custom_domain']);
+        if (!$c || $c['days'] > 21 || pq("SELECT 1 FROM tenant_notices WHERE tenant = ? AND kind = 'cert' AND at >= ?", [$t['slug'], date('Y-m-d H:i:s', time() - 10 * 86400)])->fetchColumn()) {
+            continue;
+        }
+        tenant_notify($t, 'cert', 'Končí platnost certifikátu – ' . $t['custom_domain'], "Dobrý den,\n\ncertifikát HTTPS, který jste nahráli pro doménu " . $t['custom_domain'] . ", "
+            . ($c['days'] < 0 ? 'už neplatí' : 'platí jen do ' . cz_date($c['valid_to'])) . ".\nNový nahrajte po přihlášení v části Předplatné: " . tenant_url(['custom_domain' => ''] + $t, '/admin/predplatne')
+            . "\n\nBez platného certifikátu budou prohlížeče návštěvníky před webem varovat.");
+    }
 }

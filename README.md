@@ -225,6 +225,35 @@ na limity hostingu:
 - **počet databází** – s MySQL potřebuje každé společenství vlastní
   databázi, což běžný hosting nedovolí; pro více SVJ proto použijte SQLite.
 
+#### Vlastní certifikát společenství
+
+Společenství, které už certifikát pro svou doménu má, ho může nahrát
+v Předplatném v části Vlastní doména (certifikát s celým řetězcem a
+soukromý klíč bez hesla, formát PEM). Totéž může udělat hlavní správce.
+Web před uložením ověří, že klíč k certifikátu patří, že je certifikát
+vydaný pro danou doménu a že platí; tři týdny před koncem platnosti pošle
+kontaktní osobě upozornění.
+
+Soubory se ukládají do `storage/certs/<doména>/fullchain.pem` a
+`privkey.pem`. **Aplikace je sama nepoužívá** – HTTPS obsluhuje webový
+server, který si je odtud musí načítat. Pro nginx (od verze 1.15.9, která
+umí v cestě k certifikátu proměnnou) vypadá nastavení zhruba takto:
+
+```
+server {
+    listen 443 ssl;
+    server_name ~^(www\.)?(?<vlastni>.+)$;
+    ssl_certificate     /cesta/k/webu/storage/certs/$vlastni/fullchain.pem;
+    ssl_certificate_key /cesta/k/webu/storage/certs/$vlastni/privkey.pem;
+    …
+}
+```
+
+Proces nginx musí mít ke složce `storage/certs` právo čtení. Toto
+nastavení nebylo vyzkoušeno na skutečném serveru – berte ho jako výchozí
+bod. Pro domény bez nahraného certifikátu zůstává jednodušší cesta
+automatické vystavování (viz výše).
+
 ### Registrace, zkušební doba a předplatné
 
 - Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →

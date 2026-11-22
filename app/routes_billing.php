@@ -25,7 +25,7 @@ $route('GET', '/admin/predplatne', function () {
     $state = billing_state($t);
     $payment = $state['mode'] === 'free' ? null : billing_pending($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'aiPayment' => ai_payment($t),
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
@@ -89,6 +89,24 @@ $route('POST', '/admin/predplatne/domena', function () {
         flash('Žádost o doménu ' . $domain . ' je odeslaná.' . ($registered === false && !$own ? ' Podle rychlé kontroly vypadá volná; registraci potvrdíme po zaplacení.' : ''));
         redirect('/admin/predplatne#domena');
     }
+    redirect('/admin/predplatne#domena');
+});
+$route('POST', '/admin/predplatne/certifikat', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (post('action') === 'remove') {
+        $domain = $t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request'];
+        cert_remove($domain);
+        audit('Vlastní doména: certifikát odebrán', $domain);
+        flash('Nahraný certifikát byl odebrán.', 'info');
+        redirect('/admin/predplatne#domena');
+    }
+    [$ok, $message, $domain] = cert_upload($t) + [2 => ''];
+    if ($ok) {
+        audit('Vlastní doména: nahrán certifikát', $domain);
+        pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Nahrání certifikátu společenstvím', TENANT . ' · ' . $domain]);
+    }
+    flash($message, $ok ? 'ok' : 'error');
     redirect('/admin/predplatne#domena');
 });
 $route('POST', '/admin/predplatne/ai', function () {

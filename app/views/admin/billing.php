@@ -57,6 +57,21 @@
         <div class="actions"><button class="btn" type="submit">Požádat o vlastní doménu</button></div>
       </form>
     <?php endif ?>
+    <?php if ($t['domain_status'] !== ''): $certDomain = $t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']; ?>
+    <details class="cert-box"<?= $certInfo && $certInfo['days'] <= 21 ? ' open' : '' ?>>
+      <summary>Vlastní certifikát HTTPS <?= $certInfo ? '<span class="status status-' . ($certInfo['days'] < 0 ? 'new' : ($certInfo['days'] <= 21 ? 'in_progress' : 'done')) . '">' . ($certInfo['days'] < 0 ? 'neplatný' : 'platí do ' . cz_date($certInfo['valid_to'])) . '</span>' : '<small class="muted">nepovinné</small>' ?></summary>
+      <p class="hint">Certifikát pro Vaši doménu obvykle zajistíme sami a nemusíte nic nahrávat. Vlastní nahrajte jen tehdy, když ho Vaše společenství už má (například od poskytovatele domény).</p>
+      <?php if ($certInfo): ?><p>Nahraný certifikát: vydal <?= e($certInfo['issuer'] !== '' ? $certInfo['issuer'] : 'neznámý vydavatel') ?>, platí do <strong><?= cz_date($certInfo['valid_to']) ?></strong><?= $certInfo['self_signed'] ? ' · podepsaný sám sebou' : '' ?>.</p><?php endif ?>
+      <form method="post" action="<?= url('/admin/predplatne/certifikat') ?>" enctype="multipart/form-data" class="form">
+        <?= csrf_field() ?>
+        <label>Certifikát pro <?= e($certDomain) ?> (soubor .pem nebo .crt, celý řetězec) <input type="file" name="cert_file" accept=".pem,.crt,.cer,.txt" required></label>
+        <label>Soukromý klíč (soubor .key nebo .pem, bez hesla) <input type="file" name="key_file" accept=".pem,.key,.txt" required></label>
+        <p class="hint">Soukromý klíč se uloží jen na serveru, nikde se nezobrazuje a nejde stáhnout. Před uložením ověříme, že patří k certifikátu, že je certifikát pro tuto doménu a že platí.</p>
+        <div class="actions"><button class="btn btn-small" type="submit"><?= $certInfo ? 'Nahrát nový certifikát' : 'Nahrát certifikát' ?></button></div>
+      </form>
+      <?php if ($certInfo): ?><form method="post" action="<?= url('/admin/predplatne/certifikat') ?>" data-confirm="Odebrat nahraný certifikát?"><?= csrf_field() ?><input type="hidden" name="action" value="remove"><button class="link-danger" type="submit">Odebrat certifikát</button></form><?php endif ?>
+    </details>
+    <?php endif ?>
     <?php if ($domainPayment): $dp = $domainPayment; ?>
       <h3>Platba za doménu <?= e($dp['item']) ?> na 1 rok</h3>
       <?php if ($dp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($dp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
