@@ -417,6 +417,16 @@ function theme_switch(): string
     }
     return $out . '</span>';
 }
+/** Zkušební prostředí (v storage/config.php: 'env' => 'staging'). */
+function is_staging(): bool
+{
+    return (app_config()['env'] ?? '') === 'staging';
+}
+/** Pruh nahoře na každé stránce zkušebního prostředí. */
+function staging_bar(): string
+{
+    return is_staging() ? '<div class="staging-bar" role="note">Zkušební prostředí – data se mohou kdykoli smazat, e-maily neodcházejí skutečným lidem.</div>' : '';
+}
 function redirect(string $path): never
 {
     admin_audit_flush();
@@ -650,6 +660,9 @@ function store_upload(array $f): array|string
             ? 'Soubor je příliš velký (limit serveru je ' . ini_get('upload_max_filesize') . ').'
             : 'Soubor se nepodařilo nahrát.';
     }
+    if ($limitError = plan_limit_error('storage', (int) ceil(((int) ($f['size'] ?? 0)) / 1048576))) {
+        return $limitError;
+    }
     $orig = basename((string) $f['name']);
     $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
     if (!in_array($ext, ALLOWED_EXT, true)) {
@@ -784,6 +797,15 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
     $from ??= setting('mail_from');
     if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
         return false;
+    }
+    // Zkušební prostředí: e-maily nejdou skutečným lidem, ale na jednu adresu z nastavení (nebo se neodešlou vůbec).
+    if (is_staging()) {
+        $catch = (string) (app_config()['staging_mail'] ?? '');
+        if (!filter_var($catch, FILTER_VALIDATE_EMAIL)) {
+            return true;
+        }
+        $subject = '[STAGING pro ' . $to . '] ' . $subject;
+        $to = $catch;
     }
     $name = trim(preg_replace('/[\r\n"<>]+/', ' ', $fromName ?? setting('mail_from_name', site('name'))));
     $subject = trim(preg_replace('/\s+/u', ' ', $subject));
@@ -1380,6 +1402,7 @@ function user_badge(array $u): string
 // Části aplikace, které knihovna potřebuje vždy (i v nástrojích z příkazové řádky).
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
+require_once __DIR__ . '/plan_lib.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/ai_lib.php';

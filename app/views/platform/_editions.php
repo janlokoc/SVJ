@@ -1,0 +1,30 @@
+<?php /** Tři edice vedle sebe. $edView = 'admin' (objednávka) nebo 'landing' (registrace). V administraci je $edition aktuální edice. */
+$edNow = $edView === 'admin' ? ($edition ?? 'free') : '';
+$lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
+$edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s vlastní doménou a AI zápisem.'];
+$edExtra = [
+    'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jedna šablona vzhledu, 5 barev', 'V patičce odkaz na službu'],
+    'standard' => ['Vše z edice Zdarma', 'Hlasování bez omezení, ankety, zápis ze shromáždění', 'Platby na jednotku, odečty, revize, klíče, rezervace', 'Úkoly, dodavatelé, jazykové verze', 'Všech 5 šablon, bez odkazu v patičce', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
+    'premium' => ['Vše z edice Standard', 'Vlastní doména a vlastní certifikát v ceně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
+]; ?>
+<div class="editions">
+  <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
+  <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
+    <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
+    <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
+    <p class="muted"><?= e($edNotes[$ek]) ?></p>
+    <ul class="edition-limits">
+      <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
+      <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
+      <?php endforeach ?>
+    </ul>
+    <ul class="lp-check"><?php foreach ($edExtra[$ek] as $line): ?><li><?= e($line) ?></li><?php endforeach ?></ul>
+    <?php if ($edView === 'landing'): ?>
+      <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : 'Začít zdarma, přejít později' ?></a>
+    <?php elseif ($ek !== 'free' && !empty($t['billing'])): ?>
+      <form method="post" action="<?= url('/admin/predplatne/edice') ?>"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
+        <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
+    <?php endif ?>
+  </section>
+  <?php endforeach ?>
+</div>

@@ -236,6 +236,10 @@ $route('POST', '/admin/ai', function () {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     @set_time_limit(180);
+    if (post('task') === 'minutes' && !plan_has('ai-zapis')) {
+        echo json_encode(['error' => 'Zápis pomocí AI je součástí edice Premium. Vyzkoušet ho můžete v části Předplatné.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     $result = ai_run(post('task'), (string) ($_POST['text'] ?? ''), mb_substr((string) ($_POST['context'] ?? ''), 0, 8000));
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
     exit;

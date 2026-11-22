@@ -315,6 +315,12 @@ $userForm = function (int $id = 0) {
         } elseif (val('SELECT 1 FROM users WHERE email = ? AND id <> ?', [$u['email'], $id])) {
             $errors[] = 'Účet s tímto e-mailem už existuje.';
         }
+        if (!$id && ($limitError = plan_limit_error('users'))) {
+            $errors[] = $limitError;
+        }
+        if ($u['role'] === 'admin' && $u['active'] && !($id && val("SELECT 1 FROM users WHERE id = ? AND role = 'admin' AND active = 1", [$id])) && ($limitError = plan_limit_error('admins'))) {
+            $errors[] = $limitError;
+        }
         if ($id === (int) $me['id'] && ($u['role'] !== 'admin' || !$u['active'])) {
             $errors[] = 'Sami sobě nemůžete odebrat práva správce ani účet vypnout.';
         }
@@ -481,6 +487,9 @@ $mailForm = function () {
             $errors[] = 'Nejdřív v Nastavení vyplňte adresu odesílatele e-mailů.';
         }
         [$text, $html] = build_mail($m['body'], null);
+        if (!$errors && post('action') !== 'test' && ($limitError = plan_limit_error('mails', count(mail_recipients($m['audience']))))) {
+            $errors[] = $limitError;
+        }
         if (!$errors && post('action') === 'test') {
             send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html)
                 ? $notice = 'Zkušební zpráva byla předána k odeslání na ' . $admin['email'] . '. Zkontrolujte, že dorazila a nespadla do spamu.'
@@ -752,6 +761,10 @@ $userImport = function () {
     $text = (string) ($_POST['text'] ?? '');
     $rows = null;
     if ($GLOBALS['METHOD'] === 'POST') {
+        if ($limitError = plan_limit_error('users')) {
+            flash($limitError, 'error');
+            redirect('/admin/uzivatele');
+        }
         if (strlen($text) > 200000) {
             flash('Vložený text je příliš dlouhý.', 'error');
             redirect('/admin/uzivatele/import');

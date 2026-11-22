@@ -10,8 +10,17 @@ foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
         array_push($hiddenPaths, ...$public, ...$adminPaths);
     }
 }
+// Funkce, které nejsou v edici a nikdo je nezkoušel, obyvatelé v menu nevidí; správce je v administraci vidí se štítkem edice.
+$planPublic = ['ankety' => '/ankety', 'platby' => '/platby', 'odecty' => '/odecty', 'rezervace' => '/rezervace'];
+$planAdmin = ['/admin/ankety' => 'ankety', '/admin/platby' => 'platby', '/admin/odecty' => 'odecty', '/admin/rezervace' => 'rezervace', '/admin/prostory' => 'rezervace', '/admin/revize' => 'revize', '/admin/klice' => 'klice', '/admin/ukoly' => 'ukoly', '/admin/dodavatele' => 'dodavatele'];
+$planHidden = [];
+foreach ($planPublic as $pf => $pp) {
+    if (plan_state($pf) === 'available') {
+        $planHidden[] = $pp;
+    }
+}
 $nav = array_diff_key($nav, array_flip($hiddenPaths));
-$more = array_diff_key($more, array_flip($hiddenPaths));
+$more = array_diff_key($more, array_flip($hiddenPaths), array_flip($planHidden));
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
     '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
@@ -26,14 +35,10 @@ $billing = $GLOBALS['BILLING'] ?? ['mode' => 'free', 'until' => '', 'days' => 0]
 if ($billing['mode'] !== 'free') {
     $adminNav['/admin/predplatne'] = 'Předplatné';
 }
-if ($billing['mode'] === 'locked') {
-    $nav = $more = [];
-    $adminNav = array_intersect_key($adminNav, ['/admin/predplatne' => 1, '/admin/zaloha' => 1]);
-}
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
-    $billing['mode'] === 'grace' => 'Provoz webu není uhrazen. Bez platby bude web brzy pozastaven.',
-    $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Zkušební doba končí ' . cz_date($billing['until']) . '.',
-    $billing['mode'] === 'paid' && $billing['days'] <= 7 => 'Předplatné končí ' . cz_date($billing['until']) . '.',
+    $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
+    $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Standard na zkoušku končí ' . cz_date($billing['until']) . ', potom web poběží v edici Zdarma.',
+    $billing['mode'] === 'paid' && $billing['days'] <= 14 => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' končí ' . cz_date($billing['until']) . '.',
     default => '',
 };
 $inAdmin = str_starts_with($path, '/admin') && is_admin();
@@ -41,7 +46,7 @@ $inAdmin = str_starts_with($path, '/admin') && is_admin();
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
 <!doctype html>
-<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>" data-style="<?= e(isset(STYLES[site('style')]) ? site('style') : 'klasik') ?>"<?= theme_attr() ?>>
+<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>" data-style="<?= e(isset(STYLES[site('style')]) && plan_has('sablony') ? site('style') : 'klasik') ?>"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,7 +59,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>
-<body<?= $inAdmin ? ' class="in-admin"' : '' ?>>
+<body<?= $inAdmin ? ' class="in-admin"' : '' ?>
+<?= staging_bar() ?>>
 <a class="skip" href="#obsah">Přeskočit na obsah</a>
 <header class="site-header">
   <div class="wrap header-row">
@@ -120,7 +126,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <?php if (isset($adminNav['/admin'])): ?><a class="admin-home" href="<?= url('/admin') ?>"<?= $adminActive('/admin') ? ' aria-current="page"' : '' ?>>Přehled</a><?php endif ?>
     <?php foreach ($adminGroups as $group => $hrefs): $items = array_intersect_key($adminNav, array_flip($hrefs)); if (!$items) { continue; } ?>
       <div class="admin-group"><span class="admin-label"><?= e($group) ?></span>
-        <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?></a></li><?php endforeach ?></ul>
+        <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?><?php if (isset($planAdmin[$href]) && ($ps = plan_state($planAdmin[$href])) !== 'on'): ?> <span class="plan-tag"><?= $ps === 'trial' ? 'zkouška' : e(EDITIONS[PLAN_FEATURES[$planAdmin[$href]][0]]) ?></span><?php endif ?></a></li><?php endforeach ?></ul>
       </div>
     <?php endforeach ?>
   </div>
@@ -148,8 +154,9 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
       <li><a href="<?= url('/kontakty') ?>">Kontakty</a></li>
       <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
       <?php if ($u): ?><li><a href="<?= url('/hlaseni') ?>#moje">Moje hlášení</a></li><?php endif ?>
+      <?php if (plan_managed() && plan_edition() === 'free'): ?><li class="powered">Web běží zdarma na <a href="<?= e(platform_url()) ?>"><?= e(pset('service_name')) ?></a></li><?php endif ?>
       <li><?= theme_switch() ?></li>
-      <li class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></li>
+      <?php if (plan_has('jazyky')): ?><li class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></li><?php endif ?>
       <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
     </ul>
   </div>

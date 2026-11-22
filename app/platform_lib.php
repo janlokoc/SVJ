@@ -137,6 +137,12 @@ SQL);
         $pdo->exec("CREATE TABLE feature_views (id INTEGER PRIMARY KEY AUTOINCREMENT, feature TEXT NOT NULL, tenant TEXT NOT NULL DEFAULT '', visitor TEXT NOT NULL, day TEXT NOT NULL, at TEXT NOT NULL);
             CREATE INDEX feature_views_f ON feature_views (feature, day); PRAGMA user_version = 7;");
     }
+    // Edice a zkoušení placených funkcí.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 8) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN plan TEXT NOT NULL DEFAULT '';
+            CREATE TABLE feature_trials (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL, feature TEXT NOT NULL, started TEXT NOT NULL, ends TEXT NOT NULL, warned TEXT NOT NULL DEFAULT '', UNIQUE (tenant, feature));
+            PRAGMA user_version = 8;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -244,15 +250,15 @@ const PLATFORM_TERMS = <<<'TXT'
 Tyto podmínky upravují poskytování služby, která společenstvím vlastníků jednotek (dále „zákazník“) umožňuje provozovat vlastní web s částí pro obyvatele domu a s administrací. Poskytovatelem je provozovatel uvedený v záhlaví této stránky.
 Smlouva vzniká dokončením registrace, při které osoba jednající za zákazníka potvrdí souhlas s těmito podmínkami. Tato osoba prohlašuje, že je oprávněna za společenství jednat.
 
-## 2. Zkušební doba a cena
-Po registraci běží bezplatná zkušební doba v délce uvedené v ceníku. Během ní ani po ní nevzniká povinnost službu dále využívat.
-Cena služby a doplňkových služeb je uvedena v ceníku na webu poskytovatele. Platí se předem za zvolené období bankovním převodem na základě zálohové faktury (výzvy k platbě) dostupné v administraci. Po připsání platby vystaví poskytovatel fakturu.
-Nic se nestrhává automaticky. Cenu může poskytovatel změnit s účinností od dalšího období; novou cenu oznámí nejméně 30 dní předem.
+## 2. Edice a cena
+Služba se poskytuje v edicích uvedených v ceníku na webu poskytovatele. Edice Zdarma je bezplatná a časově neomezená; má limity uvedené v ceníku a web v ní může obsahovat odkaz na službu.
+Funkce vyšších edic si zákazník může jednou na dobu uvedenou v administraci bezplatně vyzkoušet. Zkoušením nevzniká povinnost placenou edici objednat.
+Placená edice se objednává v administraci a platí předem na rok bankovním převodem na základě zálohové faktury (výzvy k platbě). Po připsání platby vystaví poskytovatel fakturu.
+Nic se nestrhává automaticky. Ceny a limity může poskytovatel změnit s účinností od dalšího období; změnu oznámí nejméně 30 dní předem.
 
-## 3. Neuhrazení a pozastavení
-Není-li služba po skončení zkušební doby nebo zaplaceného období uhrazena, běží web ještě po lhůtu uvedenou v administraci a poté je pozastaven. Správce zákazníka má i po pozastavení přístup ke stránce Předplatné a ke stažení zálohy dat.
-Web, který po zkušební době nebyl nikdy uhrazen, poskytovatel po uplynutí lhůty uvedené na webu smaže včetně všech dat. Na chystané smazání předem upozorní e-mailem osobu, která web založila.
-Data pozastaveného webu, který už byl někdy uhrazen, poskytovatel uchovává nejméně 6 měsíců od pozastavení; poté je může smazat.
+## 3. Konec placené edice a nepoužívané weby
+Není-li placená edice po skončení zaplaceného období prodloužena, běží ještě po lhůtu uvedenou v administraci a poté web přejde na edici Zdarma. Web se nepozastavuje a data se nemažou; funkce, které edice Zdarma neobsahuje, zůstávají jen pro čtení a nad její limity nelze přidávat nové záznamy.
+Web v edici Zdarma, na který se po dobu uvedenou na webu poskytovatele nikdo nepřihlásil, může poskytovatel smazat včetně všech dat. Na chystané smazání předem upozorní e-mailem osobu, která web založila; přihlášení na web lhůtu ruší.
 
 ## 4. Práva a povinnosti zákazníka
 Zákazník odpovídá za obsah, který na web vloží on nebo jeho uživatelé, a za to, že má k uveřejnění a ke zpracování údajů právní důvod.
@@ -305,8 +311,11 @@ Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pr
 Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
 TXT;
 const PLATFORM_DEFAULTS = [
-    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'ai_free_limit' => '30', 'ai_plus_limit' => '300', 'price_ai' => '990', 'ai_model' => '', 'hosting_note' => '', 'trial_days' => '30', 'grace_days' => '14',
-    'period' => 'year', 'price_first' => '1490', 'price_next' => '2390',
+    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
+    'period' => 'year', 'price_standard' => '1490', 'price_premium' => '2990',
+    'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '200', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
+    'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '2000', 'lim_standard_ai' => '30', 'lim_standard_polls' => '0',
+    'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '10000', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
@@ -380,58 +389,61 @@ function tenant_create(array $t): void
 }
 
 /**
- * Stav předplatného: free (bez placení), trial (zkušební doba), paid, grace (po splatnosti, web ještě běží), locked (web pozastaven).
- * 'until' je poslední den, do kdy je služba kryta, 'days' počet dní do tohoto dne (záporné = po splatnosti).
+ * Stav předplatného: free (bez placení, domluveno s provozovatelem), basic (edice Zdarma), trial (dříve založený web ve zkušební době),
+ * paid, grace (po splatnosti – placená edice ještě běží). Web se nikdy nepozastavuje: po lhůtě po splatnosti přejde na edici Zdarma.
+ * 'until' je poslední den, do kdy je placená edice kryta, 'days' počet dní do tohoto dne (záporné = po splatnosti).
  */
 function billing_state(?array $t): array
 {
     if (!$t || empty($t['billing'])) {
-        return ['mode' => 'free', 'until' => '', 'days' => 0];
+        return ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => 'premium'];
     }
     $today = date('Y-m-d');
     $paid = (string) $t['paid_until'];
     $until = max($paid, (string) $t['trial_ends']);
+    $edition = tenant_edition($t);
     if ($until === '') {
-        $until = substr((string) $t['created_at'], 0, 10);
+        return ['mode' => 'basic', 'until' => '', 'days' => 0, 'edition' => 'free'];
     }
     $days = (int) round((strtotime($until) - strtotime($today)) / 86400);
     if ($days >= 0) {
-        return ['mode' => $paid !== '' ? 'paid' : 'trial', 'until' => $until, 'days' => $days];
+        return ['mode' => $paid !== '' && $paid >= $today ? 'paid' : 'trial', 'until' => $until, 'days' => $days, 'edition' => $edition];
     }
-    return ['mode' => -$days <= pset_int('grace_days', 0, 365) ? 'grace' : 'locked', 'until' => $until, 'days' => $days];
+    return ['mode' => $edition !== 'free' ? 'grace' : 'basic', 'until' => $until, 'days' => $days, 'edition' => $edition];
 }
 function billing_months(): int
 {
-    return pset('period') === 'year' ? 12 : 1;
+    return 12;
 }
 function period_label(): string
 {
-    return pset('period') === 'year' ? 'rok' : 'měsíc';
+    return 'rok';
 }
-/** Cena dalšího období: první rok po zkušební době platí zaváděcí cena, potom běžná. */
-function billing_price(array $t): int
+/** Otevřená výzva k platbě za edici (nejvýše jedna na společenství), nebo null. */
+function billing_open(array $t): ?array
 {
-    $start = max(billing_state($t)['until'], date('Y-m-d'));
-    $base = $t['trial_ends'] !== '' ? $t['trial_ends'] : substr((string) $t['created_at'], 0, 10);
-    return $start < date('Y-m-d', strtotime($base . ' +1 year')) ? pset_int('price_first', 0, 1000000) : pset_int('price_next', 0, 1000000);
-}
-/** Výzva k platbě za další období (jedna otevřená na společenství); variabilní symbol páruje platbu na účtu. */
-function billing_pending(array $t): array
-{
-    $amount = billing_price($t);
-    $months = billing_months();
     $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
-    if ($p && $p['status'] === 'pending' && ((int) $p['amount'] !== $amount || (int) $p['months'] !== $months)) {
-        pq('UPDATE payments SET amount = ?, months = ? WHERE id = ?', [$amount, $months, $p['id']]);
-        $p = ['amount' => $amount, 'months' => $months] + $p;
+    return $p ?: null;
+}
+/** Výzva k platbě za edici na rok; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění. */
+function billing_order(array $t, string $edition): ?array
+{
+    if (!isset(EDITIONS[$edition]) || $edition === 'free') {
+        return null;
     }
-    if (!$p) {
-        pq('INSERT INTO payments (tenant, amount, months, created_at) VALUES (?,?,?,?)', [$t['slug'], $amount, $months, date('Y-m-d H:i:s')]);
-        $id = (int) platform_db()->lastInsertId();
-        pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
-        $p = pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
+    $amount = edition_price($edition);
+    $p = billing_open($t);
+    if ($p && $p['status'] === 'claimed') {
+        return $p;
     }
-    return $p;
+    if ($p) {
+        pq('UPDATE payments SET amount = ?, months = 12, item = ? WHERE id = ?', [$amount, $edition, $p['id']]);
+        return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
+    }
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'service',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), $edition]);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
 }
 /** Potvrzení přijaté platby: prodlouží předplatné o zaplacené období (od konce dosavadního, po splatnosti ode dneška). */
 function billing_confirm(array $p, string $by): ?array
@@ -452,13 +464,14 @@ function billing_confirm(array $p, string $by): ?array
         pq('UPDATE tenants SET ai_until = ? WHERE slug = ?', [$to, $t['slug']]);
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'AI Plus je zapnutý – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za doplněk AI Plus. Do " . cz_date($to) . " má web "
-                . $t['name'] . " k dispozici " . pset_int('ai_plus_limit', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . $t['name'] . " k dispozici " . pset_int('lim_premium_ai', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
     }
     // Doména se platí na rok dopředu: od dneška, při obnově od konce dosavadního období.
     $from = $domain ? max(date('Y-m-d'), $t['domain_until'] !== '' ? date('Y-m-d', strtotime($t['domain_until'] . ' +1 day')) : '')
-        : max(date('Y-m-d', strtotime(billing_state($t)['until'] . ' +1 day')), date('Y-m-d'));
+        : (($edition = isset(EDITIONS[$p['item'] ?? '']) && $p['item'] !== 'free' ? $p['item'] : 'standard') === tenant_edition($t) && $t['paid_until'] >= date('Y-m-d')
+            ? date('Y-m-d', strtotime($t['paid_until'] . ' +1 day')) : date('Y-m-d'));   // stejná edice se prodlužuje od konce období, jiná začíná dnes
     $to = date('Y-m-d', strtotime($from . ' +' . (int) $p['months'] . ' month -1 day'));
     // Faktura dostane pořadové číslo v roce a otisk údajů dodavatele a odběratele platných v den vystavení.
     $year = date('Y');
@@ -473,10 +486,10 @@ function billing_confirm(array $p, string $by): ?array
         }
         return ['from' => $from, 'to' => $to];
     }
-    pq("UPDATE tenants SET paid_until = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $t['slug']]);
+    pq("UPDATE tenants SET paid_until = ?, plan = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $edition, $t['slug']]);
     if ($t['owner_email'] !== '') {
-        platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nPředplatné webu " . $t['name']
-            . " je uhrazeno do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
+            . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
     }
     return ['from' => $from, 'to' => $to];
 }
@@ -520,34 +533,42 @@ function spayd(string $iban, int|float $amount, string $vs, string $message, str
     $clean = fn(string $s, int $max) => substr(trim(str_replace('*', ' ', strtoupper(ascii_text($s)))), 0, $max);
     return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '') . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
 }
-/** Jednou denně: připomene blížící se konec zkušební doby nebo předplatného a upozorní na pozastavení. */
+/** Jednou denně: připomene blížící se konec placené edice a přechod na edici Zdarma, konec zkoušky funkcí a uklidí nepoužívané weby. */
 function platform_daily(): void
 {
     if (pset('last_daily') === date('Y-m-d')) {
         return;
     }
     pset_save('last_daily', date('Y-m-d'));
-    foreach (pq("SELECT * FROM tenants WHERE billing = 1 AND active = 1 AND owner_email <> ''")->fetchAll() as $t) {
+    foreach (pq("SELECT * FROM tenants WHERE billing = 1 AND active = 1 AND demo = 0 AND owner_email <> ''")->fetchAll() as $t) {
         $s = billing_state($t);
+        if ($s['until'] === '') {
+            continue;   // edice Zdarma od začátku – není co připomínat
+        }
         $key = match (true) {
-            $s['mode'] === 'locked' => 'locked:' . $s['until'],
+            $s['mode'] === 'basic' => 'free:' . $s['until'],
             $s['mode'] === 'grace' => 'due:' . $s['until'],
-            $s['days'] <= 7 => 'soon:' . $s['until'],
+            $s['days'] <= 14 => 'soon:' . $s['until'],
             default => '',
         };
         if ($key === '' || $key === $t['reminded']) {
             continue;
         }
-        $what = $s['mode'] === 'trial' || ($s['mode'] !== 'paid' && $t['paid_until'] === '') ? 'zkušební doba' : 'předplatné';
+        $what = $t['paid_until'] === '' ? 'zkušební doba' : 'předplatné edice ' . EDITIONS[$s['edition'] === 'free' ? ($t['plan'] ?: 'standard') : $s['edition']];
+        // Před koncem zaplaceného období rovnou připravíme výzvu k platbě na další rok.
+        if ($s['mode'] !== 'basic' && $t['paid_until'] !== '' && !billing_open($t)) {
+            billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition']);
+        }
         $link = tenant_url($t, '/admin/predplatne');
         [$subject, $body] = match ($s['mode']) {
-            'locked' => ['Web je pozastaven – ' . $t['name'], "web " . $t['name'] . " je pozastaven, protože $what skončila " . cz_date($s['until']) . " a platba nedorazila.\nData zůstávají uložena. Po úhradě web znovu zprovozníme."],
-            'grace' => ['Skončila ' . $what . ' – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . ". Web zatím běží dál; bez úhrady bude za " . max(0, pset_int('grace_days', 0, 365) + $s['days']) . " dní pozastaven."],
-            default => ['Blíží se konec – ' . $what . ' webu ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . "."],
+            'basic' => ['Web přešel na edici Zdarma – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . " a web teď běží v edici Zdarma.\nNic jsme nesmazali a web funguje dál; funkce vyšší edice jsou jen pro čtení a platí limity edice Zdarma."],
+            'grace' => ['Skončila ' . $what . ' – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . ". Web zatím běží beze změny; bez úhrady přejde za " . max(0, pset_int('grace_days', 0, 365) + $s['days']) . " dní na edici Zdarma (nic se nemaže)."],
+            default => ['Blíží se konec – ' . $what . ' webu ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . ". Bez prodloužení web přejde na edici Zdarma – poběží dál, jen s jejími limity."],
         };
-        tenant_notify($t, explode(':', $key)[0], $subject, "Dobrý den,\n\n" . $body . "\n\nPlatební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
+        tenant_notify($t, explode(':', $key)[0], $subject, "Dobrý den,\n\n" . $body . "\n\nEdice a platební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
+    trial_reminders();
     platform_cleanup();
     domain_renewals();
     cert_reminders();
@@ -578,7 +599,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], default => null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -595,7 +616,7 @@ function demo_create(): void
 
 // ---------- Upozornění společenstvím a automatické mazání nezaplacených zkušebních webů ----------
 
-const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
+const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'free' => 'přechod na edici Zdarma', 'trial7' => 'končí zkouška funkce (7 dní)', 'trial2' => 'končí zkouška funkce (2 dny)', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
     'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán', 'domain' => 'končí předplatné vlastní domény', 'cert' => 'končí platnost nahraného certifikátu'];
 
 /** Pošle upozornění kontaktní osobě společenství a zapíše, komu, kdy a zda se ho podařilo odeslat. */
@@ -605,41 +626,49 @@ function tenant_notify(array $t, string $kind, string $subject, string $text): b
     pq('INSERT INTO tenant_notices (tenant, tenant_name, at, kind, email, sent, subject) VALUES (?,?,?,?,?,?,?)', [$t['slug'], $t['name'], date('Y-m-d H:i:s'), $kind, $t['owner_email'], $ok ? 1 : 0, mb_substr($subject, 0, 200)]);
     return $ok;
 }
-/** Den, kdy bude web smazán: jen placený web, který po zkušební době nikdy nezaplatil. Jinak null. */
+/** Kdy byl web naposledy používán: poslední přihlášení kohokoli, jinak den založení. */
+function tenant_last_active(array $t): string
+{
+    $s = tenant_stats($t['slug']);
+    return substr(max((string) ($s['last_login'] ?? ''), (string) $t['created_at']), 0, 10);
+}
+/** Den, kdy bude web smazán: jen web v edici Zdarma, na který se dlouho nikdo nepřihlásil. Jinak null. */
 function tenant_delete_date(array $t): ?string
 {
     $days = pset_int('delete_days', 0, 3650);
-    if ($days === 0 || empty($t['billing']) || !empty($t['demo']) || $t['paid_until'] !== '' || $t['trial_ends'] === '') {
+    if ($days === 0 || empty($t['billing']) || !empty($t['demo']) || tenant_edition($t) !== 'free') {
         return null;
     }
-    if (pq("SELECT 1 FROM payments WHERE tenant = ? AND status IN ('paid','claimed') LIMIT 1", [$t['slug']])->fetchColumn()) {
-        return null;   // platba je nahlášená nebo přijatá – nemazat
+    if (pq("SELECT 1 FROM payments WHERE tenant = ? AND status = 'claimed' LIMIT 1", [$t['slug']])->fetchColumn()) {
+        return null;   // platba je nahlášená – nemazat
     }
-    return date('Y-m-d', strtotime($t['trial_ends'] . ' +' . $days . ' day'));
+    return date('Y-m-d', strtotime(tenant_last_active($t) . ' +' . $days . ' day'));
 }
 /**
- * Smaže weby, kterým po zkušební době uplynula lhůta, a předem na to upozorní: 14 a 3 dny před smazáním.
- * Bez prokazatelně odeslaného upozornění starého aspoň 3 dny se nic nemaže.
+ * Smaže nepoužívané weby v edici Zdarma a předem na to upozorní: 14 a 3 dny před smazáním.
+ * Bez prokazatelně odeslaného upozornění starého aspoň 3 dny se nic nemaže; přihlášení na web lhůtu vynuluje.
  */
 function platform_cleanup(): void
 {
     $today = date('Y-m-d');
-    foreach (pq("SELECT * FROM tenants WHERE billing = 1 AND demo = 0 AND paid_until = '' AND trial_ends <> ''")->fetchAll() as $t) {
+    foreach (pq('SELECT * FROM tenants WHERE billing = 1 AND demo = 0')->fetchAll() as $t) {
         $on = tenant_delete_date($t);
         if ($on === null || $today < date('Y-m-d', strtotime($on . ' -14 day'))) {
             continue;
         }
-        $sent = array_column(pq("SELECT kind, MIN(at) AS at FROM tenant_notices WHERE tenant = ? AND sent = 1 AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $t['trial_ends']])->fetchAll(), 'at', 'kind');
-        $tried = array_column(pq("SELECT kind, MAX(at) AS at FROM tenant_notices WHERE tenant = ? AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $t['trial_ends']])->fetchAll(), 'at', 'kind');
+        $since = tenant_last_active($t);
+        $sent = array_column(pq("SELECT kind, MIN(at) AS at FROM tenant_notices WHERE tenant = ? AND sent = 1 AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $since])->fetchAll(), 'at', 'kind');
+        $tried = array_column(pq("SELECT kind, MAX(at) AS at FROM tenant_notices WHERE tenant = ? AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $since])->fetchAll(), 'at', 'kind');
         $warned = $sent ? min($sent) : null;
         if ($today >= $on && $warned !== null && substr($warned, 0, 10) <= date('Y-m-d', strtotime('-3 day'))) {
             tenant_delete_storage($t['slug']);
             pq('DELETE FROM tenants WHERE slug = ?', [$t['slug']]);
-            pq("UPDATE payments SET status = 'cancelled', note = 'web smazán po zkušební době' WHERE tenant = ? AND status = 'pending'", [$t['slug']]);
+            pq('DELETE FROM feature_trials WHERE tenant = ?', [$t['slug']]);
+            pq("UPDATE payments SET status = 'cancelled', note = 'web smazán pro nečinnost' WHERE tenant = ? AND status = 'pending'", [$t['slug']]);
             pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Automatické smazání společenství',
-                $t['slug'] . ' · ' . $t['name'] . ' · zkušební doba skončila ' . $t['trial_ends'] . ', upozorněno ' . substr($warned, 0, 10) . ' na ' . $t['owner_email']]);
-            tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . tenant_address($t['slug']) . ") jsme smazali včetně všech dat, protože po skončení zkušební doby "
-                . cz_date($t['trial_ends']) . " nebyl uhrazen.\n\nKdykoli si můžete založit nový: " . platform_url('/registrace'));
+                $t['slug'] . ' · ' . $t['name'] . ' · bez přihlášení od ' . $since . ', upozorněno ' . substr($warned, 0, 10) . ' na ' . $t['owner_email']]);
+            tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . tenant_address($t['slug']) . ") jsme smazali včetně všech dat, protože se na něj od "
+                . cz_date($since) . " nikdo nepřihlásil.\n\nKdykoli si můžete založit nový: " . platform_url('/registrace'));
             continue;
         }
         // Které upozornění je na řadě; každé se zkouší nejvýše jednou denně.
@@ -649,9 +678,27 @@ function platform_cleanup(): void
         }
         $when = max($on, date('Y-m-d', strtotime('+3 day')));
         tenant_notify($t, $kind, ($kind === 'del3' ? 'Poslední upozornění: web' : 'Web') . ' bude smazán – ' . $t['name'],
-            "Dobrý den,\n\nzkušební doba webu " . $t['name'] . " skončila " . cz_date($t['trial_ends']) . " a provoz nebyl uhrazen.\nPokud platbu neobdržíme, web včetně všech dat smažeme, nejdříve "
-            . cz_date($when) . ".\n\nChcete web zachovat? Platební údaje najdete po přihlášení: " . tenant_url($t, '/admin/predplatne')
+            "Dobrý den,\n\nna web " . $t['name'] . " se od " . cz_date($since) . " nikdo nepřihlásil. Nepoužívané weby v edici Zdarma mažeme, tento nejdříve "
+            . cz_date($when) . ".\n\nChcete web zachovat? Stačí se přihlásit: " . tenant_url($t, '/prihlaseni')
             . "\nChcete si jen odnést data? Zálohu stáhnete zde: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
+    }
+}
+/** Upozorní správce 7 a 2 dny před koncem zkoušky funkce. */
+function trial_reminders(): void
+{
+    $today = date('Y-m-d');
+    foreach (pq("SELECT * FROM feature_trials WHERE ends >= ? AND ends <= ? AND warned <> '2'", [$today, date('Y-m-d', strtotime('+7 day'))])->fetchAll() as $r) {
+        $left = (int) round((strtotime($r['ends']) - strtotime($today)) / 86400);
+        $step = $left <= 2 ? '2' : '7';
+        $t = tenant_row($r['tenant']);
+        if ($r['warned'] === $step || !$t || !isset(PLAN_FEATURES[$r['feature']]) || EDITION_RANK[tenant_edition($t)] >= EDITION_RANK[PLAN_FEATURES[$r['feature']][0]]) {
+            continue;
+        }
+        [$min, $name] = PLAN_FEATURES[$r['feature']];
+        tenant_notify($t, 'trial' . $step, 'Zkouška funkce ' . $name . ' končí ' . cz_date($r['ends']) . ' – ' . $t['name'], "Dobrý den,\n\nzkouška funkce „" . $name . "“ na webu " . $t['name'] . " končí " . cz_date($r['ends'])
+            . ".\nPotom zůstane vše, co jste do ní zapsali, uložené a viditelné, jen už nepůjde nic přidávat ani měnit.\n\nFunkce je součástí edice " . EDITIONS[$min] . " (" . money_czk(edition_price($min))
+            . " ročně). Objednat ji můžete zde: " . tenant_url($t, '/admin/predplatne'));
+        pq('UPDATE feature_trials SET warned = ? WHERE id = ?', [$step, $r['id']]);
     }
 }
 
@@ -723,7 +770,7 @@ function ai_payment_create(array $t): array
     if ($p = ai_payment($t)) {
         return $p;
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'ai',?)", [$t['slug'], pset_int('price_ai', 0, 1000000), date('Y-m-d H:i:s'), pset_int('ai_plus_limit', 0, 100000) . ' použití měsíčně']);
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'ai',?)", [$t['slug'], 990, date('Y-m-d H:i:s'), pset_int('lim_premium_ai', 0, 100000) . ' použití měsíčně']);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();

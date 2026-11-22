@@ -5,13 +5,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e(($title ?? '') !== '' ? $title . ' · ' . $service : $service . ' – web společenství vlastníků hotový za pět minut') ?></title>
-<meta name="description" content="Web pro společenství vlastníků jednotek: aktuality, dokumenty, e-maily vlastníkům, shromáždění, hlasování a hlášení závad. První měsíc zdarma.">
+<meta name="description" content="Web pro společenství vlastníků jednotek: aktuality, dokumenty, e-maily vlastníkům, shromáždění, hlasování a hlášení závad. Základní web zdarma.">
 <?= $GLOBALS['HEAD_EXTRA'] ?? '' ?>
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>
 <body class="lp">
+<?= staging_bar() ?>
 <a class="skip" href="#obsah">Přeskočit na obsah</a>
 <header class="site-header">
   <div class="wrap header-row">

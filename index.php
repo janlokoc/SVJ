@@ -113,6 +113,9 @@ if (!$IS_PLATFORM && !empty($_SESSION['uid'])) {
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: same-origin');
+if (is_staging()) {
+    header('X-Robots-Tag: noindex, nofollow');
+}
 header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
 header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()');
 header('Cross-Origin-Opener-Policy: same-origin');
@@ -203,17 +206,32 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
     redirect(preg_match('~^/(?![/\\\\])~', $ref) ? $ref : '/');
 }
 
-// Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
-$GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
-if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
-    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/predplatne/domena', '/admin/predplatne/zajem', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
-    && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad|admin/predplatne/funkce)/~', $PATH)) {
-    if (is_admin()) {
-        redirect('/admin/predplatne');
+// Edice: web se nikdy nepozastavuje. Funkce, která není v edici, jde vyzkoušet; po skončení zkoušky zůstává jen pro čtení.
+$GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => 'premium'];
+if (TENANT !== '' && !$needsSetup && ($planFeature = plan_feature_for($PATH)) !== null && !plan_has($planFeature)) {
+    $planState = plan_state($planFeature);
+    $inAdminPath = str_starts_with($PATH, '/admin');
+    if ($planState === 'available') {
+        if (!$inAdminPath || !is_admin()) {
+            $inAdminPath && !user() ? redirect('/prihlaseni') : not_found();
+        }
+        if ($METHOD === 'POST') {
+            redirect('/admin/predplatne#funkce');
+        }
+        render('admin/plan_try', ['title' => PLAN_FEATURES[$planFeature][1], 'feature' => $planFeature, 'back' => $PATH]);
+        exit;
     }
-    http_response_code(503);
-    render('locked', ['title' => 'Web je pozastaven']);
-    exit;
+    // Zkouška skončila: data zůstávají ke čtení, měnit je nejde.
+    $GLOBALS['PLAN_READONLY'] = $planFeature;
+    if ($METHOD === 'POST') {
+        flash('Zkouška funkce „' . PLAN_FEATURES[$planFeature][1] . '“ skončila, proto ji teď lze jen prohlížet. Dál ji můžete používat s edicí ' . EDITIONS[PLAN_FEATURES[$planFeature][0]] . '.', 'error');
+        if ($planFeature === 'ai-zapis') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Zkouška AI zápisu skončila. Dál ho můžete používat s edicí Premium.'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        redirect($inAdminPath && is_admin() ? '/admin/predplatne#funkce' : '/');
+    }
 }
 
 // Ikonu webu žádají některé prohlížeče na pevné adrese.

@@ -21,6 +21,7 @@
     <?= csrf_field() ?>
     <p>Vyberte šablonu a barvy webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Obojí můžete později kdykoli změnit v nastavení.</p>
     <p class="h-small">Šablona</p>
+    <p class="hint">Šablona Klasická je v edici Zdarma. Ostatní patří do edice Standard – když si některou vyberete, dostanete ji na <?= PLAN_TRIAL_DAYS ?> dní na zkoušku a potom se web vrátí ke Klasické, dokud nepřejdete na Standard.</p>
     <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
       <?php foreach (STYLES as $style => $label): $look = $s['look'] ?: 'les'; $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
         <label class="look-card"><input type="radio" name="style" value="<?= $style ?>"<?= $s['style'] === $style ? ' checked' : '' ?>><?php require __DIR__ . '/_mini.php'; ?><span><?= e($label) ?></span></label>
@@ -34,7 +35,7 @@
     </div>
     <div class="actions"><button class="btn btn-big" type="submit">Pokračovat na účet správce</button><a class="btn btn-ghost" href="<?= url('/registrace') ?>">Zpět</a></div>
   </form>
-  <?php else: $trial = pset_int('trial_days', 0, 365); ?>
+  <?php else: $trial = 0; ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <p>Poslední krok: účet správce webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Další správce i obyvatele pak přidáte v administraci.</p>
@@ -42,8 +43,8 @@
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
     <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
-    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> <small><?= $trial ? 'Prvních ' . $trial . ' dní je zdarma. ' : '' ?>Potom stojí provoz <?= money_czk(pset_int('price_first', 0, 1000000)) ?> za <?= period_label() ?> v prvním roce a <?= money_czk(pset_int('price_next', 0, 1000000)) ?> za <?= period_label() ?> dále. Bez úhrady se web pozastaví; nic se nestrhává automaticky.</small></span></label>
-    <div class="actions"><button class="btn btn-big" type="submit">Založit web<?= $trial ? ' a začít zkušební dobu' : '' ?></button><a class="btn btn-ghost" href="<?= url('/registrace/vzhled') ?>">Zpět</a></div>
+    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> <small>Web běží v edici Zdarma bez časového omezení a nic neplatíte. Placenou edici si můžete objednat později v administraci.</small></span></label>
+    <div class="actions"><button class="btn btn-big" type="submit">Založit web zdarma</button><a class="btn btn-ghost" href="<?= url('/registrace/vzhled') ?>">Zpět</a></div>
   </form>
   <?php endif ?>
 </div>

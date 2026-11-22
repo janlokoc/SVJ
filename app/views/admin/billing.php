@@ -1,24 +1,34 @@
-<?php $per = period_label(); ?>
 <div class="wrap page narrow">
   <h1>Předplatné</h1>
   <?php if ($state['mode'] === 'free'): ?>
     <p class="lead">Tento web běží bez placení – provoz je domluven přímo s provozovatelem služby.</p>
   <?php else: ?>
   <div class="card bill-state bill-<?= e($state['mode']) ?>">
-    <?php if ($state['mode'] === 'trial'): ?>
-      <h2>Zkušební doba zdarma</h2><p>Běží do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Potom je potřeba provoz uhradit, jinak se web pozastaví.</p>
+    <h2>Edice <?= e(EDITIONS[$edition]) ?></h2>
+    <?php if ($state['mode'] === 'basic'): ?>
+      <p>Web běží zdarma a bez časového omezení. Platí pro něj limity níže; funkce vyšších edic si můžete každou na <?= PLAN_TRIAL_DAYS ?> dní vyzkoušet.<?= $state['until'] !== '' ? ' Placená edice skončila ' . cz_date($state['until']) . ' – nic jsme nesmazali.' : '' ?></p>
+    <?php elseif ($state['mode'] === 'trial'): ?>
+      <p>Váš web má edici Standard na zkoušku do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Potom přejde na edici Zdarma – poběží dál, jen s jejími limity.</p>
     <?php elseif ($state['mode'] === 'paid'): ?>
-      <h2>Zaplaceno</h2><p>Provoz webu je uhrazen do <strong><?= cz_date($state['until']) ?></strong>.</p>
-    <?php elseif ($state['mode'] === 'grace'): ?>
-      <h2>Po splatnosti</h2><p><?= $t['paid_until'] === '' ? 'Zkušební doba skončila' : 'Předplatné skončilo' ?> <strong><?= cz_date($state['until']) ?></strong>. Web zatím běží; bez úhrady bude za <?= max(0, pset_int('grace_days', 0, 365) + $state['days']) ?> dní pozastaven.</p>
+      <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong>.</p>
     <?php else: ?>
-      <h2>Web je pozastaven</h2><p><?= $t['paid_until'] === '' ? 'Zkušební doba skončila' : 'Předplatné skončilo' ?> <strong><?= cz_date($state['until']) ?></strong> a platba nedorazila. Obyvatelé web nevidí, data zůstávají uložena. Po úhradě web znovu zprovozníme. <a href="<?= url('/admin/zaloha') ?>">Zálohu dat</a> si můžete stáhnout i teď.</p>
+      <p>Předplatné skončilo <strong><?= cz_date($state['until']) ?></strong>. Web zatím běží beze změny; bez úhrady přejde za <?= max(0, pset_int('grace_days', 0, 365) + $state['days']) ?> dní na edici Zdarma. Nic se nemaže.</p>
     <?php endif ?>
+    <ul class="usage">
+      <?php foreach ($usage as $k => $u): [$label, $unit] = PLAN_LIMITS[$k]; if ($k === 'ai' && !ai_configured()) { continue; } $pct = $u['limit'] ? min(100, (int) round(100 * $u['used'] / $u['limit'])) : 0; ?>
+      <li<?= $u['limit'] && $pct >= 100 ? ' class="is-full"' : ($u['limit'] && $pct >= 80 ? ' class="is-near"' : '') ?>><span><?= e($label) ?></span>
+        <strong><?= number_format($u['used'], 0, ',', "\u{a0}") ?><?= $u['limit'] ? ' z ' . number_format($u['limit'], 0, ',', "\u{a0}") : '' ?><?= $unit !== '' ? ' ' . $unit : '' ?><?= $u['limit'] ? '' : ' <small class="muted">· bez omezení</small>' ?></strong>
+        <?php if ($u['limit']): ?><progress class="bar" value="<?= min($u['used'], $u['limit']) ?>" max="<?= $u['limit'] ?>"></progress><?php endif ?></li>
+      <?php endforeach ?>
+    </ul>
+    <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet, odeslat další hromadný e-mail nebo nahrát další soubor.</p>
   </div>
 
-  <?php if ($deleteOn && $state['days'] < 0): ?><div class="flash flash-error">Pokud provoz neuhradíte, bude web včetně všech dat <strong>smazán <?= cz_date($deleteOn) ?></strong>. Předem Vám pošleme upozornění e-mailem. <a href="<?= url('/admin/zaloha') ?>">Stáhnout zálohu dat</a></div><?php endif ?>
-  <div class="card">
-    <h2>Platba za další <?= $per ?></h2>
+  <?php if ($deleteOn && $deleteOn <= date('Y-m-d', strtotime('+30 day'))): ?><div class="flash flash-info">Na web se dlouho nikdo nepřihlásil. Nepoužívané weby v edici Zdarma mažeme – tento by byl smazán <strong><?= cz_date($deleteOn) ?></strong>. Vaše přihlášení lhůtu právě vynulovalo.</div><?php endif ?>
+
+  <?php if ($payment): ?>
+  <div class="card" id="platba">
+    <h2>Platba za edici <?= e(EDITIONS[$payment['item']] ?? 'Standard') ?> na 1 rok</h2>
     <?php if ($payment['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($payment['claimed_at']) ?>. Čeká na potvrzení provozovatelem – obvykle do dvou pracovních dnů.</div><?php endif ?>
     <?php if ($iban): ?>
     <div class="pay">
@@ -31,13 +41,34 @@
         <?php if (pset('recipient') !== ''): ?><dt>Příjemce</dt><dd><?= e(pset('recipient')) ?></dd><?php endif ?>
       </dl>
     </div>
-    <p class="hint">Platba se páruje podle variabilního symbolu. Po připsání na účet prodloužíme předplatné o <?= (int) $payment['months'] === 12 ? 'rok' : 'měsíc' ?><?= $state['days'] >= 0 ? ' od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : '' ?>.</p>
-    <div class="actions"><?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/zaplaceno') ?>"><?= csrf_field() ?><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form><?php endif ?>
-      <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $payment['id']) ?>">Zálohová faktura k tisku</a></div>
+    <p class="hint">Platba se páruje podle variabilního symbolu. Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
     <?php else: ?>
       <p>Částka: <strong><?= money_czk((int) $payment['amount']) ?></strong>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
       <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>
     <?php endif ?>
+    <div class="actions"><?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/zaplaceno') ?>"><?= csrf_field() ?><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form><?php endif ?>
+      <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $payment['id']) ?>">Zálohová faktura k tisku</a>
+      <?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/edice') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?></div>
+  </div>
+  <?php endif ?>
+
+  <div class="card" id="edice">
+    <h2>Edice</h2>
+    <?php $edView = 'admin'; require __DIR__ . '/../platform/_editions.php'; ?>
+  </div>
+
+  <div class="card" id="funkce">
+    <h2>Funkce vyšších edic</h2>
+    <p class="muted">Každou funkci si můžete jednou na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušet. Po skončení zkoušky zůstane vše, co jste do ní zapsali, uložené a viditelné – jen už nepůjde nic přidávat ani měnit, dokud nepřejdete na edici, která funkci obsahuje.</p>
+    <ul class="plan-features">
+      <?php foreach (PLAN_FEATURES as $fk => [$min, $fname, $fdesc]): $st = plan_state($fk); $tr = plan_trials()[$fk] ?? null; ?>
+      <li><div><strong><?= e($fname) ?></strong> <span class="tag"><?= e(EDITIONS[$min]) ?></span><p><?= e($fdesc) ?></p></div>
+        <?php if ($st === 'on'): ?><span class="status status-done">v edici</span>
+        <?php elseif ($st === 'trial'): ?><span class="status status-in_progress">zkouška do <?= cz_date($tr['ends']) ?></span>
+        <?php elseif ($st === 'expired'): ?><span class="status status-new">zkouška skončila <?= cz_date($tr['ends']) ?></span>
+        <?php else: ?><form method="post" action="<?= url('/admin/predplatne/zkusit') ?>"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($fk) ?>"><button class="btn btn-small btn-ghost" type="submit">Vyzkoušet <?= PLAN_TRIAL_DAYS ?> dní</button></form><?php endif ?></li>
+      <?php endforeach ?>
+    </ul>
   </div>
 
   <div class="card" id="domena">
@@ -47,8 +78,10 @@
     <?php elseif ($t['domain_status'] === 'requested'): ?>
       <p>Žádost o doménu <strong><?= e($t['domain_request']) ?></strong> je odeslaná. <?= $t['domain_until'] !== '' ? 'Platbu jsme přijali; doménu zprovozňujeme a dáme Vám vědět e-mailem.' : 'Po přijetí platby ji zprovozníme, obvykle do několika pracovních dnů.' ?></p>
       <?php if (pset('domain_dns') !== ''): ?><div class="callout"><strong>Pokud doménu už vlastníte,</strong> nastavte u svého registrátora: <div class="prose"><?= format_text(pset('domain_dns')) ?></div></div><?php endif ?>
+    <?php elseif ($edition === 'free'): ?>
+      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>. Vlastní doména je k dispozici od edice Standard (příplatek <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně), v edici Premium je v ceně.</p>
     <?php else: ?>
-      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>, za <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně. Doménu Vám zaregistrujeme, nebo připojíme tu, kterou už máte. Správa webu se nemění – jen adresa.</p>
+      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>, <?= $edition === 'premium' ? 'v edici Premium bez příplatku' : 'za ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně (v edici Premium je v ceně)' ?>. Doménu Vám zaregistrujeme, nebo připojíme tu, kterou už máte. Správa webu se nemění – jen adresa.</p>
       <form method="post" action="<?= url('/admin/predplatne/domena') ?>" class="form">
         <?= csrf_field() ?><input type="hidden" name="action" value="request">
         <label>Požadovaná doména <input type="text" name="domain" placeholder="tabor48.cz" required maxlength="100" autocomplete="off"></label>
@@ -87,24 +120,15 @@
     <?php endif ?>
   </div>
 
-  <?php if (ai_configured()): $aiCfg = ai_settings(); ?>
+  <?php if ($aiPayment): $ap = $aiPayment; ?>
   <div class="card" id="ai">
-    <h2>AI pomocník</h2>
-    <p>Tento měsíc využito <strong><?= ai_used() ?> z <?= (int) $aiCfg['limit'] ?></strong> použití<?= $aiCfg['plus'] ? ' (doplněk AI Plus do ' . cz_date($t['ai_until']) . ')' : ' – základní limit je v ceně webu' ?>.</p>
-    <?php if ($aiPayment): $ap = $aiPayment; ?>
-      <h3>Platba za AI Plus na 1 rok</h3>
-      <?php if ($ap['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($ap['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
-      <div class="pay"><?php if ($aiQr): ?><div class="pay-qr"><?= $aiQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
-        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $ap['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($ap['vs']) ?></code></dd></dl></div>
-      <div class="actions">
-        <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za AI Plus jsem odeslal(a)</button></form><?php endif ?>
-        <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $ap['id']) ?>">Zálohová faktura k tisku</a>
-        <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
-      </div>
-    <?php elseif (!$aiCfg['plus'] || $t['ai_until'] <= date('Y-m-d', time() + 30 * 86400)): ?>
-      <p><strong>AI Plus:</strong> <?= pset_int('ai_plus_limit', 0, 100000) ?> použití měsíčně za <?= money_czk(pset_int('price_ai', 0, 1000000)) ?> ročně. Hodí se, když pomocníka používá víc členů výboru nebo píšete hodně oznámení.</p>
-      <form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="request"><button class="btn" type="submit"><?= $aiCfg['plus'] ? 'Prodloužit AI Plus o rok' : 'Objednat AI Plus' ?></button></form>
-    <?php endif ?>
+    <h2>Platba za doplněk AI Plus</h2>
+    <p class="muted">Doplněk AI Plus už se nenabízí – vyšší počet použití AI je součástí edice Premium. Tuto dříve objednanou platbu můžete dokončit, nebo zrušit.</p>
+    <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $ap['amount']) ?></strong></dd><dt>Variabilní symbol</dt><dd><code><?= e($ap['vs']) ?></code></dd></dl>
+    <div class="actions">
+      <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form>
+      <form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
+    </div>
   </div>
   <?php endif ?>
 
@@ -121,10 +145,8 @@
   </div>
 
   <div class="card card-soft">
-    <h2>Ceník</h2>
+    <h2>Další služby</h2>
     <ul class="price-rows">
-      <li><span>První rok</span><strong><?= money_czk(pset_int('price_first', 0, 1000000)) ?> <small>/ <?= $per ?></small></strong></li>
-      <li><span>Další roky</span><strong><?= money_czk(pset_int('price_next', 0, 1000000)) ?> <small>/ <?= $per ?></small></strong></li>
       <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '') { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
         <li><span><?= e($item) ?></span><strong><?= e($price) ?></strong></li>
       <?php endforeach ?>
@@ -135,7 +157,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '') ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '') ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

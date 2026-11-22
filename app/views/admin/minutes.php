@@ -26,7 +26,9 @@
         }
     }
   ?>
-  <?php if (ai_available()): ?>
+  <?php if (ai_available() && !plan_has('ai-zapis')): ?>
+  <p class="callout no-print">Průběh jednání umí z poznámek nebo nahraného přepisu schůze napsat AI pomocník. Je součástí edice Premium – <a href="<?= url('/admin/predplatne') ?>#funkce">vyzkoušejte ho na <?= PLAN_TRIAL_DAYS ?> dní zdarma</a>.</p>
+  <?php elseif (ai_available()): ?>
   <form class="card form no-print minutes-ai">
     <?= csrf_field() ?>
     <label>Poznámky nebo přepis ze schůze <textarea name="notes" rows="7" placeholder="Stačí heslovitě: kdo zahájil, co kdo řekl k jednotlivým bodům, co se dohodlo, kdo co zařídí…"></textarea></label>

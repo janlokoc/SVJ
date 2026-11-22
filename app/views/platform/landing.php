@@ -1,6 +1,5 @@
 <?php
-$first = money_czk(pset_int('price_first', 0, 1000000)); $next = money_czk(pset_int('price_next', 0, 1000000)); $per = period_label(); $trial = pset_int('trial_days', 0, 365);
-$cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Vyzkoušet ' . ($trial ? $trial . ' dní zdarma ' : '') . icon('arrow') . '</a>' : '';
+$cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma ' . icon('arrow') . '</a>' : '';
 $ai = ai_configured();
 // Čím se web liší: věci, které výbor jinde skládá z několika nástrojů.
 $unique = [
@@ -28,7 +27,7 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
       <p class="lead">Vlastní web domu s částí pro obyvatele a administrací pro výbor. Vyberete šablonu a barvy, zvolíte adresu, vytvoříte si účet – a web běží.</p>
       <ul class="lp-points"><li>25 kombinací vzhledu</li><li>shromáždění, hlasování, platby</li><li>5 jazyků</li><?= $ai ? '<li>AI pomocník v ceně</li>' : '' ?></ul>
       <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout ukázkový web</a><?php else: ?><a class="btn btn-big btn-ghost" href="#cenik">Ceník</a><?php endif ?></div>
-      <?php if ($open): ?><p class="lp-note"><?= $trial ? 'Prvních ' . $trial . ' dní zdarma, bez platební karty. ' : '' ?>Potom <?= $first ?> za <?= $per ?>.</p>
+      <?php if ($open): ?><p class="lp-note">Základní web je zdarma napořád, bez platební karty. Placené funkce si každou na <?= PLAN_TRIAL_DAYS ?> dní vyzkoušíte.</p>
       <?php else: ?><p class="lp-note">Nová společenství teď zakládáme po domluvě<?= pset('contact_email') !== '' ? ' – napište na ' . e(pset('contact_email')) : '' ?>.</p><?php endif ?>
     </div>
     <div class="hero-side lp-stack">
@@ -79,32 +78,13 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 
 <section class="lp-band" id="cenik"><div class="wrap lp-section">
   <h2>Ceník</h2>
-  <div class="lp-pricing">
-    <div class="card price-card">
-      <p class="eyebrow">Provoz webu</p>
-      <ul class="price-rows">
-        <?php if ($trial): ?><li><span>Prvních <?= $trial ?> dní</span><strong>zdarma</strong></li><?php endif ?>
-        <li><span>První rok</span><strong><?= $first ?> <small>/ <?= $per ?></small></strong></li>
-        <li><span>Další roky</span><strong><?= $next ?> <small>/ <?= $per ?></small></strong></li>
-      </ul>
-      <p class="hint">Jedna cena za celé společenství, bez omezení počtu jednotek a účtů. Platí se převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
-      <div class="actions"><?= $cta('btn') ?></div>
-    </div>
-    <div>
-      <h3>V ceně</h3>
-      <ul class="lp-check lp-included">
-        <li>Web domu, část pro obyvatele a administrace bez omezení počtu jednotek a účtů</li>
-        <li>Všechny šablony, barvy, jazyky a funkce z přehledu výše</li>
-        <li>Zálohy, aktualizace a podpora e-mailem</li>
-        <?php if ($ai): ?><li>AI pomocník pro výbor: <?= pset_int('ai_free_limit', 0, 100000) ?> použití měsíčně</li><?php endif ?>
-      </ul>
-    </div>
-  </div>
+  <p class="lead">Web společenství je zdarma pro každého a bez časového omezení. Platíte až ve chvíli, kdy Vám přestanou stačit limity nebo chcete funkce navíc – a každou placenou funkci si předtím na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušíte.</p>
+  <?php $edView = 'landing'; require __DIR__ . '/_editions.php'; ?>
+  <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
 
   <h3 class="lp-sub">Doplňky a služby</h3>
   <table class="table price-table"><tbody>
-    <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
-    <tr><td><strong>AI Plus</strong><?= $ai ? '' : ' <span class="tag">již brzy</span>' ?><br><small class="muted">AI pomocník píše oznámení, e-maily, odpovědi na závady i zápis ze shromáždění z Vašich poznámek nebo nahraného přepisu. <?= pset_int('ai_plus_limit', 0, 100000) ?> použití měsíčně<?= $ai ? ' místo ' . pset_int('ai_free_limit', 0, 100000) . ' v ceně' : '' ?>.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_ai', 0, 1000000)) ?> / rok</strong></td></tr>
+    <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši. Od edice Standard, v Premium v ceně.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
     <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'vlastní doména')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
       <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
     <?php endforeach ?>
@@ -134,7 +114,9 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 
 <section class="wrap lp-section narrow" id="otazky">
   <h2>Časté otázky</h2>
-  <details class="lp-faq"><summary>Co se stane po zkušební době?</summary><p>V administraci najdete platební údaje s QR kódem a před koncem zkušební doby Vám přijde připomenutí e-mailem. Když se rozhodnete nepokračovat, nic neplatíte – web se po <?= pset_int('grace_days', 0, 365) ?> dnech pozastaví.</p></details>
+  <details class="lp-faq"><summary>Je web opravdu zdarma?</summary><p>Ano. Edice Zdarma nemá časové omezení a nechceme po Vás platební kartu. Má limity (počet účtů, správců a hromadných e-mailů) a v patičce odkaz na službu. Když limit vyčerpáte, web běží dál.</p></details>
+  <details class="lp-faq"><summary>Jak funguje zkoušení placených funkcí?</summary><p>Každou funkci z vyšší edice si v administraci jedním kliknutím zapnete na <?= PLAN_TRIAL_DAYS ?> dní. Po skončení zkoušky zůstane vše, co jste zapsali, uložené a viditelné; měnit to půjde, až přejdete na edici, která funkci obsahuje.</p></details>
+  <details class="lp-faq"><summary>Co když placenou edici neprodloužíme?</summary><p>Web po <?= pset_int('grace_days', 0, 365) ?> dnech přejde zpět na edici Zdarma. Nic se nemaže a nepozastavuje; účty nad limit fungují dál, jen nejde přidávat nové.</p></details>
   <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. V administraci najdete zálohovou fakturu s QR kódem; po připsání platby vystavíme fakturu. Platba kartou zatím není k dispozici.</p></details>
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
   <?php if (pset('hosting_note') !== ''): ?><details class="lp-faq"><summary>Kde jsou data uložena?</summary><p><?= e(pset('hosting_note')) ?></p></details><?php endif ?>

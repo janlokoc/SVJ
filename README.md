@@ -256,24 +256,45 @@ nastavení nebylo vyzkoušeno na skutečném serveru – berte ho jako výchozí
 bod. Pro domény bez nahraného certifikátu zůstává jednodušší cesta
 automatické vystavování (viz výše).
 
-### Registrace, zkušební doba a předplatné
+### Registrace, edice a předplatné
 
 - Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →
-  účet správce. Web hned běží ve zkušební době (výchozí 30 dní).
-- V konzoli v části **Nastavení služby** se nastavují ceny (výchozí
-  1 490 Kč v prvním roce, potom 2 390 Kč), zda se platí měsíčně nebo
-  ročně, délka zkušební doby, lhůta po splatnosti, číslo účtu, ceník
-  podpory a úprav, kontakt a odesílatel e-mailů. Registraci lze vypnout.
-  Výchozí je roční platba.
-- Správce společenství vidí v administraci stránku **Předplatné**
-  s QR platbou (částka, účet, variabilní symbol). Platba kartou není
-  zapojena – vyžaduje smlouvu s platební bránou.
+  účet správce. Web běží hned, **zdarma a bez časového omezení** (edice
+  Zdarma). Žádná zkušební doba ani platební karta.
+- **Tři edice** – Zdarma, Standard (výchozí 1 490 Kč ročně) a Premium
+  (2 990 Kč ročně). Liší se limity (správci, účty, hromadné e-maily za
+  měsíc, úložiště, použití AI, hlasování za rok) a funkcemi. Ceny a limity
+  se nastavují v konzoli v **Nastavení služby**; 0 = bez omezení. Které
+  funkce patří do které edice, je v `PLAN_FEATURES` v `app/plan_lib.php`.
+- **Limity nebrání v používání.** Po dosažení limitu web běží dál a nic se
+  nemaže – jen nejde přidat další účet, odeslat další hromadný e-mail,
+  nahrát další soubor nebo založit další hlasování.
+- **Zkoušení funkcí.** Každou funkci vyšší edice si správce v části
+  Předplatné (nebo přímo kliknutím na ni v menu administrace) jednou na
+  30 dní zdarma zapne. Sedm a dva dny před koncem přijde e-mail. Po
+  skončení zůstanou data uložená a viditelná, funkce je jen pro čtení.
+  Web založený s jinou šablonou než Klasická ji dostane rovnou na zkoušku.
+- **Objednávka edice.** Správce v Předplatném klikne na „Objednat
+  Standard/Premium“, dostane zálohovou fakturu s QR platbou (účet,
+  částka, variabilní symbol) a po připsání platby ji hlavní správce
+  v konzoli v části Platby potvrdí. Stejná edice se prodlužuje od konce
+  období, přechod na jinou začíná dnem potvrzení (bez přepočtu zbytku).
+  Platba kartou není zapojena – vyžaduje smlouvu s platební bránou.
+- **Když se edice neprodlouží:** běží ještě nastavenou lhůtu (výchozí
+  14 dní) a potom web přejde na edici Zdarma. Nic se nepozastavuje ani
+  nemaže; účty nad limit fungují dál.
+- **Mazání nepoužívaných webů:** web v edici Zdarma, na který se nikdo
+  nepřihlásil déle než nastavený počet dní (výchozí 365, 0 = nemazat), se
+  smaže včetně dat. Kontaktní osobě chodí upozornění 14 a 3 dny předem;
+  bez prokazatelně odeslaného upozornění se nic nemaže a přihlášení lhůtu
+  vynuluje. Odeslaná upozornění jsou v konzoli v části Záznamy.
+- Web založený hlavním správcem v konzoli s vypnutou volbou „Web je
+  placený“ nemá žádné limity a nic neplatí.
+- Vlastní doména je od edice Standard za příplatek, v Premium v ceně.
+  Dřívější doplněk AI Plus nahradila edice Premium.
 - Platby se nepárují s bankou automaticky: hlavní správce po připsání
   na účet platbu v konzoli v části **Platby** potvrdí a předplatné se
   prodlouží.
-- Před koncem období chodí připomenutí e-mailem. Po splatnosti web běží
-  ještě nastavenou lhůtu, potom se pozastaví: obyvatelé vidí oznámení,
-  správce se dostane jen na Předplatné a Zálohu. Data zůstávají.
 - Weby založené hlavním správcem v konzoli jsou bez placení, dokud jim
   placení nezapne.
 - **Faktury:** správce společenství si v Předplatném vytiskne zálohovou
@@ -291,14 +312,6 @@ automatické vystavování (viz výše).
   jako obyvatel i jako správce; je jen pro čtení, žádná změna se
   neuloží. Tlačítkem Obnovit ukázkový web se naplní čerstvými daty
   (termíny v ukázce jsou počítané ode dne založení).
-- **Mazání nezaplacených zkušebních webů:** web, který po zkušební době
-  nikdy nezaplatil, se po nastavené lhůtě (výchozí 60 dní od konce
-  zkušební doby, 0 = nemazat) smaže včetně dat. Kontaktní osobě chodí
-  upozornění 14 dní a 3 dny předem a potvrzení po smazání. Bez
-  prokazatelně odeslaného upozornění starého aspoň 3 dny se nic nemaže;
-  web s přijatou nebo nahlášenou platbou se nemaže nikdy. Všechna
-  odeslaná upozornění (kdy, komu, zda odešla) jsou v konzoli u
-  společenství, v seznamu společenství a v Záznamech.
 - Ochrana proti zneužití registrace: nejvýše tři weby z jedné adresy za
   den a skryté pole proti robotům. E-mail se při registraci neověřuje.
 
@@ -335,6 +348,22 @@ nebo příkaz `php tools/import-webnode.php`. Soubory, které už původní
 web nevydá, zůstanou jako odkaz.
 
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
+
+### Zkušební prostředí (staging)
+
+Stejný kód lze provozovat jako zkušební prostředí s vlastní složkou
+`storage` (tedy vlastními daty). V `storage/config.php` přidejte:
+
+```php
+'env' => 'staging',
+'staging_mail' => 'vy@example.cz',   // nepovinné
+```
+
+Na každé stránce se pak zobrazí pruh „Zkušební prostředí“, vyhledávačům
+se zakáže indexování a **žádný e-mail neodejde skutečným lidem**: všechny
+se přesměrují na adresu `staging_mail` (původní příjemce je v předmětu),
+bez ní se neodešlou vůbec. Vývoj probíhá ve zkušební větvi; do produkční
+větve patří jen to, co bylo na stagingu vyzkoušeno.
 
 ## Hlášení problémů a nápadů
 
@@ -397,13 +426,11 @@ a jiné placení než předplatné aplikace Claude; použití se platí podle
 spotřeby z předplaceného kreditu.
 
 Na webu jednoho SVJ určuje `monthly_limit` nejvyšší počet použití za
-měsíc. Na platformě pro více SVJ platí jeden klíč pro všechny weby a
-limity nastavuje hlavní správce v Nastavení služby: základní počet použití
-je v ceně webu (výchozí 30 měsíčně), vyšší (výchozí 300) má web
-s placeným doplňkem **AI Plus** (výchozí 990 Kč ročně), který si správce
-společenství objedná v Předplatném stejně jako vlastní doménu. V seznamu
-společenství je vidět, kolikrát který web pomocníka tento měsíc použil.
-Tamtéž lze zvolit model.
+měsíc. Na platformě pro více SVJ platí jeden klíč pro všechny weby a počet
+použití určuje edice webu (výchozí 5 / 30 / 300 měsíčně, mění se v tabulce
+limitů v Nastavení služby). V seznamu společenství je vidět, kolikrát
+který web pomocníka tento měsíc použil. Tamtéž lze zvolit model. Zápis ze
+shromáždění pomocí AI je funkce edice Premium.
 
 U termínu typu shromáždění umí pomocník napsat část zápisu „Průběh
 jednání“ z poznámek zapisovatele nebo z nahraného přepisu schůze (.txt,

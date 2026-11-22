@@ -11,6 +11,9 @@ function current_lang(): string
     if ($lang !== null) {
         return $lang;
     }
+    if (function_exists('plan_has') && !plan_has('jazyky')) {
+        return $lang = 'cs';
+    }
     $choice = (string) ($_COOKIE['svj_lang'] ?? '');
     return $lang = isset(LANGS[$choice]) ? $choice : (isset(LANGS[site('lang')]) ? site('lang') : 'cs');
 }

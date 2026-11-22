@@ -24,6 +24,9 @@ return [
     // AI pomocník pro výbor (volitelný): návrhy oznámení, uhlazení textu, odpovědi na hlášení.
     // Vyžaduje knihovnu (ve složce webu spusťte: composer install) a klíč ke službě Claude z console.anthropic.com.
     // Text, který správce pomocníkovi zadá, se odesílá společnosti Anthropic; použití se platí podle spotřeby.
+    // Zkušební prostředí: pruh na každé stránce, zákaz indexování a e-maily jen na jednu adresu (bez ní se neodesílají).
+    // 'env' => 'staging', 'staging_mail' => 'vy@example.cz',
+
     // 'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 30],
 
     'db' => [

@@ -33,7 +33,7 @@ $tenantInput = function (array $t = []): array {
         'unit_prefix' => mb_substr(post('unit_prefix'), 0, 10), 'entrances' => post('entrances') !== '' ? post('entrances') : 'A', 'look' => $look, 'style' => isset(STYLES[post('style')]) ? post('style') : 'klasik',
         'lang' => isset(LANGS[post('lang')]) ? post('lang') : 'cs',
         'custom_domain' => strtolower(preg_replace('~^https?://|/.*$~', '', post('custom_domain'))), 'note' => post('note'), 'active' => isset($_POST['active']) ? 1 : 0,
-        'billing' => isset($_POST['billing']) ? 1 : 0, 'trial_ends' => valid_date(post('trial_ends')) ? post('trial_ends') : '', 'paid_until' => valid_date(post('paid_until')) ? post('paid_until') : '',
+        'billing' => isset($_POST['billing']) ? 1 : 0, 'trial_ends' => valid_date(post('trial_ends')) ? post('trial_ends') : '', 'paid_until' => valid_date(post('paid_until')) ? post('paid_until') : '', 'plan' => in_array(post('plan'), ['standard', 'premium'], true) ? post('plan') : '',
         'owner_name' => post('owner_name'), 'owner_email' => post('owner_email')]);
 };
 $tenantErrors = function (array $t): array {
@@ -136,6 +136,7 @@ if ($PATH === '/') {
     foreach ($tenants as &$t) {
         $t['stats'] = tenant_stats($t['slug']);
         $t['billing_state'] = billing_state($t);
+        $t['trials'] = (int) pq('SELECT COUNT(*) FROM feature_trials WHERE tenant = ? AND ends >= ?', [$t['slug'], date('Y-m-d')])->fetchColumn();
         $t['delete_on'] = tenant_delete_date($t);
         $t['ai_used'] = (int) ($t['stats']['ai_used'] ?? 0);
         $t['last_notice'] = pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 1', [$t['slug']])->fetch() ?: null;
@@ -252,8 +253,8 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         $new = $tenantInput($t);
         $errors = $tenantErrors($new);
         if (!$errors) {
-            pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ?, unit_prefix = ?, entrances = ?, look = ?, style = ?, lang = ?, custom_domain = ?, note = ?, active = ?, billing = ?, trial_ends = ?, paid_until = ?, owner_name = ?, owner_email = ?, reminded = \'\' WHERE slug = ?',
-                [$new['name'], $new['title'], $new['accent'], $new['tagline'], $new['full'], $new['address'], $new['unit_prefix'], $new['entrances'], $new['look'], $new['style'], $new['lang'], $new['custom_domain'], $new['note'], $new['active'], $new['billing'], $new['trial_ends'], $new['paid_until'], $new['owner_name'], $new['owner_email'], $slug]);
+            pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ?, unit_prefix = ?, entrances = ?, look = ?, style = ?, lang = ?, custom_domain = ?, note = ?, active = ?, billing = ?, trial_ends = ?, paid_until = ?, plan = ?, owner_name = ?, owner_email = ?, reminded = \'\' WHERE slug = ?',
+                [$new['name'], $new['title'], $new['accent'], $new['tagline'], $new['full'], $new['address'], $new['unit_prefix'], $new['entrances'], $new['look'], $new['style'], $new['lang'], $new['custom_domain'], $new['note'], $new['active'], $new['billing'], $new['trial_ends'], $new['paid_until'], $new['plan'] ?? '', $new['owner_name'], $new['owner_email'], $slug]);
             // Název a vzhled se zapisují přímo do nastavení webu společenství (jeho správce je může dál měnit).
             foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'style', 'lang'] as $k) {
                 tenant_set($slug, 'site_' . $k, (string) $new[$k]);
@@ -345,8 +346,8 @@ if ($PATH === '/nastaveni') {
         }
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
-        $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
-        foreach (['price_ai' => 'Cena AI Plus', 'ai_free_limit' => 'Limit AI v ceně', 'ai_plus_limit' => 'Limit AI Plus', 'price_domain' => 'Cena vlastní domény', 'trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
+        $in['period'] = 'year';
+        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }
@@ -389,7 +390,7 @@ if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
 }
 if ($PATH === '/zajem') {
     $days = in_array((int) ($_GET['dni'] ?? 0), [7, 30, 90], true) ? (int) $_GET['dni'] : 0;
-    render('platform/interest', ['title' => 'Zájem o funkce', 'stats' => feature_stats($days), 'days' => $days,
+    render('platform/interest', ['title' => 'Zájem o funkce', 'trials' => pq('SELECT feature, COUNT(*) AS n, SUM(ends >= ?) AS running FROM feature_trials GROUP BY feature ORDER BY n DESC', [date('Y-m-d')])->fetchAll(), 'stats' => feature_stats($days), 'days' => $days,
         'rows' => pq("SELECT i.*, t.name AS tenant_name FROM feature_interest i LEFT JOIN tenants t ON t.slug = i.tenant ORDER BY i.id DESC LIMIT 300")->fetchAll(),
         'tenantViews' => pq("SELECT v.feature, v.tenant, t.name AS tenant_name, COUNT(*) AS n, MAX(v.at) AS last FROM feature_views v LEFT JOIN tenants t ON t.slug = v.tenant WHERE v.tenant <> '' GROUP BY v.feature, v.tenant ORDER BY last DESC LIMIT 200")->fetchAll()]);
     exit;

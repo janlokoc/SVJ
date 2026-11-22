@@ -35,7 +35,10 @@ function ai_settings(): array
     // Na platformě určuje limit hlavní správce: základní počet použití je v ceně, vyšší má web s doplňkem AI Plus.
     if (platform_enabled() && defined('TENANT') && TENANT !== '') {
         $plus = ai_plus_active(tenant_row(TENANT));
-        $limit = pset_int($plus ? 'ai_plus_limit' : 'ai_free_limit', 0, 100000);
+        $limit = plan_limit('ai');
+        if ($plus) {
+            $limit = max($limit, pset_int('lim_premium_ai', 0, 100000));   // dříve zaplacený doplněk AI Plus platí do konce období
+        }
         $model = pset('ai_model') !== '' ? pset('ai_model') : $model;
     }
     return ['key' => (string) ($c['api_key'] ?? ''), 'model' => $model, 'base_url' => (string) ($c['base_url'] ?? ''), 'limit' => $limit, 'plus' => $plus];

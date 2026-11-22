@@ -139,9 +139,12 @@ if (isset($steps[$PATH])) {
         if (!$errors) {
             $slug = $signup['slug'];
             $title = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $signup['name'])) ?: $signup['name'];
-            $trialEnds = date('Y-m-d', time() + pset_int('trial_days', 0, 365) * 86400);
             tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'], 'style' => $signup['style'] ?? 'klasik',
-                'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => $trialEnds, 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
+                'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => '', 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
+            // Jiná šablona než základní je funkce edice Standard: nový web ji dostane rovnou na zkoušku.
+            if (($signup['style'] ?? 'klasik') !== 'klasik') {
+                pq('INSERT INTO feature_trials (tenant, feature, started, ends) VALUES (?,?,?,?)', [$slug, 'sablony', date('Y-m-d'), date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day'))]);
+            }
             $pdo = tenant_pdo($slug);
             $pdo->prepare("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)")->execute([$person, $email, password_hash($pass, PASSWORD_DEFAULT)]);
             tenant_set($slug, 'webmaster_email', $email);
@@ -155,11 +158,10 @@ if (isset($steps[$PATH])) {
             platform_log('Registrace společenství', $slug . ' · ' . $signup['name'] . ' · ' . $email);
             $t = tenant_row($slug);
             platform_mail($email, 'Váš web je připraven – ' . $signup['name'], "Dobrý den,\n\nweb společenství " . $signup['name'] . " je založen na adrese " . rtrim(tenant_url($t), '/') . ".\n"
-                . "Přihlásíte se e-mailem $email a heslem, které jste si zvolili při registraci.\n\nZkušební doba zdarma trvá do " . cz_date($trialEnds) . ". Potom je cena "
-                . money_czk(pset_int('price_first', 0, 1000000)) . ' za ' . period_label() . " (první rok). Platební údaje najdete v administraci v části Předplatné.");
+                . "Přihlásíte se e-mailem $email a heslem, které jste si zvolili při registraci.\n\nWeb běží v edici Zdarma bez časového omezení. Funkce vyšších edic si můžete každou na 30 dní vyzkoušet v administraci v části Předplatné.");
             unset($_SESSION['signup']);
             // Na web společenství (jiná adresa) se z formuláře nedá přesměrovat přímo – pravidla stránky to prohlížeči zakazují. Přechod obstará mezistránka.
-            $_SESSION['signup_done'] = ['name' => $signup['name'], 'site' => rtrim(tenant_url($t), '/'), 'go' => tenant_url($t, '/vitejte/' . $token), 'until' => $trialEnds];
+            $_SESSION['signup_done'] = ['name' => $signup['name'], 'site' => rtrim(tenant_url($t), '/'), 'go' => tenant_url($t, '/vitejte/' . $token)];
             redirect('/registrace/hotovo');
         }
         $signup += ['person' => $person, 'email' => $email];

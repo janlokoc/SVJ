@@ -9,6 +9,12 @@
       <td data-label="Poslední proklik"><?= $c['last'] !== '' ? cz_datetime($c['last']) : '<span class="muted">–</span>' ?></td></tr><?php endforeach ?>
   </tbody></table>
   <p class="hint">„Společenství“ = kolik webů má správce, který si detail otevřel z administrace – to jsou platící nebo zkoušející zákazníci, jejich zájem má největší váhu.</p>
+  <h2>Zkoušení placených funkcí</h2>
+  <?php if (!$trials): ?><p class="muted">Zatím si žádné společenství nezapnulo zkoušku placené funkce.</p><?php else: ?>
+  <table class="table"><thead><tr><th>Funkce</th><th>Edice</th><th>Zkoušelo společenství</th><th>Z toho právě zkouší</th></tr></thead><tbody>
+    <?php foreach ($trials as $r): ?><tr><td data-label="Funkce"><strong><?= e(PLAN_FEATURES[$r['feature']][1] ?? $r['feature']) ?></strong></td><td data-label="Edice"><?= e(EDITIONS[PLAN_FEATURES[$r['feature']][0] ?? 'standard']) ?></td>
+      <td data-label="Zkoušelo společenství"><span class="stat-num"><?= (int) $r['n'] ?></span></td><td data-label="Z toho právě zkouší"><?= (int) $r['running'] ?></td></tr><?php endforeach ?>
+  </tbody></table><?php endif ?>
   <?php if ($tenantViews): ?><h2>Která společenství se dívala</h2>
   <table class="table"><thead><tr><th>Společenství</th><th>Funkce</th><th>Počet zobrazení</th><th>Naposledy</th></tr></thead><tbody>
     <?php foreach ($tenantViews as $r): ?><tr><td data-label="Společenství"><?= e($r['tenant_name'] ?? $r['tenant']) ?></td><td data-label="Funkce"><?= e(PLANNED_FEATURES[$r['feature']][0] ?? $r['feature']) ?></td>

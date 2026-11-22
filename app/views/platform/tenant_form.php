@@ -38,10 +38,11 @@
     <label>Interní poznámka <input type="text" name="note" value="<?= e($t['note']) ?>"></label>
     <?php if ($new): ?><label class="check"><input type="checkbox" name="seed_tabor"> <span>Naplnit ukázkovým obsahem SVJ Tábor 48 <small>Dokumenty, kontakty a aktuality z původního webu svjtabor48.webnode.cz. Pro ostatní společenství nechte vypnuté.</small></span></label><?php endif ?>
     <h2>Předplatné</h2>
-    <label class="check"><input type="checkbox" name="billing"<?= $t['billing'] ? ' checked' : '' ?>> <span>Web je placený <small>Správce společenství uvidí stránku Předplatné s výzvou k platbě. Po skončení zkušební doby nebo předplatného a lhůtě po splatnosti se web sám pozastaví. Vypnuté = web běží bez placení.</small></span></label>
+    <label class="check"><input type="checkbox" name="billing"<?= $t['billing'] ? ' checked' : '' ?>> <span>Web je placený <small>Web se řídí edicemi: bez platby běží v edici Zdarma, po zaplacení ve Standardu nebo Premium. Vypnuté = web běží bez jakéhokoli omezení a nic neplatí (domluva s provozovatelem).</small></span></label>
     <div class="form-row">
-      <label>Zkušební doba do <input type="date" name="trial_ends" value="<?= e($t['trial_ends']) ?>"></label>
+      <label>Standard na zkoušku do (starší weby) <input type="date" name="trial_ends" value="<?= e($t['trial_ends']) ?>"></label>
       <label>Zaplaceno do <input type="date" name="paid_until" value="<?= e($t['paid_until']) ?>"></label>
+      <label>Zaplacená edice <select name="plan"><?php foreach (['' => '– (Standard)', 'standard' => 'Standard', 'premium' => 'Premium'] as $pk => $pl): ?><option value="<?= $pk ?>"<?= ($t['plan'] ?? '') === $pk ? ' selected' : '' ?>><?= $pl ?></option><?php endforeach ?></select></label>
     </div>
     <div class="form-row">
       <label>Kontaktní osoba <input type="text" name="owner_name" value="<?= e($t['owner_name']) ?>"></label>
@@ -69,7 +70,7 @@
   <?php if ($deleteOn || $notices): ?>
   <div class="card">
     <h2>Upozornění odeslaná společenství</h2>
-    <?php if ($deleteOn): ?><div class="flash flash-info">Web po zkušební době nezaplatil. Automaticky se smaže <strong><?= cz_date($deleteOn) ?></strong>, nejdříve však 3 dny po odeslaném upozornění. Smazání zabrání přijatá nebo nahlášená platba, prodloužení zkušební doby nebo vypnutí „Web je placený“.</div><?php endif ?>
+    <?php if ($deleteOn): ?><div class="flash flash-info">Na web se dlouho nikdo nepřihlásil. Automaticky se smaže <strong><?= cz_date($deleteOn) ?></strong>, nejdříve však 3 dny po odeslaném upozornění. Smazání zabrání přijatá nebo nahlášená platba, prodloužení zkušební doby nebo vypnutí „Web je placený“.</div><?php endif ?>
     <?php if (!$notices): ?><p class="muted">Zatím nebylo odesláno žádné upozornění.</p><?php else: ?>
     <table class="table"><thead><tr><th>Kdy</th><th>Upozornění</th><th>Komu</th><th>Stav</th></tr></thead><tbody>
       <?php foreach ($notices as $n): ?><tr><td data-label="Kdy"><?= cz_datetime($n['at']) ?></td><td data-label="Upozornění"><?= e(NOTICE_KINDS[$n['kind']] ?? $n['kind']) ?></td><td data-label="Komu"><?= e($n['email'] !== '' ? $n['email'] : '—') ?></td>

@@ -301,6 +301,9 @@ $pollForm = function (int $id = 0) {
     $hasVotes = $id && (int) val('SELECT COUNT(*) FROM poll_votes v JOIN poll_items i ON i.id = v.item_id WHERE i.poll_id = ?', [$id]) > 0;
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
+        if (!$id && ($limitError = plan_limit_error('polls'))) {
+            $errors[] = $limitError;
+        }
         $poll = array_merge($poll, ['title' => post('title'), 'body' => post('body'), 'opens_at' => post('opens_at'), 'closes_at' => post('closes_at'),
             'threshold' => max(1, min(99, (int) post('threshold'))), 'online' => isset($_POST['online']) ? 1 : 0, 'published' => isset($_POST['published']) ? 1 : 0,
             'event_id' => (int) post('event_id') ?: null]);

@@ -12,6 +12,7 @@
       <label>Celý název (patička, plná moc) <input type="text" name="site_full" value="<?= e(site('full')) ?>"></label>
       <label>Řádek nad názvem na úvodní stránce <input type="text" name="site_tagline" value="<?= e(site('tagline')) ?>"></label>
       <p class="h-small">Šablona</p>
+      <?php if (plan_managed() && !plan_has('sablony')): ?><p class="callout">V edici <?= e(EDITIONS[plan_edition()]) ?> web používá šablonu Klasická. Ostatní šablony jsou součástí edice Standard – <a href="<?= url('/admin/predplatne') ?>#funkce"><?= plan_state('sablony') === 'available' ? 'vyzkoušejte je na ' . PLAN_TRIAL_DAYS . ' dní zdarma' : 'zkouška už skončila, přejděte na Standard' ?></a>.</p><?php endif ?>
       <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
         <?php foreach (STYLES as $style => $label): $look = isset(LOOKS[site('look')]) ? site('look') : 'les'; $miniName = site('title'); ?>
           <label class="look-card"><input type="radio" name="site_style" value="<?= $style ?>"<?= site('style') === $style ? ' checked' : '' ?>><?php require __DIR__ . '/../platform/_mini.php'; ?><span><?= e($label) ?></span></label>

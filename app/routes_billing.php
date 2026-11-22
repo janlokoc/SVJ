@@ -15,7 +15,7 @@ $route('GET', '/vitejte/([a-f0-9]{64})', function (string $token) {
     q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$admin['id']]);
     audit('login', $admin['email'] . ' (první přihlášení po registraci)');
     $b = billing_state(tenant_row(TENANT));
-    flash('Web je založen' . ($b['mode'] === 'trial' ? ' a zkušební doba běží do ' . cz_date($b['until']) : '') . '. Začněte nastavením, kontakty na výbor a seznamem jednotek.');
+    flash('Web je založen a běží zdarma. Začněte nastavením, kontakty na výbor a seznamem jednotek.');
     redirect('/admin');
 });
 
@@ -23,9 +23,10 @@ $route('GET', '/admin/predplatne', function () {
     require_admin();
     $t = tenant_row(TENANT);
     $state = billing_state($t);
-    $payment = $state['mode'] === 'free' ? null : billing_pending($t);
+    $payment = $state['mode'] === 'free' ? null : billing_open($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'edition' => $state['edition'],
+        'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
@@ -63,6 +64,10 @@ $route('POST', '/admin/predplatne/domena', function () {
         redirect('/admin/predplatne#domena');
     }
     if ($action === 'request' && $t['domain_status'] === '') {
+        if (plan_edition() === 'free') {
+            flash('Vlastní doménu lze objednat od edice Standard.', 'error');
+            redirect('/admin/predplatne#edice');
+        }
         $domain = domain_clean(post('domain'));
         if ($domain === '' || str_ends_with($domain, '.' . platform_domain()) || $domain === platform_domain()) {
             flash('Zadejte doménu ve tvaru tabor48.cz (bez https:// a bez www).', 'error');
@@ -79,7 +84,11 @@ $route('POST', '/admin/predplatne/domena', function () {
             redirect('/admin/predplatne#domena');
         }
         pq("UPDATE tenants SET domain_request = ?, domain_status = 'requested' WHERE slug = ?", [$domain, TENANT]);
-        $p = domain_payment_create(tenant_row(TENANT), $domain);
+        $included = plan_edition() === 'premium';   // v edici Premium je doména v ceně
+        if ($included) {
+            pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$t['paid_until'], TENANT]);
+        }
+        $p = $included ? ['vs' => 'v ceně edice Premium'] : domain_payment_create(tenant_row(TENANT), $domain);
         audit('Vlastní doména: žádost', $domain . ($own ? ' (doménu už vlastníme)' : ' (zajistit registraci)'));
         pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Žádost o vlastní doménu', TENANT . ' · ' . $domain . ($own ? ' · doménu vlastní' : ' · zajistit registraci')]);
         if (pset('contact_email') !== '') {
@@ -132,11 +141,7 @@ $route('POST', '/admin/predplatne/ai', function () {
     $t = tenant_row(TENANT);
     $action = post('action');
     $p = ai_payment($t);
-    if ($action === 'request' && !$p && ai_configured()) {
-        $p = ai_payment_create($t);
-        audit('AI Plus: objednávka', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
-        flash('Doplněk AI Plus je objednán. Zapne se po připsání platby.');
-    } elseif ($action === 'claim' && $p && $p['status'] === 'pending') {
+    if ($action === 'claim' && $p && $p['status'] === 'pending') {
         pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
         audit('AI Plus: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
         flash('Děkujeme. Jakmile platbu uvidíme na účtu, AI Plus zapneme.');
@@ -145,6 +150,50 @@ $route('POST', '/admin/predplatne/ai', function () {
         flash('Objednávka AI Plus je zrušena.', 'info');
     }
     redirect('/admin/predplatne#ai');
+});
+$route('POST', '/admin/predplatne/edice', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (empty($t['billing'])) {
+        redirect('/admin/predplatne');
+    }
+    $open = billing_open($t);
+    if (post('action') === 'cancel') {
+        if ($open && $open['status'] === 'pending') {
+            pq("UPDATE payments SET status = 'cancelled', note = 'objednávka zrušena správcem webu' WHERE id = ?", [$open['id']]);
+            audit('Předplatné: objednávka zrušena', EDITIONS[$open['item']] ?? '');
+            flash('Objednávka je zrušena.', 'info');
+        }
+        redirect('/admin/predplatne');
+    }
+    $edition = post('edition');
+    if (!in_array($edition, ['standard', 'premium'], true)) {
+        redirect('/admin/predplatne');
+    }
+    if ($open && $open['status'] === 'claimed') {
+        flash('Jednu platbu jste už nahlásili jako odeslanou. Počkejte prosím na její potvrzení.', 'error');
+        redirect('/admin/predplatne#platba');
+    }
+    $p = billing_order($t, $edition);
+    audit('Předplatné: objednávka edice', EDITIONS[$edition] . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+    flash('Edice ' . EDITIONS[$edition] . ' je objednaná. Zapne se po připsání platby – údaje jsou níže.');
+    redirect('/admin/predplatne#platba');
+});
+$route('POST', '/admin/predplatne/zkusit', function () {
+    require_admin();
+    $feature = post('feature');
+    if (!isset(PLAN_FEATURES[$feature])) {
+        redirect('/admin/predplatne#funkce');
+    }
+    if (plan_trial_start($feature)) {
+        $ends = plan_trials()[$feature]['ends'];
+        audit('Zkouška funkce', PLAN_FEATURES[$feature][1] . ' do ' . $ends);
+        flash('Funkce „' . PLAN_FEATURES[$feature][1] . '“ je zapnutá na zkoušku do ' . cz_date($ends) . '.');
+        $back = post('back');
+        redirect(preg_match('~^/admin/[a-z0-9/-]*$~', $back) ? $back : '/admin/predplatne#funkce');
+    }
+    flash(plan_state($feature) === 'expired' ? 'Tuto funkci jste už jednou zkoušeli. Dál ji můžete používat s edicí ' . EDITIONS[PLAN_FEATURES[$feature][0]] . '.' : 'Funkce je už zapnutá.', 'info');
+    redirect('/admin/predplatne#funkce');
 });
 $route('POST', '/admin/predplatne/zaplaceno', function () {
     require_admin();
