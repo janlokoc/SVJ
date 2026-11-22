@@ -18,9 +18,9 @@ const PLAN_LIMITS = [
     'polls' => ['Hlasování ročně', ''],
 ];
 const PLAN_LIMIT_DEFAULTS = [
-    'free' => ['admins' => 1, 'users' => 30, 'mails' => 50, 'storage' => 200, 'ai' => 5, 'polls' => 1],
-    'standard' => ['admins' => 3, 'users' => 150, 'mails' => 1000, 'storage' => 2000, 'ai' => 30, 'polls' => 0],
-    'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 10000, 'ai' => 300, 'polls' => 0],
+    'free' => ['admins' => 1, 'users' => 30, 'mails' => 50, 'storage' => 50, 'ai' => 5, 'polls' => 1],
+    'standard' => ['admins' => 3, 'users' => 150, 'mails' => 1000, 'storage' => 500, 'ai' => 30, 'polls' => 0],
+    'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 1000, 'ai' => 300, 'polls' => 0],
 ];
 
 /**
