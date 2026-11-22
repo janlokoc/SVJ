@@ -29,7 +29,8 @@
     </div>
     <p class="hint">Jednotka se pak zobrazuje například jako 372A/5.</p>
     <div class="form-row">
-      <label>Vzhled <select name="look"><?php foreach (LOOKS as $k => $label): ?><option value="<?= $k ?>"<?= $t['look'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
+      <label>Šablona <select name="style"><?php foreach (STYLES as $k => $label): ?><option value="<?= $k ?>"<?= ($t['style'] ?? 'klasik') === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
+      <label>Barvy <select name="look"><?php foreach (LOOKS as $k => $label): ?><option value="<?= $k ?>"<?= $t['look'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
       <label>Jazyk webu <select name="lang"><?php foreach (LANGS as $k => $label): ?><option value="<?= $k ?>"<?= $t['lang'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
     </div>
     <label>Vlastní doména (nepovinné) <input type="text" name="custom_domain" value="<?= e($t['custom_domain']) ?>" placeholder="www.svj-priklad.cz"></label>
@@ -50,6 +51,20 @@
     <div class="actions"><button class="btn btn-big" type="submit"><?= $new ? 'Založit web' : 'Uložit' ?></button><a class="btn btn-ghost" href="<?= url('/') ?>">Zrušit</a></div>
   </form>
   <?php if (!$new): ?>
+  <?php if ($raw['domain_status'] !== ''): ?>
+  <div class="card" id="domena">
+    <h2>Vlastní doména (placený doplněk)</h2>
+    <p><strong><?= e($raw['domain_request']) ?></strong> · <?= $raw['domain_status'] === 'active' ? '<span class="status status-done">zprovozněna</span>' : '<span class="status status-new">žádost</span>' ?>
+      <?= $raw['domain_until'] !== '' ? ' · zaplaceno do ' . cz_date($raw['domain_until']) : ' · zatím nezaplaceno' ?>
+      <?= $domainPayment ? ' · poslední platba: ' . e(PAYMENT_STATUS[$domainPayment['status']]) . ' (VS ' . e($domainPayment['vs']) . ')' : '' ?></p>
+    <p class="muted">DNS: <?= $domainDns === null ? 'nepodařilo se zjistit, zda je doména registrovaná.' : ($domainDns ? 'doména je registrovaná – má ji společenství, nebo ji musíte nasměrovat na tento server.' : 'doména vypadá volná – je potřeba ji zaregistrovat.') ?></p>
+    <?php if ($raw['domain_status'] === 'requested'): ?>
+      <ol class="hint"><li>Počkejte na platbu a potvrďte ji v části Platby.</li><li>Doménu zaregistrujte (nebo nechte společenství nasměrovat tu jejich) na tento server.</li><li>Na serveru pro ni zapněte HTTPS.</li><li>Teprve potom ji zde zprovozněte.</li></ol>
+      <div class="actions"><form method="post" action="<?= url('/svj/' . $t['slug'] . '/domena') ?>" data-confirm="Doména už směruje na tento server a má certifikát HTTPS?"><?= csrf_field() ?><input type="hidden" name="do" value="activate"><button class="btn" type="submit">Zprovoznit doménu</button></form>
+    <?php else: ?><div class="actions"><?php endif ?>
+      <form method="post" action="<?= url('/svj/' . $t['slug'] . '/domena') ?>" data-confirm="Odpojit vlastní doménu od tohoto webu?"><?= csrf_field() ?><input type="hidden" name="do" value="remove"><button class="btn btn-ghost" type="submit"><?= $raw['domain_status'] === 'active' ? 'Odpojit doménu' : 'Zamítnout žádost' ?></button></form></div>
+  </div>
+  <?php endif ?>
   <?php if ($deleteOn || $notices): ?>
   <div class="card">
     <h2>Upozornění odeslaná společenství</h2>

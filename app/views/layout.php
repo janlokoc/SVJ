@@ -40,7 +40,7 @@ $inAdmin = str_starts_with($path, '/admin') && is_admin();
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
 <!doctype html>
-<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>">
+<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>" data-style="<?= e(isset(STYLES[site('style')]) ? site('style') : 'klasik') ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

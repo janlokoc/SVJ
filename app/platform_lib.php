@@ -21,7 +21,7 @@ function tenant_address(string $slug): string
     return platform_paths() ? platform_domain() . '/' . $slug : $slug . '.' . platform_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
+const PLATFORM_PATHS = ['domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -89,6 +89,18 @@ SQL);
 CREATE TABLE tenant_notices (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL, tenant_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, kind TEXT NOT NULL, email TEXT NOT NULL DEFAULT '', sent INTEGER NOT NULL DEFAULT 0, subject TEXT NOT NULL DEFAULT '');
 CREATE INDEX tenant_notices_tenant ON tenant_notices (tenant);
 PRAGMA user_version = 3;
+SQL);
+    }
+    // Šablona vzhledu a vlastní doména jako placený doplněk.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 4) {
+        $pdo->exec(<<<'SQL'
+ALTER TABLE tenants ADD COLUMN style TEXT NOT NULL DEFAULT 'klasik';
+ALTER TABLE tenants ADD COLUMN domain_request TEXT NOT NULL DEFAULT '';
+ALTER TABLE tenants ADD COLUMN domain_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE tenants ADD COLUMN domain_until TEXT NOT NULL DEFAULT '';
+ALTER TABLE payments ADD COLUMN kind TEXT NOT NULL DEFAULT 'service';
+ALTER TABLE payments ADD COLUMN item TEXT NOT NULL DEFAULT '';
+PRAGMA user_version = 4;
 SQL);
     }
     return $pdo;
@@ -259,13 +271,13 @@ Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pr
 Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
 TXT;
 const PLATFORM_DEFAULTS = [
-    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'trial_days' => '30', 'grace_days' => '14',
+    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'trial_days' => '30', 'grace_days' => '14',
     'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
-    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nPřevod obsahu ze stávajícího webu | 1 500 Kč jednorázově\nVlastní doména (např. www.svj-vasdum.cz) | 500 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
+    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nPřevod obsahu ze stávajícího webu | 1 500 Kč jednorázově\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno'];
 
@@ -323,13 +335,13 @@ function slug_problem(string $slug): ?string
 function tenant_create(array $t): void
 {
     $t += ['accent' => '', 'tagline' => 'Společenství vlastníků jednotek', 'full' => '', 'address' => '', 'unit_prefix' => '', 'entrances' => 'A', 'look' => 'les', 'lang' => 'cs', 'custom_domain' => '',
-        'seed' => '', 'note' => '', 'active' => 1, 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => '', 'demo' => 0, 'terms_at' => ''];
+        'seed' => '', 'note' => '', 'active' => 1, 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => '', 'demo' => 0, 'terms_at' => '', 'style' => 'klasik'];
     if ($t['full'] === '') {
         $t['full'] = $t['name'];
     }
-    pq('INSERT INTO tenants (slug, name, title, accent, tagline, "full", address, unit_prefix, entrances, look, lang, custom_domain, seed, note, active, created_at, billing, trial_ends, paid_until, owner_name, owner_email, demo, terms_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+    pq('INSERT INTO tenants (slug, name, title, accent, tagline, "full", address, unit_prefix, entrances, look, lang, custom_domain, seed, note, active, created_at, billing, trial_ends, paid_until, owner_name, owner_email, demo, terms_at, style) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$t['slug'], $t['name'], $t['title'], $t['accent'], $t['tagline'], $t['full'], $t['address'], $t['unit_prefix'], $t['entrances'], $t['look'], $t['lang'], $t['custom_domain'], $t['seed'], $t['note'], $t['active'],
-            date('Y-m-d H:i:s'), $t['billing'], $t['trial_ends'], $t['paid_until'], $t['owner_name'], $t['owner_email'], $t['demo'], $t['terms_at']]);
+            date('Y-m-d H:i:s'), $t['billing'], $t['trial_ends'], $t['paid_until'], $t['owner_name'], $t['owner_email'], $t['demo'], $t['terms_at'], $t['style']]);
     tenant_pdo($t['slug']);   // založí databázi a naplní ji výchozím obsahem
 }
 
@@ -374,7 +386,7 @@ function billing_pending(array $t): array
 {
     $amount = billing_price($t);
     $months = billing_months();
-    $p = pq("SELECT * FROM payments WHERE tenant = ? AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
     if ($p && $p['status'] === 'pending' && ((int) $p['amount'] !== $amount || (int) $p['months'] !== $months)) {
         pq('UPDATE payments SET amount = ?, months = ? WHERE id = ?', [$amount, $months, $p['id']]);
         $p = ['amount' => $amount, 'months' => $months] + $p;
@@ -394,13 +406,24 @@ function billing_confirm(array $p, string $by): ?array
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
         return null;
     }
-    $from = max(date('Y-m-d', strtotime(billing_state($t)['until'] . ' +1 day')), date('Y-m-d'));
+    $domain = ($p['kind'] ?? 'service') === 'domain';
+    // Doména se platí na rok dopředu: od dneška, při obnově od konce dosavadního období.
+    $from = $domain ? max(date('Y-m-d'), $t['domain_until'] !== '' ? date('Y-m-d', strtotime($t['domain_until'] . ' +1 day')) : '')
+        : max(date('Y-m-d', strtotime(billing_state($t)['until'] . ' +1 day')), date('Y-m-d'));
     $to = date('Y-m-d', strtotime($from . ' +' . (int) $p['months'] . ' month -1 day'));
     // Faktura dostane pořadové číslo v roce a otisk údajů dodavatele a odběratele platných v den vystavení.
     $year = date('Y');
     $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
     pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
         [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+    if ($domain) {
+        pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$to, $t['slug']]);
+        if ($t['owner_email'] !== '') {
+            platform_mail($t['owner_email'], 'Platba za doménu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za vlastní doménu " . $p['item'] . " (do " . cz_date($to) . ").\n"
+                . ($t['domain_status'] === 'active' ? '' : "Doménu teď zprovozníme a dáme Vám vědět.\n") . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        }
+        return ['from' => $from, 'to' => $to];
+    }
     pq("UPDATE tenants SET paid_until = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $t['slug']]);
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nPředplatné webu " . $t['name']
@@ -477,6 +500,7 @@ function platform_daily(): void
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
     platform_cleanup();
+    domain_renewals();
 }
 
 // ---------- Provozovatel, doklady, ukázkový web ----------
@@ -504,7 +528,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => ($p['kind'] ?? 'service') === 'domain' ? 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně' : null, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -516,13 +540,13 @@ function demo_tenant(): ?array
 function demo_create(): void
 {
     tenant_create(['slug' => 'demo', 'name' => 'SVJ Zahradní 12', 'title' => 'Zahradní 12', 'tagline' => 'Společenství vlastníků jednotek · ukázkový web', 'full' => 'Společenství vlastníků jednotek Zahradní 12',
-        'address' => 'Zahradní 12, Brno', 'unit_prefix' => '12', 'entrances' => 'A,B', 'look' => 'more', 'seed' => 'demo', 'demo' => 1, 'note' => 'ukázkový web, jen pro čtení']);
+        'address' => 'Zahradní 12, Brno', 'unit_prefix' => '12', 'entrances' => 'A,B', 'look' => 'more', 'style' => 'modern', 'seed' => 'demo', 'demo' => 1, 'note' => 'ukázkový web, jen pro čtení']);
 }
 
 // ---------- Upozornění společenstvím a automatické mazání nezaplacených zkušebních webů ----------
 
 const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
-    'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán'];
+    'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán', 'domain' => 'končí předplatné vlastní domény'];
 
 /** Pošle upozornění kontaktní osobě společenství a zapíše, komu, kdy a zda se ho podařilo odeslat. */
 function tenant_notify(array $t, string $kind, string $subject, string $text): bool
@@ -578,5 +602,57 @@ function platform_cleanup(): void
             "Dobrý den,\n\nzkušební doba webu " . $t['name'] . " skončila " . cz_date($t['trial_ends']) . " a provoz nebyl uhrazen.\nPokud platbu neobdržíme, web včetně všech dat smažeme, nejdříve "
             . cz_date($when) . ".\n\nChcete web zachovat? Platební údaje najdete po přihlášení: " . tenant_url($t, '/admin/predplatne')
             . "\nChcete si jen odnést data? Zálohu stáhnete zde: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
+    }
+}
+
+// ---------- Vlastní doména společenství jako placený doplněk ----------
+
+/** Upraví zadanou doménu na tvar „priklad.cz“; nesmyslný zápis vrátí jako prázdný text. */
+function domain_clean(string $d): string
+{
+    $d = strtolower(trim(preg_replace('~^https?://|/.*$~i', '', trim($d)), '. '));
+    $d = preg_replace('/^www\./', '', $d);
+    return preg_match('/^(?=.{4,100}$)[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/', $d) ? $d : '';
+}
+/** Zda doména podle DNS už někomu patří: true = registrovaná, false = vypadá volná, null = nepodařilo se zjistit. */
+function domain_registered(string $d): ?bool
+{
+    if (!function_exists('checkdnsrr')) {
+        return null;
+    }
+    try {
+        return @checkdnsrr($d . '.', 'NS') || @checkdnsrr($d . '.', 'SOA') || @checkdnsrr($d . '.', 'A');
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+function domain_payment(array $t): ?array
+{
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'domain' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
+    return $p ?: null;
+}
+/** Výzva k platbě za doménu na rok (jedna otevřená na společenství). */
+function domain_payment_create(array $t, string $domain): array
+{
+    if ($p = domain_payment($t)) {
+        pq('UPDATE payments SET item = ?, amount = ? WHERE id = ? AND status = ?', [$domain, pset_int('price_domain', 0, 1000000), $p['id'], 'pending']);
+        return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
+    }
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'domain',?)", [$t['slug'], pset_int('price_domain', 0, 1000000), date('Y-m-d H:i:s'), $domain]);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
+}
+/** Měsíc před koncem zaplaceného období domény vystaví výzvu na další rok a pošle upozornění. */
+function domain_renewals(): void
+{
+    foreach (pq("SELECT * FROM tenants WHERE domain_status = 'active' AND domain_until <> '' AND domain_until <= ?", [date('Y-m-d', time() + 30 * 86400)])->fetchAll() as $t) {
+        if (domain_payment($t)) {
+            continue;   // výzva už existuje, upozornění odešlo při jejím vzniku
+        }
+        $p = domain_payment_create($t, $t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']);
+        tenant_notify($t, 'domain', 'Končí předplatné vlastní domény – ' . $t['name'], "Dobrý den,\n\npředplatné vlastní domény " . $p['item'] . " webu " . $t['name'] . " končí " . cz_date($t['domain_until'])
+            . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
+            . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
     }
 }

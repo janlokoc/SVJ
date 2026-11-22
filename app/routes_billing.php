@@ -25,7 +25,8 @@ $route('GET', '/admin/predplatne', function () {
     $state = billing_state($t);
     $payment = $state['mode'] === 'free' ? null : billing_pending($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t),
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t),
+        'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
 });
@@ -38,9 +39,60 @@ $route('GET', '/admin/predplatne/doklad/(\d+)', function (int $id) {
     }
     render('billing_doc', ['title' => $d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs'], 'd' => $d, 'backUrl' => url('/admin/predplatne')]);
 });
+$route('POST', '/admin/predplatne/domena', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    $action = post('action');
+    if ($action === 'cancel' && $t['domain_status'] === 'requested') {
+        $p = domain_payment($t);
+        if ($p && $p['status'] === 'claimed') {
+            flash('Platbu jste už nahlásili jako odeslanou. Zrušení domluvte s provozovatelem.', 'error');
+            redirect('/admin/predplatne#domena');
+        }
+        pq("UPDATE payments SET status = 'cancelled', note = 'žádost zrušena správcem webu' WHERE tenant = ? AND kind = 'domain' AND status = 'pending'", [TENANT]);
+        pq("UPDATE tenants SET domain_request = '', domain_status = '' WHERE slug = ?", [TENANT]);
+        audit('Vlastní doména: žádost zrušena', $t['domain_request']);
+        flash('Žádost o vlastní doménu je zrušena.', 'info');
+        redirect('/admin/predplatne#domena');
+    }
+    if ($action === 'claim' && ($p = domain_payment($t)) && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
+        audit('Vlastní doména: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Děkujeme. Jakmile platbu uvidíme na účtu, doménu zprovozníme.');
+        redirect('/admin/predplatne#domena');
+    }
+    if ($action === 'request' && $t['domain_status'] === '') {
+        $domain = domain_clean(post('domain'));
+        if ($domain === '' || str_ends_with($domain, '.' . platform_domain()) || $domain === platform_domain()) {
+            flash('Zadejte doménu ve tvaru tabor48.cz (bez https:// a bez www).', 'error');
+            redirect('/admin/predplatne#domena');
+        }
+        if (pq('SELECT 1 FROM tenants WHERE slug <> ? AND (custom_domain = ? OR domain_request = ?)', [TENANT, $domain, $domain])->fetchColumn()) {
+            flash('Tuto doménu už používá jiné společenství.', 'error');
+            redirect('/admin/predplatne#domena');
+        }
+        $own = post('own') === '1';
+        $registered = domain_registered($domain);
+        if (!$own && $registered === true) {
+            flash('Doména ' . $domain . ' je už registrovaná. Pokud patří Vám, zvolte „Doménu už máme“; jinak zkuste jiný název.', 'error');
+            redirect('/admin/predplatne#domena');
+        }
+        pq("UPDATE tenants SET domain_request = ?, domain_status = 'requested' WHERE slug = ?", [$domain, TENANT]);
+        $p = domain_payment_create(tenant_row(TENANT), $domain);
+        audit('Vlastní doména: žádost', $domain . ($own ? ' (doménu už vlastníme)' : ' (zajistit registraci)'));
+        pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Žádost o vlastní doménu', TENANT . ' · ' . $domain . ($own ? ' · doménu vlastní' : ' · zajistit registraci')]);
+        if (pset('contact_email') !== '') {
+            platform_mail(pset('contact_email'), 'Žádost o vlastní doménu: ' . $domain, 'Web ' . $t['name'] . ' (' . TENANT . ') žádá o doménu ' . $domain . ($own ? ', kterou už vlastní.' : ' a o její registraci.')
+                . "\nVariabilní symbol platby: " . $p['vs'] . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
+        }
+        flash('Žádost o doménu ' . $domain . ' je odeslaná.' . ($registered === false && !$own ? ' Podle rychlé kontroly vypadá volná; registraci potvrdíme po zaplacení.' : ''));
+        redirect('/admin/predplatne#domena');
+    }
+    redirect('/admin/predplatne#domena');
+});
 $route('POST', '/admin/predplatne/zaplaceno', function () {
     require_admin();
-    $p = pq("SELECT * FROM payments WHERE tenant = ? AND status = 'pending' ORDER BY id DESC LIMIT 1", [TENANT])->fetch();
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'pending' ORDER BY id DESC LIMIT 1", [TENANT])->fetch();
     if ($p) {
         pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
         audit('Předplatné: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);

@@ -19,10 +19,17 @@
   <?php elseif ($step === 2): ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
-    <p>Vyberte vzhled webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Později ho můžete kdykoli změnit v nastavení.</p>
-    <div class="look-cards" role="radiogroup" aria-label="Vzhled webu">
-      <?php $n = 0; foreach (LOOKS as $look => $label): $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
-        <label class="look-card"><input type="radio" name="look" value="<?= $look ?>"<?= ($s['look'] ?: 'les') === $look ? ' checked' : '' ?>><?php require __DIR__ . '/_mini.php'; ?><span><?= e($label) ?></span></label>
+    <p>Vyberte šablonu a barvy webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Obojí můžete později kdykoli změnit v nastavení.</p>
+    <p class="h-small">Šablona</p>
+    <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
+      <?php foreach (STYLES as $style => $label): $look = $s['look'] ?: 'les'; $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
+        <label class="look-card"><input type="radio" name="style" value="<?= $style ?>"<?= $s['style'] === $style ? ' checked' : '' ?>><?php require __DIR__ . '/_mini.php'; ?><span><?= e($label) ?></span></label>
+      <?php endforeach ?>
+    </div>
+    <p class="h-small">Barvy</p>
+    <div class="look-picker" role="radiogroup" aria-label="Barvy webu">
+      <?php foreach (LOOKS as $k => $label): ?>
+        <label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"<?= ($s['look'] ?: 'les') === $k ? ' checked' : '' ?>><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e($label) ?></span></label>
       <?php endforeach ?>
     </div>
     <div class="actions"><button class="btn btn-big" type="submit">Pokračovat na účet správce</button><a class="btn btn-ghost" href="<?= url('/registrace') ?>">Zpět</a></div>

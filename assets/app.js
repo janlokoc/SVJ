@@ -137,3 +137,8 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
   if (!btn) return;
   btn.addEventListener('click', () => { btn.setAttribute('aria-expanded', String(btn.parentElement.classList.toggle('is-open'))); });
 })();
+
+// Výběr vzhledu: při změně barev se náhledy šablon přebarví hned
+document.querySelectorAll('.look-picker input[type=radio]').forEach((radio) => radio.addEventListener('change', () => {
+  radio.form.querySelectorAll('.look-cards .mini').forEach((m) => { m.dataset.look = radio.value; });
+}));

@@ -11,7 +11,14 @@
       </div>
       <label>Celý název (patička, plná moc) <input type="text" name="site_full" value="<?= e(site('full')) ?>"></label>
       <label>Řádek nad názvem na úvodní stránce <input type="text" name="site_tagline" value="<?= e(site('tagline')) ?>"></label>
-      <div class="look-picker" role="radiogroup" aria-label="Vzhled webu">
+      <p class="h-small">Šablona</p>
+      <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
+        <?php foreach (STYLES as $style => $label): $look = isset(LOOKS[site('look')]) ? site('look') : 'les'; $miniName = site('title'); ?>
+          <label class="look-card"><input type="radio" name="site_style" value="<?= $style ?>"<?= site('style') === $style ? ' checked' : '' ?>><?php require __DIR__ . '/../platform/_mini.php'; ?><span><?= e($label) ?></span></label>
+        <?php endforeach ?>
+      </div>
+      <p class="h-small">Barvy</p>
+      <div class="look-picker" role="radiogroup" aria-label="Barvy webu">
         <?php foreach (LOOKS as $k => $label): ?>
           <label class="look look-<?= $k ?>"><input type="radio" name="site_look" value="<?= $k ?>"<?= site('look') === $k ? ' checked' : '' ?>><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e($label) ?></span></label>
         <?php endforeach ?>

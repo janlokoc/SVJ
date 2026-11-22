@@ -30,7 +30,7 @@ $signIn = function (array $a): never {
 $tenantInput = function (array $t = []): array {
     $look = isset(LOOKS[post('look')]) ? post('look') : 'les';
     return array_merge($t, ['name' => post('name'), 'title' => post('title'), 'accent' => post('accent'), 'tagline' => post('tagline'), 'full' => post('full'), 'address' => post('address'),
-        'unit_prefix' => mb_substr(post('unit_prefix'), 0, 10), 'entrances' => post('entrances') !== '' ? post('entrances') : 'A', 'look' => $look,
+        'unit_prefix' => mb_substr(post('unit_prefix'), 0, 10), 'entrances' => post('entrances') !== '' ? post('entrances') : 'A', 'look' => $look, 'style' => isset(STYLES[post('style')]) ? post('style') : 'klasik',
         'lang' => isset(LANGS[post('lang')]) ? post('lang') : 'cs',
         'custom_domain' => strtolower(preg_replace('~^https?://|/.*$~', '', post('custom_domain'))), 'note' => post('note'), 'active' => isset($_POST['active']) ? 1 : 0,
         'billing' => isset($_POST['billing']) ? 1 : 0, 'trial_ends' => valid_date(post('trial_ends')) ? post('trial_ends') : '', 'paid_until' => valid_date(post('paid_until')) ? post('paid_until') : '',
@@ -145,7 +145,7 @@ if ($PATH === '/') {
 }
 if ($PATH === '/svj/nove') {
     $t = ['slug' => '', 'name' => '', 'title' => '', 'accent' => '', 'tagline' => 'Společenství vlastníků jednotek', 'full' => '', 'address' => '', 'unit_prefix' => '', 'entrances' => 'A',
-        'look' => 'les', 'lang' => 'cs', 'custom_domain' => '', 'note' => '', 'active' => 1, 'seed' => '', 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => ''];
+        'look' => 'les', 'style' => 'klasik', 'lang' => 'cs', 'custom_domain' => '', 'note' => '', 'active' => 1, 'seed' => '', 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => ''];
     $errors = [];
     if ($METHOD === 'POST') {
         $t = $tenantInput($t);
@@ -166,7 +166,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -180,6 +180,27 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', 
         platform_log('Smazání společenství', $slug . ' · ' . $t['name']);
         flash('Společenství „' . $t['name'] . '“ bylo smazáno včetně všech dat.');
         redirect('/');
+    }
+    if ($METHOD === 'POST' && $action === '/domena') {
+        $domain = $t['domain_request'];
+        if (post('do') === 'activate' && $t['domain_status'] === 'requested' && $domain !== '') {
+            if (pq('SELECT 1 FROM tenants WHERE slug <> ? AND custom_domain = ?', [$slug, $domain])->fetchColumn()) {
+                flash('Tuto doménu už používá jiné společenství.', 'error');
+                redirect('/svj/' . $slug);
+            }
+            $until = $t['domain_until'] !== '' ? $t['domain_until'] : date('Y-m-d', strtotime('+1 year -1 day'));
+            pq("UPDATE tenants SET custom_domain = ?, domain_status = 'active', domain_until = ? WHERE slug = ?", [$domain, $until, $slug]);
+            platform_log('Zprovoznění vlastní domény', $slug . ' · ' . $domain . ' · do ' . $until);
+            tenant_notify(tenant_row($slug), 'domain', 'Vlastní doména je zprovozněna – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " teď běží na adrese https://" . $domain . "/\nPřihlašovací údaje i správa webu zůstávají stejné; původní adresa "
+                . tenant_address($slug) . " funguje dál.\nDoména je zaplacena do " . cz_date($until) . '.');
+            flash('Doména ' . $domain . ' je zprovozněna a kontaktní osoba dostala e-mail. Ověřte, že web na ní odpovídá přes HTTPS.');
+        } elseif (post('do') === 'remove' && $t['domain_status'] !== '') {
+            pq("UPDATE tenants SET custom_domain = CASE WHEN custom_domain = domain_request THEN '' ELSE custom_domain END, domain_request = '', domain_status = '', domain_until = '' WHERE slug = ?", [$slug]);
+            pq("UPDATE payments SET status = 'cancelled', note = 'doména odpojena' WHERE tenant = ? AND kind = 'domain' AND status = 'pending'", [$slug]);
+            platform_log('Odpojení vlastní domény', $slug . ' · ' . $domain);
+            flash('Vlastní doména je odpojena. Web běží dál na adrese platformy.', 'info');
+        }
+        redirect('/svj/' . $slug);
     }
     if ($METHOD === 'POST' && $action === '/import') {
         $f = $_FILES['file'] ?? null;
@@ -219,10 +240,10 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', 
         $new = $tenantInput($t);
         $errors = $tenantErrors($new);
         if (!$errors) {
-            pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ?, unit_prefix = ?, entrances = ?, look = ?, lang = ?, custom_domain = ?, note = ?, active = ?, billing = ?, trial_ends = ?, paid_until = ?, owner_name = ?, owner_email = ?, reminded = \'\' WHERE slug = ?',
-                [$new['name'], $new['title'], $new['accent'], $new['tagline'], $new['full'], $new['address'], $new['unit_prefix'], $new['entrances'], $new['look'], $new['lang'], $new['custom_domain'], $new['note'], $new['active'], $new['billing'], $new['trial_ends'], $new['paid_until'], $new['owner_name'], $new['owner_email'], $slug]);
+            pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ?, unit_prefix = ?, entrances = ?, look = ?, style = ?, lang = ?, custom_domain = ?, note = ?, active = ?, billing = ?, trial_ends = ?, paid_until = ?, owner_name = ?, owner_email = ?, reminded = \'\' WHERE slug = ?',
+                [$new['name'], $new['title'], $new['accent'], $new['tagline'], $new['full'], $new['address'], $new['unit_prefix'], $new['entrances'], $new['look'], $new['style'], $new['lang'], $new['custom_domain'], $new['note'], $new['active'], $new['billing'], $new['trial_ends'], $new['paid_until'], $new['owner_name'], $new['owner_email'], $slug]);
             // Název a vzhled se zapisují přímo do nastavení webu společenství (jeho správce je může dál měnit).
-            foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'lang'] as $k) {
+            foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'style', 'lang'] as $k) {
                 tenant_set($slug, 'site_' . $k, (string) $new[$k]);
             }
             tenant_set($slug, 'address', $new['address']);
@@ -236,7 +257,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', 
         http_response_code(422);
     } else {
         // Zobrazují se aktuální hodnoty z webu společenství (správce je mohl změnit).
-        foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'lang'] as $k) {
+        foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'style', 'lang'] as $k) {
             $t[$k] = $settings['site_' . $k] ?? $t[$k];
         }
         $t['address'] = $settings['address'] ?? $t['address'];
@@ -247,7 +268,9 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', 
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
-        'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t)]);
+        'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),
+        'domainPayment' => pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'domain' ORDER BY id DESC LIMIT 1", [$slug])->fetch() ?: null,
+        'domainDns' => ($raw = tenant_row($slug)) && $raw['domain_request'] !== '' ? domain_registered($raw['domain_request']) : null, 'raw' => $raw]);
     exit;
 }
 if ($METHOD === 'POST' && $PATH === '/demo') {
@@ -310,7 +333,7 @@ if ($PATH === '/nastaveni') {
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
-        foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
+        foreach (['price_domain' => 'Cena vlastní domény', 'trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }

@@ -21,6 +21,8 @@ if (PHP_SAPI === 'cli') {
 }
 
 const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська', 'vi' => 'Tiếng Việt'];
+const STYLES = ['klasik' => 'Klasická – patkové nadpisy, klidné karty', 'modern' => 'Moderní – bezpatkové písmo, vzdušné plochy', 'vecna' => 'Věcná – rovné hrany, barevná hlavička',
+    'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy'];
 const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá'];
 /** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
 const FEATURES = [
@@ -305,7 +307,7 @@ function val(string $sql, array $params = []): mixed
 function site(string $key): string
 {
     static $defaults = ['name' => 'SVJ Tábor 48', 'title' => 'Tábor 48', 'accent' => 'a–d', 'tagline' => 'Společenství vlastníků jednotek · Brno',
-        'full' => 'Společenství vlastníků jednotek Tábor 48', 'unit_prefix' => '48', 'entrances' => 'A,B,C,D', 'look' => 'les', 'lang' => 'cs'];
+        'full' => 'Společenství vlastníků jednotek Tábor 48', 'unit_prefix' => '48', 'entrances' => 'A,B,C,D', 'look' => 'les', 'style' => 'klasik', 'lang' => 'cs'];
     $v = setting('site_' . $key, "\0");
     return $v === "\0" ? $defaults[$key] : $v;
 }

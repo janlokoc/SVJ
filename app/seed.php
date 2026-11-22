@@ -82,7 +82,7 @@ function seed_for(PDO $pdo, string $tenant): void
     }
     // Název, vzhled a značení jednotek podle toho, co zadal správce platformy při založení.
     $st = $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)');
-    foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'lang'] as $k) {
+    foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrances', 'look', 'style', 'lang'] as $k) {
         if (isset($row[$k])) {
             $st->execute(['site_' . $k, (string) $row[$k]]);
         }

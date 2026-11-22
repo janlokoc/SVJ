@@ -51,6 +51,7 @@ if (platform_enabled()) {
             exit;
         }
         $GLOBALS['ASSET_BASE'] = $BASE;
+        $GLOBALS['ASSET_BASE_SET'] = true;   // web je dostupný jako složka hlavní domény
         $BASE .= '/' . $pm[1];
         $PATH = '/' . trim($pm[2] ?? '', '/');
     }
@@ -86,7 +87,7 @@ session_save_path($sessionDir);
 ini_set('session.gc_probability', '1');
 ini_set('session.gc_divisor', '100');
 // Ve variantě se složkami sdílejí všechny weby jednu doménu, proto má každý vlastní název i cestu přihlašovací cookie.
-session_name(!$IS_PLATFORM && platform_enabled() && platform_paths() && empty($tenantRow['custom_domain']) ? 'svj_s_' . str_replace('-', '_', TENANT) : 'svj_session');
+session_name(!$IS_PLATFORM && !empty($GLOBALS['ASSET_BASE_SET']) ? 'svj_s_' . str_replace('-', '_', TENANT) : 'svj_session');
 session_set_cookie_params(['lifetime' => 0, 'path' => $BASE . '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
 session_start();
 // Přihlášení platí jen pro web, na kterém vzniklo: relaci nejde přenést na web jiného společenství ani do konzole platformy.
@@ -197,7 +198,7 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
 // Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
-    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
+    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/predplatne/domena', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
     && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad)/~', $PATH)) {
     if (is_admin()) {
         redirect('/admin/predplatne');

@@ -22,7 +22,7 @@
   </dl>
   <table class="table print-table invoice-items">
     <thead><tr><th>Položka</th><th class="t-actions">Cena</th></tr></thead>
-    <tbody><tr><td>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?></td><td class="t-actions"><?= money_czk((int) $p['amount']) ?></td></tr></tbody>
+    <tbody><tr><td><?php if ($d['item']): ?><?= e($d['item']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na 1 rok' ?><?php else: ?>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?><?php endif ?></td><td class="t-actions"><?= money_czk((int) $p['amount']) ?></td></tr></tbody>
     <tfoot><tr><th><?= $paid ? 'Celkem (uhrazeno)' : 'Celkem k úhradě' ?></th><th class="t-actions"><?= money_czk((int) $p['amount']) ?></th></tr></tfoot>
   </table>
   <?php if ($d['qr'] !== ''): ?><div class="pay-qr invoice-qr"><?= $d['qr'] ?><small>QR platba</small></div><?php endif ?>

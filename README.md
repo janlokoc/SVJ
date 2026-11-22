@@ -136,7 +136,9 @@ oddělená data: vlastní databázi, soubory i přihlášení ve složce
    jazyk, značení jednotek), pozastavuje je a maže, vytváří jim první
    správce a vidí základní přehled. Do obsahu webů nevidí.
 
-Každé společenství si v Nastavení samo volí jeden z pěti vzhledů, logo,
+Každé společenství si v Nastavení samo volí jednu z pěti šablon
+(Klasická, Moderní, Věcná, Novinová, Vlídná), k ní jednu z pěti
+barevných variant, logo,
 název, jazyk a to, které části menu se zobrazují. Web může běžet i na
 vlastní doméně společenství.
 
@@ -169,6 +171,30 @@ všichni se musí znovu přihlásit. Adresy `sprava`, `registrace`,
 `podminky` a několik dalších patří platformě a nejdou použít jako
 adresa společenství. Vlastní doména společenství funguje v obou
 variantách.
+
+### Vlastní doména společenství
+
+Společenství může web provozovat na vlastní adrese (např. `tabor48.cz`)
+jako placený doplněk (výchozí 999 Kč ročně, mění se v Nastavení služby).
+
+1. Správce společenství o doménu požádá v **Předplatném**: zadá název a
+   zvolí, zda ji už vlastní, nebo ji má provozovatel zaregistrovat.
+   Hned vidí platební údaje s QR kódem a zálohovou fakturu.
+2. Hlavní správce vidí žádost v konzoli u společenství. Po přijetí
+   platby ji potvrdí v části Platby (vystaví se faktura).
+3. Doménu zaregistruje u registrátora, nebo ji společenství nasměruje
+   samo podle pokynů z Nastavení služby. Na serveru pro ni zapne HTTPS.
+4. Teprve potom ji v konzoli **zprovozní**. Web od té chvíle běží na
+   vlastní doméně i na původní adrese platformy; účty, obsah ani správa
+   se nemění a hlavní správce web dál spravuje z konzole.
+5. Měsíc před koncem zaplaceného roku vznikne výzva na další rok a
+   kontaktní osobě přijde e-mail. Doménu po nezaplacení odpojuje hlavní
+   správce ručně.
+
+Registraci domény a certifikát aplikace sama nezařídí. Certifikáty jde
+zautomatizovat serverem Caddy („on-demand TLS“): adresa
+`https://<doména platformy>/domena-povolena?domain=…` odpoví 200 jen pro
+zprovozněné domény společenství, takže Caddy vystaví certifikát jen jim.
 
 ### Registrace, zkušební doba a předplatné
 
@@ -267,6 +293,17 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
   chyba se nezapisuje znovu, jen se zvyšuje počet).
 - Snímky jsou ve složce `storage/reports` a vidí je jen autor a ten,
   kdo hlášení vyřizuje. Hlášení nejsou součástí zálohy webu.
+
+## Základní dokumenty
+
+V administraci v části Dokumenty → **Základní dokumenty** je přehled
+toho, co vlastníci na webu hledají nejčastěji: stanovy, domovní řád,
+prohlášení vlastníka, výpis z rejstříku, smlouva o správě, pojistná
+smlouva, průkaz energetické náročnosti, požární řád, zásady zpracování
+osobních údajů, rozpočet a tři formuláře. U každého je vidět, zda je
+nahraný, a jde nahrát nebo nahradit novou verzí jedním krokem; odkazy
+z aktualit na něj zůstanou platné. Ostatní dokumenty se nahrávají jako
+dosud.
 
 ## Termíny do kalendáře
 

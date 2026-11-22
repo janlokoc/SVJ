@@ -1,5 +1,5 @@
 <div class="wrap page">
-  <header class="page-head row"><h1>Dokumenty</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/dokumenty/hromadne') ?>">Dokumenty pro jednotky</a><a class="btn" href="<?= url('/admin/dokumenty/novy') ?>">+ Nahrát dokument</a></span></header>
+  <header class="page-head row"><h1>Dokumenty</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/dokumenty/zakladni') ?>">Základní dokumenty</a><a class="btn btn-ghost" href="<?= url('/admin/dokumenty/hromadne') ?>">Dokumenty pro jednotky</a><a class="btn" href="<?= url('/admin/dokumenty/novy') ?>">+ Nahrát dokument</a></span></header>
   <nav class="chips" aria-label="Kategorie">
     <a href="<?= url('/admin/dokumenty') ?>"<?= $cat === '' ? ' aria-current="true"' : '' ?>>Naposledy přidané</a>
     <?php foreach (CATEGORIES as $k => $label): ?><a href="<?= url('/admin/dokumenty?kategorie=' . $k) ?>"<?= $cat === $k ? ' aria-current="true"' : '' ?>><?= $label ?></a><?php endforeach ?>

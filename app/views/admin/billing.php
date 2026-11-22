@@ -40,6 +40,38 @@
     <?php endif ?>
   </div>
 
+  <div class="card" id="domena">
+    <h2>Vlastní doména</h2>
+    <?php if ($t['domain_status'] === 'active'): ?>
+      <p>Web běží na vlastní doméně <strong><a href="https://<?= e($t['custom_domain']) ?>"><?= e($t['custom_domain']) ?></a></strong><?= $t['domain_until'] !== '' ? ', zaplaceno do ' . cz_date($t['domain_until']) : '' ?>. Adresa <?= e(tenant_address($t['slug'])) ?> funguje dál.</p>
+    <?php elseif ($t['domain_status'] === 'requested'): ?>
+      <p>Žádost o doménu <strong><?= e($t['domain_request']) ?></strong> je odeslaná. <?= $t['domain_until'] !== '' ? 'Platbu jsme přijali; doménu zprovozňujeme a dáme Vám vědět e-mailem.' : 'Po přijetí platby ji zprovozníme, obvykle do několika pracovních dnů.' ?></p>
+      <?php if (pset('domain_dns') !== ''): ?><div class="callout"><strong>Pokud doménu už vlastníte,</strong> nastavte u svého registrátora: <div class="prose"><?= format_text(pset('domain_dns')) ?></div></div><?php endif ?>
+    <?php else: ?>
+      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>, za <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně. Doménu Vám zaregistrujeme, nebo připojíme tu, kterou už máte. Správa webu se nemění – jen adresa.</p>
+      <form method="post" action="<?= url('/admin/predplatne/domena') ?>" class="form">
+        <?= csrf_field() ?><input type="hidden" name="action" value="request">
+        <label>Požadovaná doména <input type="text" name="domain" placeholder="tabor48.cz" required maxlength="100" autocomplete="off"></label>
+        <label class="check"><input type="radio" name="own" value="0" checked> <span>Doménu ještě nemáme <small>Ověříme, zda je volná, a zaregistrujeme ji pro Vaše společenství.</small></span></label>
+        <label class="check"><input type="radio" name="own" value="1"> <span>Doménu už máme <small>Po zaplacení Vám pošleme, co nastavit u Vašeho registrátora.</small></span></label>
+        <div class="actions"><button class="btn" type="submit">Požádat o vlastní doménu</button></div>
+      </form>
+    <?php endif ?>
+    <?php if ($domainPayment): $dp = $domainPayment; ?>
+      <h3>Platba za doménu <?= e($dp['item']) ?> na 1 rok</h3>
+      <?php if ($dp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($dp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
+      <div class="pay">
+        <?php if ($domainQr): ?><div class="pay-qr"><?= $domainQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $dp['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($dp['vs']) ?></code></dd></dl>
+      </div>
+      <div class="actions">
+        <?php if ($dp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/domena') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za doménu jsem odeslal(a)</button></form><?php endif ?>
+        <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $dp['id']) ?>">Zálohová faktura k tisku</a>
+        <?php if ($dp['status'] === 'pending' && $t['domain_status'] === 'requested'): ?><form method="post" action="<?= url('/admin/predplatne/domena') ?>" data-confirm="Zrušit žádost o vlastní doménu?"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit žádost</button></form><?php endif ?>
+      </div>
+    <?php endif ?>
+  </div>
+
   <div class="card card-soft">
     <h2>Ceník</h2>
     <ul class="price-rows">
@@ -55,7 +87,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : '' ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

@@ -405,3 +405,28 @@ function calendar_token(): string
     }
     return $t;
 }
+
+// ---------- Základní dokumenty společenství: přehled toho, co má na webu být, a nahrání jedním krokem ----------
+
+/** klíč → [název dokumentu, kategorie, viditelnost, k čemu slouží] */
+const CORE_DOCS = [
+    'stanovy' => ['Stanovy společenství', 'zakladni', 'public', 'Základní pravidla společenství; vlastníci je hledají nejčastěji.'],
+    'domovni-rad' => ['Domovní řád', 'zakladni', 'public', 'Pravidla užívání domu a společných prostor.'],
+    'prohlaseni' => ['Prohlášení vlastníka', 'zakladni', 'residents', 'Vymezení jednotek a spoluvlastnických podílů.'],
+    'rejstrik' => ['Výpis z rejstříku společenství', 'zakladni', 'public', 'Aktuální zápis výboru a sídla.'],
+    'sprava' => ['Smlouva o správě domu', 'zakladni', 'residents', 'Smlouva se správcem nebo účetní firmou.'],
+    'pojisteni' => ['Pojistná smlouva domu', 'zakladni', 'residents', 'Hodí se při hlášení pojistné události.'],
+    'penb' => ['Průkaz energetické náročnosti budovy', 'zakladni', 'public', 'Vlastníci ho potřebují při prodeji nebo pronájmu bytu.'],
+    'pozarni-rad' => ['Požární řád a evakuační plán', 'zakladni', 'public', 'Co dělat při požáru, kde jsou hasicí přístroje a uzávěry.'],
+    'gdpr' => ['Zásady zpracování osobních údajů', 'zakladni', 'public', 'Jak společenství nakládá s údaji vlastníků.'],
+    'rozpocet' => ['Rozpočet a plán oprav', 'oznameni', 'residents', 'Schválený rozpočet a plán čerpání fondu oprav na letošní rok.'],
+    'plna-moc' => ['Plná moc na shromáždění (formulář)', 'formulare', 'public', 'Vzor k vytištění pro vlastníky, kteří nemohou přijít.'],
+    'zmena-osob' => ['Oznámení změny počtu osob (formulář)', 'formulare', 'public', 'Pro rozúčtování služeb podle počtu osob.'],
+    'zmena-vlastnika' => ['Oznámení změny vlastníka (formulář)', 'formulare', 'public', 'Při prodeji nebo převodu jednotky.'],
+];
+/** Který dokument je k danému základnímu dokumentu nahraný (nebo null). */
+function core_doc(string $key): ?array
+{
+    $id = (int) setting('core_doc_' . $key);
+    return $id ? one('SELECT * FROM documents WHERE id = ?', [$id]) : null;
+}

@@ -8,9 +8,9 @@
     <thead><tr><th>Společenství</th><th>Adresa webu</th><th>Vzhled</th><th>Účty</th><th>Jednotky</th><th>Poslední přihlášení</th><th>Předplatné</th><th>Stav</th></tr></thead>
     <tbody><?php foreach ($tenants as $t): $s = $t['stats']; ?>
       <tr<?= $t['active'] ? '' : ' class="is-off"' ?>>
-        <td data-label="Společenství"><a href="<?= url('/svj/' . $t['slug']) ?>"><strong><?= e($t['name']) ?></strong></a><?= $t['demo'] ? ' <span class="tag tag-lock">ukázka</span>' : '' ?><?= $t['note'] ? '<br><small class="muted">' . e($t['note']) . '</small>' : '' ?></td>
+        <td data-label="Společenství"><a href="<?= url('/svj/' . $t['slug']) ?>"><strong><?= e($t['name']) ?></strong></a><?= $t['demo'] ? ' <span class="tag tag-lock">ukázka</span>' : '' ?><?= ($t['domain_status'] ?? '') === 'requested' ? ' <span class="tag tag-pin">žádá o doménu</span>' : '' ?><?= $t['note'] ? '<br><small class="muted">' . e($t['note']) . '</small>' : '' ?></td>
         <td data-label="Adresa webu"><a href="<?= e(tenant_url($t)) ?>"><?= e(preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/'))) ?></a></td>
-        <td data-label="Vzhled"><?= e(explode(' – ', LOOKS[$t['look']] ?? '')[0]) ?></td>
+        <td data-label="Vzhled"><?= e(explode(' – ', STYLES[$t['style'] ?? 'klasik'] ?? '')[0]) ?> · <?= e(mb_strtolower(explode(' – ', LOOKS[$t['look']] ?? '')[0])) ?></td>
         <td data-label="Účty"><?= $s['ready'] ? $s['users'] . ($s['admins'] ? '' : ' <span class="tag tag-pin">bez správce</span>') : '—' ?></td>
         <td data-label="Jednotky"><?= $s['ready'] ? $s['units'] : '—' ?></td>
         <td data-label="Poslední přihlášení"><?= $s['ready'] && $s['last_login'] ? cz_datetime($s['last_login']) : '—' ?></td>

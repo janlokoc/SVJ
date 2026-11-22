@@ -395,7 +395,7 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 
 // ---------- Nastavení ----------
 
-const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
+const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_style', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
     'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent', 'privacy_text'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
 $route('GET', '/admin/nastaveni', function () {
@@ -435,6 +435,9 @@ $route('POST', '/admin/nastaveni', function () {
     }
     foreach (SETTING_KEYS as $k) {
         $v = in_array($k, BOOL_SETTINGS, true) ? (isset($_POST[$k]) ? '1' : '0') : post($k);
+        if ($k === 'site_style' && !isset(STYLES[$v])) {
+            $v = 'klasik';
+        }
         if ($k === 'site_look' && !isset(LOOKS[$v])) {
             $v = 'les';
         }

@@ -24,6 +24,15 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }
+// Dotaz webového serveru (např. Caddy, „on-demand TLS“): smí pro tuto doménu vystavit certifikát? Ano jen pro zprovozněné domény společenství.
+if ($PATH === '/domena-povolena') {
+    $d = domain_clean((string) ($_GET['domain'] ?? ''));
+    $ok = $d !== '' && pq("SELECT 1 FROM tenants WHERE active = 1 AND custom_domain <> '' AND custom_domain = ?", [$d])->fetchColumn();
+    http_response_code($ok ? 200 : 404);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo $ok ? 'ok' : 'neznama domena';
+    exit;
+}
 if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju')) {
     $terms = $PATH === '/podminky';
     render('platform/text', ['title' => $terms ? 'Obchodní podmínky' : 'Smlouva o zpracování osobních údajů', 'body' => pset($terms ? 'terms' : 'dpa'),
@@ -76,7 +85,7 @@ if (isset($steps[$PATH])) {
         if ($problem = slug_problem($slug)) {
             $errors[] = $problem;
         }
-        $signup = ['name' => $name, 'slug' => $slug, 'address' => mb_substr(post('address'), 0, 200), 'look' => $signup['look'] ?? ''];
+        $signup = ['name' => $name, 'slug' => $slug, 'address' => mb_substr(post('address'), 0, 200), 'look' => $signup['look'] ?? '', 'style' => $signup['style'] ?? 'klasik'];
         if (!$errors) {
             $_SESSION['signup'] = $signup;
             redirect('/registrace/vzhled');
@@ -84,6 +93,7 @@ if (isset($steps[$PATH])) {
     } elseif ($METHOD === 'POST' && $step === 2) {
         if (isset(LOOKS[post('look')])) {
             $_SESSION['signup']['look'] = post('look');
+            $_SESSION['signup']['style'] = isset(STYLES[post('style')]) ? post('style') : 'klasik';
             redirect('/registrace/spravce');
         }
         $errors[] = 'Vyberte jeden ze vzhledů.';
@@ -113,7 +123,7 @@ if (isset($steps[$PATH])) {
             $slug = $signup['slug'];
             $title = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $signup['name'])) ?: $signup['name'];
             $trialEnds = date('Y-m-d', time() + pset_int('trial_days', 0, 365) * 86400);
-            tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'],
+            tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'], 'style' => $signup['style'] ?? 'klasik',
                 'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => $trialEnds, 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
             $pdo = tenant_pdo($slug);
             $pdo->prepare("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)")->execute([$person, $email, password_hash($pass, PASSWORD_DEFAULT)]);
@@ -140,7 +150,7 @@ if (isset($steps[$PATH])) {
     if ($errors) {
         http_response_code(422);
     }
-    render('platform/signup', ['title' => 'Založení webu', 'errors' => $errors, 'step' => $step, 'steps' => $steps, 's' => $signup + ['name' => '', 'slug' => '', 'address' => '', 'look' => '', 'person' => '', 'email' => '']]);
+    render('platform/signup', ['title' => 'Založení webu', 'errors' => $errors, 'step' => $step, 'steps' => $steps, 's' => $signup + ['name' => '', 'slug' => '', 'address' => '', 'look' => '', 'style' => 'klasik', 'person' => '', 'email' => '']]);
     exit;
 }
 http_response_code(404);

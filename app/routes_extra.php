@@ -477,3 +477,45 @@ $route('POST', '/admin/zaloha', function () {
     unlink($tmp);
     exit;
 });
+
+// ---------- Základní dokumenty ----------
+
+$route('GET', '/admin/dokumenty/zakladni', function () {
+    require_admin();
+    $slots = [];
+    foreach (CORE_DOCS as $key => $def) {
+        $slots[$key] = $def + ['doc' => core_doc($key)];
+    }
+    render('admin/core_docs', ['title' => 'Základní dokumenty', 'slots' => $slots]);
+});
+$route('POST', '/admin/dokumenty/zakladni', function () {
+    require_admin();
+    $key = post('key');
+    $def = CORE_DOCS[$key] ?? null;
+    if (!$def) {
+        not_found();
+    }
+    $stored = store_upload($_FILES['file'] ?? []);
+    if (is_string($stored)) {
+        flash($def[0] . ': ' . $stored, 'error');
+        redirect('/admin/dokumenty/zakladni');
+    }
+    [$filename, $original, $size] = $stored;
+    $old = core_doc($key);
+    $visibility = isset(VISIBILITY[post('visibility')]) ? post('visibility') : $def[2];
+    if ($old) {
+        // Nová verze nahradí soubor u téhož dokumentu, takže odkazy z aktualit a termínů zůstanou platné.
+        if ($old['filename'] && preg_match('/^[a-f0-9]{32}\.[a-z]+$/', $old['filename'])) {
+            @unlink(UPLOAD_DIR . '/' . $old['filename']);
+        }
+        q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL, visibility = ?, doc_date = ? WHERE id = ?', [$filename, $original, $size, $visibility, date('Y-m-d'), $old['id']]);
+    } else {
+        q('INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?,?,?,?,?,?,?)', [$def[0], $def[1], $visibility, $filename, $original, $size, date('Y-m-d')]);
+        $id = (int) db()->lastInsertId();
+        q('DELETE FROM settings WHERE `key` = ?', ['core_doc_' . $key]);
+        q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['core_doc_' . $key, (string) $id]);
+    }
+    audit('Základní dokument ' . ($old ? 'nahrazen' : 'nahrán'), $def[0] . ' · ' . $original);
+    flash($def[0] . ': ' . ($old ? 'nová verze je nahraná a nahradila původní.' : 'dokument je nahraný.'));
+    redirect('/admin/dokumenty/zakladni');
+});
