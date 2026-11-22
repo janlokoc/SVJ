@@ -204,7 +204,9 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
             'month' => date('Y-m-d', strtotime($base . ' +1 month')),
             default => post('until'),
         };
-        if (in_array($edition, ['standard', 'premium'], true) && (!valid_date($until) || $until < date('Y-m-d'))) {
+        if (in_array(post('do'), ['year', 'month'], true) && !in_array($edition, ['standard', 'premium'], true)) {
+            flash('Prodloužit lze jen placenou edici. Vyberte v poli Edice Standard nebo Premium a klikněte znovu.', 'error');
+        } elseif (in_array($edition, ['standard', 'premium'], true) && (!valid_date($until) || $until < date('Y-m-d'))) {
             flash('Zadejte datum, do kdy má předplatné platit (dnešní nebo pozdější).', 'error');
         } elseif (billing_set($t, $edition, $until)) {
             $label = ['unlimited' => 'bez placení a omezení', 'free' => 'Zdarma'][$edition] ?? EDITIONS[$edition] . ' do ' . cz_date($until);

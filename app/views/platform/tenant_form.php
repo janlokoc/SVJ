@@ -66,7 +66,7 @@
     <form method="post" action="<?= url('/svj/' . $t['slug'] . '/predplatne') ?>" class="form">
       <?= csrf_field() ?>
       <div class="form-row">
-        <label>Edice <select name="edition"><?php foreach (['standard' => 'Standard', 'premium' => 'Premium', 'free' => 'Zdarma (ukončit placenou edici)', 'unlimited' => 'Bez placení a bez omezení'] as $ek => $el): ?><option value="<?= $ek ?>"<?= ($bstate['mode'] === 'free' ? 'unlimited' : $bstate['edition']) === $ek ? ' selected' : '' ?>><?= $el ?></option><?php endforeach ?></select></label>
+        <label>Edice <select name="edition"><?php foreach (['standard' => 'Standard', 'premium' => 'Premium', 'free' => 'Zdarma (ukončit placenou edici)', 'unlimited' => 'Bez placení a bez omezení'] as $ek => $el): ?><option value="<?= $ek ?>"<?= ($bstate['mode'] === 'free' ? 'unlimited' : ($bstate['edition'] === 'free' ? 'standard' : $bstate['edition'])) === $ek ? ' selected' : '' ?>><?= $el ?></option><?php endforeach ?></select></label>
         <label>Platí do <input type="date" name="until" value="<?= e($t['paid_until'] !== '' && $t['paid_until'] >= date('Y-m-d') ? $t['paid_until'] : date('Y-m-d', strtotime('+1 year'))) ?>" min="<?= date('Y-m-d') ?>"></label>
       </div>
       <label>Důvod (uloží se do záznamů; při odeslání e-mailu ho uvidí i společenství) <input type="text" name="reason" maxlength="200" placeholder="Např. platba hotově, dárek za doporučení, oprava po reklamaci"></label>
