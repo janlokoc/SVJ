@@ -944,3 +944,8 @@ body.lp .lp-section { padding-block: clamp(2rem, 1.2rem + 3vw, 3.5rem); }
 .demo-roles .card p { flex: 1; }
 .quorum-counts { color: var(--muted); font-size: .95rem; margin: 0; }
 .rsvp > .quorum { margin-top: 1.2rem; }
+
+/* Pole pro datum a čas: Safari na iPhonu a iPadu jim dává vlastní šířku a bez tohoto přetečou z formuláře. */
+input[type=date], input[type=time], input[type=datetime-local], input[type=month] { -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box; min-width: 0; max-width: 100%; }
+input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-and-time-value, input[type=datetime-local]::-webkit-date-and-time-value { text-align: left; min-height: 1.4em; }
+.form-row > *, .form > * { min-width: 0; }
