@@ -12,6 +12,15 @@ $signup = $_SESSION['signup'] ?? [];
 $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '/registrace/spravce' => 'Účet správce'];
 
 if ($PATH === '/' && $METHOD === 'GET') {
+    // Ukázkový web se založí sám při prvním zobrazení úvodní stránky (jde vypnout v Nastavení služby).
+    if (!demo_tenant() && pset('demo_auto') === '1' && !tenant_row('demo')) {
+        try {
+            demo_create();
+            pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Založení ukázkového webu', 'demo · automaticky']);
+        } catch (Throwable $e) {
+            error_log('SVJ web, ukázkový web: ' . $e->getMessage());
+        }
+    }
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }

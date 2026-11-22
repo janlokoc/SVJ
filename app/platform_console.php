@@ -305,6 +305,7 @@ if ($PATH === '/nastaveni') {
             $in[$k] = post($k);
         }
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
+        $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
         foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
