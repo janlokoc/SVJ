@@ -783,6 +783,25 @@ function demo_refresh(): void
     }
     demo_create();
 }
+/**
+ * Verze ukázkového obsahu. Zvyšte ji při každé změně toho, co ukázka obsahuje (nové části webu, nová ukázková data):
+ * ukázka založená starší verzí se pak sama založí znovu, aby v ní nic nechybělo.
+ */
+const DEMO_CONTENT_VERSION = 6;
+
+/** Ukázka vznikla ze staršího obsahu, než jaký web umí teď? Pak ji hned obnoví. */
+function demo_update_content(): void
+{
+    if (pset('demo_content') === (string) DEMO_CONTENT_VERSION || !pq('SELECT 1 FROM tenants WHERE demo = 1 LIMIT 1')->fetchColumn()) {
+        return;
+    }
+    try {
+        demo_refresh();
+        pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Obnovení ukázkového webu', 'demo · nový ukázkový obsah (verze ' . DEMO_CONTENT_VERSION . ')']);
+    } catch (Throwable $e) {
+        error_log('SVJ web, obnova ukázky: ' . $e->getMessage());
+    }
+}
 /** Jednou za pár dní ukázku obnoví, aby nepůsobila opuštěně. */
 function demo_auto_refresh(): void
 {
@@ -799,6 +818,7 @@ function demo_auto_refresh(): void
 }
 function demo_create(): void
 {
+    pset_save('demo_content', (string) DEMO_CONTENT_VERSION);
     tenant_create(['slug' => 'demo', 'name' => 'SVJ Zahradní 12', 'title' => 'Zahradní 12', 'tagline' => 'Společenství vlastníků jednotek · ukázkový web', 'full' => 'Společenství vlastníků jednotek Zahradní 12',
         'address' => 'Zahradní 12, Brno', 'unit_prefix' => '12', 'entrances' => 'A,B', 'look' => 'more', 'style' => 'modern', 'seed' => 'demo', 'demo' => 1, 'note' => 'ukázkový web, jen pro čtení']);
 }

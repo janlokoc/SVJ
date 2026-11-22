@@ -12,6 +12,7 @@ $signup = $_SESSION['signup'] ?? [];
 $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '/registrace/spravce' => 'Účet správce'];
 
 if ($PATH === '/' && $METHOD === 'GET') {
+    demo_update_content();   // ukázka ze staršího obsahu (např. bez zpráv nebo anket) se založí znovu
     // Ukázkový web se založí sám při prvním zobrazení úvodní stránky (jde vypnout v Nastavení služby).
     if (!demo_tenant() && pset('demo_auto') === '1' && !tenant_row('demo')) {
         try {
