@@ -402,8 +402,17 @@ if ($PATH === '/nastaveni') {
         }
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
+        $in['vat_payer'] = isset($_POST['vat_payer']) ? '1' : '0';
+        $in['legal_checked'] = isset($_POST['legal_checked']) ? '1' : '0';
+        if ($in['vat_payer'] === '1' && trim($in['op_dic']) === '') {
+            $errors[] = 'Plátce DPH musí mít vyplněné DIČ.';
+        }
+        // Výchozí poznámka „není plátcem“ u plátce nedává smysl.
+        if ($in['vat_payer'] === '1' && $in['invoice_note'] === PLATFORM_DEFAULTS['invoice_note']) {
+            $in['invoice_note'] = '';
+        }
         $in['period'] = 'year';
-        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'monthly_surcharge' => 'Přirážka za měsíční platbu', 'referral_reward' => 'Odměna za doporučení', 'referral_welcome' => 'Sleva pro doporučeného', 'storage_pack_mb' => 'Velikost balíčku úložiště', 'price_storage' => 'Cena balíčku úložiště', 'demo_refresh_days' => 'Obnova ukázkového webu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
+        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'monthly_surcharge' => 'Přirážka za měsíční platbu', 'vat_rate' => 'Sazba DPH', 'referral_reward' => 'Odměna za doporučení', 'referral_welcome' => 'Sleva pro doporučeného', 'storage_pack_mb' => 'Velikost balíčku úložiště', 'price_storage' => 'Cena balíčku úložiště', 'demo_refresh_days' => 'Obnova ukázkového webu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }

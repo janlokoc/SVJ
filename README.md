@@ -311,6 +311,14 @@ automatické vystavování (viz výše).
   Správce vidí počet otevření odkazu, registrací a platících, stav každého
   doporučeného společenství (zaregistrovalo se, zkouší funkce, objednalo,
   platí měsíčně, zaplatilo) a kolik kreditu získal a uplatnil.
+- **DPH:** v Nastavení služby (Faktury a DPH) lze zapnout „Provozovatel je
+  plátce DPH“ a sazbu. Ceny v nastavení jsou pak konečné ceny včetně DPH;
+  faktura je daňový doklad s DIČ, základem daně, DPH a datem uskutečnění
+  plnění (den přijetí platby). Už vystavené faktury se změnou nastavení
+  nemění. Podobu dokladů si nechte potvrdit účetní.
+- **Seznam před spuštěním:** nahoře v Nastavení služby je přehled toho, co
+  ještě chybí vyplnit (provozovatel, účet, e-maily, právní texty); na
+  totéž upozorňuje i přehled společenství.
 - **Ruční nastavení předplatného:** hlavní správce může u kteréhokoli
   společenství v konzoli (karta Předplatné) nastavit edici a datum, do
   kdy platí, prodloužit ji o měsíc nebo rok, ukončit ji, nebo placení

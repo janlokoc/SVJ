@@ -1,6 +1,14 @@
 <div class="wrap page narrow">
   <h1>Nastavení služby</h1>
   <p class="lead">Ceny a limity edic, platební údaje a texty úvodní stránky na adrese <a href="<?= e(platform_url()) ?>"><?= e(platform_domain()) ?></a>.</p>
+  <?php $todo = launch_checklist(); ?>
+  <section class="card launch-list<?= $todo ? '' : ' is-done' ?>" id="spusteni">
+    <h2><?= $todo ? 'Před spuštěním zbývá doplnit (' . count($todo) . ')' : 'Vše potřebné je vyplněno' ?></h2>
+    <?php if ($todo): ?>
+    <ol><?php foreach ($todo as [$what, $why, $anchor]): ?><li><a href="#<?= $anchor ?>"><strong><?= e($what) ?></strong></a> – <?= e($why) ?></li><?php endforeach ?></ol>
+    <p class="hint">Formulář níže vyplňujte odshora dolů; uložit ho můžete kdykoli a pokračovat později. Služba běží i bez těchto údajů, ale zákazníkům by chyběly.</p>
+    <?php else: ?><p class="muted">Provozovatel, platby, e-maily i právní texty jsou připravené.</p><?php endif ?>
+  </section>
   <?php require __DIR__ . '/../_errors.php'; ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
@@ -45,35 +53,38 @@
     <label>Model (nevyplněno = podle config.php) <input type="text" name="ai_model" value="<?= e($v['ai_model']) ?>" placeholder="claude-opus-5-5" pattern="[a-z0-9.\-]*"></label>
     <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. Počet použití podle edice nastavíte v tabulce limitů výše; 0 u AI znamená, že pomocník je jen pro weby s AI Plus.</p>
     <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
-    <h2>Platby</h2>
+    <h2 id="platby">Platby</h2>
     <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
     <p class="hint">Z čísla účtu se vytváří QR platba. Dokud není vyplněné, vidí správci společenství jen informaci, že platební údaje dostanou e-mailem.</p>
     <label>Název příjemce (nepovinné) <input type="text" name="recipient" value="<?= e($v['recipient']) ?>" maxlength="35"></label>
-    <h2>Kontakt a e-maily</h2>
+    <h2 id="kontakt">Kontakt a e-maily</h2>
     <div class="form-row">
       <label>Kontaktní e-mail (zobrazuje se na webu) <input type="email" name="contact_email" value="<?= e($v['contact_email']) ?>"></label>
       <label>Odesílatel e-mailů služby <input type="email" name="mail_from" value="<?= e($v['mail_from']) ?>"></label>
     </div>
     <p class="hint">Z adresy odesílatele chodí potvrzení registrace, připomenutí konce zkušební doby a potvrzení plateb. Bez ní se tyto e-maily neposílají. Nově založené weby ji dostanou jako výchozího odesílatele.</p>
-    <h2>Provozovatel</h2>
+    <h2 id="provozovatel">Provozovatel</h2>
     <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
     <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
     <label>Sídlo <input type="text" name="op_address" value="<?= e($v['op_address']) ?>" placeholder="Ulice 1, 602 00 Brno"></label>
     <div class="form-row">
       <label>IČO <input type="text" name="op_ico" value="<?= e($v['op_ico']) ?>"></label>
-      <label>DIČ (nepovinné) <input type="text" name="op_dic" value="<?= e($v['op_dic']) ?>"></label>
+      <label>DIČ (u plátce DPH povinné) <input type="text" name="op_dic" value="<?= e($v['op_dic']) ?>"></label>
       <label>Telefon <input type="text" name="op_phone" value="<?= e($v['op_phone']) ?>"></label>
     </div>
     <label>Zápis v rejstříku <input type="text" name="op_register" value="<?= e($v['op_register']) ?>" placeholder="Zapsáno u Krajského soudu v Brně, oddíl C, vložka 12345"></label>
     <label>Kde jsou data uložena (zobrazí se v častých otázkách) <input type="text" name="hosting_note" value="<?= e($v['hosting_note']) ?>" placeholder="Servery v České republice, denní zálohy na druhé místo v EU."></label>
-    <h2>Faktury</h2>
+    <h2 id="faktury">Faktury a DPH</h2>
+    <label class="check"><input type="checkbox" name="vat_payer"<?= $v['vat_payer'] === '1' ? ' checked' : '' ?>> <span>Provozovatel je plátce DPH <small>Faktury pak budou daňové doklady s DIČ, základem daně a DPH. <strong>Ceny v tomto nastavení jsou konečné ceny včetně DPH</strong> – zákazník platí přesně uvedenou částku a daň se z ní vypočte.</small></span></label>
     <div class="form-row">
+      <label>Sazba DPH (%) <input type="number" name="vat_rate" value="<?= e($v['vat_rate']) ?>" min="0" max="100" required></label>
       <label>Splatnost zálohové faktury (dní) <input type="number" name="invoice_due_days" value="<?= e($v['invoice_due_days']) ?>" min="0" max="90" required></label>
-      <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
     </div>
-    <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby. Doklady počítají s dodavatelem, který není plátcem DPH; jste-li plátce, nechte si podobu faktury upravit.</p>
-    <h2>Obchodní podmínky</h2>
+    <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
+    <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby; datem plnění je den přijetí platby. Zálohová faktura před platbou není daňovým dokladem. <?= $v['vat_payer'] === '1' ? 'Při ceně ' . money_czk(edition_price('standard')) . ' je základ ' . money_czk2(vat_split(edition_price('standard'), (int) $v['vat_rate'])['base']) . ' a DPH ' . money_czk2(vat_split(edition_price('standard'), (int) $v['vat_rate'])['vat']) . '.' : 'Neplátce nechává poznámku „Dodavatel není plátcem DPH.“' ?> Podobu dokladů si nechte potvrdit účetní.</p>
+    <h2 id="podminky">Obchodní podmínky</h2>
     <p class="hint">Výchozí text je návrh. Před otevřením registrace ho nechte projít právníkem. Formátování: řádek začínající ## je nadpis, **tučně**.</p>
+    <label class="check"><input type="checkbox" name="legal_checked"<?= $v['legal_checked'] === '1' ? ' checked' : '' ?>> <span>Obchodní podmínky a smlouvu o zpracování údajů jsme zkontrolovali <small>Texty níže jsou vzor; před spuštěním je nechte projít právníkem a upravte podle své situace.</small></span></label>
     <label>Obchodní podmínky <textarea name="terms" rows="12"><?= e($v['terms']) ?></textarea></label>
     <label>Smlouva o zpracování osobních údajů <textarea name="dpa" rows="12"><?= e($v['dpa']) ?></textarea></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>

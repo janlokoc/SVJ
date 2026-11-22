@@ -40,6 +40,7 @@ $benefits = [
 <section class="wrap lp-section" id="cenik">
   <h2 data-reveal>Kolik to stojí</h2>
   <?php $edView = 'landing'; $edCompact = true; require __DIR__ . '/_editions.php'; ?>
+  <?php if (vat_payer()): ?><p class="hint">Ceny jsou konečné, včetně DPH.</p><?php endif ?>
   <p class="lp-more"><a href="<?= url('/cenik') ?>">Podrobný ceník, limity a doplňky <?= icon('arrow') ?></a></p>
 </section>
 

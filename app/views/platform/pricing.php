@@ -3,7 +3,7 @@
   <h1>Ceník</h1>
   <p class="lead">Web společenství je zdarma pro každého a bez časového omezení. Platíte až ve chvíli, kdy Vám přestanou stačit limity nebo chcete funkce navíc – a každou placenou funkci si předtím na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušíte.</p>
   <?php $edView = 'landing'; require __DIR__ . '/_editions.php'; ?>
-  <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
+  <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.<?= vat_payer() ? ' Všechny ceny jsou konečné, včetně DPH.' : '' ?></p>
 
   <h3 class="lp-sub">Doplňky a služby</h3>
   <table class="table price-table"><tbody>

@@ -1,4 +1,5 @@
 <div class="wrap page">
+  <?php $todo = launch_checklist(); if ($todo): ?><div class="flash flash-info">Před spuštěním zbývá v nastavení doplnit <?= count($todo) ?> <?= count($todo) === 1 ? 'věc' : (count($todo) < 5 ? 'věci' : 'věcí') ?> (<?= e(mb_strtolower($todo[0][0])) ?><?= count($todo) > 1 ? ' a další' : '' ?>). <a href="<?= url('/nastaveni') ?>#spusteni">Zobrazit seznam</a></div><?php endif ?>
   <header class="page-head row"><h1>Společenství</h1><span class="actions"><form method="post" action="<?= url('/demo') ?>"<?= $hasDemo ? ' data-confirm="Ukázkový web smazat a založit znovu s čerstvými daty?"' : '' ?>><?= csrf_field() ?><button class="btn btn-ghost" type="submit"><?= $hasDemo ? 'Obnovit ukázkový web' : 'Založit ukázkový web' ?></button></form>
     <a class="btn" href="<?= url('/svj/nove') ?>">+ Nové společenství</a></span></header>
   <p class="lead">Každé společenství má vlastní adresu, vlastní oddělená data a vlastní správce. Celkem: <?= count($tenants) ?>.</p>

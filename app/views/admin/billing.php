@@ -74,6 +74,7 @@
   <div class="card" id="edice">
     <h2>Edice</h2>
     <?php $edView = 'admin'; require __DIR__ . '/../platform/_editions.php'; ?>
+    <?php if (vat_payer()): ?><p class="hint">Všechny ceny jsou konečné, včetně DPH. Po zaplacení dostanete daňový doklad.</p><?php endif ?>
   </div>
 
   <div class="card" id="funkce">

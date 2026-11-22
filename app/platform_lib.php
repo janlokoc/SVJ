@@ -381,7 +381,7 @@ const PLATFORM_DEFAULTS = [
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
-    'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
+    'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14', 'vat_payer' => '0', 'vat_rate' => '21', 'legal_checked' => '0',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
@@ -761,11 +761,58 @@ function operator(): array
     return ['name' => pset('op_name'), 'ico' => pset('op_ico'), 'dic' => pset('op_dic'), 'address' => pset('op_address'), 'register' => pset('op_register'), 'phone' => pset('op_phone'),
         'email' => pset('contact_email'), 'account' => pset('account'), 'iban' => (string) cz_iban(pset('account'))];
 }
+/** Je provozovatel plátcem DPH? Ceny v nastavení jsou pak konečné ceny včetně daně. */
+function vat_payer(): bool
+{
+    return pset('vat_payer') === '1';
+}
+/** Rozpad konečné částky na základ a daň (částka je včetně DPH). */
+function vat_split(int|float $total, int $rate): array
+{
+    $base = round($total / (1 + $rate / 100), 2);
+    return ['base' => $base, 'vat' => round($total - $base, 2), 'total' => (float) $total, 'rate' => $rate];
+}
+function money_czk2(float $amount): string
+{
+    return number_format($amount, 2, ',', "\u{a0}") . "\u{a0}Kč";
+}
+/**
+ * Co ještě chybí vyplnit, než službu pustíte mezi zákazníky: [co, proč, odkaz na část nastavení].
+ */
+function launch_checklist(): array
+{
+    $todo = [];
+    if (pset('op_name') === '' || pset('op_address') === '' || pset('op_ico') === '') {
+        $todo[] = ['Provozovatel: jméno nebo název, sídlo a IČO', 'Bez nich nejsou faktury ani obchodní podmínky úplné.', 'provozovatel'];
+    }
+    if (pset('op_register') === '') {
+        $todo[] = ['Zápis v rejstříku', 'Uvádí se na fakturách (např. „Fyzická osoba zapsaná v živnostenském rejstříku“).', 'provozovatel'];
+    }
+    if (vat_payer() && pset('op_dic') === '') {
+        $todo[] = ['DIČ', 'Plátce DPH ho musí mít na každém daňovém dokladu.', 'provozovatel'];
+    }
+    if (!cz_iban(pset('account'))) {
+        $todo[] = ['Číslo účtu pro platby', 'Bez něj se nevytvoří QR kódy a zákazníci nevědí, kam platit.', 'platby'];
+    }
+    if (pset('mail_from') === '') {
+        $todo[] = ['Odesílatel e-mailů služby', 'Bez něj neodcházejí potvrzení plateb, připomínky ani upozornění před smazáním webu.', 'kontakt'];
+    }
+    if (pset('contact_email') === '') {
+        $todo[] = ['Kontaktní e-mail', 'Chodí na něj objednávky převodu, žádosti o doménu a žádosti podle GDPR.', 'kontakt'];
+    }
+    if (pset('hosting_note') === '') {
+        $todo[] = ['Kde jsou data uložena', 'Patří do častých otázek a k zásadám ochrany údajů.', 'provozovatel'];
+    }
+    if (pset('legal_checked') !== '1') {
+        $todo[] = ['Kontrola obchodních podmínek a smlouvy o zpracování údajů', 'Texty jsou vzor. Po kontrole to potvrďte zaškrtnutím v části Obchodní podmínky.', 'podminky'];
+    }
+    return $todo;
+}
 /** Dodavatel a odběratel pro doklad: odběratelem je společenství s údaji ze svého webu. */
 function invoice_parties(array $t): array
 {
     $s = tenant_settings($t['slug']);
-    return ['supplier' => operator(), 'note' => pset('invoice_note'),
+    return ['supplier' => operator(), 'note' => pset('invoice_note'), 'vat' => ['payer' => pset('vat_payer') === '1', 'rate' => pset_int('vat_rate', 0, 100)],
         'customer' => ['name' => $s['site_full'] ?? $t['full'], 'address' => $s['address'] ?? $t['address'], 'ico' => $s['ico'] ?? '']];
 }
 /** Podklady pro tisk dokladu: u čekající platby zálohová faktura, u zaplacené faktura s údaji uloženými při vystavení. */
