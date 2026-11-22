@@ -192,6 +192,14 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
 
 // Ukázkový web je jen pro čtení: přihlašuje se tlačítkem a žádná změna se neuloží.
 $GLOBALS['DEMO'] = TENANT !== '' && !empty($tenantRow['demo']);
+// Ukázkový web nemá účty s heslem: místo přihlášení nabídne vstup jedním kliknutím jako obyvatel nebo jako správce.
+if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/zapomenute-heslo'], true) || str_starts_with($PATH, '/obnova-hesla/'))) {
+    if (user()) {
+        redirect(is_admin() ? '/admin' : '/');
+    }
+    render('demo_login', ['title' => 'Vstup do ukázky']);
+    exit;
+}
 if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
     if ($PATH === '/demo-prihlaseni') {
         $role = post('jako') === 'admin' ? 'admin' : 'resident';

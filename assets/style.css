@@ -939,3 +939,6 @@ body.lp .lp-section { padding-block: clamp(2rem, 1.2rem + 3vw, 3.5rem); }
 .plan-line { margin: 0 0 1rem; color: var(--muted); }
 .plan-line strong { color: var(--ink); }
 .board-back { text-align: center; margin: 1.5rem 0 0; font-size: .9rem; opacity: .7; }
+.demo-roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.demo-roles .card { display: flex; flex-direction: column; gap: .5rem; margin: 0; }
+.demo-roles .card p { flex: 1; }

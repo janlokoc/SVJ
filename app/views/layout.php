@@ -88,7 +88,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
           <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($u['name']) ?></strong><small><?= e(user_badge($u)) ?></small></span></a>
           <form method="post" action="<?= url('/odhlaseni') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Odhlásit</button></form>
         <?php else: ?>
-          <a class="btn btn-small" href="<?= url('/prihlaseni') ?>"><?= icon('lock') ?> Přihlásit se</a>
+          <a class="btn btn-small" href="<?= url('/prihlaseni') ?>"><?= icon('lock') ?> <?= !empty($GLOBALS['DEMO']) ? 'Vstoupit do ukázky' : 'Přihlásit se' ?></a>
         <?php endif ?>
       </div>
     </nav>
