@@ -406,6 +406,21 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
 - **Web jako aplikace**: na telefonu jde web „přidat na plochu“ a otevírat
   bez adresního řádku. Upozornění do telefonu zatím neposílá.
 
+## Zprávy mezi sousedy a funkce ve společenství
+
+- **Zprávy** (Pro obyvatele → Zprávy): soukromé rozhovory dvou přihlášených
+  lidí z téhož domu. Vidí je jen odesílatel a příjemce; v administraci se
+  nezobrazují. Na první nepřečtenou zprávu v rozhovoru přijde e-mail (bez
+  textu zprávy), pokud má příjemce zapnutá upozornění. Stránka rozhovoru
+  si nové zprávy sama dotahuje. Kdo zprávy od sousedů nechce, vypne je ve
+  svém účtu – výbor, kontrolní komise a správci mu psát mohou vždy.
+  Výbor může celou funkci schovat v Nastavení (Části webu).
+- **Funkce ve společenství:** u uživatele lze nastavit, zda je předseda,
+  místopředseda nebo člen výboru, předseda či člen kontrolní komise,
+  předseda společenství nebo správce domu. Funkce je vidět u jména
+  v kontaktech (oddíl „Kdo je kdo“), ve zprávách, v diskuzi i v hlavičce.
+  S oprávněním na webu nesouvisí – to určuje role Správce webu.
+
 ## AI pomocník (volitelný)
 
 U textu aktuality, hromadného e-mailu a odpovědi na závadu nabídne

@@ -102,7 +102,9 @@ $route('GET', '/kontakty', function () {
     foreach (all('SELECT * FROM contacts ORDER BY sort, id') as $c) {
         $groups[$c['grp']][] = $c;
     }
-    render('contacts', ['title' => 'Kontakty', 'groups' => $groups]);
+    $bodies = all("SELECT u.id, u.name, u.position, " . units_sql('u') . " units FROM users u WHERE u.active = 1 AND u.position <> '' ORDER BY u.name");
+    usort($bodies, fn($a, $b) => array_search($a['position'], array_keys(POSITIONS), true) <=> array_search($b['position'], array_keys(POSITIONS), true));
+    render('contacts', ['title' => 'Kontakty', 'groups' => $groups, 'bodies' => $bodies]);
 });
 
 $route('GET', '/prihlaseni', function () {

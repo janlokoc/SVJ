@@ -29,7 +29,11 @@
       <label>Vztah k domu
         <select name="kind"><?php foreach (KINDS as $k => $label): ?><option value="<?= $k ?>"<?= $u['kind'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
       </label>
+      <label>Funkce ve společenství
+        <select name="position"><?php foreach (POSITIONS as $k => $label): ?><option value="<?= $k ?>"<?= ($u['position'] ?? '') === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
+      </label>
     </div>
+    <p class="hint">Funkce je vidět u jména všude na webu (kontakty, zprávy, diskuze), aby obyvatelé věděli, kdo je ve výboru a kdo v kontrolní komisi. Na oprávnění nemá vliv – to určuje role.</p>
     <p class="hint">Zprávy určené vlastníkům (například pozvánky na shromáždění) se nájemníkům neposílají.</p>
     <label class="check"><input type="checkbox" name="email_notify"<?= $u['email_notify'] ? ' checked' : '' ?>> Posílat důležité zprávy výboru e-mailem</label>
     <label class="check"><input type="checkbox" name="active"<?= $u['active'] ? ' checked' : '' ?>> Účet je aktivní (může se přihlásit)</label>

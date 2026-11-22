@@ -11,6 +11,7 @@
       <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>" autocomplete="tel"></label>
       <p class="hint">Telefon vidí jen výbor – kvůli řešení závad a požadavků.</p>
       <label class="check"><input type="checkbox" name="email_notify"<?= $u['email_notify'] ? ' checked' : '' ?>> <span>Posílat mi důležité zprávy výboru e-mailem <small>Například pozvánky na shromáždění nebo oznámení o odstávkách.</small></span></label>
+      <?php if (feature_on('zpravy')): ?><label class="check"><input type="checkbox" name="chat_off"<?= !empty($u['chat_off']) ? ' checked' : '' ?>> <span>Nechci dostávat zprávy od sousedů <small>Výbor, kontrolní komise a správci webu Vám napsat mohou vždy; Vy můžete psát komukoli.</small></span></label><?php endif ?>
       <button class="btn" type="submit">Uložit údaje</button>
     </form>
     <form method="post" action="<?= url('/muj-ucet') ?>" class="card form">

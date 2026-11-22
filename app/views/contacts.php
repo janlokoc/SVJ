@@ -1,6 +1,24 @@
 <div class="wrap page">
   <header class="page-head"><h1>Kontakty</h1>
     <p class="lead">Správu domu zajišťuje výbor SVJ. IČ <?= e(setting('ico')) ?>, číslo účtu <?= e(setting('account')) ?>.</p></header>
+  <?php if (!empty($bodies)): $kk = array_filter($bodies, fn($b) => str_ends_with($b['position'], '_kk')); $board = array_filter($bodies, fn($b) => !str_ends_with($b['position'], '_kk')); ?>
+    <section class="contact-group" id="organy">
+      <h2>Kdo je kdo ve společenství</h2>
+      <?php foreach (['Výbor a vedení' => $board, 'Kontrolní komise' => $kk] as $bodyName => $members): if (!$members) { continue; } ?>
+      <h3 class="bodies-head"><?= e($bodyName) ?></h3>
+      <div class="contact-grid">
+        <?php foreach ($members as $b): ?>
+          <div class="contact">
+            <p class="eyebrow"><?= e(POSITIONS[$b['position']] ?? '') ?></p>
+            <h3><?= e($b['name']) ?></h3>
+            <?php if (user() && $b['units'] !== ''): ?><p class="contact-note">jednotka <?= e($b['units']) ?></p><?php endif ?>
+            <?php if (user() && feature_on('zpravy') && (int) $b['id'] !== (int) user()['id']): ?><a class="contact-line" href="<?= url('/zpravy/' . $b['id']) ?>"><?= icon('mail') ?> Napsat zprávu</a><?php endif ?>
+          </div>
+        <?php endforeach ?>
+      </div>
+      <?php endforeach ?>
+    </section>
+  <?php endif ?>
   <?php foreach (CONTACT_GROUPS as $k => $label): if (empty($groups[$k])) continue; ?>
     <section class="contact-group<?= $k === 'havarie' ? ' is-alert' : '' ?>" id="<?= $k ?>">
       <h2><?= $k === 'havarie' ? icon('alert') . ' ' : '' ?><?= $label ?></h2>

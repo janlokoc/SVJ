@@ -214,3 +214,39 @@ document.querySelectorAll('[data-back]').forEach((a) => a.addEventListener('clic
   if (window.history.length > 1 && document.referrer.startsWith(window.location.origin)) { e.preventDefault(); window.history.back(); }
 }));
 
+// Zprávy: stránka rozhovoru se sama ptá na nové zprávy a po načtení sjede na konec
+const chat = document.querySelector('#chat[data-chat-url]');
+if (chat) {
+  const bottom = document.querySelector('#konec');
+  if (bottom && !window.location.hash) bottom.scrollIntoView({ block: 'end' });
+  const poll = async () => {
+    if (document.hidden) return;
+    try {
+      const r = await fetch(chat.dataset.chatUrl + '?po=' + chat.dataset.chatLast, { headers: { Accept: 'application/json' } });
+      if (!r.ok) return;
+      const d = await r.json();
+      (d.messages || []).forEach((m) => {
+        if (chat.querySelector('[data-id="' + m.id + '"]')) return;
+        const empty = chat.querySelector('.chat-empty'); if (empty) empty.remove();
+        const li = document.createElement('li');
+        li.className = 'chat-msg' + (m.mine ? ' is-mine' : ''); li.dataset.id = m.id;
+        const bubble = document.createElement('div'); bubble.className = 'chat-bubble'; bubble.innerHTML = m.html;   // text je na serveru převedený na bezpečné HTML
+        const small = document.createElement('small'); small.textContent = m.time;
+        li.append(bubble, small); chat.append(li);
+        chat.dataset.chatLast = m.id;
+        li.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      });
+    } catch (e) { /* další pokus za chvíli */ }
+  };
+  window.setInterval(poll, 8000);
+  const area = document.querySelector('.chat-form textarea');
+  if (area) area.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) area.form.requestSubmit(); });
+}
+// Hledání v seznamu lidí
+document.querySelectorAll('[data-filter-list]').forEach((input) => input.addEventListener('input', () => {
+  const needle = input.value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  document.querySelectorAll(input.dataset.filterList + ' li').forEach((li) => {
+    li.hidden = needle !== '' && !li.textContent.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(needle);
+  });
+}));
+

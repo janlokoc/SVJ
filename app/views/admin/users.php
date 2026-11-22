@@ -20,7 +20,7 @@
     <tbody>
     <?php foreach ($users as $x): ?>
       <tr<?= $x['active'] ? '' : ' class="is-off"' ?>>
-        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?><?= $x['totp_enabled'] ? ' <span class="tag tag-lock">2FA</span>' : ($x['role'] === 'admin' && $x['active'] ? ' <span class="tag tag-pin">bez 2FA</span>' : '') ?><?= $x['password_hash'] === NO_PASSWORD ? ' <span class="tag tag-pin">čeká na přijetí pozvánky</span>' : '' ?><?= $x['inviter_name'] ? '<br><small>pozval(a) ' . e($x['inviter_name']) . '</small>' : '' ?></td>
+        <td data-label="Jméno"><a href="<?= url('/admin/uzivatele/' . $x['id']) ?>"><strong><?= e($x['name']) ?></strong></a><?= position_tag($x) ?><?= $x['active'] ? '' : ' <span class="tag">vypnutý</span>' ?><?= $x['totp_enabled'] ? ' <span class="tag tag-lock">2FA</span>' : ($x['role'] === 'admin' && $x['active'] ? ' <span class="tag tag-pin">bez 2FA</span>' : '') ?><?= $x['password_hash'] === NO_PASSWORD ? ' <span class="tag tag-pin">čeká na přijetí pozvánky</span>' : '' ?><?= $x['inviter_name'] ? '<br><small>pozval(a) ' . e($x['inviter_name']) . '</small>' : '' ?></td>
         <td data-label="E-mail"><?= e($x['email']) ?></td>
         <td data-label="Role"><?= ROLES[$x['role']] ?> · <?= mb_strtolower(KINDS[$x['kind']]) ?><?= $x['email_notify'] ? '' : ' <span class="tag">bez e-mailů</span>' ?></td>
         <td data-label="Jednotka"><?= e($x['unit_names'] ?? '') ?></td>

@@ -296,7 +296,7 @@ $route('GET', '/admin/uzivatele', function () {
 $userForm = function (int $id = 0) {
     $me = require_admin();
     $u = $id ? (one('SELECT * FROM users WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'kind' => 'owner', 'email_notify' => 1, 'phone' => '', 'active' => 1];
+        : ['id' => 0, 'name' => '', 'email' => '', 'role' => 'resident', 'kind' => 'owner', 'email_notify' => 1, 'phone' => '', 'active' => 1, 'position' => ''];
     $unitIds = $id ? user_unit_ids($id) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
@@ -305,6 +305,7 @@ $userForm = function (int $id = 0) {
             'role' => isset(ROLES[post('role')]) ? post('role') : 'resident',
             'phone' => post('phone'), 'active' => isset($_POST['active']) ? 1 : 0,
             'kind' => isset(KINDS[post('kind')]) ? post('kind') : 'owner', 'email_notify' => isset($_POST['email_notify']) ? 1 : 0,
+            'position' => isset(POSITIONS[post('position')]) ? post('position') : '',
         ]);
         $unitIds = array_map('intval', (array) ($_POST['units'] ?? []));
         if ($u['name'] === '') {
@@ -325,14 +326,14 @@ $userForm = function (int $id = 0) {
             $errors[] = 'Sami sobě nemůžete odebrat práva správce ani účet vypnout.';
         }
         if (!$errors) {
-            $args = [$u['name'], $u['email'], $u['role'], $u['phone'], $u['active'], $u['kind'], $u['email_notify']];
+            $args = [$u['name'], $u['email'], $u['role'], $u['phone'], $u['active'], $u['kind'], $u['email_notify'], $u['position']];
             if ($id) {
-                q('UPDATE users SET name = ?, email = ?, role = ?, phone = ?, active = ?, kind = ?, email_notify = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE users SET name = ?, email = ?, role = ?, phone = ?, active = ?, kind = ?, email_notify = ?, position = ? WHERE id = ?', [...$args, $id]);
                 $userId = $id;
                 flash('Uživatel byl uložen.');
             } else {
                 $pass = random_password();
-                q('INSERT INTO users (name, email, role, phone, active, kind, email_notify, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
+                q('INSERT INTO users (name, email, role, phone, active, kind, email_notify, position, password_hash, must_change_password) VALUES (?,?,?,?,?,?,?,?,?,1)', [...$args, password_hash($pass, PASSWORD_DEFAULT)]);
                 $userId = (int) db()->lastInsertId();
                 audit('user_created', $u['email'] . ' · ' . $u['role']);
                 $_SESSION['new_password'] = ['name' => $u['name'], 'email' => $u['email'], 'password' => $pass];

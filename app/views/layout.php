@@ -2,7 +2,7 @@
 $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
-$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
+$more = $u ? ['/zpravy' => 'Zprávy', '/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
 // Schované části webu z menu vypadnou.
 $hiddenPaths = [];
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
@@ -21,6 +21,7 @@ foreach ($planPublic as $pf => $pp) {
 }
 $nav = array_diff_key($nav, array_flip($hiddenPaths));
 $more = array_diff_key($more, array_flip($hiddenPaths), array_flip($planHidden));
+$chatUnread = $u && isset($more['/zpravy']) ? (int) val('SELECT COUNT(*) FROM messages WHERE to_id = ? AND read_at IS NULL', [$u['id']]) : 0;
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
     '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
@@ -76,8 +77,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
           <li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li>
         <?php endforeach ?>
         <?php if ($more): $moreActive = (bool) array_filter(array_keys($more), $active) || str_starts_with($path, '/terminy'); ?>
-          <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Pro obyvatele</summary>
-            <ul><?php foreach ($more as $href => $label): ?><li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li><?php endforeach ?></ul>
+          <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Pro obyvatele<?= $chatUnread ? ' <span class="nav-count" title="Nepřečtené zprávy">' . $chatUnread . '</span>' : '' ?></summary>
+            <ul><?php foreach ($more as $href => $label): ?><li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?><?= $href === '/zpravy' && $chatUnread ? ' <span class="nav-count">' . $chatUnread . '</span>' : '' ?></a></li><?php endforeach ?></ul>
           </details></li>
         <?php endif ?>
       </ul>

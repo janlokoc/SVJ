@@ -36,6 +36,7 @@ const FEATURES = [
     'ankety' => ['Ankety', ['/ankety'], ['/admin/ankety']],
     'platby' => ['Platby a zálohy', ['/platby'], ['/admin/platby']],
     'terminy' => ['Termíny', ['/terminy'], []],
+    'zpravy' => ['Zprávy mezi sousedy', ['/zpravy'], []],
     'odecty' => ['Odečty měřidel', ['/odecty'], ['/admin/odecty']],
     'rezervace' => ['Rezervace', ['/rezervace'], ['/admin/rezervace', '/admin/prostory']],
 ];
@@ -57,6 +58,9 @@ const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
 const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
 const NO_PASSWORD = '!'; // účet čeká na přijetí pozvánky, přihlásit se zatím nejde
 const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu'];
+/** Funkce ve společenství. Je vidět u jména všude na webu; s oprávněním na webu nesouvisí (to určuje role). */
+const POSITIONS = ['' => '– bez funkce –', 'predseda_svj' => 'Předseda společenství', 'predseda' => 'Předseda výboru', 'mistopredseda' => 'Místopředseda výboru', 'clen_vyboru' => 'Člen výboru',
+    'predseda_kk' => 'Předseda kontrolní komise', 'clen_kk' => 'Člen kontrolní komise', 'spravce_domu' => 'Správce domu'];
 
 // ---------- Databáze ----------
 
@@ -121,6 +125,7 @@ function db_mysql(string $tenant): PDO
         $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '6')");
         $pdo->commit();
         schema_v7($pdo, true);
+        schema_v8($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -144,7 +149,27 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 7) {
         schema_v7($pdo, true);
     }
+    if ($mysqlVersion < 8) {
+        schema_v8($pdo, true);
+    }
     return $pdo;
+}
+/** Osmá verze databáze: funkce ve společenství (výbor, kontrolní komise) a zprávy mezi účty. */
+function schema_v8(PDO $pdo, bool $mysql): void
+{
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $int = $mysql ? 'INT' : 'INTEGER';
+    foreach ([
+        'ALTER TABLE users ADD COLUMN position ' . ($mysql ? "VARCHAR(30) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''"),
+        "ALTER TABLE users ADD COLUMN chat_off $int NOT NULL DEFAULT 0",
+        'CREATE TABLE messages (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ", from_id $int NOT NULL, to_id $int NOT NULL, body TEXT NOT NULL, created_at "
+            . ($mysql ? 'VARCHAR(19) NOT NULL' : 'TEXT NOT NULL') . ', read_at ' . ($mysql ? 'VARCHAR(19) NULL' : 'TEXT') . ", FOREIGN KEY (from_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (to_id) REFERENCES users(id) ON DELETE CASCADE)$end",
+        'CREATE INDEX messages_to ON messages (to_id, read_at)',
+        'CREATE INDEX messages_pair ON messages (from_id, to_id)',
+    ] as $sql) {
+        $pdo->exec($sql);
+    }
+    $mysql ? $pdo->exec("UPDATE settings SET value = '8' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 8');
 }
 /** Sedmá verze databáze: ankety, úkoly výboru, dodavatelé, platby na jednotku a dodavatel u závady. */
 function schema_v7(PDO $pdo, bool $mysql): void
@@ -210,6 +235,7 @@ function open_database(string $storage, string $tenant): PDO
         $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
         schema_v7($pdo, false);
+        schema_v8($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -318,6 +344,9 @@ SQL);
     }
     if ($version < 7) {
         schema_v7($pdo, false);
+    }
+    if ($version < 8) {
+        schema_v8($pdo, false);
     }
     return $pdo;
 }
@@ -771,7 +800,25 @@ function author_label(?array $row): string
     if (!$row || empty($row['author_name'])) {
         return 'Bývalý uživatel';
     }
-    return $row['author_name'] . (!empty($row['author_units']) ? ' (' . $row['author_units'] . ')' : '');
+    $position = position_label(['id' => (int) ($row['author_id'] ?? $row['user_id'] ?? 0)]);
+    return $row['author_name'] . (!empty($row['author_units']) ? ' (' . $row['author_units'] . ')' : '') . ($position !== '' ? ' · ' . mb_strtolower($position) : '');
+}
+/** Funkce člověka ve společenství („Předseda výboru“), nebo prázdný text. Stačí řádek s id; funkce všech se načtou jednou. */
+function position_label(array $user): string
+{
+    static $map = null;
+    if (isset($user['position'])) {
+        return $user['position'] !== '' ? (POSITIONS[$user['position']] ?? '') : '';
+    }
+    $map ??= array_column(all("SELECT id, position FROM users WHERE position <> ''"), 'position', 'id');
+    $p = $map[(int) ($user['id'] ?? 0)] ?? '';
+    return $p !== '' ? (POSITIONS[$p] ?? '') : '';
+}
+/** Štítek s funkcí za jménem (HTML), nebo nic. */
+function position_tag(array $user): string
+{
+    $label = position_label($user);
+    return $label !== '' ? ' <span class="tag tag-position">' . e($label) . '</span>' : '';
 }
 
 // ---------- E-maily ----------
@@ -1398,7 +1445,8 @@ function send_password_reset(array $user): bool
 function user_badge(array $u): string
 {
     $units = (string) val('SELECT ' . units_sql('u') . ' FROM users u WHERE u.id = ?', [$u['id']]);
-    return mb_strtolower(KINDS[$u['kind']] ?? '') . ($units !== '' ? ' · ' . $units : '');
+    $position = position_label($u);
+    return ($position !== '' ? mb_strtolower($position) : mb_strtolower(KINDS[$u['kind']] ?? '')) . ($units !== '' ? ' · ' . $units : '');
 }
 
 // Části aplikace, které knihovna potřebuje vždy (i v nástrojích z příkazové řádky).

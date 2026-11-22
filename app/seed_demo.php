@@ -210,4 +210,19 @@ function seed_demo_more(PDO $pdo): void
     if ($ticket) {
         $pdo->prepare('UPDATE tickets SET supplier_id = ? WHERE id = ?')->execute([$sup[0], $ticket]);
     }
+
+    // Kdo je kdo: výbor a kontrolní komise
+    foreach ([0 => 'predseda', 4 => 'mistopredseda', 3 => 'clen_vyboru', 6 => 'predseda_kk', 7 => 'clen_kk'] as $i => $position) {
+        $pdo->prepare('UPDATE users SET position = ? WHERE id = ?')->execute([$position, $uid[$i]]);
+    }
+    // Zprávy mezi sousedy: rozhovor obyvatele z ukázky s předsedkyní a jedna nepřečtená zpráva od sousedky
+    foreach ([
+        [1, 0, 'Dobrý den, paní Výborová, v kočárkárně už týden nesvítí světlo. Mám to zadat jako závadu, nebo to stačí takhle?', -3, '18:12:00', true],
+        [0, 1, 'Dobrý den, děkuji za upozornění. Zadejte to prosím jako závadu, ať se to neztratí – elektrikář přijde ve čtvrtek kvůli hromosvodu a vezme to při jednom.', -3, '19:40:00', true],
+        [1, 0, 'Zadáno, děkuji.', -3, '19:55:00', true],
+        [0, 1, 'Opraveno, vyměnili zářivku i startér. Kdyby to zlobilo dál, dejte vědět.', -1, '16:05:00', true],
+        [2, 1, 'Petře, půjčíš nám v sobotu vozík na přívěs? Vezeme starou skříň do sběrného dvora.', 0, '08:20:00', false],
+    ] as [$from, $to, $body, $d, $time, $read]) {
+        $ins('messages', ['from_id' => $uid[$from], 'to_id' => $uid[$to], 'body' => $body, 'created_at' => $at($d, $time), 'read_at' => $read ? $at($d, '23:00:00') : null]);
+    }
 }

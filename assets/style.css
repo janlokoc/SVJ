@@ -959,3 +959,21 @@ input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-an
 .space-head h2 { margin: 0; font-size: 1.35rem; }
 .space-head h2 a { text-decoration: none; color: inherit; }
 .space-head form { margin: 0; }
+
+/* Funkce ve společenství a zprávy mezi sousedy */
+.tag-position { background: var(--soft); color: var(--primary); font-weight: 700; }
+.bodies-head { font-size: 1.05rem; margin: 1.2rem 0 .6rem; color: var(--muted); }
+.chat-list a { grid-template-columns: 1fr auto; }
+.chat-list a.is-unread { border-color: var(--primary); }
+.chat-snippet { grid-column: 1 / -1; color: var(--muted); font-size: .93rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.count-new { background: var(--accent); color: #fff; }
+.chat-filter { display: grid; gap: .35rem; font-weight: 600; margin-bottom: 1rem; }
+.chat { list-style: none; padding: 0; margin: 0 0 1.2rem; display: grid; gap: .6rem; }
+.chat-msg { display: grid; justify-items: start; gap: .15rem; }
+.chat-msg.is-mine { justify-items: end; }
+.chat-bubble { max-width: min(100%, 34rem); padding: .6rem .9rem; border-radius: 14px 14px 14px 4px; background: var(--surface); border: 1px solid var(--line); overflow-wrap: anywhere; }
+.chat-msg.is-mine .chat-bubble { border-radius: 14px 14px 4px 14px; background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.chat-msg small { color: var(--muted); font-size: .8rem; }
+.chat-empty { color: var(--muted); padding: 1.5rem; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
+.chat-head h1 { margin-bottom: .2rem; }
+.nav-count { display: inline-block; min-width: 1.3em; padding: 0 .4em; margin-left: .3em; border-radius: 999px; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; text-align: center; line-height: 1.5; }
