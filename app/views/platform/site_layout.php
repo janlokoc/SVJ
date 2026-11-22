@@ -21,10 +21,9 @@
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hlavni-menu"><?= icon('menu') ?><span>Menu</span></button>
     <nav class="site-nav" id="hlavni-menu" aria-label="Hlavní menu">
       <ul>
-        <li><a href="<?= url('/') ?>#funkce">Čím se lišíme</a></li>
-        <li><a href="<?= url('/') ?>#vzhledy">Šablony</a></li>
-        <li><a href="<?= url('/') ?>#vse">Funkce</a></li>
-        <li><a href="<?= url('/') ?>#cenik">Ceník</a></li>
+        <li><a href="<?= url('/funkce') ?>">Funkce</a></li>
+        <li><a href="<?= url('/funkce') ?>#vzhledy">Šablony</a></li>
+        <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
         <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
       </ul>
       <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit problém nebo nápad"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
@@ -42,7 +41,7 @@
       <?php $op = operator(); if ($op['name'] !== ''): ?><p><?= e($op['name']) ?><?= $op['address'] !== '' ? ', ' . e($op['address']) : '' ?><?= $op['ico'] !== '' ? '<br>IČO ' . e($op['ico']) : '' ?><?= $op['phone'] !== '' ? ' · ' . e($op['phone']) : '' ?></p><?php endif ?>
     </div>
     <ul class="footer-links">
-      <li><a href="<?= url('/') ?>#cenik">Ceník</a></li>
+      <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
       <li><a href="<?= url('/registrace') ?>">Založit web</a></li>
       <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
       <li><a href="<?= url('/zpracovani-udaju') ?>">Zpracování osobních údajů</a></li>

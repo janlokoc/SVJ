@@ -24,6 +24,10 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }
+if ($METHOD === 'GET' && ($PATH === '/funkce' || $PATH === '/cenik')) {
+    render($PATH === '/funkce' ? 'platform/features' : 'platform/pricing', ['title' => $PATH === '/funkce' ? 'Co web umí' : 'Ceník', 'open' => pset('signup_open') === '1', 'demo' => demo_tenant()]);
+    exit;
+}
 // Dotaz webového serveru (např. Caddy, „on-demand TLS“): smí pro tuto doménu vystavit certifikát? Ano jen pro zprovozněné domény společenství.
 if ($PATH === '/domena-povolena') {
     $d = domain_clean((string) ($_GET['domain'] ?? ''));

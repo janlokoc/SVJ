@@ -1,110 +1,59 @@
 <?php
 $cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma ' . icon('arrow') . '</a>' : '';
-$ai = ai_configured();
-// Čím se web liší: věci, které výbor jinde skládá z několika nástrojů.
-$unique = [
-    ['Skutečný web domu, ne jen přihlašovací portál', 'Veřejná část s aktualitami, dokumenty a kontakty, kterou najde i vyhledávač. Pět šablon, pět barevných variant, vlastní logo a na přání vlastní doména.'],
-    ['Shromáždění bez počítání na papíře', 'Vlastníci potvrdí účast na webu a Vy předem vidíte, zda bude shromáždění usnášeníschopné. Plná moc a prezenční listina k tisku, po schůzi se zápis sestaví sám z účasti a hlasování.'],
-    ['E-maily, u kterých víte, kdo je četl', 'Pozvánku rozešlete jedním kliknutím a u každého vlastníka vidíte, zda ji otevřel a zda se proklikl na web.'],
-    ['Platby s QR kódem', 'Výbor nahraje z účetnictví zálohy a stav účtu. Každý vlastník vidí jen svou jednotku a nedoplatek uhradí načtením QR kódu; dlužníkům pošlete upomínku jedním tlačítkem.'],
-    ['Pět jazyků pro sousedy', 'Čeština, slovenština, angličtina, ukrajinština a vietnamština. Každý obyvatel si jazyk přepne sám.'],
-    $ai ? ['AI pomocník v ceně', 'Z pár poznámek napíše oznámení nebo e-mail vlastníkům, uhladí text a navrhne odpověď na nahlášenou závadu. Text vždy schvaluje výbor.']
-        : ['Vývěska u vchodu', 'Veřejná stránka s oznámeními, termíny a havarijními čísly. Cedulku s QR kódem vytisknete ke vchodu, nebo stránku pustíte na obrazovce v hale.'],
-];
-$groups = [
-    'Komunikace' => ['Aktuality a dokumenty – veřejné, pro přihlášené, nebo jen pro jednu jednotku', 'Hlasování per rollam podle spoluvlastnických podílů', 'Ankety pro rychlé zjištění názoru', 'Hlášení závad se stavem a přiřazeným dodavatelem', 'Diskuze sousedů', 'Termíny do kalendáře v telefonu'],
-    'Dům a lidé' => ['Jednotky, vlastníci a podíly s importem z katastru', 'Pozvánky pro členy domácnosti a nájemníky', 'Evidence klíčů a čipů', 'Samoodečty měřidel', 'Rezervace společných prostor', 'Základní dokumenty: stanovy, domovní řád a další na jednom místě'],
-    'Práce výboru' => ['Úkoly a usnesení – kdo co zařídí a do kdy', 'Kalendář revizí s upozorněním předem', 'Evidence dodavatelů', 'Zápis ze shromáždění jedním kliknutím', 'Veřejná vývěska s QR kódem ke vchodu', 'Převod obsahu ze stávajícího webu'],
-    'Bezpečnost' => ['Oddělená databáze a soubory každého společenství', 'Dvoufázové přihlášení', 'Záznamy o práci správců, které nejdou smazat', 'Úplná záloha ke stažení kdykoli', 'Web jde na telefonu přidat na plochu', 'Tlačítko Nahlásit na každé stránce'],
-];
 $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'noviny' => 'cihla', 'vlidna' => 'svestka'];
+$benefits = [
+    ['Web domu i část pro sousedy', 'Aktuality, dokumenty a kontakty pro veřejnost; závady, hlasování a termíny pro přihlášené obyvatele.'],
+    ['Shromáždění a hlasování bez papírů', 'Vlastníci potvrdí účast a hlasují na webu. Výsledky i zápis se sestaví samy.'],
+    ['Hotovo za pět minut', 'Zvolíte adresu a vzhled, vytvoříte si účet a můžete zvát sousedy. Nic se neinstaluje.'],
+];
 ?>
-<section class="hero lp-hero">
+<section class="hero lp-hero lp-hero-simple">
   <div class="wrap hero-grid">
     <div class="hero-text">
-      <p class="eyebrow">Pro výbory a správce SVJ</p>
-      <h1>Web Vašeho SVJ <span class="h1-sub">za pět minut</span></h1>
-      <p class="lead">Vlastní web domu s částí pro obyvatele a administrací pro výbor. Vyberete šablonu a barvy, zvolíte adresu, vytvoříte si účet – a web běží.</p>
-      <ul class="lp-points"><li>25 kombinací vzhledu</li><li>shromáždění, hlasování, platby</li><li>5 jazyků</li><?= $ai ? '<li>AI pomocník v ceně</li>' : '' ?></ul>
-      <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout ukázkový web</a><?php else: ?><a class="btn btn-big btn-ghost" href="#cenik">Ceník</a><?php endif ?></div>
-      <?php if ($open): ?><p class="lp-note">Základní web je zdarma napořád, bez platební karty. Placené funkce si každou na <?= PLAN_TRIAL_DAYS ?> dní vyzkoušíte.</p>
+      <h1>Web Vašeho SVJ <span class="h1-sub">zdarma a za pět minut</span></h1>
+      <p class="lead">Vlastní web domu s částí pro obyvatele a administrací pro výbor.</p>
+      <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout ukázku</a><?php endif ?></div>
+      <?php if ($open): ?><p class="lp-note">Bez platební karty a bez časového omezení.</p>
       <?php else: ?><p class="lp-note">Nová společenství teď zakládáme po domluvě<?= pset('contact_email') !== '' ? ' – napište na ' . e(pset('contact_email')) : '' ?>.</p><?php endif ?>
     </div>
-    <div class="hero-side lp-stack">
-      <?php $look = 'les'; $miniName = 'Zahradní 12'; require __DIR__ . '/_mini.php'; $look = 'more'; $miniName = 'Na Vyhlídce 8'; require __DIR__ . '/_mini.php'; ?>
+    <div class="hero-side">
+      <?php $look = 'les'; $miniName = 'Zahradní 12'; require __DIR__ . '/_mini.php'; ?>
     </div>
   </div>
 </section>
 
 <section class="wrap lp-section" id="funkce">
-  <p class="eyebrow">Na čem si zakládáme</p>
-  <h2>Šest věcí, které tu máte pohromadě</h2>
-  <ol class="lp-unique">
-    <?php foreach ($unique as [$h, $p]): ?><li><h3><?= e($h) ?></h3><p><?= e($p) ?></p></li><?php endforeach ?>
-  </ol>
+  <ul class="lp-benefits">
+    <?php foreach ($benefits as [$h, $p]): ?><li><h2><?= e($h) ?></h2><p><?= e($p) ?></p></li><?php endforeach ?>
+  </ul>
+  <p class="lp-more"><a href="<?= url('/funkce') ?>">Všechny funkce <?= icon('arrow') ?></a></p>
 </section>
 
-<section class="lp-band" id="vzhledy"><div class="wrap lp-section">
-  <p class="eyebrow">Šablony a barvy</p>
+<section class="wrap lp-section" id="vzhledy">
   <h2>Pět šablon, každá v pěti barvách</h2>
-  <p class="lead">Klasická, moderní, věcná, novinová nebo vlídná. Zkuste si přepnout barvy – a ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga.</p>
-  <form class="lp-style-form">
-    <div class="look-picker" role="radiogroup" aria-label="Barvy náhledů">
-      <?php foreach (LOOKS as $k => $label): ?><label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e(explode(' – ', $label)[0]) ?></span></label><?php endforeach ?>
-    </div>
-    <div class="lp-looks look-cards">
-      <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
-    </div>
-  </form>
-  <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout si hotový web v ukázce <?= icon('arrow') ?></a></div><?php endif ?>
-</div></section>
-
-<section class="wrap lp-section" id="vse">
-  <h2>A všechno ostatní, co výbor potřebuje</h2>
-  <div class="lp-groups">
-    <?php foreach ($groups as $name => $items): ?><div><h3><?= e($name) ?></h3><ul class="lp-check"><?php foreach ($items as $it): ?><li><?= e($it) ?></li><?php endforeach ?></ul></div><?php endforeach ?>
+  <div class="lp-looks look-cards lp-looks-plain">
+    <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong></figcaption></figure><?php endforeach ?>
   </div>
 </section>
 
-<section class="lp-band lp-band-soft"><div class="wrap lp-section">
-  <h2>Jak začít</h2>
-  <ol class="lp-steps">
-    <li><strong>Zvolte název a adresu</strong><span>Například <code><?= e(tenant_address('zahradni')) ?></code>.</span></li>
-    <li><strong>Vyberte šablonu a barvy</strong><span>25 kombinací; kdykoli je změníte a nahrajete vlastní logo.</span></li>
-    <li><strong>Vytvořte si účet správce</strong><span>Hned potom jste v administraci a můžete zvát vlastníky.</span></li>
-  </ol>
-  <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Nejdřív si prohlédnout ukázku</a><?php endif ?></div>
-</div></section>
+<section class="wrap lp-section" id="cenik">
+  <h2>Kolik to stojí</h2>
+  <?php $edView = 'landing'; $edCompact = true; require __DIR__ . '/_editions.php'; ?>
+  <p class="lp-more"><a href="<?= url('/cenik') ?>">Podrobný ceník, limity a doplňky <?= icon('arrow') ?></a></p>
+</section>
 
-<section class="lp-band" id="cenik"><div class="wrap lp-section">
-  <h2>Ceník</h2>
-  <p class="lead">Web společenství je zdarma pro každého a bez časového omezení. Platíte až ve chvíli, kdy Vám přestanou stačit limity nebo chcete funkce navíc – a každou placenou funkci si předtím na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušíte.</p>
-  <?php $edView = 'landing'; require __DIR__ . '/_editions.php'; ?>
-  <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
-
-  <h3 class="lp-sub">Doplňky a služby</h3>
-  <table class="table price-table"><tbody>
-    <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši. Od edice Standard, v Premium v ceně.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
-    <tr><td><strong>Převod obsahu ze starého webu</strong><br><small class="muted">Aktuality, dokumenty, kontakty a texty přeneseme za Vás. Objednává se v administraci, v kterékoli edici; hotovo do 5 pracovních dnů od platby.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_migration', 0, 1000000)) ?> jednorázově</strong></td></tr>
-    <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'převod obsahu') || str_contains(mb_strtolower($line), 'vlastní doména')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
-      <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
-    <?php endforeach ?>
-  </tbody></table>
-
-  <h3 class="lp-sub" id="pripravujeme">Připravujeme</h3>
-  <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>
-  <ul class="planned">
-    <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
-    <li><a href="<?= url('/pripravujeme/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
-      <span class="planned-desc"><?= e($desc) ?></span>
-      <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci →</span></span></a></li>
-    <?php endforeach ?>
-  </ul>
-</div></section>
+<section class="wrap lp-section narrow" id="otazky">
+  <h2>Časté otázky</h2>
+  <details class="lp-faq"><summary>Je web opravdu zdarma?</summary><p>Ano. Edice Zdarma nemá časové omezení a nechceme po Vás platební kartu. Má limity (počet účtů, správců a hromadných e-mailů) a v patičce odkaz na službu. Když limit vyčerpáte, web běží dál.</p></details>
+  <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
+  <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. Správce si kdykoli stáhne úplnou zálohu webu včetně dokumentů.</p></details>
+  <p class="lp-more"><a href="<?= url('/cenik') ?>#otazky">Další otázky k ceně a placení <?= icon('arrow') ?></a></p>
+  <div class="actions lp-final"><?= $cta() ?></div>
+</section>
 
 <?php $op = operator(); if ($op['name'] !== ''): ?>
-<section class="wrap lp-section" id="provozovatel">
-  <h2>Kdo službu provozuje</h2>
+<section class="wrap lp-section narrow" id="provozovatel">
+  <h2 class="lp-small-head">Kdo službu provozuje</h2>
   <div class="lp-operator">
     <p><strong><?= e($op['name']) ?></strong><br><?= e($op['address']) ?><?= $op['ico'] !== '' ? '<br>IČO ' . e($op['ico']) : '' ?><?= $op['register'] !== '' ? '<br><small class="muted">' . e($op['register']) . '</small>' : '' ?></p>
     <p><?= $op['email'] !== '' ? '<a href="mailto:' . e($op['email']) . '">' . e($op['email']) . '</a><br>' : '' ?><?= $op['phone'] !== '' ? e($op['phone']) . '<br>' : '' ?>
@@ -113,15 +62,3 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 </section>
 <?php endif ?>
 
-<section class="wrap lp-section narrow" id="otazky">
-  <h2>Časté otázky</h2>
-  <details class="lp-faq"><summary>Je web opravdu zdarma?</summary><p>Ano. Edice Zdarma nemá časové omezení a nechceme po Vás platební kartu. Má limity (počet účtů, správců a hromadných e-mailů) a v patičce odkaz na službu. Když limit vyčerpáte, web běží dál.</p></details>
-  <details class="lp-faq"><summary>Jak funguje zkoušení placených funkcí?</summary><p>Každou funkci z vyšší edice si v administraci jedním kliknutím zapnete na <?= PLAN_TRIAL_DAYS ?> dní. Po skončení zkoušky zůstane vše, co jste zapsali, uložené a viditelné; měnit to půjde, až přejdete na edici, která funkci obsahuje.</p></details>
-  <details class="lp-faq"><summary>Co když placenou edici neprodloužíme?</summary><p>Web po <?= pset_int('grace_days', 0, 365) ?> dnech přejde zpět na edici Zdarma. Nic se nemaže a nepozastavuje; účty nad limit fungují dál, jen nejde přidávat nové.</p></details>
-  <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. V administraci najdete zálohovou fakturu s QR kódem; po připsání platby vystavíme fakturu. Platba kartou zatím není k dispozici.</p></details>
-  <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
-  <?php if (pset('hosting_note') !== ''): ?><details class="lp-faq"><summary>Kde jsou data uložena?</summary><p><?= e(pset('hosting_note')) ?></p></details><?php endif ?>
-  <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. Správce si kdykoli stáhne úplnou zálohu webu včetně dokumentů – i po skončení předplatného.</p></details>
-  <details class="lp-faq"><summary>Můžeme mít vlastní doménu?</summary><p>Ano, web může běžet i na Vaší doméně. Nastavení je v ceníku jako samostatná položka.</p></details>
-  <div class="actions lp-final"><?= $cta() ?></div>
-</section>

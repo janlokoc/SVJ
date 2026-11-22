@@ -6,21 +6,30 @@ $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jedna šablona vzhledu, 5 barev', 'V patičce odkaz na službu'],
     'standard' => ['Vše z edice Zdarma', 'Hlasování bez omezení, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
     'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Vlastní doména a vlastní certifikát v ceně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
-]; ?>
-<div class="editions">
+];
+$edCompact = !empty($edCompact);
+if ($edCompact) {
+    $n = fn(string $ed, string $k, string $one, string $many) => ($v = $lim($ed, $k)) ? 'až ' . number_format($v, 0, ',', "\u{a0}") . ' ' . ($v === 1 ? $one : $many) : 'bez omezení';
+    $edExtra = [
+        'free' => ['Veřejný web a část pro obyvatele', 'Účty obyvatel: ' . $n('free', 'users', 'účet', 'účtů'), 'Jedna šablona, 5 barev'],
+        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Účty obyvatel: ' . $n('standard', 'users', 'účet', 'účtů'), 'Všech 5 šablon'],
+        'premium' => ['Platby na jednotku, rezervace, jazyky', 'Účty obyvatel: ' . $n('premium', 'users', 'účet', 'účtů'), 'Vlastní doména v ceně'],
+    ];
+} ?>
+<div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
   <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
     <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
-    <p class="muted"><?= e($edNotes[$ek]) ?></p>
+    <?php if (!$edCompact): ?><p class="muted"><?= e($edNotes[$ek]) ?></p>
     <ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
       <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
       <?php endforeach ?>
-    </ul>
+    </ul><?php endif ?>
     <ul class="lp-check"><?php foreach ($edExtra[$ek] as $line): ?><li><?= e($line) ?></li><?php endforeach ?></ul>
     <?php if ($edView === 'landing'): ?>
-      <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : 'Začít zdarma, přejít později' ?></a>
+      <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : ($edCompact ? 'Začít zdarma' : 'Začít zdarma, přejít později') ?></a>
     <?php elseif ($ek !== 'free' && !empty($t['billing'])): ?>
       <form method="post" action="<?= url('/admin/predplatne/edice') ?>"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
         <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
