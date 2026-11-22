@@ -42,7 +42,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
+const PLATFORM_PATHS = ['zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -127,6 +127,10 @@ SQL);
     // Placený doplněk AI Plus.
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 5) {
         $pdo->exec("ALTER TABLE tenants ADD COLUMN ai_until TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 5;");
+    }
+    // Zájem o připravované funkce.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 6) {
+        $pdo->exec("CREATE TABLE feature_interest (id INTEGER PRIMARY KEY AUTOINCREMENT, feature TEXT NOT NULL, tenant TEXT NOT NULL DEFAULT '', contact TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 6;");
     }
     return $pdo;
 }
@@ -297,7 +301,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'ai_free_limit' => '30', 'ai_plus_limit' => '300', 'price_ai' => '990', 'ai_model' => '', 'hosting_note' => '', 'trial_days' => '30', 'grace_days' => '14',
-    'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
+    'period' => 'year', 'price_first' => '1490', 'price_next' => '2390',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
@@ -858,4 +862,42 @@ function cert_reminders(): void
             . ($c['days'] < 0 ? 'už neplatí' : 'platí jen do ' . cz_date($c['valid_to'])) . ".\nNový nahrajte po přihlášení v části Předplatné: " . tenant_url(['custom_domain' => ''] + $t, '/admin/predplatne')
             . "\n\nBez platného certifikátu budou prohlížeče návštěvníky před webem varovat.");
     }
+}
+
+// ---------- Připravované funkce a zájem o ně ----------
+
+/** klíč → [název, popis, předpokládaná cena nebo ''] – funkce, které ještě nejsou hotové; zájem o ně se sbírá tlačítkem. */
+const PLANNED_FEATURES = [
+    'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'doplněk'],
+    'ai-asistent' => ['AI asistent pro obyvatele', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – kdykoli, i v noci.', 'doplněk'],
+    'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'podle počtu zpráv'],
+    'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk'],
+    'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'doplněk'],
+    'push' => ['Upozornění do telefonu', 'Nové oznámení nebo připomenutí hlasování přímo na displej, bez e-mailu.', 'v ceně'],
+    'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'za hlasování'],
+    'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'doplněk'],
+];
+/** Zapíše zájem; od jednoho společenství (nebo z jedné adresy) se každá funkce počítá jednou. Vrací, zda šlo o nový hlas. */
+function interest_add(string $feature, string $tenant, string $contact): bool
+{
+    if (!isset(PLANNED_FEATURES[$feature])) {
+        return false;
+    }
+    $dup = $tenant !== '' ? pq('SELECT 1 FROM feature_interest WHERE feature = ? AND tenant = ?', [$feature, $tenant])->fetchColumn()
+        : pq("SELECT 1 FROM feature_interest WHERE feature = ? AND tenant = '' AND ip = ? AND at >= ?", [$feature, client_ip(), date('Y-m-d H:i:s', time() - 30 * 86400)])->fetchColumn();
+    if ($dup) {
+        return false;
+    }
+    pq('INSERT INTO feature_interest (feature, tenant, contact, at, ip) VALUES (?,?,?,?,?)', [$feature, $tenant, mb_substr($contact, 0, 190), date('Y-m-d H:i:s'), client_ip()]);
+    return true;
+}
+function interest_counts(): array
+{
+    $out = array_fill_keys(array_keys(PLANNED_FEATURES), ['tenants' => 0, 'visitors' => 0]);
+    foreach (pq("SELECT feature, SUM(tenant <> '') AS tenants, SUM(tenant = '') AS visitors FROM feature_interest GROUP BY feature")->fetchAll() as $r) {
+        if (isset($out[$r['feature']])) {
+            $out[$r['feature']] = ['tenants' => (int) $r['tenants'], 'visitors' => (int) $r['visitors']];
+        }
+    }
+    return $out;
 }

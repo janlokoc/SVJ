@@ -108,6 +108,18 @@
   </div>
   <?php endif ?>
 
+  <div class="card" id="pripravujeme">
+    <h2>Připravujeme</h2>
+    <p class="muted">Tyto funkce ještě nejsou hotové. Dejte nám vědět, o které máte zájem – podle toho rozhodujeme, co udělat dřív. K ničemu se tím nezavazujete.</p>
+    <ul class="planned">
+      <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
+      <li><div><strong><?= e($name) ?></strong> <span class="tag">již brzy</span><p><?= e($desc) ?></p></div>
+        <?php if (in_array($key, $interested, true)): ?><span class="status status-done">zájem zaznamenán</span>
+        <?php else: ?><form method="post" action="<?= url('/admin/predplatne/zajem') ?>"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($key) ?>"><button class="btn btn-small btn-ghost" type="submit">Mám zájem</button></form><?php endif ?></li>
+      <?php endforeach ?>
+    </ul>
+  </div>
+
   <div class="card card-soft">
     <h2>Ceník</h2>
     <ul class="price-rows">

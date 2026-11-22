@@ -387,6 +387,11 @@ if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
     report_admin_page('/hlaseni', substr($PATH, 8), $METHOD, $super['email']);
     exit;
 }
+if ($PATH === '/zajem') {
+    render('platform/interest', ['title' => 'Zájem o funkce', 'counts' => interest_counts(),
+        'rows' => pq("SELECT i.*, t.name AS tenant_name FROM feature_interest i LEFT JOIN tenants t ON t.slug = i.tenant ORDER BY i.id DESC LIMIT 300")->fetchAll()]);
+    exit;
+}
 if ($PATH === '/zaznamy') {
     render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices ORDER BY id DESC LIMIT 200')->fetchAll()]);

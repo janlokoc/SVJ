@@ -261,7 +261,7 @@ automatické vystavování (viz výše).
 - Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →
   účet správce. Web hned běží ve zkušební době (výchozí 30 dní).
 - V konzoli v části **Nastavení služby** se nastavují ceny (výchozí
-  999 Kč v prvním roce, potom 1 499 Kč), zda se platí měsíčně nebo
+  1 490 Kč v prvním roce, potom 2 390 Kč), zda se platí měsíčně nebo
   ročně, délka zkušební doby, lhůta po splatnosti, číslo účtu, ceník
   podpory a úprav, kontakt a odesílatel e-mailů. Registraci lze vypnout.
   Výchozí je roční platba.
@@ -404,6 +404,17 @@ s placeným doplňkem **AI Plus** (výchozí 990 Kč ročně), který si správc
 společenství objedná v Předplatném stejně jako vlastní doménu. V seznamu
 společenství je vidět, kolikrát který web pomocníka tento měsíc použil.
 Tamtéž lze zvolit model.
+
+U termínu typu shromáždění umí pomocník napsat část zápisu „Průběh
+jednání“ z poznámek zapisovatele nebo z nahraného přepisu schůze (.txt,
+.docx, .vtt, .srt – třeba z Teams, Google Meet nebo diktafonu v telefonu;
+soubor .docx vyžaduje rozšíření PHP zip). Přepis se neukládá. Zvukovou
+nahrávku zpracovat nelze – Claude API zvuk nepřijímá.
+
+Ceník na úvodní stránce má část **Připravujeme** s tlačítkem „Mám zájem“
+(stejná je v Předplatném). Počty zájemců a kontakty jsou v konzoli pod
+**Zájem o funkce**; seznam funkcí je v `PLANNED_FEATURES`
+v `app/platform_lib.php`.
 
 Text, který správce pomocníkovi zadá, se odesílá ke zpracování společnosti
 Anthropic – nic se neposílá samo a správce je na to u tlačítek upozorněn.

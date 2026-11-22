@@ -16,7 +16,28 @@
     Shromáždění <strong><?= $att['quorate'] ? 'je' : 'není' ?> usnášeníschopné</strong> (potřeba je více než <?= (int) $att['threshold'] ?> %). Prezenční listina je přílohou zápisu.</p>
   <?php if ($ev['program'] !== ''): ?><h2>2. Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
   <h2><?= $ev['program'] !== '' ? '3' : '2' ?>. Průběh jednání</h2>
-  <div contenteditable="true" class="fill fill-block">Sem doplňte průběh jednání, přednesené zprávy a diskuzi.</div>
+<?php
+    $aiContext = 'Jednání: ' . $ev['title'] . ', ' . cz_date($ev['event_date'], true) . ($ev['event_time'] !== '' ? ' v ' . $ev['event_time'] : '') . ($ev['place'] !== '' ? ', ' . $ev['place'] : '')
+        . "\nÚčast: " . percent_cz($att['percent']) . ' hlasů, shromáždění ' . ($att['quorate'] ? 'je' : 'není') . ' usnášeníschopné.'
+        . ($ev['program'] !== '' ? "\nProgram:\n" . $ev['program'] : '');
+    foreach ($polls as $p) {
+        foreach ($p['res']['items'] as $it) {
+            $aiContext .= "\nHlasování – " . $it['question'] . ': ' . ($it['passed'] ? 'přijato' : 'nepřijato');
+        }
+    }
+  ?>
+  <?php if (ai_available()): ?>
+  <form class="card form no-print minutes-ai">
+    <?= csrf_field() ?>
+    <label>Poznámky nebo přepis ze schůze <textarea name="notes" rows="7" placeholder="Stačí heslovitě: kdo zahájil, co kdo řekl k jednotlivým bodům, co se dohodlo, kdo co zařídí…"></textarea></label>
+    <label class="transcript-upload">Nebo nahrajte přepis ze schůze (.txt, .docx, .vtt, .srt)
+      <input type="file" accept=".txt,.md,.vtt,.srt,.docx" data-transcript-url="<?= url('/admin/prepis') ?>" data-transcript-target="textarea[name=notes]">
+      <span class="hint" data-transcript-status>Přepis vytvoří například Teams, Google Meet, Zoom nebo diktafon v telefonu. Text se načte do pole výše a soubor se nikam neukládá.</span></label>
+    <?php $aiTarget = 'textarea[name=notes]'; $aiTasks = ['minutes']; $aiOutput = '#minutes-body'; require __DIR__ . '/_ai.php'; ?>
+    <p class="hint">Pomocník z poznámek napíše část „Průběh jednání“ níže. Výsledek si přečtěte a opravte – za zápis odpovídá zapisovatel a ověřovatelé. Poznámky se neukládají.</p>
+  </form>
+  <?php endif ?>
+  <div contenteditable="true" class="fill fill-block" id="minutes-body">Sem doplňte průběh jednání, přednesené zprávy a diskuzi.</div>
   <?php $n = $ev['program'] !== '' ? 4 : 3; foreach ($polls as $p): ?>
     <h2><?= $n++ ?>. Hlasování: <?= e($p['poll']['title']) ?></h2>
     <?php foreach ($p['res']['items'] as $i => $it): ?>

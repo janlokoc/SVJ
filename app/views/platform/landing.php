@@ -91,16 +91,35 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
       <div class="actions"><?= $cta('btn') ?></div>
     </div>
     <div>
-      <h3>Podpora a úpravy</h3>
-      <table class="table price-table"><tbody>
-        <?php if ($ai): ?><tr><td>AI pomocník pro výbor (<?= pset_int('ai_free_limit', 0, 100000) ?> použití měsíčně)</td><td class="t-actions"><strong>v ceně</strong></td></tr>
-        <tr><td>AI Plus (<?= pset_int('ai_plus_limit', 0, 100000) ?> použití měsíčně)</td><td class="t-actions"><strong><?= money_czk(pset_int('price_ai', 0, 1000000)) ?> / rok</strong></td></tr><?php endif ?>
-        <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '') { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
-          <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
-        <?php endforeach ?>
-      </tbody></table>
+      <h3>V ceně</h3>
+      <ul class="lp-check lp-included">
+        <li>Web domu, část pro obyvatele a administrace bez omezení počtu jednotek a účtů</li>
+        <li>Všechny šablony, barvy, jazyky a funkce z přehledu výše</li>
+        <li>Zálohy, aktualizace a podpora e-mailem</li>
+        <?php if ($ai): ?><li>AI pomocník pro výbor: <?= pset_int('ai_free_limit', 0, 100000) ?> použití měsíčně</li><?php endif ?>
+      </ul>
     </div>
   </div>
+
+  <h3 class="lp-sub">Doplňky a služby</h3>
+  <table class="table price-table"><tbody>
+    <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
+    <tr><td><strong>AI Plus</strong><?= $ai ? '' : ' <span class="tag">již brzy</span>' ?><br><small class="muted">AI pomocník píše oznámení, e-maily, odpovědi na závady i zápis ze shromáždění z Vašich poznámek nebo nahraného přepisu. <?= pset_int('ai_plus_limit', 0, 100000) ?> použití měsíčně<?= $ai ? ' místo ' . pset_int('ai_free_limit', 0, 100000) . ' v ceně' : '' ?>.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_ai', 0, 1000000)) ?> / rok</strong></td></tr>
+    <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'vlastní doména')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
+      <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
+    <?php endforeach ?>
+  </tbody></table>
+
+  <h3 class="lp-sub" id="pripravujeme">Připravujeme</h3>
+  <p class="muted">Tyto funkce ještě nejsou hotové. Klikněte na „Mám zájem“ u těch, které byste využili – podle zájmu rozhodujeme, co udělat dřív. K ničemu se tím nezavazujete.</p>
+  <ul class="planned">
+    <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
+    <li><div><strong><?= e($name) ?></strong> <span class="tag">již brzy</span><?= $price !== '' ? ' <small class="muted">· ' . e($price) . '</small>' : '' ?><p><?= e($desc) ?></p></div>
+      <form method="post" action="<?= url('/zajem') ?>" class="planned-form"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($key) ?>">
+        <span class="hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></span>
+        <input type="email" name="email" placeholder="e-mail (nepovinné)" aria-label="E-mail pro zprávu, až bude funkce <?= e($name) ?> hotová"><button class="btn btn-small btn-ghost" type="submit">Mám zájem</button></form></li>
+    <?php endforeach ?>
+  </ul>
 </div></section>
 
 <?php $op = operator(); if ($op['name'] !== ''): ?>

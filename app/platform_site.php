@@ -33,6 +33,14 @@ if ($PATH === '/domena-povolena') {
     echo $ok ? 'ok' : 'neznama domena';
     exit;
 }
+if ($PATH === '/zajem' && $METHOD === 'POST') {
+    $email = filter_var(post('email'), FILTER_VALIDATE_EMAIL) ? post('email') : '';
+    if (post('website') === '' && isset(PLANNED_FEATURES[post('feature')])) {
+        interest_add(post('feature'), '', $email);
+        flash('Děkujeme, zájem o funkci „' . PLANNED_FEATURES[post('feature')][0] . '“ jsme si poznamenali.' . ($email !== '' ? ' Až bude hotová, dáme Vám vědět.' : ''));
+    }
+    redirect('/#pripravujeme');
+}
 if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju')) {
     $terms = $PATH === '/podminky';
     render('platform/text', ['title' => $terms ? 'Obchodní podmínky' : 'Smlouva o zpracování osobních údajů', 'body' => pset($terms ? 'terms' : 'dpa'),

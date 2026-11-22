@@ -198,7 +198,7 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
 // Placený web po skončení zkušební doby či předplatného a lhůtě po splatnosti: běží jen přihlášení správce, stránka Předplatné a záloha dat.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
-    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/predplatne/domena', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
+    && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/predplatne/domena', '/admin/predplatne/zajem', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
     && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad)/~', $PATH)) {
     if (is_admin()) {
         redirect('/admin/predplatne');

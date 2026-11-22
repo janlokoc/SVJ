@@ -9,6 +9,10 @@ const AI_TASKS = [
     'draft' => ['Napsat z poznámek', 'Z poznámek níže napiš oznámení výboru pro obyvatele domu.'],
     'polish' => ['Uhladit text', 'Uprav text níže: oprav pravopis a překlepy, zjednoduš kostrbaté věty a sjednoť tón. Význam, fakta, čísla ani data neměň a nic nepřidávej.'],
     'shorten' => ['Zkrátit', 'Zkrať text níže zhruba na polovinu. Zachovej všechna data, časy, místa, částky a to, co mají lidé udělat.'],
+    'minutes' => ['Napsat zápis z poznámek', 'Z poznámek (nebo přepisu) ze shromáždění vlastníků níže napiš část zápisu „Průběh jednání“. Je to úřední záznam, ne oznámení: piš ve třetí osobě, minulým časem, věcně a úplně. '
+        . 'Postupuj podle bodů programu z kontextu; u každého bodu shrň, co zaznělo, kdo co přednesl nebo navrhl (jména jen tak, jak jsou v poznámkách) a k čemu se dospělo. '
+        . 'Výsledky hlasování a účast neopisuj – jsou v zápisu uvedeny zvlášť; jen na příslušném místě napiš, že se hlasovalo. Diskuzi shrň, nepřepisuj doslova. '
+        . 'Co v poznámkách není, nedoplňuj; nejasné místo označ [ověřit: …]. Každý bod programu začni jeho názvem na samostatném řádku.'],
     'reply' => ['Navrhnout odpověď', 'Napiš krátkou odpověď výboru obyvateli na jeho hlášení uvedené v kontextu. Poznámky níže říkají, co mu má výbor sdělit; když jsou prázdné, potvrď přijetí a napiš, že se výbor ozve.'],
 ];
 
@@ -77,8 +81,8 @@ function ai_run(string $task, string $input, string $context = ''): array
     if ($input === '' && $task !== 'reply') {
         return ['error' => 'Nejdřív napište text nebo aspoň pár poznámek.'];
     }
-    if (mb_strlen($input) + mb_strlen($context) > 20000) {
-        return ['error' => 'Text je na pomocníka příliš dlouhý (nejvýše 20 000 znaků). Zkraťte ho, nebo ho zpracujte po částech.'];
+    if (mb_strlen($input) + mb_strlen($context) > ($task === 'minutes' ? 120000 : 20000)) {
+        return ['error' => 'Text je na pomocníka příliš dlouhý (nejvýše ' . ($task === 'minutes' ? '120 000' : '20 000') . ' znaků). Zkraťte ho, nebo ho zpracujte po částech.'];
     }
     if ($cfg['limit'] > 0 && ai_used() >= $cfg['limit']) {
         return ['error' => 'Měsíční limit AI pomocníka (' . $cfg['limit'] . ' použití) je vyčerpán. Obnoví se prvního dne příštího měsíce.'
@@ -121,3 +125,66 @@ function ai_run(string $task, string $input, string $context = ''): array
     q("INSERT INTO settings (`key`, value) VALUES (?, '1') ON CONFLICT(`key`) DO UPDATE SET value = value + 1", ['ai_used_' . date('Y-m')]);
     return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens'];
 }
+
+/**
+ * Text z nahraného přepisu schůze (.txt, .md, .vtt, .srt, .docx) – třeba z Teams, Google Meet
+ * nebo z diktafonu v telefonu. U titulkových formátů zahodí časové značky a čísla.
+ * Vrací ['text' => …] nebo ['error' => …].
+ */
+function transcript_text(string $path, string $name): array
+{
+    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    if (!in_array($ext, ['txt', 'md', 'vtt', 'srt', 'docx'], true)) {
+        return ['error' => 'Nahrajte přepis jako .txt, .vtt, .srt nebo .docx. Zvukovou nahrávku zatím zpracovat neumíme – nechte ji nejdřív přepsat (Teams, Google Meet, diktafon v telefonu).'];
+    }
+    if (filesize($path) > 5 * 1024 * 1024) {
+        return ['error' => 'Soubor je příliš velký (nejvýše 5 MB).'];
+    }
+    if ($ext === 'docx') {
+        if (!class_exists('ZipArchive')) {
+            return ['error' => 'Tento server neumí číst soubory Wordu. Uložte přepis jako prostý text (.txt).'];
+        }
+        $zip = new ZipArchive();
+        $xml = $zip->open($path) === true ? $zip->getFromName('word/document.xml') : false;
+        if ($xml === false || strlen($xml) > 20 * 1024 * 1024) {
+            return ['error' => 'Soubor se nepodařilo přečíst. Uložte přepis jako prostý text (.txt).'];
+        }
+        $xml = preg_replace(['~<w:tab\b[^>]*/>~', '~<w:br\b[^>]*/>~', '~</w:p>~'], ["\t", "\n", "\n"], $xml);
+        $text = html_entity_decode(strip_tags($xml), ENT_QUOTES | ENT_XML1, 'UTF-8');
+    } else {
+        $text = (string) file_get_contents($path);
+        if (str_starts_with($text, "\xEF\xBB\xBF")) {
+            $text = substr($text, 3);
+        } elseif (str_starts_with($text, "\xFF\xFE") || str_starts_with($text, "\xFE\xFF")) {
+            $text = mb_convert_encoding($text, 'UTF-8', 'UTF-16');
+        }
+        if (!mb_check_encoding($text, 'UTF-8')) {
+            $text = mb_convert_encoding($text, 'UTF-8', 'Windows-1250');
+        }
+        if ($ext === 'vtt' || $ext === 'srt') {
+            $lines = [];
+            foreach (preg_split('~\R~', $text) as $line) {
+                $line = trim($line);
+                if ($line === '' || str_contains($line, '-->') || preg_match('~^(WEBVTT|NOTE\b|STYLE$|REGION$|Kind:|Language:|\d+$|[0-9a-f-]{20,}(/\d+-\d+)?$)~i', $line)) {
+                    continue;
+                }
+                // <v Jana Nováková>text</v> → Jana Nováková: text
+                $line = preg_replace('~<v\s+([^>]+)>~', '$1: ', $line);
+                $line = trim(html_entity_decode(strip_tags($line), ENT_QUOTES, 'UTF-8'));
+                if ($line !== '' && $line !== end($lines)) {
+                    $lines[] = $line;
+                }
+            }
+            $text = implode("\n", $lines);
+        }
+    }
+    $text = trim(preg_replace(['~[^\S\n]+~u', '~\n{3,}~'], [' ', "\n\n"], str_replace("\r", '', $text)));
+    if ($text === '') {
+        return ['error' => 'V souboru jsme nenašli žádný text.'];
+    }
+    if (mb_strlen($text) > 110000) {
+        return ['text' => mb_substr($text, 0, 110000), 'note' => 'Přepis je velmi dlouhý, načetli jsme prvních 110 000 znaků. Zbytek zpracujte zvlášť.'];
+    }
+    return ['text' => $text];
+}
+

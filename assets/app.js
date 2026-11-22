@@ -152,8 +152,12 @@ document.querySelectorAll('.ai-box').forEach((box) => {
   const status = box.querySelector('.ai-status');
   const undo = box.querySelector('[data-ai-undo]');
   if (!field) return;
+  // Výsledek se vkládá buď zpět do pole, nebo do jiného místa na stránce (zápis ze shromáždění).
+  const out = box.dataset.aiOutput ? document.querySelector(box.dataset.aiOutput) : null;
+  const read = () => (out ? out.innerText : field.value);
+  const write = (v) => { if (out) out.innerText = v; else field.value = v; };
   let before = null;
-  undo.addEventListener('click', () => { if (before !== null) { field.value = before; before = null; undo.hidden = true; status.textContent = ''; } });
+  undo.addEventListener('click', () => { if (before !== null) { write(before); before = null; undo.hidden = true; status.textContent = ''; } });
   box.querySelectorAll('[data-ai-task]').forEach((btn) => btn.addEventListener('click', async () => {
     const buttons = box.querySelectorAll('button');
     buttons.forEach((b) => { b.disabled = true; });
@@ -164,10 +168,34 @@ document.querySelectorAll('.ai-box').forEach((box) => {
       const r = await fetch(box.dataset.aiUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
       const d = await r.json();
       if (d.text) {
-        before = field.value; field.value = d.text; undo.hidden = false;
+        before = read(); write(d.text); undo.hidden = false;
         status.textContent = d.truncated ? 'Hotovo, ale text byl příliš dlouhý a je uříznutý. Zkontrolujte konec.' : 'Hotovo. Text si přečtěte a upravte, než ho uložíte.';
       } else { status.className = 'ai-status is-bad'; status.textContent = d.error || 'Nepodařilo se.'; }
     } catch (e) { status.className = 'ai-status is-bad'; status.textContent = 'Nepodařilo se spojit se serverem.'; }
     buttons.forEach((b) => { b.disabled = false; });
   }));
 });
+
+// Přepis ze schůze: soubor se pošle na server, ten z něj vytáhne text a vloží ho do pole s poznámkami
+document.querySelectorAll('[data-transcript-url]').forEach((input) => input.addEventListener('change', async () => {
+  const form = input.closest('form');
+  const field = form.querySelector(input.dataset.transcriptTarget);
+  const status = form.querySelector('[data-transcript-status]');
+  if (!input.files[0]) return;
+  if (field.value.trim() && !confirm('Pole s poznámkami už obsahuje text. Nahradit ho přepisem ze souboru?')) { input.value = ''; return; }
+  const body = new FormData();
+  body.append('_csrf', form.querySelector('[name=_csrf]').value);
+  body.append('file', input.files[0]);
+  status.className = 'hint';
+  status.textContent = 'Načítáme přepis…';
+  try {
+    const r = await fetch(input.dataset.transcriptUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
+    const d = await r.json();
+    if (d.text) {
+      field.value = d.text;
+      status.textContent = d.note || ('Přepis je načtený (' + d.text.length.toLocaleString('cs-CZ') + ' znaků). Teď klikněte na „Napsat zápis z poznámek“.');
+    } else { status.className = 'hint is-bad'; status.textContent = d.error || 'Soubor se nepodařilo načíst.'; }
+  } catch (e) { status.className = 'hint is-bad'; status.textContent = 'Soubor se nepodařilo načíst – možná je příliš velký.'; }
+  input.value = '';
+}));
+

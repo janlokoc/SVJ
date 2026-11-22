@@ -219,12 +219,24 @@ $route('POST', '/admin/platby', $adminAccounts);
 
 // ---------- AI pomocník (volitelný) ----------
 
+$route('POST', '/admin/prepis', function () {
+    require_admin();
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    $f = $_FILES['file'] ?? null;
+    $result = (!$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name']))
+        ? ['error' => 'Soubor se nepodařilo nahrát. Zkuste to znovu, nebo text vložte ručně.']
+        : transcript_text($f['tmp_name'], (string) $f['name']);
+    echo json_encode($result, JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
 $route('POST', '/admin/ai', function () {
     require_admin();
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     @set_time_limit(180);
-    $result = ai_run(post('task'), (string) ($_POST['text'] ?? ''), mb_substr((string) ($_POST['context'] ?? ''), 0, 6000));
+    $result = ai_run(post('task'), (string) ($_POST['text'] ?? ''), mb_substr((string) ($_POST['context'] ?? ''), 0, 8000));
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
     exit;
 });
