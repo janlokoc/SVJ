@@ -199,3 +199,18 @@ document.querySelectorAll('[data-transcript-url]').forEach((input) => input.addE
   input.value = '';
 }));
 
+// Web otevřený z plochy jako aplikace nemá tlačítko Zpět: dokumenty se proto otevírají na stránce s náhledem uvnitř webu.
+const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+if (standalone) {
+  document.querySelectorAll('a[href*="/soubor/"]').forEach((a) => {
+    if (a.hasAttribute('download') || a.href.includes('nahled=') || a.href.includes('stahnout=')) return;
+    a.href += (a.href.includes('?') ? '&' : '?') + 'nahled=1';
+    a.removeAttribute('target');
+  });
+  // Odkazy mimo web by v aplikaci z plochy také neměly cestu zpět – otevřou se v prohlížeči.
+  document.querySelectorAll('a[href^="http"]').forEach((a) => { if (a.host !== window.location.host) { a.target = '_blank'; a.rel = 'noopener'; } });
+}
+document.querySelectorAll('[data-back]').forEach((a) => a.addEventListener('click', (e) => {
+  if (window.history.length > 1 && document.referrer.startsWith(window.location.origin)) { e.preventDefault(); window.history.back(); }
+}));
+

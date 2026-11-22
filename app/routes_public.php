@@ -65,6 +65,11 @@ $route('GET', '/soubor/(\d+)', function (int $id) {
     }
     if (!$d['filename']) {
         if ($d['external_url'] && str_starts_with($d['external_url'], 'https://')) {
+            if (isset($_GET['nahled'])) {
+                // Soubor uložený jinde: v aplikaci z plochy by přesměrování nemělo cestu zpět, proto se otevírá v novém okně.
+                render('file_view', ['title' => $d['title'], 'd' => $d, 'ext' => '', 'name' => '', 'external' => $d['external_url']]);
+                return;
+            }
             header('Location: ' . $d['external_url'], true, 302);
             exit;
         }
@@ -77,9 +82,16 @@ $route('GET', '/soubor/(\d+)', function (int $id) {
     $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
     $inline = ['pdf' => 'application/pdf', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'];
     $name = $d['original_name'] ?: $d['title'] . '.' . $ext;
+    // Náhled uvnitř webu: když je web otevřený z plochy tabletu nebo telefonu jako aplikace, prohlížeč u samotného souboru
+    // nenabídne cestu zpět. Stránka s náhledem má menu webu i tlačítko Zpět.
+    if (isset($_GET['nahled']) && isset($inline[$ext])) {
+        render('file_view', ['title' => $d['title'], 'd' => $d, 'ext' => $ext, 'name' => $name]);
+        return;
+    }
     header_remove('Content-Security-Policy');
     header('Content-Type: ' . ($inline[$ext] ?? 'application/octet-stream'));
-    header('Content-Disposition: ' . (isset($inline[$ext]) ? 'inline' : 'attachment') . "; filename*=UTF-8''" . rawurlencode($name));
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Content-Disposition: ' . (isset($inline[$ext]) && !isset($_GET['stahnout']) ? 'inline' : 'attachment') . "; filename*=UTF-8''" . rawurlencode($name));
     header('Content-Length: ' . filesize($file));
     header('Cache-Control: private, max-age=3600');
     readfile($file);

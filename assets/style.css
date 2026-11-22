@@ -931,3 +931,8 @@ body.lp .lp-section { padding-block: clamp(2rem, 1.2rem + 3vw, 3.5rem); }
 @media (max-width: 560px) { .lp-hero-simple h1 { font-size: 2.3rem; } }
 .console-back { margin-left: auto; }
 .console-foot { justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+
+.file-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; margin-bottom: 1rem; }
+.file-bar h1 { flex: 1 1 200px; font-size: 1.4rem; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.file-frame { display: block; width: 100%; height: 80vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.file-image { display: block; max-width: 100%; height: auto; border-radius: 10px; }
