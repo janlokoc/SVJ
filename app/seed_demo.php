@@ -193,4 +193,21 @@ function seed_demo_more(PDO $pdo): void
     ] as [$title, $note, $who, $due, $done, $source, $created]) {
         $ins('tasks', ['title' => $title, 'note' => $note, 'assignee' => $who, 'due_date' => $day($due), 'done' => $done, 'source' => $source, 'created_at' => $at($created, '19:00:00')]);
     }
+
+    // Dodavatelé (smyšlení); první otevřená závada má přiřazeného instalatéra
+    $sup = [];
+    foreach ([
+        ['Instalatérství Vodička', 'Voda, topení, kanalizace', '777 100 201', 'vodicka@example.cz', 'Havarijní výjezd do 2 hodin. Servisní smlouva na stoupačky.'],
+        ['Výtahy Morava s.r.o.', 'Servis a revize výtahů', '777 100 202', 'servis@vytahy-morava.example.cz', 'Pravidelná prohlídka každé 3 měsíce, odborná zkouška jednou za 3 roky.'],
+        ['Elektro Blesk', 'Elektroinstalace, hromosvody', '777 100 203', 'blesk@example.cz', 'Revize společné elektroinstalace a hromosvodu.'],
+        ['Úklid Čistý dům', 'Úklid společných prostor', '777 100 204', 'info@cisty-dum.example.cz', 'Úklid dvakrát týdně, mytí oken na jaře a na podzim.'],
+        ['Zámečnictví Klíč', 'Zámky, dveře, čipový systém', '777 100 205', 'klic@example.cz', 'Dodavatel čipů ke vchodovým dveřím; nové čipy do 3 pracovních dnů.'],
+        ['Správa domů Jih s.r.o.', 'Účetnictví a správa', '777 100 206', 'sprava@sprava-jih.example.cz', 'Vede účetnictví, předpisy záloh a roční vyúčtování.'],
+    ] as [$name, $field, $phone, $email, $note]) {
+        $sup[] = $ins('suppliers', ['name' => $name, 'field' => $field, 'phone' => $phone, 'email' => $email, 'note' => $note]);
+    }
+    $ticket = (int) $pdo->query("SELECT id FROM tickets WHERE status <> 'done' ORDER BY id LIMIT 1")->fetchColumn();
+    if ($ticket) {
+        $pdo->prepare('UPDATE tickets SET supplier_id = ? WHERE id = ?')->execute([$sup[0], $ticket]);
+    }
 }
