@@ -13,6 +13,7 @@ $benefits = [
       <h1>Web Vašeho SVJ <span class="h1-sub">zdarma a za pět minut</span></h1>
       <p class="lead">Vlastní web domu s částí pro obyvatele a administrací pro výbor.</p>
       <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout ukázku</a><?php endif ?></div>
+      <?php if (!empty($_SESSION['ref']['name'])): ?><p class="lp-note lp-ref">Doporučilo Vás <strong><?= e($_SESSION['ref']['name']) ?></strong>.</p><?php endif ?>
       <?php if ($open): ?><p class="lp-note">Bez platební karty a bez časového omezení.</p>
       <?php else: ?><p class="lp-note">Nová společenství teď zakládáme po domluvě<?= pset('contact_email') !== '' ? ' – napište na ' . e(pset('contact_email')) : '' ?>.</p><?php endif ?>
     </div>

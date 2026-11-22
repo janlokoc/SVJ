@@ -166,6 +166,13 @@ SQL);
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 12) {
         $pdo->exec("ALTER TABLE tenants ADD COLUMN storage_extra INTEGER NOT NULL DEFAULT 0; ALTER TABLE tenants ADD COLUMN storage_until TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 12;");
     }
+    // Doporučení: kód webu, kdo koho doporučil, kredit na další platbu a sleva uplatněná u platby.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 13) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN ref_code TEXT NOT NULL DEFAULT ''; ALTER TABLE tenants ADD COLUMN referred_by TEXT NOT NULL DEFAULT ''; ALTER TABLE tenants ADD COLUMN credit INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE payments ADD COLUMN discount INTEGER NOT NULL DEFAULT 0;
+            CREATE TABLE referrals (id INTEGER PRIMARY KEY AUTOINCREMENT, referrer TEXT NOT NULL, referred TEXT NOT NULL UNIQUE, referred_name TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, rewarded_at TEXT NOT NULL DEFAULT '', amount INTEGER NOT NULL DEFAULT 0);
+            PRAGMA user_version = 13;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -364,7 +371,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -554,15 +561,18 @@ function billing_order(array $t, string $edition, string $period = 'year'): ?arr
         return null;
     }
     $amount = $months === 1 ? edition_price($edition, 'month') : max(0, edition_price($edition) - billing_credit($t, $edition));
+    // Kredit za doporučení se odečítá jen u roční platby (trvalý příkaz potřebuje stále stejnou částku) a strhne se až při potvrzení platby.
+    $discount = $months === 12 ? min($amount, max(0, (int) ($t['credit'] ?? 0))) : 0;
+    $amount -= $discount;
     $p = billing_open($t);
     if ($p && $p['status'] === 'claimed') {
         return $p;
     }
     if ($p) {
-        pq('UPDATE payments SET amount = ?, months = ?, item = ? WHERE id = ?', [$amount, $months, $edition, $p['id']]);
+        pq('UPDATE payments SET amount = ?, months = ?, item = ?, discount = ? WHERE id = ?', [$amount, $months, $edition, $discount, $p['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,?,?,'service',?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition]);
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, discount) VALUES (?,?,?,?,'service',?,?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition, $discount]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -639,7 +649,8 @@ function billing_confirm(array $p, string $by): ?array
         return ['from' => $from, 'to' => $to];
     }
     $monthly = (int) $p['months'] === 1;
-    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, auto_renew = 1, reminded = '' WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', $t['slug']]);
+    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, auto_renew = 1, reminded = '', credit = MAX(0, credit - ?) WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', (int) ($p['discount'] ?? 0), $t['slug']]);
+    referral_reward($t, $p);
     if ($monthly) {
         // Trvalý příkaz posílá každý měsíc stejnou částku se stejným variabilním symbolem – další platbu proto čekáme pod týmž symbolem.
         pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, vs) VALUES (?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
@@ -992,6 +1003,71 @@ function domain_renewals(): void
         tenant_notify($t, 'domain', 'Končí předplatné vlastní domény – ' . $t['name'], "Dobrý den,\n\npředplatné vlastní domény " . $p['item'] . " webu " . $t['name'] . " končí " . cz_date($t['domain_until'])
             . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
             . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
+    }
+}
+
+// ---------- Doporučení: odměna za přivedení platícího společenství ----------
+
+/** Kód pro doporučení (vznikne při prvním použití) – je součástí odkazu, který společenství posílá dál. */
+function referral_code(array $t): string
+{
+    if (($t['ref_code'] ?? '') !== '') {
+        return $t['ref_code'];
+    }
+    do {
+        $code = substr(strtr(base64_encode(random_bytes(8)), ['+' => '', '/' => '', '=' => '']), 0, 8);
+    } while (strlen($code) < 8 || pq('SELECT 1 FROM tenants WHERE ref_code = ?', [$code])->fetchColumn());
+    pq('UPDATE tenants SET ref_code = ? WHERE slug = ?', [$code, $t['slug']]);
+    return $code;
+}
+function referral_link(array $t): string
+{
+    return platform_url('/') . '?ref=' . referral_code($t);
+}
+/** Společenství, kterému kód patří (jen běžný web, ne ukázka). */
+function referral_owner(string $code): ?array
+{
+    if (!preg_match('/^[A-Za-z0-9]{8}$/', $code)) {
+        return null;
+    }
+    $t = pq('SELECT * FROM tenants WHERE ref_code = ? AND demo = 0', [$code])->fetch();
+    return $t ?: null;
+}
+/** Zapíše, že nové společenství přišlo na doporučení; samo sebe (stejný kontaktní e-mail) doporučit nejde. */
+function referral_register(string $code, array $new): void
+{
+    $ref = referral_owner($code);
+    if (!$ref || $ref['slug'] === $new['slug'] || ($ref['owner_email'] !== '' && strcasecmp($ref['owner_email'], (string) $new['owner_email']) === 0)) {
+        return;
+    }
+    pq('UPDATE tenants SET referred_by = ?, credit = credit + ? WHERE slug = ?', [$ref['slug'], pset_int('referral_welcome', 0, 100000), $new['slug']]);
+    pq('INSERT OR IGNORE INTO referrals (referrer, referred, referred_name, created_at) VALUES (?,?,?,?)', [$ref['slug'], $new['slug'], $new['name'], date('Y-m-d H:i:s')]);
+}
+/**
+ * Odměna doporučiteli: připíše se jako kredit ve chvíli, kdy doporučené společenství poprvé zaplatí rok,
+ * nebo při třetí měsíční platbě. Za každé doporučené společenství jen jednou.
+ */
+function referral_reward(array $paid, array $payment): void
+{
+    $r = pq("SELECT * FROM referrals WHERE referred = ? AND rewarded_at = ''", [$paid['slug']])->fetch();
+    $amount = pset_int('referral_reward', 0, 100000);
+    if (!$r || $amount === 0) {
+        return;
+    }
+    $monthsPaid = (int) pq("SELECT COALESCE(SUM(months), 0) FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid'", [$paid['slug']])->fetchColumn();
+    if ((int) $payment['months'] !== 12 && $monthsPaid < 3) {
+        return;
+    }
+    $ref = tenant_row($r['referrer']);
+    if (!$ref) {
+        return;
+    }
+    pq('UPDATE referrals SET rewarded_at = ?, amount = ? WHERE id = ?', [date('Y-m-d H:i:s'), $amount, $r['id']]);
+    pq('UPDATE tenants SET credit = credit + ? WHERE slug = ?', [$amount, $ref['slug']]);
+    pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Odměna za doporučení', $ref['slug'] . ' · +' . $amount . ' Kč za ' . $paid['slug']]);
+    if ($ref['owner_email'] !== '') {
+        platform_mail($ref['owner_email'], 'Odměna za doporučení: ' . money_czk($amount) . ' – ' . $ref['name'], "Dobrý den,\n\nspolečenství " . $paid['name'] . ", které jste nám doporučili, si zaplatilo edici. Děkujeme!\n"
+            . "Na účet webu " . $ref['name'] . " jsme připsali slevu " . money_czk($amount) . ". Odečte se sama od Vaší příští roční platby za edici.\n\nPřehled doporučení: " . tenant_url($ref, '/admin/predplatne') . '#doporuceni');
     }
 }
 

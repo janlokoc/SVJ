@@ -28,6 +28,11 @@
     </tbody></table>
     <p class="hint">Funkce edic (které části webu jsou ve Standardu a v Premium) jsou dané v kódu v <code>app/plan_lib.php</code>. Každou placenou funkci si web v edici Zdarma může jednou na <?= PLAN_TRIAL_DAYS ?> dní vyzkoušet.</p>
     <div class="form-row">
+      <label>Odměna za doporučení (Kč; 0 = vypnuto) <input type="number" name="referral_reward" value="<?= e($v['referral_reward']) ?>" min="0" required></label>
+      <label>Sleva pro doporučené společenství (Kč) <input type="number" name="referral_welcome" value="<?= e($v['referral_welcome']) ?>" min="0" required></label>
+    </div>
+    <p class="hint">Doporučitel dostane odměnu jako slevu na svou příští roční platbu, až doporučené společenství poprvé zaplatí rok (při měsíčním placení po třetí platbě). Doporučený dostane slevu na první roční platbu.</p>
+    <div class="form-row">
       <label>Balíček úložiště navíc (MB) <input type="number" name="storage_pack_mb" value="<?= e($v['storage_pack_mb']) ?>" min="1" required></label>
       <label>Cena balíčku (Kč za rok; 0 = nenabízet) <input type="number" name="price_storage" value="<?= e($v['price_storage']) ?>" min="0" required></label>
     </div>

@@ -78,6 +78,11 @@
       </div>
       <p class="hint">Nastavení nevytváří platbu ani fakturu – slouží pro dary, slevy, platby mimo systém a opravy. „Prodloužit“ počítá od konce dosavadního období stejné edice, jinak ode dneška. Běžné platby potvrzujte v části Platby.</p>
     </form>
+    <?php if ((int) ($t['credit'] ?? 0) > 0 || !empty($referrals) || ($t['referred_by'] ?? '') !== ''): ?>
+    <h3>Doporučení</h3>
+    <p>Kredit na příští roční platbu: <strong><?= money_czk((int) ($t['credit'] ?? 0)) ?></strong><?= ($t['referred_by'] ?? '') !== '' ? ' · přišlo na doporučení webu <a href="' . url('/svj/' . $t['referred_by']) . '">' . e($t['referred_by']) . '</a>' : '' ?></p>
+    <?php if (!empty($referrals)): ?><ul><?php foreach ($referrals as $r): ?><li><?= $r['referrer'] === $t['slug'] ? 'doporučilo: ' . e($r['referred_name'] ?: $r['referred']) : 'doporučeno webem ' . e($r['referrer']) ?> (<?= cz_date($r['created_at']) ?>) – <?= $r['rewarded_at'] !== '' ? 'odměna ' . money_czk((int) $r['amount']) . ' připsána ' . cz_date($r['rewarded_at']) : 'zatím bez platby' ?></li><?php endforeach ?></ul><?php endif ?>
+    <?php endif ?>
     <h3>Zkoušení funkcí</h3>
     <table class="table"><thead><tr><th>Funkce</th><th>Edice</th><th>Stav</th><th></th></tr></thead><tbody>
       <?php $edRank = $bstate['mode'] === 'free' ? 2 : EDITION_RANK[$bstate['edition']]; foreach (PLAN_FEATURES as $fk => [$fmin, $fname]): $tr = $trials[$fk] ?? null; $in = $edRank >= EDITION_RANK[$fmin]; $running = $tr && $tr['ends'] >= date('Y-m-d'); ?>

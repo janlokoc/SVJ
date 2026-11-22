@@ -11,6 +11,10 @@ $open = pset('signup_open') === '1';
 $signup = $_SESSION['signup'] ?? [];
 $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '/registrace/spravce' => 'Účet správce'];
 
+// Odkaz s doporučením (?ref=KÓD) si zapamatujeme do konce registrace.
+if ($METHOD === 'GET' && isset($_GET['ref']) && ($refOwner = referral_owner((string) $_GET['ref']))) {
+    $_SESSION['ref'] = ['code' => $refOwner['ref_code'], 'name' => $refOwner['name']];
+}
 if ($PATH === '/' && $METHOD === 'GET') {
     demo_update_content();   // ukázka ze staršího obsahu (např. bez zpráv nebo anket) se založí znovu
     // Ukázkový web se založí sám při prvním zobrazení úvodní stránky (jde vypnout v Nastavení služby).
@@ -150,6 +154,10 @@ if (isset($steps[$PATH])) {
             $title = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $signup['name'])) ?: $signup['name'];
             tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'], 'style' => $signup['style'] ?? 'klasik',
                 'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => '', 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
+            if (!empty($_SESSION['ref']['code'])) {
+                referral_register($_SESSION['ref']['code'], tenant_row($slug));
+                unset($_SESSION['ref']);
+            }
             // Jiná šablona než základní je funkce edice Standard: nový web ji dostane rovnou na zkoušku.
             if (($signup['style'] ?? 'klasik') !== 'klasik') {
                 pq('INSERT INTO feature_trials (tenant, feature, started, ends) VALUES (?,?,?,?)', [$slug, 'sablony', date('Y-m-d'), date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day'))]);

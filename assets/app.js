@@ -294,3 +294,12 @@ document.querySelectorAll('[data-collapse-toggle]').forEach((btn) => btn.addEven
   });
 }));
 
+// Zkopírování odkazu do schránky a označení celého textu při kliknutí do pole
+document.querySelectorAll('[data-copy]').forEach((btn) => btn.addEventListener('click', async () => {
+  const old = btn.textContent;
+  try { await navigator.clipboard.writeText(btn.dataset.copy); btn.textContent = 'Zkopírováno'; }
+  catch (e) { const f = btn.closest('.card, form, div').querySelector('[data-select-all]'); if (f) { f.focus(); f.select(); } btn.textContent = 'Označeno – zkopírujte'; }
+  window.setTimeout(() => { btn.textContent = old; }, 2500);
+}));
+document.querySelectorAll('[data-select-all]').forEach((f) => f.addEventListener('focus', () => f.select()));
+

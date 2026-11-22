@@ -5,6 +5,7 @@
       <li<?= $i === $step ? ' aria-current="step"' : '' ?> class="<?= $i < $step ? 'is-done' : '' ?>"><?php if ($i < $step): ?><a href="<?= url($href) ?>"><?= $i ?>. <?= e($label) ?></a><?php else: ?><?= $i ?>. <?= e($label) ?><?php endif ?></li>
     <?php endforeach ?>
   </ol>
+  <?php if (!empty($_SESSION['ref']['name'])): ?><div class="flash flash-ok">Doporučilo Vás <strong><?= e($_SESSION['ref']['name']) ?></strong>.<?= pset_int('referral_welcome', 0, 100000) ? ' Na první roční platbu za edici dostanete slevu ' . money_czk(pset_int('referral_welcome', 0, 100000)) . '.' : '' ?> Web je i tak zdarma.</div><?php endif ?>
   <?php require __DIR__ . '/../_errors.php'; ?>
   <?php if ($step === 1): ?>
   <form method="post" class="card form">

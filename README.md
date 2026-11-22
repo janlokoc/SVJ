@@ -300,6 +300,14 @@ automatické vystavování (viz výše).
 - **Ukázkový web** nejde smazat a sám se obnovuje s čerstvými daty
   (výchozí každých 7 dní, Nastavení služby), aby termíny a lhůty vypadaly
   aktuálně. Obnovit ho lze i ručně v konzoli.
+- **Sleva za doporučení:** každé společenství má v Předplatném svůj odkaz
+  (`…/?ref=KÓD`). Kdo se přes něj zaregistruje, dostane slevu na první
+  roční platbu (výchozí 150 Kč). Doporučitel dostane odměnu (výchozí
+  300 Kč), jakmile doporučené společenství poprvé zaplatí rok, při
+  měsíčním placení po třetí platbě – jen jednou za každé společenství.
+  Odměna se připíše jako kredit a sama se odečte od příští roční platby;
+  nevyplácí se. Obě částky jsou v Nastavení služby (0 = vypnuto). Sám sebe
+  (stejný kontaktní e-mail) doporučit nejde.
 - **Ruční nastavení předplatného:** hlavní správce může u kteréhokoli
   společenství v konzoli (karta Předplatné) nastavit edici a datum, do
   kdy platí, prodloužit ji o měsíc nebo rok, ukončit ji, nebo placení

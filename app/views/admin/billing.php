@@ -58,6 +58,7 @@
     </div>
     <p class="hint">Měsíční platba vyjde ročně na <?= money_czk((int) $payment['amount'] * 12) ?>; při roční platbě je to <?= money_czk(edition_price((string) ($payment['item'] ?? 'standard'))) ?>. Trvalý příkaz zrušíte kdykoli ve své bance – edice pak doběhne do konce zaplaceného měsíce a web přejde na edici Zdarma.</p>
     <?php else: ?>
+    <?php if ((int) ($payment['discount'] ?? 0) > 0): ?><p class="flash flash-ok">Od ceny je odečtena sleva <?= money_czk((int) $payment['discount']) ?> za doporučení.</p><?php endif ?>
     <p class="hint">Platba se páruje podle variabilního symbolu. <?= (int) $payment['amount'] < edition_price((string) ($payment['item'] ?? 'standard')) ? 'Částka je snížená o nevyčerpanou část dosavadní edice. ' : '' ?>Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
     <?php endif ?>
     <?php else: ?>
@@ -88,6 +89,24 @@
       <?php endforeach ?>
     </ul>
   </div>
+
+  <?php $rwd = pset_int('referral_reward', 0, 100000); if ($rwd && empty($t['demo'])): $rwdWelcome = pset_int('referral_welcome', 0, 100000); ?>
+  <div class="card" id="doporuceni">
+    <h2>Doporučte nás a ušetřete</h2>
+    <p>Znáte jiné společenství, kterému by se takový web hodil? Pošlete jim svůj odkaz. Když si potom zaplatí edici, <strong>dostanete slevu <?= money_czk($rwd) ?></strong> na svou příští roční platbu<?= $rwdWelcome ? ' a oni slevu ' . money_czk($rwdWelcome) . ' na první rok' : '' ?>. Počet doporučení není omezený.</p>
+    <label>Váš odkaz pro doporučení <input type="text" value="<?= e($refLink) ?>" readonly data-select-all aria-describedby="ref-hint"></label>
+    <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($refLink) ?>">Zkopírovat odkaz</button>
+      <a class="btn btn-small btn-ghost" href="mailto:?subject=<?= rawurlencode('Web pro naše společenství – doporučení') ?>&amp;body=<?= rawurlencode("Dobrý den,\n\npro web našeho společenství používáme tuto službu a jsme s ní spokojení. Základní web je zdarma:\n" . $refLink . "\n\nS pozdravem") ?>">Poslat e-mailem</a></p>
+    <p class="hint" id="ref-hint">Odměna se připíše, jakmile doporučené společenství poprvé zaplatí roční edici (při měsíčním placení po třetí platbě). Odečte se sama od Vaší příští roční platby; nevyplácí se v penězích.</p>
+    <?php if ((int) $t['credit'] > 0): ?><div class="flash flash-ok">Máte připsanou slevu <strong><?= money_czk((int) $t['credit']) ?></strong>. Odečte se od příští roční platby za edici.</div><?php endif ?>
+    <?php if ($referrals): ?>
+    <table class="table"><thead><tr><th>Doporučené společenství</th><th>Založeno</th><th>Odměna</th></tr></thead><tbody>
+      <?php foreach ($referrals as $r): ?><tr><td data-label="Doporučené společenství"><?= e($r['referred_name'] !== '' ? $r['referred_name'] : $r['referred']) ?></td><td data-label="Založeno"><?= cz_date($r['created_at']) ?></td>
+        <td data-label="Odměna"><?= $r['rewarded_at'] !== '' ? '<span class="status status-done">' . money_czk((int) $r['amount']) . ' připsáno ' . cz_date($r['rewarded_at']) . '</span>' : '<span class="muted">čeká na první platbu</span>' ?></td></tr><?php endforeach ?>
+    </tbody></table>
+    <?php endif ?>
+  </div>
+  <?php endif ?>
 
   <div class="card" id="uloziste">
     <h2>Úložiště dokumentů</h2>
