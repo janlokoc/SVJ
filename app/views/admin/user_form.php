@@ -49,4 +49,5 @@
   </form>
   <?php elseif ($u['id']): ?><p class="hint">Vlastní účet smazat nejde. Může to udělat jiný správce.</p>
   <?php endif ?>
+  <?php if (!empty($u['id'])): ?><p class="hint">Žádá tento člověk o přístup ke svým údajům (GDPR) a sám se nepřihlásí? <a href="<?= url('/admin/uzivatele/' . $u['id'] . '/udaje.json') ?>" download>Stáhnout všechny jeho údaje</a>. Může si je stáhnout i sám ve svém účtu, kde si účet může také zrušit.</p><?php endif ?>
 </div>

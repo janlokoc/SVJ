@@ -16,6 +16,7 @@
     <label>Chcete zprávu, až bude funkce hotová? <input type="email" name="email" required placeholder="vas@e-mail.cz"></label>
     <?php else: ?><span>Chcete zprávu, až bude funkce hotová?</span><?php endif ?>
     <button class="btn btn-small" type="submit">Dejte mi vědět</button></form>
+    <?php if ($askEmail): ?><p class="hint">E-mail použijeme jen k této jedné zprávě. Podrobnosti: <a href="<?= e(platform_url('/ochrana-udaju')) ?>">ochrana osobních údajů</a>.</p><?php endif ?>
   <?php endif ?>
   <p class="hint">Funkce zatím není hotová a termín neslibujeme. Pořadí určujeme podle toho, o které funkce je největší zájem.</p>
 </div>

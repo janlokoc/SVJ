@@ -44,7 +44,8 @@
       <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
       <li><a href="<?= url('/registrace') ?>">Založit web</a></li>
       <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
-      <li><a href="<?= url('/zpracovani-udaju') ?>">Zpracování osobních údajů</a></li>
+      <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
+      <li><a href="<?= url('/zpracovani-udaju') ?>">Smlouva o zpracování údajů</a></li>
       <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
       <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>
       <li><?= theme_switch() ?></li>

@@ -54,6 +54,10 @@ if ($PATH === '/zajem' && $METHOD === 'POST') {
     }
     redirect('/pripravujeme/' . $feature);
 }
+if ($METHOD === 'GET' && $PATH === '/ochrana-udaju') {
+    render('platform/text', ['title' => 'Ochrana osobních údajů', 'body' => PLATFORM_PRIVACY, 'also' => ['/zpracovani-udaju', 'Smlouva o zpracování osobních údajů (pro weby společenství)']]);
+    exit;
+}
 if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju')) {
     $terms = $PATH === '/podminky';
     render('platform/text', ['title' => $terms ? 'Obchodní podmínky' : 'Smlouva o zpracování osobních údajů', 'body' => pset($terms ? 'terms' : 'dpa'),

@@ -242,19 +242,33 @@ Správcem osobních údajů je společenství vlastníků jednotek, kterému ten
 Ke správě domu a plnění povinností společenství: vedení seznamu členů, svolávání shromáždění, hlasování, řešení závad a rozesílání oznámení výboru. Provozní záznamy slouží k ochraně účtů před zneužitím.
 
 ## Kdo údaje vidí
-- Výbor (správci webu) vidí všechny údaje.
-- Ostatní přihlášení obyvatelé vidí Vaše jméno a jednotku u příspěvků v diskuzi a u rezervací.
+- Výbor (správci webu) vidí všechny údaje kromě soukromých zpráv mezi obyvateli.
+- Ostatní přihlášení obyvatelé vidí Vaše jméno a jednotku u příspěvků v diskuzi, u rezervací a v seznamu lidí, kterým lze napsat zprávu.
+- Soukromé zprávy vidí jen odesílatel a příjemce.
 - Vaše hlasy v hlasování a nahlášené závady vidí jen výbor a lidé z Vaší jednotky.
-- Veřejnost nevidí nic z výše uvedeného.
+- Veřejnost vidí jen jména a funkce členů výboru a kontrolní komise.
+
+## Kdo údaje zpracovává pro společenství
+- Provozovatel této webové služby, který web technicky provozuje a zálohuje (zpracovatel; je uveden v patičce nebo na stránce služby).
+- Pokud výbor používá AI pomocníka, odesílá se text, který mu výbor zadá, ke zpracování společnosti Anthropic. Výbor do něj nemá vkládat osobní údaje, které tam být nemusí.
+Údaje se nepředávají nikomu dalšímu a nepoužívají se k reklamě.
 
 ## E-maily
 Výbor Vám může posílat důležité zprávy e-mailem. Zasílání si můžete vypnout ve svém účtu. U rozeslaných zpráv web eviduje, zda byla zpráva otevřena a zda jste klikli na odkaz v ní, aby výbor věděl, ke komu se informace dostala.
 
-## Jak dlouho údaje uchováváme
-Po dobu, kdy jste vlastníkem nebo obyvatelem domu, a dále po dobu, kterou společenství ukládají právní předpisy. Účet Vám výbor na požádání zruší.
+## Cookies
+Web používá jen nezbytné cookies: pro přihlášení, zvolený jazyk a světlý nebo tmavý vzhled. Nepoužívá reklamní ani sledovací cookies třetích stran, proto nezobrazuje cookie lištu.
 
-## Vaše práva
-Máte právo na přístup ke svým údajům, jejich opravu, výmaz, omezení zpracování a právo vznést námitku. Obraťte se na výbor. Stížnost můžete podat u Úřadu pro ochranu osobních údajů (www.uoou.cz).
+## Jak dlouho údaje uchováváme
+Po dobu, kdy jste vlastníkem nebo obyvatelem domu, a dále po dobu, kterou společenství ukládají právní předpisy (například zápisy ze shromáždění a výsledky hlasování). Provozní záznamy o přihlášení slouží bezpečnosti a uchovávají se nejdéle po dobu existence webu.
+
+## Vaše práva a jak je uplatnit
+- **Přístup a přenositelnost:** po přihlášení si v části Můj účet → Moje údaje a soukromí stáhnete vše, co o Vás web ukládá.
+- **Oprava:** jméno, telefon a heslo změníte ve svém účtu; ostatní opraví výbor.
+- **Výmaz („právo být zapomenut“):** účet si můžete sami zrušit tamtéž. Zůstanou jen údaje, které společenství musí uchovat ze zákona (seznam vlastníků, zápisy a výsledky hlasování), a příspěvky bez Vašeho jména.
+- **Námitka a omezení zpracování:** e-maily od výboru a zprávy od sousedů vypnete ve svém účtu; s dalšími požadavky se obraťte na výbor.
+- **Stížnost:** můžete ji podat u Úřadu pro ochranu osobních údajů (www.uoou.cz).
+Na žádosti odpovídá výbor bez zbytečného odkladu, nejpozději do jednoho měsíce. Kontakt najdete na stránce Kontakty.
 TXT;
 
 // ---------- Import obsahu z jiného webu (soubor JSON připravený převodem) ----------

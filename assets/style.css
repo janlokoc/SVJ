@@ -977,3 +977,13 @@ input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-an
 .chat-empty { color: var(--muted); padding: 1.5rem; text-align: center; border: 1px dashed var(--line); border-radius: 12px; }
 .chat-head h1 { margin-bottom: .2rem; }
 .nav-count { display: inline-block; min-width: 1.3em; padding: 0 .4em; margin-left: .3em; border-radius: 999px; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; text-align: center; line-height: 1.5; }
+
+.edition-monthly { margin: -.3rem 0 0; color: var(--muted); font-size: .93rem; }
+.edition-order { display: grid; gap: .4rem; }
+.danger-zone { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.danger-zone summary { cursor: pointer; }
+.danger-zone summary h2 { display: inline; font-size: 1.15rem; margin: 0; }
+.danger-zone[open] summary { margin-bottom: .8rem; }
+.btn-danger { background: #a52a2a; border-color: #a52a2a; color: #fff; }
+.btn-danger:hover { background: #8a2222; border-color: #8a2222; }
+.rights { display: grid; gap: .5rem; padding-left: 1.2rem; }

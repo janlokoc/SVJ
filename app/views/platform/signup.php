@@ -43,7 +43,7 @@
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
     <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
-    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> <small>Web běží v edici Zdarma bez časového omezení a nic neplatíte. Placenou edici si můžete objednat později v administraci.</small></span></label>
+    <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> a beru na vědomí <a href="<?= url('/ochrana-udaju') ?>" target="_blank" rel="noopener">zásady ochrany osobních údajů</a> <small>Web běží v edici Zdarma bez časového omezení a nic neplatíte. Placenou edici si můžete objednat později v administraci.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Založit web zdarma</button><a class="btn btn-ghost" href="<?= url('/registrace/vzhled') ?>">Zpět</a></div>
   </form>
   <?php endif ?>

@@ -30,7 +30,8 @@ $route('GET', '/admin/predplatne', function () {
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
-        'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
+        'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient'), (int) $payment['months'] === 1), (int) $payment['months'] === 1 ? 'QR kód pro trvalý příkaz' : 'QR platba') : '',
+        'qrOnce' => $payment && $iban && (int) $payment['months'] === 1 ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR jednorázová platba') : '',
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
 });
 $route('GET', '/admin/predplatne/doklad/(\d+)', function (int $id) {
@@ -243,9 +244,10 @@ $route('POST', '/admin/predplatne/edice', function () {
         flash($problem, 'info');
         redirect('/admin/predplatne#edice');
     }
-    $credit = billing_credit($t, $edition);
-    $p = billing_order($t, $edition);
-    audit('Předplatné: objednávka edice', EDITIONS[$edition] . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+    $period = post('period') === 'month' ? 'month' : 'year';
+    $credit = $period === 'year' ? billing_credit($t, $edition) : 0;
+    $p = billing_order($t, $edition, $period);
+    audit('Předplatné: objednávka edice', EDITIONS[$edition] . ($period === 'month' ? ' měsíčně' : ' ročně') . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
     flash('Edice ' . EDITIONS[$edition] . ' je objednaná. Zapne se po připsání platby – údaje jsou níže.' . ($credit ? ' Od ceny jsme odečetli ' . money_czk($credit) . ' za nevyčerpanou část edice ' . EDITIONS[tenant_edition($t)] . '.' : ''));
     redirect('/admin/predplatne#platba');
 });
@@ -264,6 +266,50 @@ $route('POST', '/admin/predplatne/zkusit', function () {
     }
     flash(plan_state($feature) === 'expired' ? 'Tuto funkci jste už jednou zkoušeli. Dál ji můžete používat s edicí ' . EDITIONS[PLAN_FEATURES[$feature][0]] . '.' : 'Funkce je už zapnutá.', 'info');
     redirect('/admin/predplatne#funkce');
+});
+// Zrušení celého webu na žádost správce: smaže se po týdnu, do té doby lze žádost vzít zpět. V ukázkovém webu to nejde.
+$route('POST', '/admin/predplatne/zrusit-web', function () {
+    $u = require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t || !empty($t['demo']) || !empty($GLOBALS['DEMO'])) {
+        flash('Ukázkový web zrušit nelze.', 'error');
+        redirect('/admin/predplatne');
+    }
+    if (post('action') === 'cancel') {
+        if ($t['delete_at'] !== '') {
+            tenant_delete_cancel($t, $u['email']);
+            audit('Zrušení webu: žádost vzata zpět');
+            flash('Žádost o smazání webu je zrušena. Web běží dál beze změny.');
+        }
+        redirect('/admin/predplatne#zrusit');
+    }
+    $errors = [];
+    if (!password_verify((string) ($_POST['password'] ?? ''), $u['password_hash'])) {
+        $errors[] = 'Heslo není správně.';
+    }
+    if (mb_strtolower(trim(post('confirm'))) !== TENANT) {
+        $errors[] = 'Pro potvrzení opište adresu webu: ' . TENANT . '.';
+    }
+    if (!isset($_POST['understand'])) {
+        $errors[] = 'Potvrďte, že rozumíte tomu, že se smažou všechna data.';
+    }
+    if ($errors) {
+        flash(implode(' ', $errors), 'error');
+        redirect('/admin/predplatne#zrusit');
+    }
+    $on = tenant_delete_request($t, $u['name'] . ' <' . $u['email'] . '>');
+    audit('Zrušení webu: žádost o smazání', 'smazat ' . $on);
+    $text = "Dobrý den,\n\n" . $u['name'] . " požádal(a) o zrušení webu " . $t['name'] . " (" . tenant_address(TENANT) . ").\nWeb včetně všech účtů, dokumentů a dalších dat bude nenávratně smazán "
+        . cz_date($on) . ".\n\nDo té doby web běží normálně a kterýkoli správce může žádost vzít zpět: " . tenant_url($t, '/admin/predplatne') . "\nZálohu dat si stáhnete zde: " . tenant_url($t, '/admin/zaloha');
+    $to = array_unique(array_filter(array_merge(array_column(all("SELECT email FROM users WHERE role = 'admin' AND active = 1"), 'email'), [$t['owner_email']])));
+    foreach ($to as $email) {
+        platform_mail($email, 'Web bude smazán ' . cz_date($on) . ' – ' . $t['name'], $text);
+    }
+    if (pset('contact_email') !== '') {
+        platform_mail(pset('contact_email'), 'Žádost o smazání webu: ' . $t['name'], 'Správce ' . $u['name'] . ' <' . $u['email'] . '> požádal o smazání webu ' . TENANT . '. Smaže se ' . cz_date($on) . ', pokud žádost nevezme zpět.');
+    }
+    flash('Web bude smazán ' . cz_date($on) . '. Do té doby můžete žádost vzít zpět. Všem správcům jsme poslali e-mail.', 'info');
+    redirect('/admin/predplatne#zrusit');
 });
 $route('POST', '/admin/predplatne/zaplaceno', function () {
     require_admin();

@@ -272,6 +272,18 @@ automatické vystavování (viz výše).
   smaže včetně dat. Kontaktní osobě chodí upozornění 14 a 3 dny předem;
   bez prokazatelně odeslaného upozornění se nic nemaže a přihlášení lhůtu
   vynuluje. Odeslaná upozornění jsou v konzoli v části Záznamy.
+- **Měsíční platba:** edici lze platit i měsíčně. Měsíční cena je roční
+  cena ÷ 12 zvýšená o přirážku z Nastavení služby (výchozí 30 %; Standard
+  161 Kč, Premium 324 Kč). Platí se trvalým příkazem: QR kód podle
+  standardu QR Platba (`FRQ:1M`) ho v bankovní aplikaci předvyplní,
+  variabilní symbol zůstává každý měsíc stejný. Každou připsanou platbu
+  potvrdíte v Platbách; edice se prodlouží o měsíc a vystaví se faktura.
+  Podpora trvalého příkazu z QR kódu se mezi bankami liší – na stránce je
+  i ruční postup a QR pro jednorázovou platbu prvního měsíce.
+- **Zrušení webu správcem:** správce společenství může v Předplatném
+  požádat o smazání celého webu (opíše adresu webu a zadá heslo). Web se
+  smaže po 7 dnech; do té doby běží, všichni správci dostanou e-mail
+  a kterýkoli z nich může žádost vzít zpět. V ukázkovém webu to nejde.
 - **Ruční nastavení předplatného:** hlavní správce může u kteréhokoli
   společenství v konzoli (karta Předplatné) nastavit edici a datum, do
   kdy platí, prodloužit ji o měsíc nebo rok, ukončit ji, nebo placení
@@ -498,6 +510,24 @@ Překládá se rozhraní webu (menu, formuláře, hlášky, data). Obsah, který
 píše výbor a obyvatelé, administrace a e-maily zůstávají v původním
 znění. Slovníky jsou v `app/lang/` (český text → překlad); překlady jsou
 strojové a je vhodné nechat je projít rodilým mluvčím.
+
+## Ochrana osobních údajů (GDPR)
+
+- **Moje údaje a soukromí** (Můj účet): přehled toho, co web o člověku
+  ukládá, stažení všech údajů v JSON (přístup a přenositelnost) a zrušení
+  vlastního účtu heslem (výmaz). Poslední správce svůj účet zrušit nemůže.
+- Při zrušení účtu se smažou kontaktní údaje, zprávy, rezervace
+  a přiřazení k jednotce. Zůstávají příspěvky a závady bez jména, hlasy
+  a účast jednotky (součást zápisů), vlastník podle katastru a provozní
+  záznamy o přihlášení.
+- Výbor může údaje uživatele stáhnout za něj (formulář uživatele) –
+  pro žádosti lidí, kteří se sami nepřihlásí.
+- Stránka **Ochrana osobních údajů** webu společenství popisuje práva,
+  zpracovatele, cookies a lhůty; výbor si text může upravit v Nastavení
+  (weby s vlastním textem se nemění). Služba sama má vlastní zásady na
+  adrese `/ochrana-udaju` hlavní domény.
+- Texty jsou výchozí vzor, ne právní posouzení – před ostrým provozem je
+  nechte zkontrolovat.
 
 ## Zabezpečení
 

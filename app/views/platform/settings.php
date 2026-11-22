@@ -18,6 +18,8 @@
       <label>Standard (Kč za rok) <input type="number" name="price_standard" value="<?= e($v['price_standard']) ?>" min="0" required></label>
       <label>Premium (Kč za rok) <input type="number" name="price_premium" value="<?= e($v['price_premium']) ?>" min="0" required></label>
     </div>
+    <label>Přirážka za měsíční platbu (%) <input type="number" name="monthly_surcharge" value="<?= e($v['monthly_surcharge']) ?>" min="0" max="500" required></label>
+    <p class="hint">Měsíční cena = roční cena ÷ 12 + přirážka, zaokrouhleno na koruny. Teď: Standard <?= money_czk(edition_price('standard', 'month')) ?>, Premium <?= money_czk(edition_price('premium', 'month')) ?> měsíčně. Měsíční platba se platí trvalým příkazem se stále stejným variabilním symbolem; každou připsanou platbu potvrzujete v Platbách.</p>
     <table class="table limits-table"><thead><tr><th>Limit (0 = bez omezení)</th><?php foreach (EDITIONS as $ek => $en): ?><th><?= $en ?></th><?php endforeach ?></tr></thead><tbody>
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): ?><tr><td data-label="Limit"><?= e($ln) ?><?= $unit !== '' ? ' (' . $unit . ')' : '' ?></td>
         <?php foreach (EDITIONS as $ek => $en): ?><td data-label="<?= $en ?>"><input type="number" name="lim_<?= $ek ?>_<?= $lk ?>" value="<?= e($v['lim_' . $ek . '_' . $lk]) ?>" min="0" required aria-label="<?= e($ln . ' – ' . $en) ?>"></td><?php endforeach ?></tr><?php endforeach ?>

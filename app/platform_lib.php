@@ -44,7 +44,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -151,6 +151,13 @@ SQL);
             contact_name TEXT NOT NULL DEFAULT '', contact_email TEXT NOT NULL DEFAULT '', contact_phone TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'ordered', payment_id INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL, done_at TEXT NOT NULL DEFAULT '', done_note TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 9;");
     }
+    // Měsíční platba a smazání webu na žádost jeho správce.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 10) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN period TEXT NOT NULL DEFAULT 'year';
+            ALTER TABLE tenants ADD COLUMN delete_at TEXT NOT NULL DEFAULT '';
+            ALTER TABLE tenants ADD COLUMN delete_by TEXT NOT NULL DEFAULT '';
+            PRAGMA user_version = 10;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -253,7 +260,35 @@ function tenant_delete_storage(string $slug): void
 
 // ---------- Nastavení služby, registrace a předplatné ----------
 
+const PLATFORM_PRIVACY = <<<'TXT'
+## Kdo údaje zpracovává
+Tyto zásady se týkají webu služby a jejích zákazníků. Správcem údajů je provozovatel služby uvedený v záhlaví této stránky.
+U webů jednotlivých společenství je správcem údajů vždy dané společenství a provozovatel je jeho zpracovatelem; podmínky upravuje smlouva o zpracování osobních údajů.
+
+## Jaké údaje ukládáme
+- **Při založení webu:** název a adresu společenství, jméno a e-mail osoby, která web zakládá, čas souhlasu s podmínkami a IP adresu (kvůli ochraně před zneužitím registrace).
+- **Při platbě:** údaje na zálohové faktuře a faktuře, variabilní symbol a to, kdo platbu potvrdil.
+- **Když nám napíšete nebo nahlásíte problém:** text hlášení, adresu stránky, typ prohlížeče, případný snímek obrazovky a kontakt, který uvedete.
+- **Zájem o připravované funkce:** e-mail, pokud ho zadáte, abychom Vám dali vědět. U prokliků na detail funkce jen anonymní denní otisk (nelze z něj zjistit, kdo jste).
+- **Provozní záznamy:** přihlášení hlavních správců a úkony v konzoli.
+
+## K čemu údaje slouží
+K poskytování služby (plnění smlouvy), k vystavení dokladů (právní povinnost) a k ochraně a zlepšování služby (oprávněný zájem). Údaje nepoužíváme k reklamě a nepředáváme je třetím stranám, s výjimkou poskytovatele hostingu.
+
+## Jak dlouho
+- Údaje webu společenství do jeho zrušení; nepoužívaný web v edici Zdarma mažeme po lhůtě uvedené v obchodních podmínkách, vždy s upozorněním předem. Web lze kdykoli zrušit v administraci.
+- Faktury po dobu, kterou ukládají účetní a daňové předpisy.
+- E-maily zájemců o připravované funkce do spuštění funkce, nebo dokud nepožádáte o výmaz.
+
+## Cookies
+Používáme jen nezbytné cookies: přihlášení, průběh registrace a zvolený světlý nebo tmavý vzhled. Žádné reklamní ani sledovací cookies třetích stran, proto nezobrazujeme cookie lištu.
+
+## Vaše práva
+Máte právo na přístup ke svým údajům, jejich opravu, výmaz, omezení zpracování, přenositelnost a právo vznést námitku. Napište nám na kontakt uvedený v záhlaví; odpovíme do jednoho měsíce. Stížnost můžete podat u Úřadu pro ochranu osobních údajů (www.uoou.cz).
+Správce webu společenství si může data svého webu kdykoli stáhnout (Záloha) a celý web zrušit (Předplatné → Zrušit web).
+TXT;
 const PLATFORM_TERMS = <<<'TXT'
+
 ## 1. Úvodní ustanovení
 Tyto podmínky upravují poskytování služby, která společenstvím vlastníků jednotek (dále „zákazník“) umožňuje provozovat vlastní web s částí pro obyvatele domu a s administrací. Poskytovatelem je provozovatel uvedený v záhlaví této stránky.
 Smlouva vzniká dokončením registrace, při které osoba jednající za zákazníka potvrdí souhlas s těmito podmínkami. Tato osoba prohlašuje, že je oprávněna za společenství jednat.
@@ -320,7 +355,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '500', 'lim_standard_ai' => '30', 'lim_standard_polls' => '0',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '1000', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -496,25 +531,29 @@ function billing_order_problem(array $t, string $edition): ?string
     }
     return null;
 }
-/** Výzva k platbě za edici na rok; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění. */
-function billing_order(array $t, string $edition): ?array
+/**
+ * Výzva k platbě za edici na rok nebo na měsíc; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění.
+ * Měsíční platba je dražší o přirážku z nastavení (roční cena / 12 + přirážka) a platí se trvalým příkazem se stále stejným variabilním symbolem.
+ */
+function billing_order(array $t, string $edition, string $period = 'year'): ?array
 {
+    $months = $period === 'month' ? 1 : 12;
     if (!isset(EDITIONS[$edition]) || $edition === 'free') {
         return null;
     }
     if (billing_order_problem($t, $edition)) {
         return null;
     }
-    $amount = max(0, edition_price($edition) - billing_credit($t, $edition));
+    $amount = $months === 1 ? edition_price($edition, 'month') : max(0, edition_price($edition) - billing_credit($t, $edition));
     $p = billing_open($t);
     if ($p && $p['status'] === 'claimed') {
         return $p;
     }
     if ($p) {
-        pq('UPDATE payments SET amount = ?, months = 12, item = ? WHERE id = ?', [$amount, $edition, $p['id']]);
+        pq('UPDATE payments SET amount = ?, months = ?, item = ? WHERE id = ?', [$amount, $months, $edition, $p['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'service',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), $edition]);
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,?,?,'service',?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -576,7 +615,12 @@ function billing_confirm(array $p, string $by): ?array
         }
         return ['from' => $from, 'to' => $to];
     }
-    pq("UPDATE tenants SET paid_until = ?, plan = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $edition, $t['slug']]);
+    $monthly = (int) $p['months'] === 1;
+    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, reminded = '' WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', $t['slug']]);
+    if ($monthly) {
+        // Trvalý příkaz posílá každý měsíc stejnou částku se stejným variabilním symbolem – další platbu proto čekáme pod týmž symbolem.
+        pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, vs) VALUES (?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
+    }
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
             . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
@@ -618,10 +662,12 @@ function cz_iban(string $account): ?string
     return 'CZ' . sprintf('%02d', 98 - $mod97($bban . '123500')) . $bban;
 }
 /** Text QR platby (český standard „QR Platba“, formát SPAYD), který přečte bankovní aplikace. */
-function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = ''): string
+function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = '', bool $standing = false): string
 {
     $clean = fn(string $s, int $max) => substr(trim(str_replace('*', ' ', strtoupper(ascii_text($s)))), 0, $max);
-    return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '') . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
+    return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '')
+        // Trvalý příkaz podle standardu QR Platba: první platba dnes, opakování každý měsíc, bez data ukončení.
+        . ($standing ? '*DT:' . date('Ymd') . '*FRQ:1M*DH:1' : '') . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
 }
 /** Jednou denně: připomene blížící se konec placené edice a přechod na edici Zdarma, konec zkoušky funkcí a uklidí nepoužívané weby. */
 function platform_daily(): void
@@ -635,10 +681,11 @@ function platform_daily(): void
         if ($s['until'] === '') {
             continue;   // edice Zdarma od začátku – není co připomínat
         }
+        $monthly = ($t['period'] ?? 'year') === 'month';
         $key = match (true) {
             $s['mode'] === 'basic' => 'free:' . $s['until'],
-            $s['mode'] === 'grace' => 'due:' . $s['until'],
-            $s['days'] <= 14 => 'soon:' . $s['until'],
+            $s['mode'] === 'grace' && (!$monthly || $s['days'] <= -5) => 'due:' . $s['until'],
+            !$monthly && $s['mode'] !== 'grace' && $s['days'] <= 14 => 'soon:' . $s['until'],
             default => '',
         };
         if ($key === '' || $key === $t['reminded']) {
@@ -647,7 +694,7 @@ function platform_daily(): void
         $what = $t['paid_until'] === '' ? 'zkušební doba' : 'předplatné edice ' . EDITIONS[$s['edition'] === 'free' ? ($t['plan'] ?: 'standard') : $s['edition']];
         // Před koncem zaplaceného období rovnou připravíme výzvu k platbě na další rok.
         if ($s['mode'] !== 'basic' && $t['paid_until'] !== '' && !billing_open($t)) {
-            billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition']);
+            billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition'], $monthly ? 'month' : 'year');
         }
         $link = tenant_url($t, '/admin/predplatne');
         [$subject, $body] = match ($s['mode']) {
@@ -659,6 +706,7 @@ function platform_daily(): void
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
     trial_reminders();
+    tenant_requested_deletions();
     platform_cleanup();
     domain_renewals();
     cert_reminders();
@@ -771,6 +819,38 @@ function platform_cleanup(): void
             "Dobrý den,\n\nna web " . $t['name'] . " se od " . cz_date($since) . " nikdo nepřihlásil. Nepoužívané weby v edici Zdarma mažeme, tento nejdříve "
             . cz_date($when) . ".\n\nChcete web zachovat? Stačí se přihlásit: " . tenant_url($t, '/prihlaseni')
             . "\nChcete si jen odnést data? Zálohu stáhnete zde: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
+    }
+}
+const TENANT_DELETE_WAIT_DAYS = 7;
+
+/** Správce webu požádal o zrušení: web se smaže po týdnu, do té doby lze žádost vzít zpět. Ukázkový web zrušit nelze. */
+function tenant_delete_request(array $t, string $by): ?string
+{
+    if (!empty($t['demo'])) {
+        return null;
+    }
+    $on = date('Y-m-d', strtotime('+' . TENANT_DELETE_WAIT_DAYS . ' day'));
+    pq('UPDATE tenants SET delete_at = ?, delete_by = ? WHERE slug = ?', [$on, mb_substr($by, 0, 190), $t['slug']]);
+    pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Žádost o smazání webu', $t['slug'] . ' · ' . $t['name'] . ' · požádal ' . $by . ' · smazat ' . $on]);
+    return $on;
+}
+function tenant_delete_cancel(array $t, string $by): void
+{
+    pq("UPDATE tenants SET delete_at = '', delete_by = '' WHERE slug = ?", [$t['slug']]);
+    pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Žádost o smazání webu vzata zpět', $t['slug'] . ' · ' . $by]);
+}
+/** Smaže weby, u kterých uplynula lhůta od žádosti správce. */
+function tenant_requested_deletions(): void
+{
+    foreach (pq("SELECT * FROM tenants WHERE delete_at <> '' AND delete_at <= ? AND demo = 0", [date('Y-m-d')])->fetchAll() as $t) {
+        tenant_delete_storage($t['slug']);
+        pq('DELETE FROM tenants WHERE slug = ?', [$t['slug']]);
+        pq('DELETE FROM feature_trials WHERE tenant = ?', [$t['slug']]);
+        pq("UPDATE payments SET status = 'cancelled', note = 'web zrušen na žádost správce' WHERE tenant = ? AND status = 'pending'", [$t['slug']]);
+        pq("UPDATE migrations SET status = 'cancelled' WHERE tenant = ? AND status = 'ordered'", [$t['slug']]);
+        pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Smazání společenství na žádost správce', $t['slug'] . ' · ' . $t['name'] . ' · požádal ' . $t['delete_by']]);
+        tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . tenant_address($t['slug']) . ") jsme na žádost jeho správce smazali včetně všech dat, účtů a dokumentů.\n"
+            . "Vystavené faktury uchováváme po dobu, kterou ukládají účetní předpisy.\n\nKdykoli si můžete založit nový web: " . platform_url('/registrace'));
     }
 }
 /** Upozorní správce 7 a 2 dny před koncem zkoušky funkce. */

@@ -194,8 +194,9 @@ function plan_feature_for(string $path): ?string
     }
     return null;
 }
-/** Cena edice za rok. */
-function edition_price(string $edition): int
+/** Cena edice za rok, nebo za měsíc: měsíční cena je dvanáctina roční zvýšená o přirážku z nastavení (výchozí 30 %), zaokrouhlená na koruny. */
+function edition_price(string $edition, string $period = 'year'): int
 {
-    return $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
+    $year = $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
+    return $period === 'month' ? (int) round($year / 12 * (1 + pset_int('monthly_surcharge', 0, 500) / 100)) : $year;
 }

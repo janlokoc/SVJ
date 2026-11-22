@@ -263,6 +263,7 @@ require __DIR__ . '/app/routes_admin.php';
 require __DIR__ . '/app/routes_extra.php';
 require __DIR__ . '/app/routes_more.php';
 require __DIR__ . '/app/routes_chat.php';
+require __DIR__ . '/app/routes_gdpr.php';
 require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';

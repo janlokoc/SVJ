@@ -28,20 +28,31 @@
 
   <?php if ($payment): ?>
   <div class="card" id="platba">
-    <h2>Platba za edici <?= e(EDITIONS[$payment['item']] ?? 'Standard') ?> na 1 rok</h2>
+    <?php $monthlyPay = (int) $payment['months'] === 1; ?>
+    <h2>Platba za edici <?= e(EDITIONS[$payment['item']] ?? 'Standard') ?> <?= $monthlyPay ? '– měsíčně trvalým příkazem' : 'na 1 rok' ?></h2>
     <?php if ($payment['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($payment['claimed_at']) ?>. Čeká na potvrzení provozovatelem – obvykle do dvou pracovních dnů.</div><?php endif ?>
     <?php if ($iban): ?>
     <div class="pay">
-      <div class="pay-qr"><?= $qr ?><small>Načtěte v bankovní aplikaci</small></div>
+      <div class="pay-qr"><?= $qr ?><small><?= $monthlyPay ? 'QR kód pro trvalý příkaz' : 'Načtěte v bankovní aplikaci' ?></small></div>
       <dl class="pay-data">
-        <dt>Částka</dt><dd><strong><?= money_czk((int) $payment['amount']) ?></strong></dd>
+        <dt>Částka</dt><dd><strong><?= money_czk((int) $payment['amount']) ?></strong><?= $monthlyPay ? ' <small class="muted">každý měsíc</small>' : '' ?></dd>
         <dt>Číslo účtu</dt><dd><?= e(str_starts_with(strtoupper(trim(pset('account'))), 'CZ') ? $iban : pset('account')) ?></dd>
         <dt>IBAN</dt><dd><?= e(trim(chunk_split($iban, 4, ' '))) ?></dd>
         <dt>Variabilní symbol</dt><dd><code><?= e($payment['vs']) ?></code></dd>
         <?php if (pset('recipient') !== ''): ?><dt>Příjemce</dt><dd><?= e(pset('recipient')) ?></dd><?php endif ?>
       </dl>
     </div>
+    <?php if ($monthlyPay): ?>
+    <div class="callout"><strong>Jak nastavit trvalý příkaz</strong>
+      <ol><li>Načtěte QR kód v bankovní aplikaci – vyplní částku, účet, variabilní symbol i měsíční opakování. Před potvrzením zkontrolujte, že aplikace nabízí <strong>trvalý příkaz</strong>, ne jednorázovou platbu.</li>
+        <li>Pokud Vaše banka trvalý příkaz z QR kódu neumí, zadejte ho ručně: <?= money_czk((int) $payment['amount']) ?> každý měsíc na účet <?= e(pset('account')) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</li>
+        <li>Variabilní symbol zůstává každý měsíc stejný. Každou připsanou platbu potvrdíme a edici prodloužíme o měsíc.</li></ol>
+      <?php if (!empty($qrOnce)): ?><details><summary>Chci zatím zaplatit jen první měsíc jednorázově</summary><div class="pay-qr"><?= $qrOnce ?><small>Jednorázová platba <?= money_czk((int) $payment['amount']) ?></small></div></details><?php endif ?>
+    </div>
+    <p class="hint">Měsíční platba vyjde ročně na <?= money_czk((int) $payment['amount'] * 12) ?>; při roční platbě je to <?= money_czk(edition_price((string) ($payment['item'] ?? 'standard'))) ?>. Trvalý příkaz zrušíte kdykoli ve své bance – edice pak doběhne do konce zaplaceného měsíce a web přejde na edici Zdarma.</p>
+    <?php else: ?>
     <p class="hint">Platba se páruje podle variabilního symbolu. <?= (int) $payment['amount'] < edition_price((string) ($payment['item'] ?? 'standard')) ? 'Částka je snížená o nevyčerpanou část dosavadní edice. ' : '' ?>Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
+    <?php endif ?>
     <?php else: ?>
       <p>Částka: <strong><?= money_czk((int) $payment['amount']) ?></strong>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
       <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>
@@ -208,6 +219,30 @@
     </ul>
     <?php if (pset('contact_email') !== ''): ?><p class="hint">Podporu a úpravy objednáte na <a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a>.</p><?php endif ?>
   </div>
+
+  <?php if (empty($t['demo']) && empty($GLOBALS['DEMO'])): ?>
+  <details class="card danger-zone" id="zrusit"<?= $t['delete_at'] !== '' ? ' open' : '' ?>>
+    <summary><h2>Zrušit web a smazat všechna data</h2></summary>
+    <?php if ($t['delete_at'] !== ''): ?>
+      <div class="flash flash-error">Web bude nenávratně smazán <strong><?= cz_date($t['delete_at']) ?></strong> na žádost: <?= e($t['delete_by']) ?>.</div>
+      <p>Do té doby web běží normálně. <a href="<?= url('/admin/zaloha') ?>">Stáhněte si zálohu dat</a>, pokud ji budete chtít mít.</p>
+      <form method="post" action="<?= url('/admin/predplatne/zrusit-web') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn" type="submit">Vzít žádost zpět – web nemazat</button></form>
+    <?php else: ?>
+      <p>Smaže se celý web společenství: všechny účty, jednotky, dokumenty, hlasování, zprávy i nastavení. <strong>Nejde to vrátit.</strong></p>
+      <ul><li>Web se smaže za <?= TENANT_DELETE_WAIT_DAYS ?> dní od žádosti. Do té doby běží normálně a kterýkoli správce může žádost vzít zpět.</li>
+        <li>Všem správcům webu pošleme e-mail, aby o žádosti věděli.</li>
+        <li>Zaplacené předplatné se nevrací; vystavené faktury uchováváme po dobu danou účetními předpisy.</li>
+        <li>Nejdřív si <a href="<?= url('/admin/zaloha') ?>">stáhněte zálohu dat</a>.</li></ul>
+      <form method="post" action="<?= url('/admin/predplatne/zrusit-web') ?>" class="form" data-confirm="Opravdu požádat o smazání celého webu?">
+        <?= csrf_field() ?>
+        <label>Pro potvrzení opište adresu webu: <strong><?= e($t['slug']) ?></strong> <input type="text" name="confirm" required autocomplete="off" autocapitalize="none"></label>
+        <label>Vaše heslo <input type="password" name="password" required autocomplete="current-password"></label>
+        <label class="check"><input type="checkbox" name="understand" required> <span>Rozumím, že se smažou všechna data společenství a nepůjde to vrátit.</span></label>
+        <div class="actions"><button class="btn btn-danger" type="submit">Požádat o smazání webu</button></div>
+      </form>
+    <?php endif ?>
+  </details>
+  <?php endif ?>
 
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
