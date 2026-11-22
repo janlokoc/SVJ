@@ -192,6 +192,21 @@ $route('GET', '/terminy/(\d+)/plna-moc', function (int $id) {
 foreach (crud_defs() as $slug => $def) {
     $route('GET', "/admin/$slug", function () use ($slug, $def) {
         require_admin();
+        // Prostory a jejich rezervace jsou na jedné stránce.
+        if ($slug === 'prostory') {
+            redirect('/admin/rezervace');
+        }
+        if ($slug === 'rezervace') {
+            $today = date('Y-m-d');
+            $res = all('SELECT r.*, u.name author_name, ' . units_sql('u') . ' author_units FROM reservations r LEFT JOIN users u ON u.id = r.user_id WHERE r.res_date >= ? ORDER BY r.res_date, r.time_from', [$today]);
+            $byResource = [];
+            foreach ($res as $r) {
+                $byResource[(int) $r['resource_id']][] = $r;
+            }
+            render('admin/spaces', ['title' => 'Prostory a rezervace', 'resources' => all('SELECT * FROM resources ORDER BY active DESC, name'), 'byResource' => $byResource,
+                'past' => array_column(all('SELECT resource_id, COUNT(*) AS n FROM reservations WHERE res_date < ? GROUP BY resource_id', [$today]), 'n', 'resource_id')]);
+            return;
+        }
         render('admin/crud_list', ['title' => $def['title'], 'slug' => $slug, 'def' => $def, 'rows' => all("SELECT * FROM {$def['table']} ORDER BY {$def['order']} LIMIT 1000")]);
     });
     $form = function (int $id = 0) use ($slug, $def) {
