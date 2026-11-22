@@ -111,13 +111,12 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
   </tbody></table>
 
   <h3 class="lp-sub" id="pripravujeme">Připravujeme</h3>
-  <p class="muted">Tyto funkce ještě nejsou hotové. Klikněte na „Mám zájem“ u těch, které byste využili – podle zájmu rozhodujeme, co udělat dřív. K ničemu se tím nezavazujete.</p>
+  <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>
   <ul class="planned">
     <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
-    <li><div><strong><?= e($name) ?></strong> <span class="tag">již brzy</span><?= $price !== '' ? ' <small class="muted">· ' . e($price) . '</small>' : '' ?><p><?= e($desc) ?></p></div>
-      <form method="post" action="<?= url('/zajem') ?>" class="planned-form"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($key) ?>">
-        <span class="hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></span>
-        <input type="email" name="email" placeholder="e-mail (nepovinné)" aria-label="E-mail pro zprávu, až bude funkce <?= e($name) ?> hotová"><button class="btn btn-small btn-ghost" type="submit">Mám zájem</button></form></li>
+    <li><a href="<?= url('/pripravujeme/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
+      <span class="planned-desc"><?= e($desc) ?></span>
+      <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci →</span></span></a></li>
     <?php endforeach ?>
   </ul>
 </div></section>

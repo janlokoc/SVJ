@@ -1,6 +1,6 @@
 <?php $flash = flash(); $service = pset('service_name'); ?>
 <!doctype html>
-<html lang="cs" data-look="les">
+<html lang="cs" data-look="les"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -47,6 +47,7 @@
       <li><a href="<?= url('/zpracovani-udaju') ?>">Zpracování osobních údajů</a></li>
       <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
       <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>
+      <li><?= theme_switch() ?></li>
     </ul>
   </div>
 </footer>

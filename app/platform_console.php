@@ -388,8 +388,10 @@ if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
     exit;
 }
 if ($PATH === '/zajem') {
-    render('platform/interest', ['title' => 'Zájem o funkce', 'counts' => interest_counts(),
-        'rows' => pq("SELECT i.*, t.name AS tenant_name FROM feature_interest i LEFT JOIN tenants t ON t.slug = i.tenant ORDER BY i.id DESC LIMIT 300")->fetchAll()]);
+    $days = in_array((int) ($_GET['dni'] ?? 0), [7, 30, 90], true) ? (int) $_GET['dni'] : 0;
+    render('platform/interest', ['title' => 'Zájem o funkce', 'stats' => feature_stats($days), 'days' => $days,
+        'rows' => pq("SELECT i.*, t.name AS tenant_name FROM feature_interest i LEFT JOIN tenants t ON t.slug = i.tenant ORDER BY i.id DESC LIMIT 300")->fetchAll(),
+        'tenantViews' => pq("SELECT v.feature, v.tenant, t.name AS tenant_name, COUNT(*) AS n, MAX(v.at) AS last FROM feature_views v LEFT JOIN tenants t ON t.slug = v.tenant WHERE v.tenant <> '' GROUP BY v.feature, v.tenant ORDER BY last DESC LIMIT 200")->fetchAll()]);
     exit;
 }
 if ($PATH === '/zaznamy') {

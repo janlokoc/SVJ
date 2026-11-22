@@ -42,7 +42,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
+const PLATFORM_PATHS = ['vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -131,6 +131,11 @@ SQL);
     // Zájem o připravované funkce.
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 6) {
         $pdo->exec("CREATE TABLE feature_interest (id INTEGER PRIMARY KEY AUTOINCREMENT, feature TEXT NOT NULL, tenant TEXT NOT NULL DEFAULT '', contact TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 6;");
+    }
+    // Prokliky na detail připravovaných funkcí.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 7) {
+        $pdo->exec("CREATE TABLE feature_views (id INTEGER PRIMARY KEY AUTOINCREMENT, feature TEXT NOT NULL, tenant TEXT NOT NULL DEFAULT '', visitor TEXT NOT NULL, day TEXT NOT NULL, at TEXT NOT NULL);
+            CREATE INDEX feature_views_f ON feature_views (feature, day); PRAGMA user_version = 7;");
     }
     return $pdo;
 }
@@ -877,6 +882,91 @@ const PLANNED_FEATURES = [
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'za hlasování'],
     'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'doplněk'],
 ];
+/**
+ * Podrobný popis připravovaných funkcí pro stránku s detailem:
+ * lead = jednou větou, problem = jaký problém řeší, how = co přesně bude dělat, note = cena a omezení.
+ */
+const PLANNED_DETAILS = [
+    'ai-zapis-nahravka' => [
+        'lead' => 'Schůzi nahrajete na telefon, nahrávku vložíte na web a dostanete návrh zápisu.',
+        'problem' => 'Zápis ze shromáždění bývá nejméně oblíbená práce ve výboru. Zapisovatel během schůze nestíhá poslouchat i psát, zápis pak vzniká týdny po schůzi z paměti a vlastníci se dohadují, co kdo vlastně řekl. Dnes už pomocník umí zápis napsat z poznámek nebo z hotového přepisu – přepis si ale musíte obstarat sami.',
+        'how' => ['Nahrajete zvukový soubor ze schůze (telefon, diktafon, záznam online schůzky).', 'Služba nahrávku přepíše do textu a rozliší, kdy mluví kdo.', 'AI z přepisu sestaví zápis podle programu: průběh jednání, návrhy, výsledky hlasování, úkoly a termíny.', 'Zapisovatel návrh projde, opraví a vytiskne nebo uloží do Dokumentů. Nahrávka se po zpracování smaže.'],
+        'note' => 'Placený doplněk – přepis zvuku je výpočetně drahý, cena bude podle délky nahrávky. Účastníci musí o nahrávání vědět.',
+    ],
+    'ai-asistent' => [
+        'lead' => 'Sousedé se zeptají webu a dostanou odpověď podle Vašich stanov, domovního řádu a oznámení.',
+        'problem' => 'Výbor odpovídá pořád na stejné otázky: kdy se smí vrtat, kam s kočárkem, kdy bude vyúčtování, komu hlásit kapající radiátor. Odpovědi přitom v dokumentech na webu jsou, jen je nikdo nehledá.',
+        'how' => ['Přihlášený obyvatel položí otázku běžnou řečí, česky i v dalších jazycích webu.', 'Asistent odpoví jen podle dokumentů a oznámení Vašeho domu a uvede, odkud odpověď vzal.', 'Když odpověď v podkladech není, řekne to a nabídne předání dotazu výboru.', 'Výbor vidí, na co se lidé ptají nejčastěji, a ví, co na webu doplnit.'],
+        'note' => 'Placený doplněk. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu.',
+    ],
+    'sms' => [
+        'lead' => 'Důležité zprávy dojdou i těm, kdo e-mail nečtou.',
+        'problem' => 'Část vlastníků, hlavně starších, e-maily nečte nebo e-mail vůbec nemá. O odstávce vody, havárii nebo termínu shromáždění se tak dozvědí pozdě a výbor jim musí volat nebo obcházet byty.',
+        'how' => ['U oznámení, pozvánky nebo havárie zaškrtnete „poslat i SMS“.', 'Zpráva odejde na telefonní čísla, která mají vlastníci a nájemníci na webu uvedená.', 'Vyberete příjemce: celý dům, jeden vchod, nebo jen ty, kdo nemají e-mail.', 'U každé zprávy uvidíte, komu byla doručena.'],
+        'note' => 'Platí se podle počtu odeslaných zpráv (zhruba 1–2 Kč za SMS), bez měsíčního paušálu.',
+    ],
+    'katastr' => [
+        'lead' => 'Web sám pozná, že byt změnil majitele.',
+        'problem' => 'Vlastník má změnu nahlásit, ale často to neudělá. Výbor pak posílá pozvánky a předpisy záloh původnímu majiteli, seznam pro hlasování neodpovídá skutečnosti a usnesení se dá kvůli tomu napadnout.',
+        'how' => ['Web pravidelně porovnává seznam jednotek s údaji v katastru nemovitostí.', 'Při změně vlastníka nebo podílu upozorní výbor e-mailem a v administraci.', 'Jedním kliknutím změnu převezmete do evidence jednotek, včetně hlasovacích podílů.', 'Před shromážděním dostanete přehled změn od posledního hlasování.'],
+        'note' => 'Placený doplněk – dálkový přístup do katastru je zpoplatněný státem, cena bude podle počtu jednotek.',
+    ],
+    'insolvence' => [
+        'lead' => 'Upozornění, když se dlužník dostane do insolvence – dokud je čas přihlásit pohledávku.',
+        'problem' => 'Na přihlášení pohledávky do insolvenčního řízení má společenství jen dva měsíce od rozhodnutí o úpadku. Když si toho výbor nevšimne, o dlužné zálohy zpravidla přijde a doplatí je ostatní vlastníci.',
+        'how' => ['Web denně kontroluje vlastníky jednotek v insolvenčním rejstříku.', 'Při nálezu pošle výboru upozornění s číslem řízení a lhůtou pro přihlášení pohledávky.', 'U jednotky uvidíte stav řízení a dlužnou částku z evidence plateb.', 'Volitelně i hlídání exekucí a zástav zapsaných u jednotky v katastru.'],
+        'note' => 'Placený doplněk. Insolvenční rejstřík je veřejný, kontrola se týká jen vlastníků Vašich jednotek.',
+    ],
+    'push' => [
+        'lead' => 'Nové oznámení se objeví na displeji telefonu jako zpráva z aplikace.',
+        'problem' => 'E-maily ze společenství zapadnou mezi reklamou a nástěnku u vchodu si přečte málokdo. O odstávce nebo o běžícím hlasování se tak lidé dozvědí, až když je pozdě.',
+        'how' => ['Obyvatel si web přidá na plochu telefonu a povolí upozornění.', 'Při novém oznámení, havárii nebo zahájení hlasování mu přijde zpráva na displej.', 'Každý si sám zvolí, o čem chce vědět (oznámení, hlasování, závady, termíny).', 'Před koncem hlasování přijde připomenutí těm, kdo ještě nehlasovali.'],
+        'note' => 'Bude v ceně webu, bez příplatku. Na iPhonu funguje po přidání webu na plochu.',
+    ],
+    'bankid' => [
+        'lead' => 'Hlasující se ověří přes svou banku – stejně jako na úřadech.',
+        'problem' => 'U hlasování mimo shromáždění (per rollam) se dá namítnout, že hlasoval někdo jiný než vlastník. U běžných věcí to nevadí, u půjčky, velké rekonstrukce nebo změny stanov ale může spor o platnost stát roky.',
+        'how' => ['U vybraného hlasování zapnete ověření bankovní identitou.', 'Vlastník před odesláním hlasu potvrdí totožnost ve svém bankovnictví.', 'K hlasu se uloží záznam o ověření, který obstojí jako důkaz.', 'Ostatní hlasování běží dál bez ověřování, jako dnes.'],
+        'note' => 'Platí se za hlasování podle počtu ověření (banky účtují jednotky korun za ověření).',
+    ],
+    'banka' => [
+        'lead' => 'Stav záloh a nedoplatků se aktualizuje sám podle účtu společenství.',
+        'problem' => 'Dnes musí výbor nebo správce stav plateb do webu nahrávat ručně z tabulky. Údaje proto zastarávají, vlastníci se ptají, zda jejich platba došla, a upomínky chodí i těm, kdo už zaplatili.',
+        'how' => ['Web si z banky stahuje výpis z účtu společenství (jen pro čtení, platit z něj nemůže).', 'Platby spáruje s jednotkami podle variabilního symbolu.', 'Vlastník vidí, které zálohy má uhrazené, výbor vidí aktuální nedoplatky.', 'Upomínky odejdou jen těm, kdo opravdu dluží.'],
+        'note' => 'Placený doplněk. Nejdřív pro banky s veřejným rozhraním (Fio, ČSOB, Česká spořitelna, KB, Raiffeisenbank).',
+    ],
+];
+/** Otisk návštěvníka pro počítání unikátních prokliků; mění se každý den a nedá se z něj zjistit adresa. */
+function visitor_hash(): string
+{
+    return substr(hash('sha256', client_ip() . '|' . ($_SERVER['HTTP_USER_AGENT'] ?? '') . '|' . date('Y-m-d') . '|' . basename((string) (glob(ROOT_STORAGE . '/platform-*.sqlite')[0] ?? ''))), 0, 16);
+}
+/** Zapíše proklik na detail funkce (roboty nepočítá). */
+function feature_view(string $feature, string $tenant = ''): void
+{
+    $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
+    if (!isset(PLANNED_FEATURES[$feature]) || $ua === '' || preg_match('~bot|crawl|spider|slurp|preview|monitor|curl|wget|python|headless(?!chrome)~i', $ua)) {
+        return;
+    }
+    pq('INSERT INTO feature_views (feature, tenant, visitor, day, at) VALUES (?,?,?,?,?)', [$feature, $tenant, visitor_hash(), date('Y-m-d'), date('Y-m-d H:i:s')]);
+}
+/** Přehled pro konzoli: prokliky celkem, unikátní návštěvníci (za den), počet společenství a žádosti o zprávu. */
+function feature_stats(int $days = 0): array
+{
+    $out = array_fill_keys(array_keys(PLANNED_FEATURES), ['views' => 0, 'visitors' => 0, 'tenants' => 0, 'notify' => 0, 'last' => '']);
+    $since = $days > 0 ? date('Y-m-d', time() - $days * 86400) : '0000-00-00';
+    foreach (pq("SELECT feature, COUNT(*) AS views, COUNT(DISTINCT visitor || day) AS visitors, COUNT(DISTINCT NULLIF(tenant, '')) AS tenants, MAX(at) AS last FROM feature_views WHERE day >= ? GROUP BY feature", [$since])->fetchAll() as $r) {
+        if (isset($out[$r['feature']])) {
+            $out[$r['feature']] = ['views' => (int) $r['views'], 'visitors' => (int) $r['visitors'], 'tenants' => (int) $r['tenants'], 'notify' => 0, 'last' => (string) $r['last']];
+        }
+    }
+    foreach (pq('SELECT feature, COUNT(*) AS n FROM feature_interest WHERE at >= ? GROUP BY feature', [$since . ' 00:00:00'])->fetchAll() as $r) {
+        if (isset($out[$r['feature']])) {
+            $out[$r['feature']]['notify'] = (int) $r['n'];
+        }
+    }
+    return $out;
+}
 /** Zapíše zájem; od jednoho společenství (nebo z jedné adresy) se každá funkce počítá jednou. Vrací, zda šlo o nový hlas. */
 function interest_add(string $feature, string $tenant, string $contact): bool
 {

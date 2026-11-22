@@ -1,6 +1,6 @@
 <?php $flash = flash(); $super = $GLOBALS['SUPER'] ?? null; $path = $GLOBALS['PATH']; ?>
 <!doctype html>
-<html lang="cs" data-look="grafit">
+<html lang="cs" data-look="grafit"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -37,5 +37,6 @@
   <?php if ($flash): ?><div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div><?php endif ?>
   <?= $content ?>
 </main>
+<footer class="wrap console-foot"><?= theme_switch() ?></footer>
 </body>
 </html>

@@ -33,13 +33,22 @@ if ($PATH === '/domena-povolena') {
     echo $ok ? 'ok' : 'neznama domena';
     exit;
 }
+if ($METHOD === 'GET' && preg_match('~^/pripravujeme/([a-z0-9-]+)$~', $PATH, $fm) && isset(PLANNED_FEATURES[$fm[1]])) {
+    feature_view($fm[1]);
+    $notified = ($_SESSION['feature_notified'] ?? []);
+    render('platform/feature', ['title' => PLANNED_FEATURES[$fm[1]][0], 'key' => $fm[1], 'notified' => in_array($fm[1], $notified, true)]);
+    exit;
+}
 if ($PATH === '/zajem' && $METHOD === 'POST') {
-    $email = filter_var(post('email'), FILTER_VALIDATE_EMAIL) ? post('email') : '';
-    if (post('website') === '' && isset(PLANNED_FEATURES[post('feature')])) {
-        interest_add(post('feature'), '', $email);
-        flash('Děkujeme, zájem o funkci „' . PLANNED_FEATURES[post('feature')][0] . '“ jsme si poznamenali.' . ($email !== '' ? ' Až bude hotová, dáme Vám vědět.' : ''));
+    $feature = post('feature');
+    if (!isset(PLANNED_FEATURES[$feature])) {
+        redirect('/#pripravujeme');
     }
-    redirect('/#pripravujeme');
+    if (post('website') === '' && filter_var(post('email'), FILTER_VALIDATE_EMAIL)) {
+        interest_add($feature, '', post('email'));
+        $_SESSION['feature_notified'][] = $feature;
+    }
+    redirect('/pripravujeme/' . $feature);
 }
 if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju')) {
     $terms = $PATH === '/podminky';

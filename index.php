@@ -129,6 +129,14 @@ if (!empty($_SESSION['uid']) || !empty($_SESSION['pending'])) {
 if (platform_enabled() && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
     platform_daily();   // připomenutí plateb, jednou denně
 }
+// Světlý / tmavý vzhled / podle zařízení – volba návštěvníka, platí pro celou službu.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^/vzhled/(svetly|tmavy|system)$~', $PATH, $tm)) {
+    theme_set(['svetly' => 'light', 'tmavy' => 'dark', 'system' => ''][$tm[1]]);
+    $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    $back = $BASE !== '' && str_starts_with($back, $BASE) ? substr($back, strlen($BASE)) : $back;
+    header('Location: ' . url(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_starts_with($back, '/vzhled') ? $back : '/'), true, 303);
+    exit;
+}
 if ($IS_PLATFORM) {
     $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
     $GLOBALS['LAYOUT'] = 'platform/layout';
@@ -199,7 +207,7 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0];
 if ($GLOBALS['BILLING']['mode'] === 'locked' && !$needsSetup
     && !in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/admin/predplatne', '/admin/predplatne/zaplaceno', '/admin/predplatne/domena', '/admin/predplatne/zajem', '/admin/zaloha', '/logo', '/favicon.ico', '/muj-ucet', '/hlaseni'], true)
-    && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad)/~', $PATH)) {
+    && !preg_match('~^/(obnova-hesla|jazyk|vitejte|admin/predplatne/doklad|admin/predplatne/funkce)/~', $PATH)) {
     if (is_admin()) {
         redirect('/admin/predplatne');
     }

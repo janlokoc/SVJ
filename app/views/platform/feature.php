@@ -1,0 +1,4 @@
+<div class="wrap page narrow">
+  <?php $back = url('/') . '#pripravujeme'; $notifyUrl = url('/zajem'); $askEmail = true; require __DIR__ . '/_feature.php'; ?>
+  <p><a class="btn" href="<?= url('/registrace') ?>">Vyzkoušet web 30 dní zdarma</a></p>
+</div>

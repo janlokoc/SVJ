@@ -25,7 +25,7 @@ $route('GET', '/admin/predplatne', function () {
     $state = billing_state($t);
     $payment = $state['mode'] === 'free' ? null : billing_pending($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'interested' => array_column(pq('SELECT feature FROM feature_interest WHERE tenant = ?', [TENANT])->fetchAll(), 'feature'), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
@@ -109,13 +109,23 @@ $route('POST', '/admin/predplatne/certifikat', function () {
     flash($message, $ok ? 'ok' : 'error');
     redirect('/admin/predplatne#domena');
 });
+$route('GET', '/admin/predplatne/funkce/([a-z0-9-]+)', function (string $key) {
+    require_admin();
+    if (!isset(PLANNED_FEATURES[$key])) {
+        not_found();
+    }
+    feature_view($key, TENANT);
+    render('admin/feature', ['title' => PLANNED_FEATURES[$key][0], 'key' => $key,
+        'notified' => (bool) pq('SELECT 1 FROM feature_interest WHERE feature = ? AND tenant = ?', [$key, TENANT])->fetchColumn()]);
+});
 $route('POST', '/admin/predplatne/zajem', function () {
     $u = require_admin();
-    if (isset(PLANNED_FEATURES[post('feature')])) {
-        interest_add(post('feature'), TENANT, $u['email']);
-        flash('Děkujeme, zájem o funkci „' . PLANNED_FEATURES[post('feature')][0] . '“ jsme si poznamenali. Až bude hotová, dáme Vám vědět.');
+    $feature = post('feature');
+    if (!isset(PLANNED_FEATURES[$feature])) {
+        redirect('/admin/predplatne#pripravujeme');
     }
-    redirect('/admin/predplatne#pripravujeme');
+    interest_add($feature, TENANT, $u['email']);
+    redirect('/admin/predplatne/funkce/' . $feature);
 });
 $route('POST', '/admin/predplatne/ai', function () {
     require_admin();

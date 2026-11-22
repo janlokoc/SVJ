@@ -385,6 +385,38 @@ function asset(string $path): string
     $f = __DIR__ . '/../assets/' . $path;
     return ($GLOBALS['ASSET_BASE'] ?? $GLOBALS['BASE'] ?? '') . '/assets/' . $path . (is_file($f) ? '?v=' . filemtime($f) : '');
 }
+/** Vzhled zvolený návštěvníkem: 'light', 'dark', nebo '' (podle nastavení zařízení). */
+function theme(): string
+{
+    $t = (string) ($_COOKIE['svj_theme'] ?? '');
+    return in_array($t, ['light', 'dark'], true) ? $t : '';
+}
+function theme_set(string $theme): void
+{
+    $opt = ['expires' => $theme === '' ? time() - 3600 : time() + 365 * 86400, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+        'secure' => ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'];
+    // Na platformě platí volba pro hlavní adresu i weby všech společenství (tabor.svj.cz).
+    $main = function_exists('platform_main_domain') ? platform_main_domain() : '';
+    $host = strtolower((string) preg_replace('~:\d+$~', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+    if ($main !== '' && str_contains($main, '.') && !filter_var($main, FILTER_VALIDATE_IP) && ($host === $main || str_ends_with($host, '.' . $main))) {
+        $opt['domain'] = $main;
+    }
+    setcookie('svj_theme', $theme, $opt);
+}
+/** Atribut pro <html>; bez volby se vzhled řídí nastavením zařízení. */
+function theme_attr(): string
+{
+    return theme() !== '' ? ' data-theme="' . theme() . '"' : '';
+}
+/** Přepínač vzhledu do patičky. */
+function theme_switch(): string
+{
+    $out = '<span class="theme-switch" role="group" aria-label="Vzhled" translate="no">';
+    foreach (['svetly' => ['light', 'Světlý'], 'tmavy' => ['dark', 'Tmavý'], 'system' => ['', 'Podle zařízení']] as $slug => [$val, $label]) {
+        $out .= '<a href="' . url('/vzhled/' . $slug) . '" rel="nofollow"' . (theme() === $val ? ' aria-current="true"' : '') . '>' . $label . '</a>';
+    }
+    return $out . '</span>';
+}
 function redirect(string $path): never
 {
     admin_audit_flush();

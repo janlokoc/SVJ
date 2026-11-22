@@ -110,12 +110,12 @@
 
   <div class="card" id="pripravujeme">
     <h2>Připravujeme</h2>
-    <p class="muted">Tyto funkce ještě nejsou hotové. Dejte nám vědět, o které máte zájem – podle toho rozhodujeme, co udělat dřív. K ničemu se tím nezavazujete.</p>
+    <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>
     <ul class="planned">
       <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
-      <li><div><strong><?= e($name) ?></strong> <span class="tag">již brzy</span><p><?= e($desc) ?></p></div>
-        <?php if (in_array($key, $interested, true)): ?><span class="status status-done">zájem zaznamenán</span>
-        <?php else: ?><form method="post" action="<?= url('/admin/predplatne/zajem') ?>"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($key) ?>"><button class="btn btn-small btn-ghost" type="submit">Mám zájem</button></form><?php endif ?></li>
+      <li><a href="<?= url('/admin/predplatne/funkce/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
+        <span class="planned-desc"><?= e($desc) ?></span>
+        <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci →</span></span></a></li>
       <?php endforeach ?>
     </ul>
   </div>

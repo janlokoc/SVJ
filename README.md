@@ -411,10 +411,15 @@ jednání“ z poznámek zapisovatele nebo z nahraného přepisu schůze (.txt,
 soubor .docx vyžaduje rozšíření PHP zip). Přepis se neukládá. Zvukovou
 nahrávku zpracovat nelze – Claude API zvuk nepřijímá.
 
-Ceník na úvodní stránce má část **Připravujeme** s tlačítkem „Mám zájem“
-(stejná je v Předplatném). Počty zájemců a kontakty jsou v konzoli pod
-**Zájem o funkce**; seznam funkcí je v `PLANNED_FEATURES`
-v `app/platform_lib.php`.
+Ceník na úvodní stránce má část **Připravujeme** (stejná je v Předplatném).
+Každá funkce má stránku s detailem – jaký problém řeší a co přesně bude
+dělat. Zájem se měří počtem prokliků na detail: v konzoli pod **Zájem
+o funkce** jsou unikátní návštěvníci (jednou za den, roboti se nepočítají),
+prokliky celkem, počet společenství a žádosti o zprávu. Texty jsou
+v `PLANNED_FEATURES` a `PLANNED_DETAILS` v `app/platform_lib.php`.
+
+Návštěvník si v patičce volí světlý nebo tmavý vzhled, případně vzhled
+podle zařízení (výchozí). Volba se ukládá do cookie `svj_theme`.
 
 Text, který správce pomocníkovi zadá, se odesílá ke zpracování společnosti
 Anthropic – nic se neposílá samo a správce je na to u tlačítek upozorněn.
