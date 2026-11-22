@@ -395,7 +395,7 @@ function q(string $sql, array $params = []): PDOStatement
 {
     // Režim podpory: nic se nezapisuje. Výjimkou je jen zápis do záznamů o vstupu a odchodu podpory.
     if (support_mode() && empty($GLOBALS['SUPPORT_AUDIT']) && preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP)\b/i', $sql)) {
-        return db()->query('SELECT 1 WHERE 1 = 0');
+        return db()->query('SELECT 1 FROM (SELECT 1 AS x) t WHERE 1 = 0');
     }
     $st = db()->prepare(sql($sql));
     $st->execute($params);
