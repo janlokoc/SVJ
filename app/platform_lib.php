@@ -177,6 +177,10 @@ SQL);
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 14) {
         $pdo->exec("ALTER TABLE tenants ADD COLUMN ref_clicks INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 14;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 15) {
+        // Ceny jsou bez DPH: u platby si pamatujeme sazbu, která se k ní připočítává (0 = neplátce).
+        $pdo->exec("ALTER TABLE payments ADD COLUMN vat_rate INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 15;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -576,7 +580,7 @@ function billing_order(array $t, string $edition, string $period = 'year'): ?arr
         pq('UPDATE payments SET amount = ?, months = ?, item = ?, discount = ? WHERE id = ?', [$amount, $months, $edition, $discount, $p['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, discount) VALUES (?,?,?,?,'service',?,?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition, $discount]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, discount) VALUES (" . vat_rate_now() . ",?,?,?,?,'service',?,?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition, $discount]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -597,7 +601,7 @@ function billing_confirm(array $p, string $by): ?array
             [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
         pq('UPDATE tenants SET storage_extra = ?, storage_until = ? WHERE slug = ?', [(int) $p['item'], $to, $t['slug']]);
         if ($t['owner_email'] !== '') {
-            platform_mail($t['owner_email'], 'Úložiště navíc je zapnuté – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za úložiště navíc. Web " . $t['name'] . " má do "
+            platform_mail($t['owner_email'], 'Úložiště navíc je zapnuté – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za úložiště navíc. Web " . $t['name'] . " má do "
                 . cz_date($to) . " o " . (int) $p['item'] . " MB místa více.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
@@ -612,7 +616,7 @@ function billing_confirm(array $p, string $by): ?array
         $m = pq('SELECT * FROM migrations WHERE payment_id = ?', [$p['id']])->fetch();
         $to = $m && filter_var($m['contact_email'], FILTER_VALIDATE_EMAIL) ? $m['contact_email'] : $t['owner_email'];
         if ($to !== '') {
-            platform_mail($to, 'Platba za převod obsahu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za převod obsahu z webu " . $p['item'] . ".\n"
+            platform_mail($to, 'Platba za převod obsahu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za převod obsahu z webu " . $p['item'] . ".\n"
                 . "Na převodu začínáme pracovat; obvykle je hotový do 5 pracovních dnů. Kdybychom potřebovali přístup nebo podklady, ozveme se na tento e-mail.\n"
                 . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
@@ -629,7 +633,7 @@ function billing_confirm(array $p, string $by): ?array
             [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
         pq('UPDATE tenants SET ai_until = ? WHERE slug = ?', [$to, $t['slug']]);
         if ($t['owner_email'] !== '') {
-            platform_mail($t['owner_email'], 'AI Plus je zapnutý – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za doplněk AI Plus. Do " . cz_date($to) . " má web "
+            platform_mail($t['owner_email'], 'AI Plus je zapnutý – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za doplněk AI Plus. Do " . cz_date($to) . " má web "
                 . $t['name'] . " k dispozici " . pset_int('lim_premium_ai', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
@@ -647,7 +651,7 @@ function billing_confirm(array $p, string $by): ?array
     if ($domain) {
         pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$to, $t['slug']]);
         if ($t['owner_email'] !== '') {
-            platform_mail($t['owner_email'], 'Platba za doménu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za vlastní doménu " . $p['item'] . " (do " . cz_date($to) . ").\n"
+            platform_mail($t['owner_email'], 'Platba za doménu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za vlastní doménu " . $p['item'] . " (do " . cz_date($to) . ").\n"
                 . ($t['domain_status'] === 'active' ? '' : "Doménu teď zprovozníme a dáme Vám vědět.\n") . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
@@ -657,10 +661,10 @@ function billing_confirm(array $p, string $by): ?array
     referral_reward($t, $p);
     if ($monthly) {
         // Trvalý příkaz posílá každý měsíc stejnou částku se stejným variabilním symbolem – další platbu proto čekáme pod týmž symbolem.
-        pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item, vs) VALUES (?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
+        pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, vs) VALUES (" . vat_rate_now() . ",?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
     }
     if ($t['owner_email'] !== '') {
-        platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
+        platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
             . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
     }
     return ['from' => $from, 'to' => $to];
@@ -761,16 +765,42 @@ function operator(): array
     return ['name' => pset('op_name'), 'ico' => pset('op_ico'), 'dic' => pset('op_dic'), 'address' => pset('op_address'), 'register' => pset('op_register'), 'phone' => pset('op_phone'),
         'email' => pset('contact_email'), 'account' => pset('account'), 'iban' => (string) cz_iban(pset('account'))];
 }
-/** Je provozovatel plátcem DPH? Ceny v nastavení jsou pak konečné ceny včetně daně. */
+/** Je provozovatel plátcem DPH? Ceny v nastavení jsou bez daně a k platbě se DPH připočítává. */
 function vat_payer(): bool
 {
     return pset('vat_payer') === '1';
 }
-/** Rozpad konečné částky na základ a daň (částka je včetně DPH). */
-function vat_split(int|float $total, int $rate): array
+/** Sazba, která se právě teď připočítává k novým platbám (neplátce 0). */
+function vat_rate_now(): int
 {
-    $base = round($total / (1 + $rate / 100), 2);
-    return ['base' => $base, 'vat' => round($total - $base, 2), 'total' => (float) $total, 'rate' => $rate];
+    return vat_payer() ? pset_int('vat_rate', 0, 100) : 0;
+}
+/** Rozpad ceny bez DPH na základ, daň a částku k úhradě. */
+function vat_split(int|float $base, int $rate): array
+{
+    $vat = round($base * $rate / 100, 2);
+    return ['base' => (float) $base, 'vat' => $vat, 'total' => round($base + $vat, 2), 'rate' => $rate];
+}
+/** Částka, kterou má zákazník u platby skutečně poslat (cena + DPH). */
+function pay_total(array $p): int|float
+{
+    $rate = (int) ($p['vat_rate'] ?? 0);
+    return $rate > 0 ? vat_split((int) $p['amount'], $rate)['total'] : (int) $p['amount'];
+}
+function pay_money(array $p): string
+{
+    return (int) ($p['vat_rate'] ?? 0) > 0 ? money_czk2((float) pay_total($p)) : money_czk((int) $p['amount']);
+}
+/** Dovětek k částce s DPH: z čeho se skládá. */
+function pay_vat_hint(array $p): string
+{
+    $rate = (int) ($p['vat_rate'] ?? 0);
+    return $rate > 0 ? ' <small class="muted">(' . pay_money($p) . ' + DPH ' . $rate . "\u{a0}%)</small>" : '';
+}
+/** Věta k ceníkům: ceny jsou bez DPH. */
+function vat_note(): string
+{
+    return vat_payer() ? 'Ceny jsou uvedeny bez DPH; k platbě se připočte DPH ' . pset_int('vat_rate', 0, 100) . "\u{a0}%. Po zaplacení dostanete daňový doklad." : '';
 }
 function money_czk2(float $amount): string
 {
@@ -828,7 +858,7 @@ function invoice_view(array $p): ?array
     $iban = (string) ($parties['supplier']['iban'] ?? '');
     return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
-        'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
+        'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
 function demo_tenant(): ?array
 {
@@ -1038,7 +1068,7 @@ function domain_payment_create(array $t, string $domain): array
         pq('UPDATE payments SET item = ?, amount = ? WHERE id = ? AND status = ?', [$domain, pset_int('price_domain', 0, 1000000), $p['id'], 'pending']);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'domain',?)", [$t['slug'], pset_int('price_domain', 0, 1000000), date('Y-m-d H:i:s'), $domain]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,12,?,'domain',?)", [$t['slug'], pset_int('price_domain', 0, 1000000), date('Y-m-d H:i:s'), $domain]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -1052,7 +1082,7 @@ function domain_renewals(): void
         }
         $p = domain_payment_create($t, $t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']);
         tenant_notify($t, 'domain', 'Končí předplatné vlastní domény – ' . $t['name'], "Dobrý den,\n\npředplatné vlastní domény " . $p['item'] . " webu " . $t['name'] . " končí " . cz_date($t['domain_until'])
-            . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
+            . ".\nPlatbu na další rok (" . pay_money($p) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
             . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
     }
 }
@@ -1185,7 +1215,7 @@ function storage_order(array $t, int $packs): ?array
         pq('UPDATE payments SET amount = ?, item = ? WHERE id = ?', [$amount, (string) $mb, $p['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'storage',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), (string) $mb]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,12,?,'storage',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), (string) $mb]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -1212,7 +1242,7 @@ function migration_payment(?array $m): ?array
 /** Založí objednávku a výzvu k platbě. */
 function migration_order(array $t, array $in): array
 {
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,0,?,'migration',?)", [$t['slug'], pset_int('price_migration', 0, 1000000), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,0,?,'migration',?)", [$t['slug'], pset_int('price_migration', 0, 1000000), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
     $pid = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $pid), $pid]);
     pq('INSERT INTO migrations (tenant, url, scope, access, note, contact_name, contact_email, contact_phone, payment_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
@@ -1236,7 +1266,7 @@ function ai_payment_create(array $t): array
     if ($p = ai_payment($t)) {
         return $p;
     }
-    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'ai',?)", [$t['slug'], 990, date('Y-m-d H:i:s'), pset_int('lim_premium_ai', 0, 100000) . ' použití měsíčně']);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,12,?,'ai',?)", [$t['slug'], 990, date('Y-m-d H:i:s'), pset_int('lim_premium_ai', 0, 100000) . ' použití měsíčně']);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();

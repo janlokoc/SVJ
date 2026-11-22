@@ -42,7 +42,7 @@
     <div class="pay">
       <div class="pay-qr"><?= $qr ?><small><?= $monthlyPay ? 'QR kód pro trvalý příkaz' : 'Načtěte v bankovní aplikaci' ?></small></div>
       <dl class="pay-data">
-        <dt>Částka</dt><dd><strong><?= money_czk((int) $payment['amount']) ?></strong><?= $monthlyPay ? ' <small class="muted">každý měsíc</small>' : '' ?></dd>
+        <dt>Částka</dt><dd><strong><?= pay_money($payment) ?></strong><?= pay_vat_hint($payment) ?><?= $monthlyPay ? ' <small class="muted">každý měsíc</small>' : '' ?></dd>
         <dt>Číslo účtu</dt><dd><?= e(str_starts_with(strtoupper(trim(pset('account'))), 'CZ') ? $iban : pset('account')) ?></dd>
         <dt>IBAN</dt><dd><?= e(trim(chunk_split($iban, 4, ' '))) ?></dd>
         <dt>Variabilní symbol</dt><dd><code><?= e($payment['vs']) ?></code></dd>
@@ -52,9 +52,9 @@
     <?php if ($monthlyPay): ?>
     <div class="callout"><strong>Jak nastavit trvalý příkaz</strong>
       <ol><li>Načtěte QR kód v bankovní aplikaci – vyplní částku, účet, variabilní symbol i měsíční opakování. Před potvrzením zkontrolujte, že aplikace nabízí <strong>trvalý příkaz</strong>, ne jednorázovou platbu.</li>
-        <li>Pokud Vaše banka trvalý příkaz z QR kódu neumí, zadejte ho ručně: <?= money_czk((int) $payment['amount']) ?> každý měsíc na účet <?= e(pset('account')) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</li>
+        <li>Pokud Vaše banka trvalý příkaz z QR kódu neumí, zadejte ho ručně: <?= pay_money($payment) ?> každý měsíc na účet <?= e(pset('account')) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</li>
         <li>Variabilní symbol zůstává každý měsíc stejný. Každou připsanou platbu potvrdíme a edici prodloužíme o měsíc.</li></ol>
-      <?php if (!empty($qrOnce)): ?><details><summary>Chci zatím zaplatit jen první měsíc jednorázově</summary><div class="pay-qr"><?= $qrOnce ?><small>Jednorázová platba <?= money_czk((int) $payment['amount']) ?></small></div></details><?php endif ?>
+      <?php if (!empty($qrOnce)): ?><details><summary>Chci zatím zaplatit jen první měsíc jednorázově</summary><div class="pay-qr"><?= $qrOnce ?><small>Jednorázová platba <?= pay_money($payment) ?></small></div></details><?php endif ?>
     </div>
     <p class="hint">Měsíční platba vyjde ročně na <?= money_czk((int) $payment['amount'] * 12) ?>; při roční platbě je to <?= money_czk(edition_price((string) ($payment['item'] ?? 'standard'))) ?>. Trvalý příkaz zrušíte kdykoli ve své bance – edice pak doběhne do konce zaplaceného měsíce a web přejde na edici Zdarma.</p>
     <?php else: ?>
@@ -62,7 +62,7 @@
     <p class="hint">Platba se páruje podle variabilního symbolu. <?= (int) $payment['amount'] < edition_price((string) ($payment['item'] ?? 'standard')) ? 'Částka je snížená o nevyčerpanou část dosavadní edice. ' : '' ?>Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
     <?php endif ?>
     <?php else: ?>
-      <p>Částka: <strong><?= money_czk((int) $payment['amount']) ?></strong>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
+      <p>Částka: <strong><?= pay_money($payment) ?></strong><?= pay_vat_hint($payment) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
       <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>
     <?php endif ?>
     <div class="actions"><?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/zaplaceno') ?>"><?= csrf_field() ?><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form><?php endif ?>
@@ -74,7 +74,7 @@
   <div class="card" id="edice">
     <h2>Edice</h2>
     <?php $edView = 'admin'; require __DIR__ . '/../platform/_editions.php'; ?>
-    <?php if (vat_payer()): ?><p class="hint">Všechny ceny jsou konečné, včetně DPH. Po zaplacení dostanete daňový doklad.</p><?php endif ?>
+    <?php if (vat_payer()): ?><p class="hint"><?= e(vat_note()) ?></p><?php endif ?>
   </div>
 
   <div class="card" id="funkce">
@@ -128,7 +128,7 @@
       <h3>Platba za <?= (int) $sp['item'] ?> MB navíc na 1 rok</h3>
       <?php if ($sp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($sp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
       <div class="pay"><?php if ($storageQr): ?><div class="pay-qr"><?= $storageQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
-        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $sp['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($sp['vs']) ?></code></dd></dl></div>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= pay_money($sp) ?></strong><?= pay_vat_hint($sp) ?></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($sp['vs']) ?></code></dd></dl></div>
       <div class="actions">
         <?php if ($sp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/uloziste') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za úložiště jsem odeslal(a)</button></form><?php endif ?>
         <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $sp['id']) ?>">Zálohová faktura k tisku</a>
@@ -154,7 +154,7 @@
         <?php if ($mp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($mp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
         <div class="pay">
           <?php if ($migrationQr): ?><div class="pay-qr"><?= $migrationQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
-          <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $mp['amount']) ?></strong> <small class="muted">jednorázově</small></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($mp['vs']) ?></code></dd></dl>
+          <dl class="pay-data"><dt>Částka</dt><dd><strong><?= pay_money($mp) ?></strong><?= pay_vat_hint($mp) ?> <small class="muted">jednorázově</small></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($mp['vs']) ?></code></dd></dl>
         </div>
         <?php if (!$iban): ?><p>Platební údaje Vám provozovatel pošle e-mailem.</p><?php endif ?>
         <div class="actions">
@@ -237,7 +237,7 @@
       <?php if ($dp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($dp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
       <div class="pay">
         <?php if ($domainQr): ?><div class="pay-qr"><?= $domainQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
-        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $dp['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($dp['vs']) ?></code></dd></dl>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= pay_money($dp) ?></strong><?= pay_vat_hint($dp) ?></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($dp['vs']) ?></code></dd></dl>
       </div>
       <div class="actions">
         <?php if ($dp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/domena') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za doménu jsem odeslal(a)</button></form><?php endif ?>
@@ -251,7 +251,7 @@
   <div class="card" id="ai">
     <h2>Platba za doplněk AI Plus</h2>
     <p class="muted">Doplněk AI Plus už se nenabízí – vyšší počet použití AI je součástí edice Premium. Tuto dříve objednanou platbu můžete dokončit, nebo zrušit.</p>
-    <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $ap['amount']) ?></strong></dd><dt>Variabilní symbol</dt><dd><code><?= e($ap['vs']) ?></code></dd></dl>
+    <dl class="pay-data"><dt>Částka</dt><dd><strong><?= pay_money($ap) ?></strong><?= pay_vat_hint($ap) ?></dd><dt>Variabilní symbol</dt><dd><code><?= e($ap['vs']) ?></code></dd></dl>
     <div class="actions">
       <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form>
       <form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
@@ -308,7 +308,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'storage' ? '<br><small class="muted">úložiště +' . (int) $p['item'] . ' MB</small>' : (($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : ''))) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= pay_money($p) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'storage' ? '<br><small class="muted">úložiště +' . (int) $p['item'] . ' MB</small>' : (($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : ''))) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

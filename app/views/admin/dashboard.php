@@ -9,6 +9,16 @@
   <p class="plan-line">Edice <strong><?= e(EDITIONS[$bs['edition']]) ?></strong><?= match ($bs['mode']) { 'paid' => ' · zaplaceno do ' . cz_date($bs['until']), 'trial' => ' · na zkoušku do ' . cz_date($bs['until']), 'grace' => ' · předplatné skončilo ' . cz_date($bs['until']), default => ' · bez časového omezení' } ?><?php foreach ($activeTrials as $tr): ?> · zkouška „<?= e(PLAN_FEATURES[$tr['feature']][1]) ?>“ do <?= cz_date($tr['ends']) ?><?php endforeach ?>
     · <a href="<?= url('/admin/predplatne') ?>">Předplatné a limity</a></p>
   <?php endif ?>
+  <?php $onb = onboarding_summary(); if ($onb['waiting'] && !$onb['hidden']): ?>
+  <div class="card onb-card">
+    <div class="onb-card-head"><h2>Průvodce nastavením</h2><span class="onb-count"><?= $onb['done'] ?> z <?= $onb['total'] ?> hotovo</span></div>
+    <progress class="bar" max="<?= $onb['total'] ?>" value="<?= $onb['done'] ?>"><?= $onb['done'] ?> z <?= $onb['total'] ?></progress>
+    <ul class="onb-next">
+      <?php foreach (array_slice($onb['waiting'], 0, 3) as $s): ?><li><span class="light light-<?= $s['important'] ? 'must' : 'wait' ?>" aria-hidden="true"></span> <a href="<?= url($s['href']) ?>"><?= e($s['title']) ?></a> <small class="muted"><?= $s['important'] ? 'čeká – důležité' : 'čeká' ?></small></li><?php endforeach ?>
+    </ul>
+    <p><a class="btn btn-small" href="<?= url('/admin/pruvodce') ?>">Zobrazit všechny kroky</a><?= count($onb['waiting']) > 3 ? ' <small class="muted">a dalších ' . (count($onb['waiting']) - 3) . '</small>' : '' ?></p>
+  </div>
+  <?php endif ?>
   <div class="stat-grid">
     <a class="stat" href="<?= url('/admin/aktuality') ?>"><span class="stat-num"><?= $stats['posts'] ?></span><span>aktualit</span></a>
     <a class="stat" href="<?= url('/admin/dokumenty') ?>"><span class="stat-num"><?= $stats['documents'] ?></span><span>dokumentů</span></a>

@@ -312,10 +312,16 @@ automatické vystavování (viz výše).
   doporučeného společenství (zaregistrovalo se, zkouší funkce, objednalo,
   platí měsíčně, zaplatilo) a kolik kreditu získal a uplatnil.
 - **DPH:** v Nastavení služby (Faktury a DPH) lze zapnout „Provozovatel je
-  plátce DPH“ a sazbu. Ceny v nastavení jsou pak konečné ceny včetně DPH;
-  faktura je daňový doklad s DIČ, základem daně, DPH a datem uskutečnění
-  plnění (den přijetí platby). Už vystavené faktury se změnou nastavení
-  nemění. Podobu dokladů si nechte potvrdit účetní.
+  plátce DPH“ a sazbu. Ceny v nastavení i v ceníku jsou **bez DPH**; daň se
+  připočte k platbě (QR kód, zálohová faktura, trvalý příkaz) a faktura je
+  daňový doklad s DIČ, základem daně a DPH. Sazba se ukládá u každé platby,
+  takže zaplacené doklady se změnou nastavení nemění; čekající platby se
+  přepočtou. Podobu dokladů si nechte potvrdit účetní.
+- **Průvodce pro nového správce:** Administrace → Průvodce nastavením
+  (a karta na přehledu) vede správce kroky od údajů společenství přes import
+  jednotek a obyvatel, kontakty a dokumenty po oznámení sousedům. U každého
+  kroku je semafor: hotovo (pozná se podle obsahu webu, nebo se odškrtne),
+  čeká – důležité, čeká, přeskočeno.
 - **Seznam před spuštěním:** nahoře v Nastavení služby je přehled toho, co
   ještě chybí vyplnit (provozovatel, účet, e-maily, právní texty); na
   totéž upozorňuje i přehled společenství.

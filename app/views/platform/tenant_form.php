@@ -97,7 +97,7 @@
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
     <p><strong><a href="<?= e($migration['url']) ?>" rel="noopener noreferrer nofollow" target="_blank"><?= e($migration['url']) ?></a></strong> · <span class="status status-<?= ['ordered' => 'new', 'paid' => 'in_progress', 'done' => 'done'][$migration['status']] ?? 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span>
-      · objednáno <?= cz_datetime($migration['created_at']) ?><?= $mp ? ' · platba: ' . e(PAYMENT_STATUS[$mp['status']] ?? $mp['status']) . ' (VS ' . e($mp['vs']) . ', ' . money_czk((int) $mp['amount']) . ')' : '' ?></p>
+      · objednáno <?= cz_datetime($migration['created_at']) ?><?= $mp ? ' · platba: ' . e(PAYMENT_STATUS[$mp['status']] ?? $mp['status']) . ' (VS ' . e($mp['vs']) . ', ' . pay_money($mp) . ')' : '' ?></p>
     <dl class="pay-data">
       <dt>Rozsah</dt><dd><?= e(implode(', ', array_map(fn($k) => MIGRATION_SCOPE[$k] ?? $k, array_filter(explode(',', $migration['scope']))))) ?></dd>
       <dt>Přístup</dt><dd><?= e(MIGRATION_ACCESS[$migration['access']] ?? '') ?></dd>
@@ -144,7 +144,7 @@
   <?php if ($payments): ?>
   <div class="card"><h2>Platby tohoto společenství</h2>
     <table class="table"><thead><tr><th>Var. symbol</th><th>Částka</th><th>Období</th><th>Stav</th></tr></thead><tbody>
-    <?php foreach ($payments as $p): ?><tr><td data-label="Var. symbol"><code><?= e($p['vs']) ?></code></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td>
+    <?php foreach ($payments as $p): ?><tr><td data-label="Var. symbol"><code><?= e($p['vs']) ?></code></td><td data-label="Částka"><?= pay_money($p) ?></td>
       <td data-label="Období"><?= $p['period_from'] ? cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '—' ?></td><td data-label="Stav"><?= e(PAYMENT_STATUS[$p['status']]) ?></td></tr><?php endforeach ?>
     </tbody></table>
     <p><a href="<?= url('/platby') ?>">Potvrdit nebo zrušit platbu →</a></p>

@@ -436,6 +436,10 @@ if ($PATH === '/nastaveni') {
                     pset_save($k, $v);
                 }
             }
+            if (array_intersect($changed, ['vat_payer', 'vat_rate'])) {
+                // Platby, které ještě čekají na úhradu, se přepočtou podle nového stavu; zaplacené se nemění.
+                pq("UPDATE payments SET vat_rate = ? WHERE status IN ('pending', 'claimed')", [$in['vat_payer'] === '1' ? (int) $in['vat_rate'] : 0]);
+            }
             platform_log('Změna nastavení služby', implode(', ', $changed));
             flash('Nastavení služby je uloženo.');
             redirect('/nastaveni');

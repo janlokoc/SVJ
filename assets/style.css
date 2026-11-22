@@ -1048,3 +1048,34 @@ body.lp .editions .edition:hover { transform: translateY(-5px); box-shadow: 0 18
 .launch-list.is-done { border-color: var(--ok); background: var(--ok-soft); }
 .launch-list ol { display: grid; gap: .4rem; padding-left: 1.3rem; margin: .6rem 0; }
 .invoice-items tfoot .vat-row td { padding: .35rem 1rem; color: var(--muted); border: 0; }
+
+/* Průvodce nastavením: semafor u kroků */
+.light { display: inline-block; flex: none; width: .85rem; height: .85rem; border-radius: 50%; background: var(--line); vertical-align: -.05rem; }
+.light-done { background: #2e9a5f; }
+.light-must { background: #d2382e; }
+.light-wait { background: #e0a100; }
+.light-skip { background: transparent; border: 2px solid var(--muted); }
+.onb-progress.is-done { border-color: var(--ok); background: var(--ok-soft); }
+.onb-progress .bar, .onb-card .bar { width: 100%; }
+.onb-legend { display: flex; flex-wrap: wrap; gap: .3rem .5rem; align-items: center; font-size: .85rem; color: var(--muted); margin: .6rem 0 0; }
+.onb-legend .light:not(:first-child) { margin-left: .6rem; }
+.onb-list { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: .6rem; }
+.onb-step { display: flex; gap: .8rem; padding: .9rem 1rem; border: 1px solid var(--line); border-left-width: 4px; border-radius: var(--radius, 10px); background: var(--surface); }
+.onb-step > .light { margin-top: .3rem; }
+.onb-step.is-done { border-left-color: #2e9a5f; }
+.onb-step.is-must { border-left-color: #d2382e; }
+.onb-step.is-wait { border-left-color: #e0a100; }
+.onb-step.is-done h3, .onb-step.is-skip h3 { color: var(--muted); }
+.onb-body { min-width: 0; flex: 1; }
+.onb-body h3 { margin: 0 0 .2rem; font-size: 1.05rem; }
+.onb-body p { margin: 0 0 .6rem; }
+.onb-state { font-size: .78rem; font-weight: 700; color: var(--muted); white-space: nowrap; margin-left: .3rem; }
+.onb-step.is-must .onb-state { color: var(--accent); }
+.onb-step.is-done .onb-state { color: var(--ok); }
+.onb-actions { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.onb-actions .inline-form { display: flex; flex-wrap: wrap; gap: .4rem; }
+.onb-hide { margin-top: 1rem; }
+.onb-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem; }
+.onb-card-head h2 { margin: 0; }
+.onb-count { font-weight: 700; color: var(--muted); }
+.onb-next { list-style: none; padding: 0; margin: .8rem 0; display: grid; gap: .35rem; }
