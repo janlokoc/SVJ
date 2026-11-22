@@ -26,7 +26,9 @@ function platform_domain(): string
 /** Hlavní varianta adres: weby jako složky (svj.cz/tabor) místo subdomén (tabor.svj.cz). */
 function platform_main_paths(): bool
 {
-    return (app_config()['platform']['mode'] ?? '') === 'path';
+    // Weby společenství běží vždy na subdoménách (tabor.svj.cz). Dřívější volba 'mode' => 'path' se už nepoužívá;
+    // složky zůstávají jen pro přístup přes další adresu serveru (IP adresu při zkoušení z telefonu).
+    return false;
 }
 /**
  * Právě platná varianta adres. Přes další adresu serveru (IP adresu) subdomény neexistují,

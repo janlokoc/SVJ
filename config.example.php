@@ -13,9 +13,7 @@ return [
     // a hlavní správce je zakládá na adrese samotné domény. Bez tohoto řádku web běží pro jedno společenství.
     // 'platform' => ['domain' => 'svj.cz'],
     //
-    // Varianta bez subdomén: weby jsou složky hlavní domény (svj.cz/tabor) a stačí běžný certifikát HTTPS
-    // pro svj.cz, bez zástupného DNS záznamu i zástupného certifikátu:
-    // 'platform' => ['domain' => 'svj.cz', 'mode' => 'path'],
+    // Weby společenství běží vždy na subdoménách (tabor.svj.cz); potřebují zástupný DNS záznam a certifikát pro *.svj.cz.
     //
     // Zkoušení z telefonu v domácí síti: přidejte IP adresu počítače mezi další adresy. Na počítači pak weby běží
     // na tabor.localhost, z telefonu se tentýž web otevře jako složka: http://192.168.1.20:8080/tabor/
