@@ -31,6 +31,8 @@
         <form method="post" action="<?= url('/odhlaseni') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Odhlásit</button></form>
       </div>
     </nav>
+    <?php else: ?>
+    <a class="btn btn-small btn-ghost console-back" href="<?= e(platform_url('/')) ?>">← Zpět na úvodní stránku</a>
     <?php endif ?>
   </div>
 </header>
@@ -38,6 +40,6 @@
   <?php if ($flash): ?><div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div><?php endif ?>
   <?= $content ?>
 </main>
-<footer class="wrap console-foot"><?= theme_switch() ?></footer>
+<footer class="wrap console-foot"><a href="<?= e(platform_url('/')) ?>">Úvodní stránka služby</a><?= theme_switch() ?></footer>
 </body>
 </html>
