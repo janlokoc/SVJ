@@ -50,6 +50,19 @@
     <div class="actions"><button class="btn btn-big" type="submit"><?= $new ? 'Založit web' : 'Uložit' ?></button><a class="btn btn-ghost" href="<?= url('/') ?>">Zrušit</a></div>
   </form>
   <?php if (!$new): ?>
+  <?php if ($deleteOn || $notices): ?>
+  <div class="card">
+    <h2>Upozornění odeslaná společenství</h2>
+    <?php if ($deleteOn): ?><div class="flash flash-info">Web po zkušební době nezaplatil. Automaticky se smaže <strong><?= cz_date($deleteOn) ?></strong>, nejdříve však 3 dny po odeslaném upozornění. Smazání zabrání přijatá nebo nahlášená platba, prodloužení zkušební doby nebo vypnutí „Web je placený“.</div><?php endif ?>
+    <?php if (!$notices): ?><p class="muted">Zatím nebylo odesláno žádné upozornění.</p><?php else: ?>
+    <table class="table"><thead><tr><th>Kdy</th><th>Upozornění</th><th>Komu</th><th>Stav</th></tr></thead><tbody>
+      <?php foreach ($notices as $n): ?><tr><td data-label="Kdy"><?= cz_datetime($n['at']) ?></td><td data-label="Upozornění"><?= e(NOTICE_KINDS[$n['kind']] ?? $n['kind']) ?></td><td data-label="Komu"><?= e($n['email'] !== '' ? $n['email'] : '—') ?></td>
+        <td data-label="Stav"><?= $n['sent'] ? '<span class="status status-done">odesláno</span>' : '<span class="status status-new">neodesláno</span>' ?></td></tr><?php endforeach ?>
+    </tbody></table>
+    <p class="hint">„Neodesláno“ znamená, že chybí e-mail kontaktní osoby, není nastaven odesílatel e-mailů služby, nebo server zprávu nepřijal.</p>
+    <?php endif ?>
+  </div>
+  <?php endif ?>
   <?php if ($payments): ?>
   <div class="card"><h2>Platby tohoto společenství</h2>
     <table class="table"><thead><tr><th>Var. symbol</th><th>Částka</th><th>Období</th><th>Stav</th></tr></thead><tbody>

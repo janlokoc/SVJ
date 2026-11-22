@@ -16,6 +16,7 @@
     <?php endif ?>
   </div>
 
+  <?php if ($deleteOn && $state['days'] < 0): ?><div class="flash flash-error">Pokud provoz neuhradíte, bude web včetně všech dat <strong>smazán <?= cz_date($deleteOn) ?></strong>. Předem Vám pošleme upozornění e-mailem. <a href="<?= url('/admin/zaloha') ?>">Stáhnout zálohu dat</a></div><?php endif ?>
   <div class="card">
     <h2>Platba za další <?= $per ?></h2>
     <?php if ($payment['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($payment['claimed_at']) ?>. Čeká na potvrzení provozovatelem – obvykle do dvou pracovních dnů.</div><?php endif ?>

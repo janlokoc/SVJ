@@ -177,6 +177,14 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
   jako obyvatel i jako správce; je jen pro čtení, žádná změna se
   neuloží. Tlačítkem Obnovit ukázkový web se naplní čerstvými daty
   (termíny v ukázce jsou počítané ode dne založení).
+- **Mazání nezaplacených zkušebních webů:** web, který po zkušební době
+  nikdy nezaplatil, se po nastavené lhůtě (výchozí 60 dní od konce
+  zkušební doby, 0 = nemazat) smaže včetně dat. Kontaktní osobě chodí
+  upozornění 14 dní a 3 dny předem a potvrzení po smazání. Bez
+  prokazatelně odeslaného upozornění starého aspoň 3 dny se nic nemaže;
+  web s přijatou nebo nahlášenou platbou se nemaže nikdy. Všechna
+  odeslaná upozornění (kdy, komu, zda odešla) jsou v konzoli u
+  společenství, v seznamu společenství a v Záznamech.
 - Ochrana proti zneužití registrace: nejvýše tři weby z jedné adresy za
   den a skryté pole proti robotům. E-mail se při registraci neověřuje.
 
@@ -230,6 +238,14 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
   chyba se nezapisuje znovu, jen se zvyšuje počet).
 - Snímky jsou ve složce `storage/reports` a vidí je jen autor a ten,
   kdo hlášení vyřizuje. Hlášení nejsou součástí zálohy webu.
+
+## Termíny do kalendáře
+
+U každého termínu je tlačítko **Přidat do kalendáře** (soubor .ics pro
+Apple, Outlook i další aplikace) a odkaz do Google Kalendáře. Stránka
+**Termíny** (Pro obyvatele) nabízí i odběr všech termínů: kalendářová
+aplikace si je stahuje sama z adresy s tajným kódem a nové termíny se
+v ní objeví bez dalšího klikání.
 
 ## Jazyky
 

@@ -71,6 +71,14 @@ ALTER TABLE payments ADD COLUMN invoice_data TEXT NOT NULL DEFAULT '';
 PRAGMA user_version = 2;
 SQL);
     }
+    // Evidence odeslaných upozornění (konec zkušební doby, platby, chystané smazání).
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 3) {
+        $pdo->exec(<<<'SQL'
+CREATE TABLE tenant_notices (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL, tenant_name TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, kind TEXT NOT NULL, email TEXT NOT NULL DEFAULT '', sent INTEGER NOT NULL DEFAULT 0, subject TEXT NOT NULL DEFAULT '');
+CREATE INDEX tenant_notices_tenant ON tenant_notices (tenant);
+PRAGMA user_version = 3;
+SQL);
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -182,7 +190,8 @@ Nic se nestrhává automaticky. Cenu může poskytovatel změnit s účinností 
 
 ## 3. Neuhrazení a pozastavení
 Není-li služba po skončení zkušební doby nebo zaplaceného období uhrazena, běží web ještě po lhůtu uvedenou v administraci a poté je pozastaven. Správce zákazníka má i po pozastavení přístup ke stránce Předplatné a ke stažení zálohy dat.
-Data pozastaveného webu poskytovatel uchovává nejméně 6 měsíců od pozastavení; poté je může smazat.
+Web, který po zkušební době nebyl nikdy uhrazen, poskytovatel po uplynutí lhůty uvedené na webu smaže včetně všech dat. Na chystané smazání předem upozorní e-mailem osobu, která web založila.
+Data pozastaveného webu, který už byl někdy uhrazen, poskytovatel uchovává nejméně 6 měsíců od pozastavení; poté je může smazat.
 
 ## 4. Práva a povinnosti zákazníka
 Zákazník odpovídá za obsah, který na web vloží on nebo jeho uživatelé, a za to, že má k uveřejnění a ke zpracování údajů právní důvod.
@@ -235,7 +244,7 @@ Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pr
 Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
 TXT;
 const PLATFORM_DEFAULTS = [
-    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'trial_days' => '30', 'grace_days' => '14',
+    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'trial_days' => '30', 'grace_days' => '14',
     'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
@@ -449,9 +458,10 @@ function platform_daily(): void
             'grace' => ['Skončila ' . $what . ' – ' . $t['name'], "$what webu " . $t['name'] . " skončila " . cz_date($s['until']) . ". Web zatím běží dál; bez úhrady bude za " . max(0, pset_int('grace_days', 0, 365) + $s['days']) . " dní pozastaven."],
             default => ['Blíží se konec – ' . $what . ' webu ' . $t['name'], "$what webu " . $t['name'] . " končí " . cz_date($s['until']) . "."],
         };
-        platform_mail($t['owner_email'], $subject, "Dobrý den,\n\n" . $body . "\n\nPlatební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
+        tenant_notify($t, explode(':', $key)[0], $subject, "Dobrý den,\n\n" . $body . "\n\nPlatební údaje včetně QR kódu najdete po přihlášení v administraci: " . $link);
         pq('UPDATE tenants SET reminded = ? WHERE slug = ?', [$key, $t['slug']]);
     }
+    platform_cleanup();
 }
 
 // ---------- Provozovatel, doklady, ukázkový web ----------
@@ -492,4 +502,66 @@ function demo_create(): void
 {
     tenant_create(['slug' => 'demo', 'name' => 'SVJ Zahradní 12', 'title' => 'Zahradní 12', 'tagline' => 'Společenství vlastníků jednotek · ukázkový web', 'full' => 'Společenství vlastníků jednotek Zahradní 12',
         'address' => 'Zahradní 12, Brno', 'unit_prefix' => '12', 'entrances' => 'A,B', 'look' => 'more', 'seed' => 'demo', 'demo' => 1, 'note' => 'ukázkový web, jen pro čtení']);
+}
+
+// ---------- Upozornění společenstvím a automatické mazání nezaplacených zkušebních webů ----------
+
+const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
+    'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán'];
+
+/** Pošle upozornění kontaktní osobě společenství a zapíše, komu, kdy a zda se ho podařilo odeslat. */
+function tenant_notify(array $t, string $kind, string $subject, string $text): bool
+{
+    $ok = $t['owner_email'] !== '' && platform_mail($t['owner_email'], $subject, $text);
+    pq('INSERT INTO tenant_notices (tenant, tenant_name, at, kind, email, sent, subject) VALUES (?,?,?,?,?,?,?)', [$t['slug'], $t['name'], date('Y-m-d H:i:s'), $kind, $t['owner_email'], $ok ? 1 : 0, mb_substr($subject, 0, 200)]);
+    return $ok;
+}
+/** Den, kdy bude web smazán: jen placený web, který po zkušební době nikdy nezaplatil. Jinak null. */
+function tenant_delete_date(array $t): ?string
+{
+    $days = pset_int('delete_days', 0, 3650);
+    if ($days === 0 || empty($t['billing']) || !empty($t['demo']) || $t['paid_until'] !== '' || $t['trial_ends'] === '') {
+        return null;
+    }
+    if (pq("SELECT 1 FROM payments WHERE tenant = ? AND status IN ('paid','claimed') LIMIT 1", [$t['slug']])->fetchColumn()) {
+        return null;   // platba je nahlášená nebo přijatá – nemazat
+    }
+    return date('Y-m-d', strtotime($t['trial_ends'] . ' +' . $days . ' day'));
+}
+/**
+ * Smaže weby, kterým po zkušební době uplynula lhůta, a předem na to upozorní: 14 a 3 dny před smazáním.
+ * Bez prokazatelně odeslaného upozornění starého aspoň 3 dny se nic nemaže.
+ */
+function platform_cleanup(): void
+{
+    $today = date('Y-m-d');
+    foreach (pq("SELECT * FROM tenants WHERE billing = 1 AND demo = 0 AND paid_until = '' AND trial_ends <> ''")->fetchAll() as $t) {
+        $on = tenant_delete_date($t);
+        if ($on === null || $today < date('Y-m-d', strtotime($on . ' -14 day'))) {
+            continue;
+        }
+        $sent = array_column(pq("SELECT kind, MIN(at) AS at FROM tenant_notices WHERE tenant = ? AND sent = 1 AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $t['trial_ends']])->fetchAll(), 'at', 'kind');
+        $tried = array_column(pq("SELECT kind, MAX(at) AS at FROM tenant_notices WHERE tenant = ? AND kind IN ('del14','del3') AND at >= ? GROUP BY kind", [$t['slug'], $t['trial_ends']])->fetchAll(), 'at', 'kind');
+        $warned = $sent ? min($sent) : null;
+        if ($today >= $on && $warned !== null && substr($warned, 0, 10) <= date('Y-m-d', strtotime('-3 day'))) {
+            tenant_delete_storage($t['slug']);
+            pq('DELETE FROM tenants WHERE slug = ?', [$t['slug']]);
+            pq("UPDATE payments SET status = 'cancelled', note = 'web smazán po zkušební době' WHERE tenant = ? AND status = 'pending'", [$t['slug']]);
+            pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Automatické smazání společenství',
+                $t['slug'] . ' · ' . $t['name'] . ' · zkušební doba skončila ' . $t['trial_ends'] . ', upozorněno ' . substr($warned, 0, 10) . ' na ' . $t['owner_email']]);
+            tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . $t['slug'] . '.' . platform_domain() . ") jsme smazali včetně všech dat, protože po skončení zkušební doby "
+                . cz_date($t['trial_ends']) . " nebyl uhrazen.\n\nKdykoli si můžete založit nový: " . platform_url('/registrace'));
+            continue;
+        }
+        // Které upozornění je na řadě; každé se zkouší nejvýše jednou denně.
+        $kind = $today >= date('Y-m-d', strtotime($on . ' -3 day')) && isset($sent['del14']) && substr($sent['del14'], 0, 10) < $today ? 'del3' : 'del14';
+        if (isset($sent[$kind]) || substr($tried[$kind] ?? '', 0, 10) === $today) {
+            continue;
+        }
+        $when = max($on, date('Y-m-d', strtotime('+3 day')));
+        tenant_notify($t, $kind, ($kind === 'del3' ? 'Poslední upozornění: web' : 'Web') . ' bude smazán – ' . $t['name'],
+            "Dobrý den,\n\nzkušební doba webu " . $t['name'] . " skončila " . cz_date($t['trial_ends']) . " a provoz nebyl uhrazen.\nPokud platbu neobdržíme, web včetně všech dat smažeme, nejdříve "
+            . cz_date($when) . ".\n\nChcete web zachovat? Platební údaje najdete po přihlášení: " . tenant_url($t, '/admin/predplatne')
+            . "\nChcete si jen odnést data? Zálohu stáhnete zde: " . tenant_url($t, '/admin/zaloha') . "\n\nPokud web nepotřebujete, nemusíte dělat nic.");
+    }
 }

@@ -136,6 +136,8 @@ if ($PATH === '/') {
     foreach ($tenants as &$t) {
         $t['stats'] = tenant_stats($t['slug']);
         $t['billing_state'] = billing_state($t);
+        $t['delete_on'] = tenant_delete_date($t);
+        $t['last_notice'] = pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 1', [$t['slug']])->fetch() ?: null;
     }
     unset($t);
     render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants, 'hasDemo' => (bool) demo_tenant()]);
@@ -244,7 +246,8 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import)?$~', 
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
-        'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll()]);
+        'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
+        'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t)]);
     exit;
 }
 if ($METHOD === 'POST' && $PATH === '/demo') {
@@ -307,7 +310,7 @@ if ($PATH === '/nastaveni') {
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
-        foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
+        foreach (['trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }
@@ -349,7 +352,8 @@ if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
     exit;
 }
 if ($PATH === '/zaznamy') {
-    render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll()]);
+    render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll(),
+        'notices' => pq('SELECT * FROM tenant_notices ORDER BY id DESC LIMIT 200')->fetchAll()]);
     exit;
 }
 if ($PATH === '/ucet') {

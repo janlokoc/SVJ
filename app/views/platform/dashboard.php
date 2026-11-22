@@ -15,7 +15,9 @@
         <td data-label="Jednotky"><?= $s['ready'] ? $s['units'] : '—' ?></td>
         <td data-label="Poslední přihlášení"><?= $s['ready'] && $s['last_login'] ? cz_datetime($s['last_login']) : '—' ?></td>
         <td data-label="Předplatné"><?php $b = $t['billing_state']; echo match ($b['mode']) { 'free' => '<span class="muted">bez placení</span>', 'trial' => 'zkušební do ' . cz_date($b['until']), 'paid' => 'zaplaceno do ' . cz_date($b['until']),
-          'grace' => '<span class="tag tag-pin">po splatnosti ' . -$b['days'] . ' d</span>', 'locked' => '<span class="tag tag-pin">pozastaveno pro neplacení</span>' }; ?></td>
+          'grace' => '<span class="tag tag-pin">po splatnosti ' . -$b['days'] . ' d</span>', 'locked' => '<span class="tag tag-pin">pozastaveno pro neplacení</span>' }; ?>
+          <?php if ($t['delete_on']): ?><br><small class="muted">smazání <?= cz_date($t['delete_on']) ?></small><?php endif ?>
+          <?php if ($t['last_notice']): ?><br><small class="muted">upozornění <?= cz_date($t['last_notice']['at']) ?>: <?= e(NOTICE_KINDS[$t['last_notice']['kind']] ?? '') ?><?= $t['last_notice']['sent'] ? '' : ' (neodesláno)' ?></small><?php endif ?></td>
         <td data-label="Stav"><span class="status status-<?= $t['active'] ? 'done' : 'new' ?>"><?= $t['active'] ? 'běží' : 'pozastaveno' ?></span></td>
       </tr>
     <?php endforeach ?></tbody>

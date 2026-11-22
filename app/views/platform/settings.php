@@ -12,6 +12,8 @@
       <label>Zkušební doba zdarma (dní) <input type="number" name="trial_days" value="<?= e($v['trial_days']) ?>" min="0" max="365" required></label>
       <label>Web běží po splatnosti ještě (dní) <input type="number" name="grace_days" value="<?= e($v['grace_days']) ?>" min="0" max="365" required></label>
     </div>
+    <label>Nezaplacený zkušební web smazat po (dní od konce zkušební doby) <input type="number" name="delete_days" value="<?= e($v['delete_days']) ?>" min="0" max="3650" required></label>
+    <p class="hint">Týká se jen webů, které po zkušební době nikdy nezaplatily. Kontaktní osobě přijde upozornění 14 dní a 3 dny před smazáním a potvrzení po něm; bez prokazatelně odeslaného upozornění se nic nemaže. 0 = nemazat. Všechna odeslaná upozornění vidíte u společenství a v Záznamech.</p>
     <h2>Cena</h2>
     <label>Platí se <select name="period"><option value="month"<?= $v['period'] === 'month' ? ' selected' : '' ?>>měsíčně</option><option value="year"<?= $v['period'] === 'year' ? ' selected' : '' ?>>ročně</option></select></label>
     <div class="form-row">
