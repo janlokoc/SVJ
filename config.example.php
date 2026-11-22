@@ -17,8 +17,9 @@ return [
     // pro svj.cz, bez zástupného DNS záznamu i zástupného certifikátu:
     // 'platform' => ['domain' => 'svj.cz', 'mode' => 'path'],
     //
-    // Zkoušení z telefonu v domácí síti: přidejte IP adresu počítače mezi další adresy (jen s 'mode' => 'path'):
-    // 'platform' => ['domain' => 'localhost', 'mode' => 'path', 'aliases' => ['192.168.1.20']],
+    // Zkoušení z telefonu v domácí síti: přidejte IP adresu počítače mezi další adresy. Na počítači pak weby běží
+    // na tabor.localhost, z telefonu se tentýž web otevře jako složka: http://192.168.1.20:8080/tabor/
+    // 'platform' => ['domain' => 'localhost', 'aliases' => ['192.168.1.20']],
 
     // AI pomocník pro výbor (volitelný): návrhy oznámení, uhlazení textu, odpovědi na hlášení.
     // Vyžaduje knihovnu (ve složce webu spusťte: composer install) a klíč ke službě Claude z console.anthropic.com.

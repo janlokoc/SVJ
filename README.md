@@ -203,10 +203,12 @@ Web spuštěný na vlastním počítači otevřete z telefonu na stejné Wi-Fi:
 1. Server spusťte tak, aby poslouchal na všech adresách:
    `php -S 0.0.0.0:8080 index.php`.
 2. Zjistěte IP adresu počítače v síti (na Macu `ipconfig getifaddr en0`).
-3. Na platformě pro více SVJ použijte variantu se složkami a IP adresu
-   přidejte mezi další adresy v `storage/config.php`:
-   `'platform' => ['domain' => 'localhost', 'mode' => 'path', 'aliases' => ['192.168.1.20']]`.
-   (Subdomény jako `tabor.localhost` z telefonu otevřít nejdou.)
+3. Na platformě pro více SVJ přidejte IP adresu mezi další adresy
+   v `storage/config.php`:
+   `'platform' => ['domain' => 'localhost', 'aliases' => ['192.168.1.20']]`.
+   Na počítači zůstávají subdomény (`tabor.localhost`); přes IP adresu,
+   kde subdomény neexistují, se tentýž web otevírá jako složka. Texty na
+   webu vždy ukazují adresy v podobě hlavní domény.
 4. V telefonu otevřete `http://192.168.1.20:8080/` (web jednoho SVJ), nebo
    `http://192.168.1.20:8080/tabor/` (platforma).
 

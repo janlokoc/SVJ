@@ -6,22 +6,40 @@ declare(strict_types=1);
 
 const RESERVED_SLUGS = ['www', 'admin', 'api', 'mail', 'smtp', 'ftp', 'static', 'assets', 'platforma', 'svj'];
 
+/** Hlavní doména platformy podle nastavení (ta, kterou uvidí zákazníci). */
+function platform_main_domain(): string
+{
+    return strtolower((string) (app_config()['platform']['domain'] ?? ''));
+}
+/** Požadavek přišel přes další adresu serveru (např. IP adresa počítače v domácí síti při zkoušení z telefonu). */
+function platform_via_alias(): bool
+{
+    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+    return $host !== '' && in_array($host, array_map('strtolower', (array) (app_config()['platform']['aliases'] ?? [])), true);
+}
+/** Doména, přes kterou návštěvník právě přišel: hlavní, nebo další adresa serveru. Na ni míří vytvářené odkazy. */
 function platform_domain(): string
 {
-    $domain = strtolower((string) (app_config()['platform']['domain'] ?? ''));
-    // Další adresy téhož serveru (např. IP adresa počítače v domácí síti při zkoušení z telefonu): kdo přišel přes ně, dostává odkazy na ně.
-    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
-    return $domain !== '' && $host !== '' && in_array($host, array_map('strtolower', (array) (app_config()['platform']['aliases'] ?? [])), true) ? $host : $domain;
+    $domain = platform_main_domain();
+    return $domain !== '' && platform_via_alias() ? strtolower(preg_replace('/:\d+$/', '', (string) $_SERVER['HTTP_HOST'])) : $domain;
 }
-/** Weby společenství jako složky hlavní domény (svj.cz/tabor) místo subdomén (tabor.svj.cz) – stačí běžný certifikát HTTPS. */
-function platform_paths(): bool
+/** Hlavní varianta adres: weby jako složky (svj.cz/tabor) místo subdomén (tabor.svj.cz). */
+function platform_main_paths(): bool
 {
     return (app_config()['platform']['mode'] ?? '') === 'path';
 }
-/** Adresa webu společenství bez https://, jak ji uvidí lidé. */
+/**
+ * Právě platná varianta adres. Přes další adresu serveru (IP adresu) subdomény neexistují,
+ * proto se tam weby otevírají vždy jako složky – i když hlavní doména používá subdomény.
+ */
+function platform_paths(): bool
+{
+    return platform_main_paths() || platform_via_alias();
+}
+/** Adresa webu společenství bez https://, jak ji uvidí zákazníci na hlavní doméně. */
 function tenant_address(string $slug): string
 {
-    return platform_paths() ? platform_domain() . '/' . $slug : $slug . '.' . platform_domain();
+    return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
 const PLATFORM_PATHS = ['domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
@@ -706,7 +724,9 @@ function ai_payment_create(array $t): array
 function slug_input(string $v): string
 {
     $v = strtolower(trim(preg_replace('~^https?://~i', '', trim($v))));
-    $v = preg_replace('~' . preg_quote(platform_domain(), '~') . '(:\d+)?~', '', $v);
+    foreach (array_unique([platform_main_domain(), platform_domain()]) as $fixed) {
+        $v = preg_replace('~' . preg_quote($fixed, '~') . '(:\d+)?~', '', $v);
+    }
     return trim(substr(preg_replace('/-{2,}/', '-', preg_replace('/[^a-z0-9-]/', '', preg_replace('~[\s_./]+~', '-', ascii_text($v)))), 0, 39), '-');
 }
 
