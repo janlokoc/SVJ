@@ -147,11 +147,19 @@ prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
 ### Adresy webů
 
 Web každého společenství běží na subdoméně hlavní domény
-(`tabor.svj.cz`). Varianta se složkami (`svj.cz/tabor`, dříve volba
-`'mode' => 'path'`) byla zrušena a nastavení se ignoruje. Jako složky se
-weby otevírají jen při přístupu přes další adresu serveru uvedenou
-v `aliases` (IP adresa při zkoušení z telefonu); v textech a e-mailech se
-i tehdy uvádí adresa na subdoméně.
+(`tabor.svj.cz`). K tomu je potřeba zástupný DNS záznam `*.svj.cz`
+a certifikát pro zástupné subdomény.
+
+Na hostingu, který to neumí, lze zapnout **složky**:
+`'platform' => ['domain' => 'svj.cz', 'addresses' => 'folders']`. Weby pak
+mají adresy `svj.cz/tabor` a stačí běžný certifikát pro `svj.cz`. Všechny
+weby v tom případě sdílejí v prohlížeči jeden původ; data, soubory
+i přihlášení zůstávají oddělené na serveru. Variantu zvolte před založením
+prvních webů – adresy v už rozeslaných e-mailech se zpětně nezmění.
+
+Jako složky se weby otevírají také při přístupu přes další adresu serveru
+uvedenou v `aliases` (IP adresa při zkoušení z telefonu). Dřívější volba
+`'mode' => 'path'` se ignoruje.
 
 ### Vlastní doména společenství
 
