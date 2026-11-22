@@ -173,6 +173,10 @@ SQL);
             CREATE TABLE referrals (id INTEGER PRIMARY KEY AUTOINCREMENT, referrer TEXT NOT NULL, referred TEXT NOT NULL UNIQUE, referred_name TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, rewarded_at TEXT NOT NULL DEFAULT '', amount INTEGER NOT NULL DEFAULT 0);
             PRAGMA user_version = 13;");
     }
+    // Počet návštěv přes odkaz s doporučením.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 14) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN ref_clicks INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 14;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -1067,9 +1071,47 @@ function referral_reward(array $paid, array $payment): void
     pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Odměna za doporučení', $ref['slug'] . ' · +' . $amount . ' Kč za ' . $paid['slug']]);
     if ($ref['owner_email'] !== '') {
         platform_mail($ref['owner_email'], 'Odměna za doporučení: ' . money_czk($amount) . ' – ' . $ref['name'], "Dobrý den,\n\nspolečenství " . $paid['name'] . ", které jste nám doporučili, si zaplatilo edici. Děkujeme!\n"
-            . "Na účet webu " . $ref['name'] . " jsme připsali slevu " . money_czk($amount) . ". Odečte se sama od Vaší příští roční platby za edici.\n\nPřehled doporučení: " . tenant_url($ref, '/admin/predplatne') . '#doporuceni');
+            . "Na účet webu " . $ref['name'] . " jsme připsali kredit " . money_czk($amount) . ". Odečte se sám od Vaší platby za další období (při roční platbě).\n\nPřehled doporučení: " . tenant_url($ref, '/admin/predplatne') . '#doporuceni');
     }
 }
+
+/**
+ * Přehled doporučení jednoho společenství: každé doporučené s aktuálním stavem a souhrn.
+ * Stavy: registered (jen se zaregistrovalo), trying (zkouší placené funkce), ordered (objednalo edici, čeká se na platbu),
+ * monthly (platí měsíčně, odměna po třetí platbě), converted (zaplatilo – kredit připsán), gone (web už neexistuje).
+ */
+function referral_overview(array $t): array
+{
+    $rows = [];
+    $reward = pset_int('referral_reward', 0, 100000);
+    foreach (pq('SELECT * FROM referrals WHERE referrer = ? ORDER BY id DESC', [$t['slug']])->fetchAll() as $r) {
+        $ref = tenant_row($r['referred']);
+        $state = 'registered';
+        $note = '';
+        if ($r['rewarded_at'] !== '') {
+            $state = 'converted';
+        } elseif (!$ref) {
+            $state = 'gone';
+        } else {
+            $paidMonths = (int) pq("SELECT COALESCE(SUM(months), 0) FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid'", [$ref['slug']])->fetchColumn();
+            if ($paidMonths > 0) {
+                $state = 'monthly';
+                $note = $paidMonths . ' ze 3 měsíčních plateb';
+            } elseif (pq("SELECT 1 FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') LIMIT 1", [$ref['slug']])->fetchColumn()) {
+                $state = 'ordered';
+            } elseif (pq('SELECT 1 FROM feature_trials WHERE tenant = ? AND ends >= ? LIMIT 1', [$ref['slug'], date('Y-m-d')])->fetchColumn()) {
+                $state = 'trying';
+            }
+        }
+        $rows[] = $r + ['state' => $state, 'note' => $note];
+    }
+    $converted = array_filter($rows, fn($r) => $r['state'] === 'converted');
+    $used = (int) pq("SELECT COALESCE(SUM(discount), 0) FROM payments WHERE tenant = ? AND status = 'paid'", [$t['slug']])->fetchColumn();
+    return ['rows' => $rows, 'clicks' => (int) ($t['ref_clicks'] ?? 0), 'registered' => count($rows), 'converted' => count($converted),
+        'earned' => array_sum(array_map(fn($r) => (int) $r['amount'], $converted)), 'used' => $used, 'credit' => (int) ($t['credit'] ?? 0), 'reward' => $reward];
+}
+const REFERRAL_STATES = ['registered' => ['Zaregistrovalo se', 'new'], 'trying' => ['Zkouší placené funkce', 'in_progress'], 'ordered' => ['Objednalo edici, čeká se na platbu', 'in_progress'],
+    'monthly' => ['Platí měsíčně', 'in_progress'], 'converted' => ['Zaplatilo – kredit připsán', 'done'], 'gone' => ['Web už neexistuje', 'new']];
 
 // ---------- Úložiště navíc: balíčky nad limit edice, placené na rok ----------
 

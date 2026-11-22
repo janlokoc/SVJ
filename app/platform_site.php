@@ -13,6 +13,9 @@ $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '
 
 // Odkaz s doporučením (?ref=KÓD) si zapamatujeme do konce registrace.
 if ($METHOD === 'GET' && isset($_GET['ref']) && ($refOwner = referral_owner((string) $_GET['ref']))) {
+    if (($_SESSION['ref']['code'] ?? '') !== $refOwner['ref_code'] && !preg_match('~bot|crawl|spider|preview~i', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''))) {
+        pq('UPDATE tenants SET ref_clicks = ref_clicks + 1 WHERE slug = ?', [$refOwner['slug']]);   // jednou za návštěvu
+    }
     $_SESSION['ref'] = ['code' => $refOwner['ref_code'], 'name' => $refOwner['name']];
 }
 if ($PATH === '/' && $METHOD === 'GET') {
