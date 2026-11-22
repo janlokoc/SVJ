@@ -9,7 +9,7 @@
       <tr<?= $p['status'] === 'cancelled' ? ' class="is-off"' : '' ?>>
         <td data-label="Var. symbol"><code><?= e($p['vs']) ?></code></td>
         <td data-label="Společenství"><?php if ($p['tenant_name']): ?><a href="<?= url('/svj/' . $p['tenant']) ?>"><?= e($p['tenant_name']) ?></a><?php else: ?><?= e($p['tenant']) ?> <small class="muted">(smazáno)</small><?php endif ?></td>
-        <td data-label="Částka"><?= money_czk((int) $p['amount']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : '' ?></td>
+        <td data-label="Částka"><?= money_czk((int) $p['amount']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '') ?></td>
         <td data-label="Období"><?= $p['period_from'] ? cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?></td>
         <td data-label="Stav"><span class="status status-<?= ['pending' => 'in_progress', 'claimed' => 'new', 'paid' => 'done', 'cancelled' => 'rsvp-no'][$p['status']] ?>"><?= e(PAYMENT_STATUS[$p['status']]) ?></span><?= $p['paid_at'] ? '<br><small class="muted">' . cz_datetime($p['paid_at']) . ' · ' . e($p['confirmed_by']) . '</small>' : '' ?></td>
         <td data-label="Vytvořeno"><?= cz_date($p['created_at']) ?></td>

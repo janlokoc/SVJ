@@ -72,6 +72,27 @@
     <?php endif ?>
   </div>
 
+  <?php if (ai_configured()): $aiCfg = ai_settings(); ?>
+  <div class="card" id="ai">
+    <h2>AI pomocník</h2>
+    <p>Tento měsíc využito <strong><?= ai_used() ?> z <?= (int) $aiCfg['limit'] ?></strong> použití<?= $aiCfg['plus'] ? ' (doplněk AI Plus do ' . cz_date($t['ai_until']) . ')' : ' – základní limit je v ceně webu' ?>.</p>
+    <?php if ($aiPayment): $ap = $aiPayment; ?>
+      <h3>Platba za AI Plus na 1 rok</h3>
+      <?php if ($ap['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($ap['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
+      <div class="pay"><?php if ($aiQr): ?><div class="pay-qr"><?= $aiQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $ap['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($ap['vs']) ?></code></dd></dl></div>
+      <div class="actions">
+        <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za AI Plus jsem odeslal(a)</button></form><?php endif ?>
+        <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $ap['id']) ?>">Zálohová faktura k tisku</a>
+        <?php if ($ap['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
+      </div>
+    <?php elseif (!$aiCfg['plus'] || $t['ai_until'] <= date('Y-m-d', time() + 30 * 86400)): ?>
+      <p><strong>AI Plus:</strong> <?= pset_int('ai_plus_limit', 0, 100000) ?> použití měsíčně za <?= money_czk(pset_int('price_ai', 0, 1000000)) ?> ročně. Hodí se, když pomocníka používá víc členů výboru nebo píšete hodně oznámení.</p>
+      <form method="post" action="<?= url('/admin/predplatne/ai') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="request"><button class="btn" type="submit"><?= $aiCfg['plus'] ? 'Prodloužit AI Plus o rok' : 'Objednat AI Plus' ?></button></form>
+    <?php endif ?>
+  </div>
+  <?php endif ?>
+
   <div class="card card-soft">
     <h2>Ceník</h2>
     <ul class="price-rows">
@@ -87,7 +108,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : '' ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '') ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

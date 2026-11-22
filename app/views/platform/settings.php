@@ -23,6 +23,15 @@
     <label>Vlastní doména společenství (Kč za rok) <input type="number" name="price_domain" value="<?= e($v['price_domain']) ?>" min="0" required></label>
     <label>Pokyny pro společenství, které doménu už vlastní <textarea name="domain_dns" rows="3" placeholder="Nastavte záznam A pro tabor48.cz a www.tabor48.cz na adresu 203.0.113.10"><?= e($v['domain_dns']) ?></textarea></label>
     <p class="hint">O doménu žádá správce společenství v části Předplatné. Žádost uvidíte u společenství; po zaplacení, nasměrování domény na server a zapnutí HTTPS ji tam zprovozníte.</p>
+    <h2>AI pomocník</h2>
+    <p class="hint">Funguje, když je na serveru knihovna a klíč v <code>storage/config.php</code> (<?= function_exists('ai_configured') && ai_configured() ? 'nastaveno' : 'zatím nenastaveno' ?>). Spotřebu platíte Vy; kolik který web tento měsíc využil, vidíte v seznamu společenství.</p>
+    <div class="form-row">
+      <label>Použití měsíčně v ceně webu <input type="number" name="ai_free_limit" value="<?= e($v['ai_free_limit']) ?>" min="0" required></label>
+      <label>Použití měsíčně s AI Plus <input type="number" name="ai_plus_limit" value="<?= e($v['ai_plus_limit']) ?>" min="0" required></label>
+      <label>AI Plus (Kč za rok) <input type="number" name="price_ai" value="<?= e($v['price_ai']) ?>" min="0" required></label>
+    </div>
+    <label>Model (nevyplněno = podle config.php) <input type="text" name="ai_model" value="<?= e($v['ai_model']) ?>" placeholder="claude-opus-5-5" pattern="[a-z0-9.\-]*"></label>
+    <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. 0 použití v ceně znamená, že pomocník je jen pro weby s AI Plus.</p>
     <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
     <h2>Platby</h2>
     <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>

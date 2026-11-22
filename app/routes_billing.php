@@ -25,7 +25,8 @@ $route('GET', '/admin/predplatne', function () {
     $state = billing_state($t);
     $payment = $state['mode'] === 'free' ? null : billing_pending($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t),
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'aiPayment' => ai_payment($t),
+        'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, (int) $payment['amount'], $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
@@ -89,6 +90,25 @@ $route('POST', '/admin/predplatne/domena', function () {
         redirect('/admin/predplatne#domena');
     }
     redirect('/admin/predplatne#domena');
+});
+$route('POST', '/admin/predplatne/ai', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    $action = post('action');
+    $p = ai_payment($t);
+    if ($action === 'request' && !$p && ai_configured()) {
+        $p = ai_payment_create($t);
+        audit('AI Plus: objednávka', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Doplněk AI Plus je objednán. Zapne se po připsání platby.');
+    } elseif ($action === 'claim' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
+        audit('AI Plus: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Děkujeme. Jakmile platbu uvidíme na účtu, AI Plus zapneme.');
+    } elseif ($action === 'cancel' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'cancelled', note = 'objednávka zrušena správcem webu' WHERE id = ?", [$p['id']]);
+        flash('Objednávka AI Plus je zrušena.', 'info');
+    }
+    redirect('/admin/predplatne#ai');
 });
 $route('POST', '/admin/predplatne/zaplaceno', function () {
     require_admin();

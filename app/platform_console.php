@@ -137,6 +137,7 @@ if ($PATH === '/') {
         $t['stats'] = tenant_stats($t['slug']);
         $t['billing_state'] = billing_state($t);
         $t['delete_on'] = tenant_delete_date($t);
+        $t['ai_used'] = (int) ($t['stats']['ai_used'] ?? 0);
         $t['last_notice'] = pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 1', [$t['slug']])->fetch() ?: null;
     }
     unset($t);
@@ -333,7 +334,7 @@ if ($PATH === '/nastaveni') {
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = $in['period'] === 'year' ? 'year' : 'month';
-        foreach (['price_domain' => 'Cena vlastní domény', 'trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
+        foreach (['price_ai' => 'Cena AI Plus', 'ai_free_limit' => 'Limit AI v ceně', 'ai_plus_limit' => 'Limit AI Plus', 'price_domain' => 'Cena vlastní domény', 'trial_days' => 'Délka zkušební doby', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_first' => 'Cena v prvním roce', 'price_next' => 'Cena v dalších letech'] as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }

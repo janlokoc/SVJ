@@ -25,8 +25,16 @@ TXT;
 function ai_settings(): array
 {
     $c = (array) (app_config()['ai'] ?? []);
-    return ['key' => (string) ($c['api_key'] ?? ''), 'model' => (string) ($c['model'] ?? 'claude-opus-5-5'), 'base_url' => (string) ($c['base_url'] ?? ''),
-        'limit' => (int) ($c['monthly_limit'] ?? 200)];
+    $model = (string) ($c['model'] ?? 'claude-opus-5-5');
+    $limit = (int) ($c['monthly_limit'] ?? 30);
+    $plus = false;
+    // Na platformě určuje limit hlavní správce: základní počet použití je v ceně, vyšší má web s doplňkem AI Plus.
+    if (platform_enabled() && defined('TENANT') && TENANT !== '') {
+        $plus = ai_plus_active(tenant_row(TENANT));
+        $limit = pset_int($plus ? 'ai_plus_limit' : 'ai_free_limit', 0, 100000);
+        $model = pset('ai_model') !== '' ? pset('ai_model') : $model;
+    }
+    return ['key' => (string) ($c['api_key'] ?? ''), 'model' => $model, 'base_url' => (string) ($c['base_url'] ?? ''), 'limit' => $limit, 'plus' => $plus];
 }
 /** Knihovna je nainstalovaná (složka vendor vedle index.php). */
 function ai_sdk_ready(): bool
@@ -73,7 +81,8 @@ function ai_run(string $task, string $input, string $context = ''): array
         return ['error' => 'Text je na pomocníka příliš dlouhý (nejvýše 20 000 znaků). Zkraťte ho, nebo ho zpracujte po částech.'];
     }
     if ($cfg['limit'] > 0 && ai_used() >= $cfg['limit']) {
-        return ['error' => 'Měsíční limit AI pomocníka (' . $cfg['limit'] . ' použití) je vyčerpán. Obnoví se prvního dne příštího měsíce.'];
+        return ['error' => 'Měsíční limit AI pomocníka (' . $cfg['limit'] . ' použití) je vyčerpán. Obnoví se prvního dne příštího měsíce.'
+            . (platform_enabled() && !$cfg['plus'] ? ' Vyšší limit nabízí doplněk AI Plus v části Předplatné.' : '')];
     }
     $prompt = AI_TASKS[$task][1] . "\n\nSpolečenství: " . site('full') . ($context !== '' ? "\n\n<kontext>\n$context\n</kontext>" : '') . "\n\n<text>\n$input\n</text>";
     try {

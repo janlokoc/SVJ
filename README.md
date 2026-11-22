@@ -359,11 +359,20 @@ Zapnutí:
 1. ve složce webu spusťte `composer install` (stáhne oficiální knihovnu
    Anthropic; bez ní web běží celý, jen bez pomocníka),
 2. do `storage/config.php` doplňte
-   `'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 200]`.
+   `'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 30]`.
 
-Klíč získáte na console.anthropic.com; použití se platí podle spotřeby.
-`monthly_limit` je nejvyšší počet použití na jeden web za měsíc. Na
-platformě pro více SVJ platí jeden klíč pro všechny weby.
+Klíč získáte v Claude Console (platform.claude.com) – je to jiný účet
+a jiné placení než předplatné aplikace Claude; použití se platí podle
+spotřeby z předplaceného kreditu.
+
+Na webu jednoho SVJ určuje `monthly_limit` nejvyšší počet použití za
+měsíc. Na platformě pro více SVJ platí jeden klíč pro všechny weby a
+limity nastavuje hlavní správce v Nastavení služby: základní počet použití
+je v ceně webu (výchozí 30 měsíčně), vyšší (výchozí 300) má web
+s placeným doplňkem **AI Plus** (výchozí 990 Kč ročně), který si správce
+společenství objedná v Předplatném stejně jako vlastní doménu. V seznamu
+společenství je vidět, kolikrát který web pomocníka tento měsíc použil.
+Tamtéž lze zvolit model.
 
 Text, který správce pomocníkovi zadá, se odesílá ke zpracování společnosti
 Anthropic – nic se neposílá samo a správce je na to u tlačítek upozorněn.

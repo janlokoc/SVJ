@@ -106,6 +106,10 @@ ALTER TABLE payments ADD COLUMN item TEXT NOT NULL DEFAULT '';
 PRAGMA user_version = 4;
 SQL);
     }
+    // Placený doplněk AI Plus.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 5) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN ai_until TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 5;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -171,7 +175,7 @@ function tenant_stats(string $slug): array
         $pdo = tenant_pdo($slug);
         $one = fn(string $sql) => $pdo->query($sql)->fetchColumn();
         return ['ready' => true, 'users' => (int) $one('SELECT COUNT(*) FROM users WHERE active = 1'), 'admins' => (int) $one("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1"),
-            'units' => (int) $one('SELECT COUNT(*) FROM units'), 'last_login' => (string) $one('SELECT MAX(last_login_at) FROM users'), 'documents' => (int) $one('SELECT COUNT(*) FROM documents')];
+            'units' => (int) $one('SELECT COUNT(*) FROM units'), 'ai_used' => (int) $one("SELECT value FROM settings WHERE `key` = 'ai_used_" . date('Y-m') . "'"), 'last_login' => (string) $one('SELECT MAX(last_login_at) FROM users'), 'documents' => (int) $one('SELECT COUNT(*) FROM documents')];
     } catch (Throwable $e) {
         return ['ready' => false, 'error' => true];
     }
@@ -274,7 +278,7 @@ Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pr
 Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
 TXT;
 const PLATFORM_DEFAULTS = [
-    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'hosting_note' => '', 'trial_days' => '30', 'grace_days' => '14',
+    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'ai_free_limit' => '30', 'ai_plus_limit' => '300', 'price_ai' => '990', 'ai_model' => '', 'hosting_note' => '', 'trial_days' => '30', 'grace_days' => '14',
     'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
@@ -410,6 +414,21 @@ function billing_confirm(array $p, string $by): ?array
         return null;
     }
     $domain = ($p['kind'] ?? 'service') === 'domain';
+    if (($p['kind'] ?? '') === 'ai') {
+        // AI Plus se platí na rok dopředu, při obnově od konce dosavadního období.
+        $from = max(date('Y-m-d'), $t['ai_until'] !== '' ? date('Y-m-d', strtotime($t['ai_until'] . ' +1 day')) : '');
+        $to = date('Y-m-d', strtotime($from . ' +12 month -1 day'));
+        $year = date('Y');
+        $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+        pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+            [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+        pq('UPDATE tenants SET ai_until = ? WHERE slug = ?', [$to, $t['slug']]);
+        if ($t['owner_email'] !== '') {
+            platform_mail($t['owner_email'], 'AI Plus je zapnutý – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za doplněk AI Plus. Do " . cz_date($to) . " má web "
+                . $t['name'] . " k dispozici " . pset_int('ai_plus_limit', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        }
+        return ['from' => $from, 'to' => $to];
+    }
     // Doména se platí na rok dopředu: od dneška, při obnově od konce dosavadního období.
     $from = $domain ? max(date('Y-m-d'), $t['domain_until'] !== '' ? date('Y-m-d', strtotime($t['domain_until'] . ' +1 day')) : '')
         : max(date('Y-m-d', strtotime(billing_state($t)['until'] . ' +1 day')), date('Y-m-d'));
@@ -531,7 +550,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => ($p['kind'] ?? 'service') === 'domain' ? 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně' : null, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], default => null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -658,4 +677,26 @@ function domain_renewals(): void
             . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
             . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
     }
+}
+
+// ---------- AI Plus: placený doplněk s vyšším měsíčním limitem AI pomocníka ----------
+
+function ai_plus_active(?array $t): bool
+{
+    return $t && ($t['ai_until'] ?? '') !== '' && $t['ai_until'] >= date('Y-m-d');
+}
+function ai_payment(array $t): ?array
+{
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'ai' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
+    return $p ?: null;
+}
+function ai_payment_create(array $t): array
+{
+    if ($p = ai_payment($t)) {
+        return $p;
+    }
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'ai',?)", [$t['slug'], pset_int('price_ai', 0, 1000000), date('Y-m-d H:i:s'), pset_int('ai_plus_limit', 0, 100000) . ' použití měsíčně']);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
 }
