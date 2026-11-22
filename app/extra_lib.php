@@ -249,7 +249,7 @@ Ke správě domu a plnění povinností společenství: vedení seznamu členů,
 - Veřejnost vidí jen jména a funkce členů výboru a kontrolní komise.
 
 ## Kdo údaje zpracovává pro společenství
-- Provozovatel této webové služby, který web technicky provozuje a zálohuje (zpracovatel; je uveden v patičce nebo na stránce služby).
+- Provozovatel této webové služby, který web technicky provozuje a zálohuje (zpracovatel; je uveden v patičce nebo na stránce služby). Při řešení podpory může do webu nahlédnout jen pro čtení; každý takový vstup je zapsán v záznamech, které má výbor k dispozici.
 - Pokud výbor používá AI pomocníka, odesílá se text, který mu výbor zadá, ke zpracování společnosti Anthropic. Výbor do něj nemá vkládat osobní údaje, které tam být nemusí.
 Údaje se nepředávají nikomu dalšímu a nepoužívají se k reklamě.
 

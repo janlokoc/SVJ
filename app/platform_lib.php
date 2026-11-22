@@ -298,7 +298,7 @@ U webů jednotlivých společenství je správcem údajů vždy dané společens
 - **Při platbě:** údaje na zálohové faktuře a faktuře, variabilní symbol a to, kdo platbu potvrdil.
 - **Když nám napíšete nebo nahlásíte problém:** text hlášení, adresu stránky, typ prohlížeče, případný snímek obrazovky a kontakt, který uvedete.
 - **Zájem o připravované funkce:** e-mail, pokud ho zadáte, abychom Vám dali vědět. U prokliků na detail funkce jen anonymní denní otisk (nelze z něj zjistit, kdo jste).
-- **Provozní záznamy:** přihlášení hlavních správců a úkony v konzoli.
+- **Provozní záznamy:** přihlášení hlavních správců a úkony v konzoli, včetně vstupů podpory do webu společenství (kdo, kdy, za koho a proč).
 
 ## K čemu údaje slouží
 K poskytování služby (plnění smlouvy), k vystavení dokladů (právní povinnost) a k ochraně a zlepšování služby (oprávněný zájem). Údaje nepoužíváme k reklamě a nepředáváme je třetím stranám, s výjimkou poskytovatele hostingu.
@@ -339,7 +339,8 @@ Službu není dovoleno používat k rozesílání nevyžádaných sdělení, k �
 
 ## 5. Práva a povinnosti poskytovatele
 Poskytovatel zajišťuje provoz služby, její zabezpečení a pravidelné zálohování. Krátkodobé odstávky kvůli údržbě oznamuje předem, je-li to možné.
-Poskytovatel do obsahu webu zákazníka nenahlíží, ledaže o to zákazník požádá při řešení podpory nebo to vyžaduje odstranění závady či plnění právní povinnosti.
+Poskytovatel do obsahu webu zákazníka nenahlíží, ledaže o to zákazník požádá při řešení podpory nebo to vyžaduje odstranění závady či plnění právní povinnosti. Dělá to v režimu podpory: do webu vstoupí za některého z jeho uživatelů **pouze pro čtení** – nemůže v něm nic změnit, odeslat ani smazat a soukromé zprávy mezi uživateli nevidí. Každý takový vstup se s důvodem a časem zapíše do záznamů webu, kde ho správce společenství vidí.
+Na žádost uživatele může poskytovatel poslat odkaz pro nastavení nového hesla nebo vypnout dvoufázové ověření; hesla uživatelů nezná a nemůže je zobrazit.
 Poskytovatel může službu měnit a rozšiřovat. Podstatné omezení funkcí oznámí předem.
 
 ## 6. Odpovědnost
@@ -370,6 +371,7 @@ Tato smlouva podle čl. 28 nařízení (EU) 2016/679 (GDPR) upravuje zpracován�
 ## 3. Povinnosti zpracovatele
 Zpracovatel zpracovává údaje jen na základě doložených pokynů správce, kterými jsou tato smlouva a nastavení provedená správcem ve službě.
 Zajišťuje, že osoby s přístupem k údajům jsou vázány mlčenlivostí.
+Do webu správce vstupuje jen při řešení podpory, odstraňování závad nebo plnění právní povinnosti, a to v režimu pouze pro čtení; každý vstup se zapisuje do záznamů webu, které má správce k dispozici.
 Přijal technická a organizační opatření: šifrovaný přenos, hesla ukládaná jen jako otisk, oddělená databáze každého společenství, řízení přístupů, záznamy o činnosti správců a pravidelné zálohy.
 Je správci nápomocen při vyřizování žádostí subjektů údajů a při plnění povinností podle čl. 32–36 GDPR.
 Porušení zabezpečení osobních údajů oznámí správci bez zbytečného odkladu poté, co se o něm dozví.

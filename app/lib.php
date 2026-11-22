@@ -379,8 +379,24 @@ SQL);
     return $pdo;
 }
 
+/** Je do webu přihlášena podpora provozovatele? Pak je web jen pro čtení. */
+function support_mode(): bool
+{
+    return !empty($_SESSION['support']);
+}
+/** Zapne nebo vypne zámek zápisu přímo v databázi (SQLite; u MySQL hlídá zápisy funkce q). */
+function support_lock(bool $on): void
+{
+    if (db_driver() !== 'mysql') {
+        db()->exec('PRAGMA query_only = ' . ($on ? 'ON' : 'OFF'));
+    }
+}
 function q(string $sql, array $params = []): PDOStatement
 {
+    // Režim podpory: nic se nezapisuje. Výjimkou je jen zápis do záznamů o vstupu a odchodu podpory.
+    if (support_mode() && empty($GLOBALS['SUPPORT_AUDIT']) && preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP)\b/i', $sql)) {
+        return db()->query('SELECT 1 WHERE 1 = 0');
+    }
     $st = db()->prepare(sql($sql));
     $st->execute($params);
     return $st;
@@ -488,7 +504,7 @@ function support_bar(): string
     if (empty($_SESSION['support']) || !($u = user())) {
         return '';
     }
-    return '<div class="support-bar" role="status"><span><strong>Režim podpory.</strong> Jste přihlášeni jako ' . e($u['name']) . ' (' . e($u['email']) . '). Vše, co uděláte, se zapisuje do záznamů společenství.</span>'
+    return '<div class="support-bar" role="status"><span><strong>Režim podpory – jen pro čtení.</strong> Díváte se jako ' . e($u['name']) . ' (' . e($u['email']) . '). Nic nejde změnit, odeslat ani smazat.</span>'
         . '<form method="post" action="' . url('/odhlaseni') . '">' . csrf_field() . '<button type="submit">Ukončit režim podpory</button></form></div>';
 }
 function staging_bar(): string
@@ -1035,9 +1051,13 @@ function login_user(array $u): void
 function audit(string $action, string $detail = '', ?int $userId = null): void
 {
     $GLOBALS['AUDITED'] = true;
-    // Co se stalo v režimu podpory, je v záznamech poznat.
-    if (!empty($_SESSION['support']) && $action !== 'support_login') {
-        $detail = trim($detail . ' [podpora provozovatele: ' . $_SESSION['support'] . ']');
+    // V režimu podpory se zapisuje jen vstup a odchod podpory; nic jiného se stát nemůže.
+    if (support_mode()) {
+        if (!in_array($action, ['support_login', 'support_logout'], true)) {
+            return;
+        }
+        $GLOBALS['SUPPORT_AUDIT'] = true;
+        support_lock(false);
     }
     $uid = $userId ?? ($_SESSION['uid'] ?? null);
     $name = $uid ? (string) val('SELECT name FROM users WHERE id = ?', [$uid]) : '';
@@ -1072,6 +1092,7 @@ function audit(string $action, string $detail = '', ?int $userId = null): void
         if ($mysql) {
             $pdo->query("SELECT RELEASE_LOCK('svj_audit')");
         }
+        unset($GLOBALS['SUPPORT_AUDIT']);
     }
 }
 /** Ochrana proti hádání hesel: nejvýše 8 chyb z jedné adresy a 10 chyb na jeden účet za 15 minut. */

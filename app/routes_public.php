@@ -167,7 +167,7 @@ $route('GET', '/prihlaseni/overeni', $verify);
 $route('POST', '/prihlaseni/overeni', $verify);
 
 $route('POST', '/odhlaseni', function () {
-    audit('logout');
+    audit(support_mode() ? 'support_logout' : 'logout');
     $_SESSION = [];
     session_regenerate_id(true);
     flash('Byli jste odhlášeni.');

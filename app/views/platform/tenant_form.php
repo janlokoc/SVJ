@@ -154,23 +154,33 @@
     <h2>Podpora: přihlášení a hesla</h2>
     <?php if (!empty($tenantEnter)): ?><div class="flash flash-info">Vstup jako <?= e($tenantEnter['name']) ?> je připraven a zapsán do záznamů. Odkaz platí 2 minuty a jen jednou. <a class="btn btn-small" href="<?= e($tenantEnter['link']) ?>" rel="noreferrer">Otevřít web v režimu podpory</a></div><?php endif ?>
     <?php if (!empty($tenantReset)): ?><div class="flash flash-<?= $tenantReset['sent'] ? 'ok' : 'error' ?>"><?= $tenantReset['sent'] ? 'Odkaz na nové heslo jsme poslali na ' . e($tenantReset['email']) . '.' : 'E-mail na ' . e($tenantReset['email']) . ' se nepodařilo odeslat.' ?> Odkaz platí 24 hodin; můžete ho předat i jinou cestou:<br><code class="break"><?= e($tenantReset['link']) ?></code></div><?php endif ?>
-    <p class="hint">Zapomenuté heslo si každý obnoví sám odkazem „Zapomněli jste heslo?“ na přihlašovací stránce. Tady pomůžete, když mu e-mail nechodí, ztratil telefon s ověřovacím kódem, nebo potřebujete vidět web jeho očima.</p>
-    <table class="table"><thead><tr><th>Správce webu</th><th>Poslední přihlášení</th><th>Pomoc</th></tr></thead><tbody>
-    <?php foreach ($supportAdmins as $a): ?><tr>
-      <td data-label="Správce webu"><strong><?= e($a['name']) ?></strong><br><small class="muted"><?= e($a['email']) ?><?= $a['totp_enabled'] ? ' · dvoufázové ověření' : '' ?></small></td>
-      <td data-label="Poslední přihlášení"><?= $a['last_login_at'] ? cz_datetime($a['last_login_at']) : '<span class="muted">zatím nikdy</span>' ?></td>
-      <td data-label="Pomoc" class="support-actions">
-        <form method="post" action="<?= url('/svj/' . $t['slug'] . '/heslo') ?>" class="inline-form" data-confirm="Poslat na <?= e($a['email']) ?> odkaz pro nastavení nového hesla?"><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Poslat odkaz na nové heslo</button></form>
-        <?php if ($a['totp_enabled']): ?><form method="post" action="<?= url('/svj/' . $t['slug'] . '/overeni') ?>" class="inline-form" data-confirm="Vypnout dvoufázové ověření účtu <?= e($a['email']) ?>? Udělejte to jen na ověřenou žádost."><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Vypnout dvoufázové ověření</button></form><?php endif ?>
-        <form method="post" action="<?= url('/svj/' . $t['slug'] . '/vstoupit') ?>" class="support-enter"><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>">
-          <input type="text" name="reason" placeholder="Důvod vstupu" aria-label="Důvod vstupu jako <?= e($a['name']) ?>" maxlength="200" required><button class="btn btn-small" type="submit">Připravit vstup jako tento správce</button></form>
-      </td></tr><?php endforeach ?>
-    </tbody></table>
-    <?php if (!$supportAdmins): ?><p class="empty">Web nemá žádného aktivního správce. Přidejte ho níže.</p><?php endif ?>
-    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/heslo') ?>" class="form"><?= csrf_field() ?>
-      <div class="form-row"><label>Jiný účet na tomto webu (e-mail) <input type="email" name="email" required></label></div>
-      <button class="btn btn-small btn-ghost" type="submit">Poslat odkaz na nové heslo</button></form>
-    <p class="hint">Vstup jako správce Vás přihlásí do webu společenství v režimu podpory: nahoře je po celou dobu výrazný pruh, vstup i s důvodem se zapíše do záznamů společenství (správce ho tam vidí) i platformy a v režimu podpory nejde měnit heslo ani účet, za který jste přihlášeni. Používejte ho jen na žádost společenství.</p>
+    <?php $pickUser = function (string $id) use ($supportUsers, $supportPick) { ?>
+      <label>Uživatel <select name="user" id="<?= $id ?>" required><option value="">– vyberte –</option>
+        <?php foreach (['admin' => 'Správci webu', 'user' => 'Obyvatelé'] as $role => $group): $rows = array_filter($supportUsers, fn($u) => ($u['role'] === 'admin') === ($role === 'admin')); if (!$rows) { continue; } ?>
+        <optgroup label="<?= $group ?>"><?php foreach ($rows as $u): ?><option value="<?= (int) $u['id'] ?>"<?= $supportPick === (int) $u['id'] ? ' selected' : '' ?>><?= e($u['name']) ?> – <?= e($u['email']) ?><?= $role === 'admin' ? '' : ' (' . (($u['kind'] ?? '') === 'tenant' ? 'nájemník' : 'vlastník') . ')' ?><?= $u['totp_enabled'] ? ' · 2FA' : '' ?></option><?php endforeach ?></optgroup>
+        <?php endforeach ?></select></label>
+    <?php }; ?>
+    <?php if (!$supportUsers): ?><p class="empty">Web nemá žádný aktivní účet. Přidejte správce níže.</p><?php else: ?>
+    <h3>Podívat se na web očima uživatele</h3>
+    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/vstoupit') ?>" class="form support-enter"><?= csrf_field() ?>
+      <div class="form-row"><?php $pickUser('sup-enter-user') ?>
+        <label>Důvod vstupu <input type="text" name="reason" maxlength="200" required placeholder="např. požadavek č. 123 – nevidí dokumenty"></label></div>
+      <button class="btn" type="submit">Připravit vstup jen pro čtení</button>
+    </form>
+    <ol class="hint support-steps">
+      <li>Vyberte uživatele, napište důvod a potvrďte. Vstup se hned zapíše do záznamů platformy.</li>
+      <li>Objeví se tlačítko „Otevřít web v režimu podpory“ (platí 2 minuty, jen jednou). Otevře web společenství přihlášený za vybraného uživatele – bez jeho hesla i ověřovacího kódu.</li>
+      <li>Web vidíte přesně jako on, ale <strong>jen pro čtení</strong>: žádný formulář se neuloží, nic se neodešle ani nesmaže a soukromé zprávy mezi uživateli se nezobrazí. Nahoře je po celou dobu červený pruh.</li>
+      <li>Skončíte tlačítkem „Ukončit režim podpory“. Vstup i odchod s důvodem vidí správce společenství ve svých Záznamech.</li>
+    </ol>
+    <h3>Pomoc s přihlášením</h3>
+    <form method="post" class="form" action="<?= url('/svj/' . $t['slug'] . '/heslo') ?>"><?= csrf_field() ?>
+      <div class="form-row"><?php $pickUser('sup-login-user') ?></div>
+      <div class="actions"><button class="btn btn-ghost" type="submit">Poslat odkaz na nové heslo</button>
+        <button class="btn btn-ghost" type="submit" formaction="<?= url('/svj/' . $t['slug'] . '/overeni') ?>">Vypnout dvoufázové ověření</button></div>
+    </form>
+    <p class="hint">Zapomenuté heslo si každý obnoví sám odkazem „Zapomněli jste heslo?“ na přihlašovací stránce. Tady pomůžete, když mu e-mail nechodí nebo ztratil telefon s ověřovacím kódem. Odkaz na nové heslo platí 24 hodin; dosavadní heslo platí, dokud si uživatel nenastaví nové. Hesla uživatelů neznáte a nejdou zobrazit.</p>
+    <?php endif ?>
   </div>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/spravce') ?>" class="card form">
     <h2>Přidat správce tohoto webu</h2>

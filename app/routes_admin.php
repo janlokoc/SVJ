@@ -678,7 +678,7 @@ const AUDIT_LABELS = [
     'login' => 'Přihlášení', 'login_failed' => 'Neúspěšné přihlášení', 'login_2fa_failed' => 'Chybný ověřovací kód', 'logout' => 'Odhlášení',
     'setup' => 'Vytvoření prvního správce', 'setup_code_failed' => 'Chybný instalační kód', 'password_changed' => 'Změna hesla', 'gdpr_export' => 'Export osobních údajů', 'gdpr_erasure' => 'Zrušení účtu na vlastní žádost',
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
-    'support_login' => 'Vstup podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
+    'support_login' => 'Vstup podpory provozovatele (jen pro čtení)', 'support_logout' => 'Odchod podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
     'unit_deleted' => 'Smazání jednotky', 'users_imported' => 'Import uživatelů', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];

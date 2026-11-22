@@ -299,6 +299,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         } elseif ($action === '/vstoupit') {
             if (mb_strlen($reason) < 3) {
                 flash('Napište důvod vstupu (například číslo požadavku nebo kdo o pomoc požádal). Zapíše se do záznamů společenství.', 'error');
+                $_SESSION['support_pick'] = (int) $u['id'];
             } else {
                 $token = bin2hex(random_bytes(32));
                 tenant_set($slug, 'support_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => (int) $u['id'], 'by' => $super['email'], 'reason' => $reason], JSON_UNESCAPED_UNICODE));
@@ -319,6 +320,8 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
             platform_mail($u['email'], 'Dvoufázové ověření bylo vypnuto – ' . $t['name'], "Dobrý den,\n\nna Vaši žádost jsme u Vašeho účtu na webu " . $t['name'] . " vypnuli dvoufázové ověření. Přihlásíte se e-mailem a heslem; ověření si pak znovu zapněte v části Můj účet.\n\nPokud jste o to nežádali, ozvěte se nám prosím hned.");
             platform_log('Vypnutí dvoufázového ověření', $slug . ' · ' . $u['email']);
             flash('Dvoufázové ověření účtu ' . $u['email'] . ' je vypnuté. Uživatel o tom dostal e-mail.');
+        } else {
+            flash('Účet ' . $u['email'] . ' dvoufázové ověření zapnuté nemá.', 'info');
         }
         redirect('/svj/' . $slug . '#podpora');
     }
@@ -370,7 +373,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
-        'supportAdmins' => tenant_pdo($slug)->query("SELECT id, name, email, last_login_at, totp_enabled, password_hash FROM users WHERE role = 'admin' AND active = 1 ORDER BY id")->fetchAll(), 'tenantEnter' => (function () { $r = $_SESSION['tenant_enter'] ?? null; unset($_SESSION['tenant_enter']); return $r; })(), 'tenantReset' => (function () { $r = $_SESSION['tenant_reset'] ?? null; unset($_SESSION['tenant_reset']); return $r; })(),
+        'supportUsers' => tenant_pdo($slug)->query("SELECT id, name, email, role, kind, last_login_at, totp_enabled FROM users WHERE active = 1 ORDER BY role = 'admin' DESC, name")->fetchAll(), 'supportPick' => (function () { $r = (int) ($_SESSION['support_pick'] ?? 0); unset($_SESSION['support_pick']); return $r; })(), 'tenantEnter' => (function () { $r = $_SESSION['tenant_enter'] ?? null; unset($_SESSION['tenant_enter']); return $r; })(), 'tenantReset' => (function () { $r = $_SESSION['tenant_reset'] ?? null; unset($_SESSION['tenant_reset']); return $r; })(),
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),

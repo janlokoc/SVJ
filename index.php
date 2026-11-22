@@ -216,10 +216,18 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
 
 // Edice: web se nikdy nepozastavuje. Funkce, která není v edici, jde vyzkoušet; po skončení zkoušky zůstává jen pro čtení.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => 'premium'];
-// V režimu podpory nejde měnit účet, za který je podpora přihlášena, ani rušit celý web.
-if (!empty($_SESSION['support']) && $METHOD === 'POST' && (str_starts_with($PATH, '/muj-ucet') || $PATH === '/admin/predplatne/zrusit-web')) {
-    flash('V režimu podpory nejde měnit heslo ani účet, za který jste přihlášeni, ani rušit web. Tohle musí udělat správce společenství sám.', 'error');
-    redirect(str_starts_with($PATH, '/muj-ucet') ? '/muj-ucet' : '/admin/predplatne');
+// Režim podpory je jen pro čtení: žádný formulář se neprovede (kromě odchodu) a soukromé zprávy se neukazují.
+if (support_mode()) {
+    support_lock(true);
+    if ($METHOD === 'POST' && $PATH !== '/odhlaseni') {
+        flash('Režim podpory je jen pro čtení – nic se neuložilo. Změnu musí udělat uživatel sám.', 'error');
+        $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+        redirect($back !== '' && str_starts_with($back, ($GLOBALS['BASE'] ?? '') . '/') ? substr($back, strlen($GLOBALS['BASE'] ?? '')) : '/');
+    }
+    if ($PATH === '/zpravy' || str_starts_with($PATH, '/zpravy/')) {
+        flash('Soukromé zprávy mezi uživateli se v režimu podpory nezobrazují.', 'info');
+        redirect('/');
+    }
 }
 if (TENANT !== '' && !$needsSetup && ($planFeature = plan_feature_for($PATH)) !== null && !plan_has($planFeature)) {
     $planState = plan_state($planFeature);
@@ -254,7 +262,7 @@ if ($PATH === '/favicon.ico') {
 }
 
 // Úlohy jednou denně (připomenutí revizí) spustí první návštěva dne.
-if ($METHOD === 'GET' && !$needsSetup) {
+if ($METHOD === 'GET' && !$needsSetup && !support_mode()) {
     daily_tasks();
 }
 

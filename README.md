@@ -313,14 +313,20 @@ automatické vystavování (viz výše).
   daňový doklad s DIČ, základem daně a DPH. Sazba se ukládá u každé platby,
   takže zaplacené doklady se změnou nastavení nemění; čekající platby se
   přepočtou. Podobu dokladů si nechte potvrdit účetní.
-- **Podpora (konzole → společenství → Podpora: přihlášení a hesla):** hlavní
-  správce může poslat kterémukoli účtu odkaz na nové heslo (platí 24 hodin,
-  zobrazí se i v konzoli), vypnout správci dvoufázové ověření a vstoupit do
-  webu jako jeho správce. Vstup vyžaduje důvod, je jednorázovým odkazem
-  (2 minuty), zapisuje se do záznamů společenství i platformy a po celou
-  dobu je na webu červený pruh „Režim podpory“. V tomto režimu nejde měnit
-  heslo ani účet, za který je podpora přihlášena, ani zrušit web; každá
-  akce je v záznamech označena. Heslo uživatele se vstupem nemění.
+- **Podpora (konzole → společenství → Podpora: přihlášení a hesla):**
+  - *Vstup do webu očima uživatele:* hlavní správce vybere kterýkoli
+    aktivní účet (správce, vlastník, nájemník), napíše důvod a dostane
+    jednorázový odkaz (2 minuty). Web se otevře přihlášený za toho
+    uživatele **jen pro čtení**: žádný formulář se neprovede, zápisy do
+    databáze jsou zablokované (u SQLite i zámkem `query_only`), denní
+    úlohy se nespouštějí a soukromé zprávy mezi uživateli se nezobrazují.
+    Nahoře je červený pruh „Režim podpory – jen pro čtení“. Vstup
+    (kdo, za koho, proč) i odchod se zapisují do záznamů společenství a
+    platformy. Heslo ani přihlášení uživatele se nemění.
+  - *Pomoc s přihlášením:* odkaz na nové heslo pro kterýkoli účet (platí
+    24 hodin, zobrazí se i v konzoli) a vypnutí dvoufázového ověření.
+  - Obchodní podmínky, smlouva o zpracování i zásady ochrany údajů tento
+    režim popisují.
 - **Průvodce pro nového správce:** Administrace → Průvodce nastavením
   (a karta na přehledu) vede správce kroky od údajů společenství přes import
   jednotek a obyvatel, kontakty a dokumenty po oznámení sousedům. U každého

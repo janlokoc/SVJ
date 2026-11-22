@@ -30,7 +30,7 @@ $route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
     }
     login_user($u);
     $_SESSION['support'] = (string) $d['by'];
-    audit('support_login', 'jako ' . $u['email'] . ' · důvod: ' . (string) ($d['reason'] ?? ''));
+    audit('support_login', (string) $d['by'] . ' jako ' . $u['email'] . ' · důvod: ' . (string) ($d['reason'] ?? ''));
     redirect($u['role'] === 'admin' ? '/admin' : '/');
 });
 
