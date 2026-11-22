@@ -91,3 +91,13 @@ function seed_for(PDO $pdo, string $tenant): void
         $pdo->prepare('UPDATE settings SET value = ? WHERE `key` = ?')->execute([$row['address'], 'address']);
     }
 }
+
+/** Doplní obsah, který potřebuje tabulky přidané po základním schématu. */
+function seed_after(PDO $pdo, string $tenant): void
+{
+    $row = $tenant !== '' && function_exists('tenant_row') ? (tenant_row($tenant) ?? []) : [];
+    if (($row['seed'] ?? '') === 'demo') {
+        require_once __DIR__ . '/seed_demo.php';
+        seed_demo_more($pdo);
+    }
+}

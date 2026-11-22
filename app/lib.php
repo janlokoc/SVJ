@@ -121,6 +121,7 @@ function db_mysql(string $tenant): PDO
         $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '6')");
         $pdo->commit();
         schema_v7($pdo, true);
+        seed_after($pdo, $tenant);
         return $pdo;
     }
     $mysqlVersion = (int) $pdo->query("SELECT value FROM settings WHERE `key` = 'schema_version'")->fetchColumn();
@@ -209,6 +210,7 @@ function open_database(string $storage, string $tenant): PDO
         $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
         schema_v7($pdo, false);
+        seed_after($pdo, $tenant);
         return $pdo;
     }
     $version = (int) $pdo->query('PRAGMA user_version')->fetchColumn();

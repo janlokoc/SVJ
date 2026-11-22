@@ -149,3 +149,37 @@ function seed_demo(PDO $pdo, string $uploads): void
         $ins('settings', ['key' => $k, 'value' => $v]);
     }
 }
+
+/** Obsah ukázky v tabulkách, které vznikají až po základním schématu (ankety). */
+function seed_demo_more(PDO $pdo): void
+{
+    $day = fn(int $n) => date('Y-m-d', time() + $n * 86400);
+    $at = fn(int $n, string $time = '18:30:00') => $day($n) . ' ' . $time;
+    $ins = function (string $table, array $row) use ($pdo): int {
+        $pdo->prepare("INSERT INTO $table (`" . implode('`,`', array_keys($row)) . '`) VALUES (' . implode(',', array_fill(0, count($row), '?')) . ')')->execute(array_values($row));
+        return (int) $pdo->lastInsertId();
+    };
+    $uid = array_map('intval', array_column($pdo->query('SELECT id FROM users ORDER BY id')->fetchAll(), 'id'));
+    if (count($uid) < 8) {
+        return;
+    }
+    // Ankety: jedna běžící (obyvatel z ukázky v ní ještě neodpověděl, takže vidí možnosti) a jedna uzavřená s výsledky
+    $survey = $ins('surveys', ['title' => 'Kdy uspořádat společnou brigádu?', 'body' => 'Čeká nás úklid dvora, natření laviček a výsadba u vchodu B. Vyberte termín, který Vám vyhovuje nejvíc – výbor pak pošle pozvánku.',
+        'closes_at' => $day(10), 'anonymous' => 1, 'published' => 1, 'created_at' => $at(-4, '09:15:00')]);
+    $opt = [];
+    foreach (['Sobota dopoledne', 'Sobota odpoledne', 'Neděle dopoledne', 'Nezúčastním se, ale přispěji na občerstvení'] as $i => $label) {
+        $opt[] = $ins('survey_options', ['survey_id' => $survey, 'label' => $label, 'sort' => $i]);
+    }
+    foreach ([[0, 0], [2, 0], [3, 1], [4, 0], [6, 3], [7, 2]] as $n => [$u, $o]) {
+        $ins('survey_answers', ['survey_id' => $survey, 'user_id' => $uid[$u], 'option_id' => $opt[$o], 'answered_at' => $at(-3 + ($n % 3), '1' . $n . ':05:00')]);
+    }
+    $survey = $ins('surveys', ['title' => 'Máte zájem o kolárnu ve dvoře?', 'body' => 'Zjišťujeme zájem, než necháme zpracovat nabídku na uzamykatelný přístřešek pro 12 kol.',
+        'closes_at' => $day(-20), 'anonymous' => 0, 'published' => 1, 'created_at' => $at(-45, '17:40:00')]);
+    $opt = [];
+    foreach (['Ano, využil(a) bych ji', 'Ne, kolo nemám nebo ho mám ve sklepě', 'Je mi to jedno'] as $i => $label) {
+        $opt[] = $ins('survey_options', ['survey_id' => $survey, 'label' => $label, 'sort' => $i]);
+    }
+    foreach ([[0, 0], [1, 0], [2, 0], [3, 1], [4, 0], [5, 2], [6, 1], [7, 0]] as $n => [$u, $o]) {
+        $ins('survey_answers', ['survey_id' => $survey, 'user_id' => $uid[$u], 'option_id' => $opt[$o], 'answered_at' => $at(-40 + $n, '18:1' . $n . ':00')]);
+    }
+}
