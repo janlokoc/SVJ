@@ -52,7 +52,7 @@ if ($PATH === '/hlaseni') {
     exit;
 }
 if ($PATH === '/registrace/adresa' && $METHOD === 'GET') {
-    $slug = strtolower(trim((string) ($_GET['adresa'] ?? '')));
+    $slug = slug_input((string) ($_GET['adresa'] ?? ''));
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     echo json_encode(['ok' => slug_problem($slug) === null, 'message' => slug_problem($slug) ?? 'Adresa ' . tenant_address($slug) . ' je volná.'], JSON_UNESCAPED_UNICODE);
@@ -78,7 +78,7 @@ if (isset($steps[$PATH])) {
     }
     if ($METHOD === 'POST' && $step === 1) {
         $name = mb_substr(post('name'), 0, 120);
-        $slug = strtolower(post('slug')) !== '' ? strtolower(post('slug')) : slugify($name);
+        $slug = slug_input(post('slug')) !== '' ? slug_input(post('slug')) : slugify($name);
         if (mb_strlen($name) < 3) {
             $errors[] = 'Vyplňte název společenství.';
         }

@@ -700,3 +700,11 @@ function ai_payment_create(array $t): array
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
 }
+
+/** Z toho, co člověk napsal do pole adresy, nechá jen název: pevnou část (doménu) i protokol odstraní. */
+function slug_input(string $v): string
+{
+    $v = strtolower(trim(preg_replace('~^https?://~i', '', trim($v))));
+    $v = preg_replace('~' . preg_quote(platform_domain(), '~') . '(:\d+)?~', '', $v);
+    return trim(substr(preg_replace('/-{2,}/', '-', preg_replace('/[^a-z0-9-]/', '', preg_replace('~[\s_./]+~', '-', ascii_text($v)))), 0, 39), '-');
+}

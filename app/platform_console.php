@@ -150,7 +150,7 @@ if ($PATH === '/svj/nove') {
     $errors = [];
     if ($METHOD === 'POST') {
         $t = $tenantInput($t);
-        $t['slug'] = strtolower(post('slug'));
+        $t['slug'] = slug_input(post('slug'));
         $t['seed'] = isset($_POST['seed_tabor']) ? 'tabor' : '';
         $errors = $tenantErrors($t);
         if ($problem = slug_problem($t['slug'])) {

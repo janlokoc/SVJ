@@ -72,7 +72,9 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
       }).catch(() => {});
     }, 300);
   };
-  slug.addEventListener('input', () => { own = slug.value !== ''; slug.value = slug.value.toLowerCase(); check(); });
+  const fixed = (slug.dataset.slugFixed || '').toLowerCase();
+  const clean = (v) => { v = v.toLowerCase().replace(/^\s+/, '').replace(/^https?:\/\//, ''); if (fixed) v = v.split(fixed).map((part, i) => (i ? part.replace(/^:\d+/, '') : part)).join(''); return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_.\/]+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-{2,}/g, '-').replace(/^-+/, '').slice(0, 39); };
+  slug.addEventListener('input', () => { const c = clean(slug.value); if (c !== slug.value) slug.value = c; own = slug.value !== ''; check(); });
   if (name) name.addEventListener('input', () => { if (!own) { slug.value = slugify(name.value); check(); } });
   if (slug.value) check();
 });

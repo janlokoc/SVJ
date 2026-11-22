@@ -10,9 +10,9 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <label>Název společenství <input type="text" name="name" id="signup-name" value="<?= e($s['name']) ?>" required minlength="3" maxlength="120" placeholder="SVJ Zahradní 12" autofocus></label>
-    <label>Adresa webu <span class="slug-row"><?php if (platform_paths()): ?><span><?= e(platform_domain()) ?>/</span><?php endif ?><input type="text" name="slug" id="signup-slug" value="<?= e($s['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" maxlength="39" required placeholder="zahradni"
+    <label>Adresa webu <span class="slug-row"><?php if (platform_paths()): ?><span><?= e(platform_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_domain()) ?>" aria-describedby="slug-fixed-note" id="signup-slug" value="<?= e($s['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" maxlength="39" required placeholder="zahradni"
       data-slug-from="#signup-name" data-slug-check="<?= url('/registrace/adresa') ?>" data-slug-status="#slug-status" autocomplete="off"><?php if (!platform_paths()): ?><span>.<?= e(platform_domain()) ?></span><?php endif ?></span></label>
-    <p class="hint" id="slug-status" role="status">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
+    <p class="hint" id="slug-status" role="status">Doplňte jen název – část <?= e(platform_paths() ? platform_domain() . '/' : '.' . platform_domain()) ?> je pevná. Malá písmena bez diakritiky, číslice a pomlčka; adresu později nejde změnit.</p>
     <label>Adresa domu (nepovinné) <input type="text" name="address" value="<?= e($s['address']) ?>" maxlength="200" placeholder="Zahradní 12, Brno"></label>
     <div class="actions"><button class="btn btn-big" type="submit">Pokračovat na vzhled</button></div>
   </form>
