@@ -327,6 +327,16 @@ automatické vystavování (viz výše).
     24 hodin, zobrazí se i v konzoli) a vypnutí dvoufázového ověření.
   - Obchodní podmínky, smlouva o zpracování i zásady ochrany údajů tento
     režim popisují.
+- **Právní texty (vzory):** obchodní podmínky, smlouva o zpracování údajů a
+  zásady ochrany údajů jsou výchozí texty v `app/platform_lib.php`
+  (`PLATFORM_TERMS`, `PLATFORM_DPA`, `PLATFORM_PRIVACY`). Pokrývají mimo
+  jiné: zákazník není spotřebitel, roční platba předem a ceny bez DPH,
+  doplňky a jednorázové služby, automatické prodloužení bez dluhu,
+  reklamace, dostupnost bez záruky, zálohy, režim podpory jen pro čtení,
+  AI pomocník (text odchází třetí straně), omezení odpovědnosti, zrušení
+  webu, ukončení služby a lhůty pro oznámení změn. Texty uložené
+  v Nastavení služby mají přednost před výchozími – po aktualizaci je tam
+  porovnejte. Před spuštěním je nechte projít právníkem.
 - **Průvodce pro nového správce:** Administrace → Průvodce nastavením
   (a karta na přehledu) vede správce kroky od údajů společenství přes import
   jednotek a obyvatel, kontakty a dokumenty po oznámení sousedům. U každého

@@ -301,7 +301,7 @@ U webů jednotlivých společenství je správcem údajů vždy dané společens
 - **Provozní záznamy:** přihlášení hlavních správců a úkony v konzoli, včetně vstupů podpory do webu společenství (kdo, kdy, za koho a proč).
 
 ## K čemu údaje slouží
-K poskytování služby (plnění smlouvy), k vystavení dokladů (právní povinnost) a k ochraně a zlepšování služby (oprávněný zájem). Údaje nepoužíváme k reklamě a nepředáváme je třetím stranám, s výjimkou poskytovatele hostingu.
+K poskytování služby (plnění smlouvy), k vystavení dokladů (právní povinnost) a k ochraně a zlepšování služby (oprávněný zájem). Údaje nepoužíváme k reklamě a neprodáváme je. Přístup k nim mají jen naši zpracovatelé: poskytovatel serverů a služba pro odesílání e-mailů. Text vložený do pomocníka s umělou inteligencí se odesílá poskytovateli této služby (jeho servery mohou být mimo EU); pomocníka lze v nastavení webu vypnout.
 
 ## Jak dlouho
 - Údaje webu společenství do jeho zrušení; nepoužívaný web v edici Zdarma mažeme po lhůtě uvedené v obchodních podmínkách, vždy s upozorněním předem. Web lze kdykoli zrušit v administraci.
@@ -318,71 +318,95 @@ TXT;
 const PLATFORM_TERMS = <<<'TXT'
 
 ## 1. Úvodní ustanovení
-Tyto podmínky upravují poskytování služby, která společenstvím vlastníků jednotek (dále „zákazník“) umožňuje provozovat vlastní web s částí pro obyvatele domu a s administrací. Poskytovatelem je provozovatel uvedený v záhlaví této stránky.
-Smlouva vzniká dokončením registrace, při které osoba jednající za zákazníka potvrdí souhlas s těmito podmínkami. Tato osoba prohlašuje, že je oprávněna za společenství jednat.
+Tyto podmínky upravují poskytování služby, která společenstvím vlastníků jednotek a bytovým družstvům (dále „zákazník“) umožňuje provozovat vlastní web s částí pro obyvatele domu a s administrací. Poskytovatelem je provozovatel uvedený v záhlaví této stránky.
+Služba je určena právnickým osobám. Zákazník není spotřebitelem a ustanovení o ochraně spotřebitele (včetně práva odstoupit od smlouvy do 14 dnů) se na smlouvu nepoužijí.
+Smlouva vzniká dokončením registrace, při které osoba jednající za zákazníka potvrdí souhlas s těmito podmínkami. Tato osoba prohlašuje, že je členem statutárního orgánu zákazníka nebo je jím k založení webu pověřena. Poskytovatel může požádat o doložení tohoto oprávnění.
+Poskytovatel se zákazníkem komunikuje elektronicky – e-mailem na adresy správců webu a oznámeními v administraci.
 
-## 2. Edice a cena
+## 2. Edice, doplňky a cena
 Služba se poskytuje v edicích uvedených v ceníku na webu poskytovatele. Edice Zdarma je bezplatná a časově neomezená; má limity uvedené v ceníku a web v ní může obsahovat odkaz na službu.
 Funkce vyšších edic si zákazník může jednou na dobu uvedenou v administraci bezplatně vyzkoušet. Zkoušením nevzniká povinnost placenou edici objednat.
-Placená edice se objednává v administraci a platí předem na rok nebo na měsíc bankovním převodem na základě zálohové faktury (výzvy k platbě). Po připsání platby vystaví poskytovatel fakturu.
-Předplatné se prodlužuje automaticky: před koncem období poskytovatel vystaví zálohovou fakturu na další období a zákazníka na to upozorní. Automatické prodlužování lze kdykoli vypnout v administraci; neuhrazením další faktury zákazníkovi nevzniká dluh.
-Nic se nestrhává automaticky. Ceny a limity může poskytovatel změnit s účinností od dalšího období; změnu oznámí nejméně 30 dní předem.
+Placená edice se objednává v administraci na jeden rok. K edici lze objednat doplňky na rok (například vlastní doménu, úložiště navíc nebo vyšší limit AI pomocníka) a jednorázové služby (například převod obsahu ze staršího webu). Rozsah a cenu každé z nich uvádí ceník a objednávka.
+Ceny jsou uvedeny bez daně z přidané hodnoty; je-li poskytovatel jejím plátcem, připočte ji v zákonné výši. Platí se předem bankovním převodem na základě zálohové faktury (výzvy k platbě) se splatností na ní uvedenou. Po připsání platby vystaví poskytovatel fakturu – daňový doklad a zpřístupní ji v administraci. Placená edice nebo doplněk se zapne po připsání platby.
+Kredit získaný za doporučení služby se odečte od ceny další roční edice. Nelze ho vyplatit v penězích ani převést na jiného zákazníka.
 
-## 3. Konec placené edice a nepoužívané weby
+## 3. Prodloužení, konec placené edice a nepoužívané weby
+Předplatné se prodlužuje automaticky: před koncem období poskytovatel vystaví zálohovou fakturu na další rok a zákazníka na to upozorní e-mailem. Nic se nestrhává automaticky. Automatické prodlužování lze kdykoli vypnout v administraci; neuhrazením další zálohové faktury zákazníkovi nevzniká dluh.
 Není-li placená edice po skončení zaplaceného období prodloužena, běží ještě po lhůtu uvedenou v administraci a poté web přejde na edici Zdarma. Web se nepozastavuje a data se nemažou; funkce, které edice Zdarma neobsahuje, zůstávají jen pro čtení a nad její limity nelze přidávat nové záznamy.
 Web v edici Zdarma, na který se po dobu uvedenou na webu poskytovatele nikdo nepřihlásil, může poskytovatel smazat včetně všech dat. Na chystané smazání předem upozorní e-mailem osobu, která web založila; přihlášení na web lhůtu ruší.
+Ceny a limity může poskytovatel změnit s účinností od dalšího období; změnu oznámí nejméně 30 dní předem. Na již zaplacené období se změna ceny nevztahuje.
 
 ## 4. Práva a povinnosti zákazníka
 Zákazník odpovídá za obsah, který na web vloží on nebo jeho uživatelé, a za to, že má k uveřejnění a ke zpracování údajů právní důvod.
-Zákazník chrání přístupové údaje svých správců a bez zbytečného odkladu oznámí poskytovateli podezření na jejich zneužití.
-Službu není dovoleno používat k rozesílání nevyžádaných sdělení, k šíření protiprávního obsahu ani způsobem, který ohrožuje její provoz.
+Zákazník určuje, kdo je správcem jeho webu, a odpovídá za jejich jednání. Chrání přístupové údaje správců a bez zbytečného odkladu oznámí poskytovateli podezření na jejich zneužití. Udržuje aktuální kontaktní e-mail a fakturační údaje.
+Službu není dovoleno používat k rozesílání nevyžádaných nebo obchodních sdělení, k šíření protiprávního obsahu, k účelům nesouvisejícím se správou domu ani způsobem, který ohrožuje její provoz nebo jiné zákazníky.
+Obsah, který je zjevně protiprávní, může poskytovatel znepřístupnit; zákazníka o tom bez odkladu informuje. Poskytovatel nemá povinnost obsah vkládaný zákazníkem sledovat.
 
 ## 5. Práva a povinnosti poskytovatele
-Poskytovatel zajišťuje provoz služby, její zabezpečení a pravidelné zálohování. Krátkodobé odstávky kvůli údržbě oznamuje předem, je-li to možné.
+Poskytovatel zajišťuje provoz služby, její zabezpečení a pravidelné zálohování. Usiluje o nepřetržitou dostupnost, konkrétní míru dostupnosti však nezaručuje. Plánovanou údržbu provádí pokud možno v noci a delší odstávku oznamuje předem.
+Zálohy slouží k obnově služby po havárii. Zákazníkovi v placené edici poskytovatel umožňuje stáhnout si vlastní úplnou zálohu dat a doporučuje to dělat pravidelně.
 Poskytovatel do obsahu webu zákazníka nenahlíží, ledaže o to zákazník požádá při řešení podpory nebo to vyžaduje odstranění závady či plnění právní povinnosti. Dělá to v režimu podpory: do webu vstoupí za některého z jeho uživatelů **pouze pro čtení** – nemůže v něm nic změnit, odeslat ani smazat a soukromé zprávy mezi uživateli nevidí. Každý takový vstup se s důvodem a časem zapíše do záznamů webu, kde ho správce společenství vidí.
 Na žádost uživatele může poskytovatel poslat odkaz pro nastavení nového hesla nebo vypnout dvoufázové ověření; hesla uživatelů nezná a nemůže je zobrazit.
-Poskytovatel může službu měnit a rozšiřovat. Podstatné omezení funkcí oznámí předem.
+Poskytovatel může službu měnit a rozšiřovat. Podstatné omezení funkcí zaplacené edice oznámí nejméně 30 dní předem.
+Funkce označené jako připravované jsou jen informací o záměru; poskytovatel se nezavazuje je zavést.
 
-## 6. Odpovědnost
-Služba je poskytována v podobě, v jaké je popsána na webu poskytovatele. Poskytovatel neodpovídá za škodu způsobenou obsahem vloženým zákazníkem, nesprávným použitím služby ani výpadky mimo jeho vliv (připojení, služby třetích stran).
-Odpovědnost poskytovatele za škodu je omezena částkou, kterou zákazník za službu zaplatil za posledních 12 měsíců. Omezení se neuplatní tam, kde to zákon nepřipouští.
+## 6. Pomocník s umělou inteligencí
+Některé funkce (návrhy textů, zápis ze shromáždění z poznámek nebo přepisu) využívají službu umělé inteligence třetí strany. Text, který do nich uživatel vloží, se k vytvoření návrhu odešle tomuto poskytovateli; jeho servery mohou být mimo Evropskou unii. Funkci lze v nastavení webu vypnout.
+Výstup je návrh, který musí člověk před použitím zkontrolovat. Poskytovatel neodpovídá za jeho věcnou ani právní správnost.
 
-## 7. Ukončení
-Zákazník může službu kdykoli přestat používat; smlouva zaniká uplynutím zaplaceného období, není-li uhrazeno další. Před ukončením si v placené edici může stáhnout úplnou zálohu dat.
-Poskytovatel může smlouvu vypovědět, porušuje-li zákazník tyto podmínky závažně nebo opakovaně. Poměrnou část předplatného za nevyužité období v takovém případě nevrací jen tehdy, bylo-li porušení úmyslné.
+## 7. Reklamace
+Vadu služby zákazník oznámí bez zbytečného odkladu formulářem „Podpora webu“ nebo e-mailem na kontaktní adresu poskytovatele a popíše, v čem spočívá. Poskytovatel se k reklamaci vyjádří do 10 pracovních dnů.
+Je-li reklamace oprávněná a vada podstatně omezila užívání placené edice, má zákazník právo na přiměřenou slevu, případně na prodloužení zaplaceného období o dobu, po kterou vada trvala.
 
-## 8. Osobní údaje
+## 8. Odpovědnost
+Služba je poskytována v podobě, v jaké je popsána na webu poskytovatele. Poskytovatel neodpovídá za škodu způsobenou obsahem vloženým zákazníkem, nesprávným použitím služby, vyzrazením přístupových údajů na straně zákazníka ani výpadky mimo jeho vliv (připojení k internetu, doručování e-mailů, služby třetích stran, vyšší moc).
+Služba není právní, účetní ani daňovou radou. Vzory dokumentů a výpočty (například usnášeníschopnost nebo výsledky hlasování) jsou pomůckou; za jejich použití v souladu se stanovami a zákonem odpovídá zákazník.
+Odpovědnost poskytovatele za škodu je omezena částkou, kterou zákazník za službu zaplatil za posledních 12 měsíců. Omezení se neuplatní u škody způsobené úmyslně nebo z hrubé nedbalosti ani tam, kde to zákon nepřipouští.
+
+## 9. Ukončení
+Zákazník může službu kdykoli přestat používat; placená edice skončí uplynutím zaplaceného období, není-li uhrazeno další. Zaplacená cena se při ukončení ze strany zákazníka nevrací.
+Správce zákazníka může v administraci požádat o zrušení celého webu. Web se po ochranné lhůtě uvedené v administraci smaže včetně všech dat; do té doby lze žádost vzít zpět. Před zrušením si zákazník v placené edici může stáhnout úplnou zálohu dat.
+Poskytovatel může smlouvu vypovědět, porušuje-li zákazník tyto podmínky závažně nebo opakovaně a nezjedná nápravu ani po upozornění. Poměrnou část předplatného za nevyužité období v takovém případě nevrací jen tehdy, bylo-li porušení úmyslné.
+Ukončí-li poskytovatel provoz služby, oznámí to nejméně 3 měsíce předem, umožní zákazníkům stáhnout jejich data a vrátí poměrnou část předplatného za nevyužité období.
+
+## 10. Osobní údaje
 Při provozu webu zpracovává poskytovatel osobní údaje obyvatel domu jako zpracovatel pro zákazníka, který je jejich správcem. Podmínky upravuje Smlouva o zpracování osobních údajů, která je součástí těchto podmínek.
+Údaje o zákazníkovi a osobách, které za něj jednají (registrace, fakturace, podpora), zpracovává poskytovatel jako správce podle Zásad ochrany osobních údajů zveřejněných na webu služby.
 
-## 9. Závěrečná ustanovení
-Právní vztahy se řídí českým právem. Poskytovatel může podmínky změnit; změnu oznámí správcům zákazníka nejméně 30 dní předem a zákazník ji může odmítnout ukončením služby.
+## 11. Závěrečná ustanovení
+Právní vztahy se řídí českým právem, zejména občanským zákoníkem. Spory rozhodují české soudy příslušné podle sídla poskytovatele.
+Poskytovatel může podmínky změnit; změnu oznámí správcům zákazníka nejméně 30 dní předem. Zákazník ji může odmítnout ukončením služby ke dni účinnosti změny; poskytovatel mu pak vrátí poměrnou část předplatného za nevyužité období.
+Je-li některé ustanovení neplatné, ostatní zůstávají v platnosti.
 TXT;
 const PLATFORM_DPA = <<<'TXT'
 ## 1. Strany a předmět
-Správcem osobních údajů je společenství vlastníků, které si založilo web (dále „správce“). Zpracovatelem je provozovatel služby uvedený v záhlaví této stránky (dále „zpracovatel“).
-Tato smlouva podle čl. 28 nařízení (EU) 2016/679 (GDPR) upravuje zpracování osobních údajů, které správce nebo jeho uživatelé do služby vloží.
+Správcem osobních údajů je společenství vlastníků nebo družstvo, které si založilo web (dále „správce“). Zpracovatelem je provozovatel služby uvedený v záhlaví této stránky (dále „zpracovatel“).
+Tato smlouva podle čl. 28 nařízení (EU) 2016/679 (GDPR) upravuje zpracování osobních údajů, které správce nebo jeho uživatelé do služby vloží. Je uzavřena elektronicky přijetím obchodních podmínek a trvá po dobu poskytování služby.
 
 ## 2. Rozsah zpracování
 **Účel:** provoz webu společenství, komunikace s vlastníky a obyvateli, organizace shromáždění a hlasování, evidence jednotek a správa domu.
-**Subjekty údajů:** vlastníci jednotek, členové jejich domácností, nájemníci, členové výboru a kontaktní osoby dodavatelů.
-**Kategorie údajů:** jméno a příjmení, e-mail, telefon, adresa, označení jednotky a spoluvlastnický podíl, údaje o účasti a hlasování, obsah vložených zpráv, hlášení a dokumentů, technické údaje o přihlášení (čas, IP adresa).
+**Subjekty údajů:** vlastníci jednotek, členové jejich domácností, nájemníci, členové výboru a kontrolní komise a kontaktní osoby dodavatelů.
+**Kategorie údajů:** jméno a příjmení, e-mail, telefon, adresa, označení jednotky a spoluvlastnický podíl, funkce v orgánech společenství, údaje o účasti a hlasování, předepsané zálohy a stav plateb na jednotku včetně variabilního symbolu, odečty měřidel, evidence klíčů a rezervací, obsah vložených zpráv, hlášení, příloh a dokumentů, technické údaje o přihlášení (čas, IP adresa).
+**Zvláštní kategorie údajů** (například údaje o zdravotním stavu) služba nevyžaduje a správce je do ní nevkládá.
+Zpracovatel údaje nepoužívá k vlastním účelům, k marketingu ani k profilování.
 **Doba:** po dobu trvání smlouvy o poskytování služby a nejdéle 6 měsíců po jejím skončení.
 
 ## 3. Povinnosti zpracovatele
 Zpracovatel zpracovává údaje jen na základě doložených pokynů správce, kterými jsou tato smlouva a nastavení provedená správcem ve službě.
 Zajišťuje, že osoby s přístupem k údajům jsou vázány mlčenlivostí.
 Do webu správce vstupuje jen při řešení podpory, odstraňování závad nebo plnění právní povinnosti, a to v režimu pouze pro čtení; každý vstup se zapisuje do záznamů webu, které má správce k dispozici.
-Přijal technická a organizační opatření: šifrovaný přenos, hesla ukládaná jen jako otisk, oddělená databáze každého společenství, řízení přístupů, záznamy o činnosti správců a pravidelné zálohy.
-Je správci nápomocen při vyřizování žádostí subjektů údajů a při plnění povinností podle čl. 32–36 GDPR.
-Porušení zabezpečení osobních údajů oznámí správci bez zbytečného odkladu poté, co se o něm dozví.
-Na žádost poskytne správci informace potřebné k doložení splnění povinností a umožní audit v přiměřeném rozsahu.
+Přijal technická a organizační opatření: šifrovaný přenos, hesla ukládaná jen jako otisk, možnost dvoufázového ověření, oddělená databáze každého společenství, řízení přístupů, neměnné záznamy o činnosti správců a pravidelné zálohy.
+Je správci nápomocen při vyřizování žádostí subjektů údajů (služba umožňuje výpis i výmaz údajů uživatele) a při plnění povinností podle čl. 32–36 GDPR.
+Porušení zabezpečení osobních údajů oznámí správci bez zbytečného odkladu, nejpozději do 48 hodin poté, co se o něm dozví, a sdělí mu, co je mu o rozsahu a následcích známo.
+Na žádost poskytne správci informace potřebné k doložení splnění povinností a umožní audit v přiměřeném rozsahu, nejvýše jednou ročně a po předchozí domluvě.
 
 ## 4. Další zpracovatelé
-Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pro provoz služby (zejména poskytovatel serverů a služba pro odesílání e-mailů). Zpracovatel je zaváže ke stejné ochraně údajů a správce o zamýšlené změně informuje předem.
-Údaje jsou uloženy na serverech v Evropské unii a nepředávají se do třetích zemí.
+Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pro provoz služby: poskytovatele serverů a služby pro odesílání e-mailů. Zpracovatel je zaváže ke stejné ochraně údajů. O zamýšlené změně informuje správce nejméně 30 dní předem; správce může vznést námitku a při nesouhlasu službu ukončit.
+Údaje jsou uloženy na serverech v Evropské unii.
+Použije-li uživatel pomocníka s umělou inteligencí, odešle se text, který do něj vloží, poskytovateli této služby, jehož servery mohou být mimo Evropskou unii; předání se řídí standardními smluvními doložkami nebo jiným nástrojem podle kapitoly V GDPR. Správce může tuto funkci v nastavení webu vypnout a odpovídá za to, jaké údaje do ní jeho uživatelé vkládají.
 
 ## 5. Skončení zpracování
-Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
+Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování. Ze záloh údaje zmizí s jejich pravidelnou obměnou.
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
