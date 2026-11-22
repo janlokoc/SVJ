@@ -85,7 +85,8 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
   <h3 class="lp-sub">Doplňky a služby</h3>
   <table class="table price-table"><tbody>
     <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši. Od edice Standard, v Premium v ceně.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
-    <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'vlastní doména')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
+    <tr><td><strong>Převod obsahu ze starého webu</strong><br><small class="muted">Aktuality, dokumenty, kontakty a texty přeneseme za Vás. Objednává se v administraci, v kterékoli edici; hotovo do 5 pracovních dnů od platby.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_migration', 0, 1000000)) ?> jednorázově</strong></td></tr>
+    <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'převod obsahu') || str_contains(mb_strtolower($line), 'vlastní doména')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
       <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
     <?php endforeach ?>
   </tbody></table>

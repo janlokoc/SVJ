@@ -906,3 +906,9 @@ html[data-style="vlidna"] .table { border-width: 2px; }
 .powered { color: var(--muted); font-size: .88rem; }
 .staging-bar { background: #b45309; color: #fff; text-align: center; font-size: .85rem; font-weight: 600; padding: .3rem 1rem; }
 @media print { .staging-bar, .powered { display: none; } }
+
+fieldset.checks { border: 0; padding: 0; margin: 0; display: grid; gap: .35rem; }
+fieldset.checks legend { font-weight: 600; padding: 0; margin-bottom: .3rem; }
+.callout ol { margin: .5rem 0; padding-left: 1.3rem; display: grid; gap: .35rem; }
+.req-box { background: var(--soft); border-radius: 12px; padding: 1rem 1.2rem; margin: 1rem 0; }
+.req-box ol { margin: .5rem 0; padding-left: 1.3rem; display: grid; gap: .35rem; }

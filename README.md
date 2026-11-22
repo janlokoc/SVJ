@@ -317,6 +317,15 @@ prohlížečích bez dalšího nastavení; ve variantě se složkami je to
 
 ### Import obsahu ze starého webu
 
+Převod je i placená služba: správce společenství si ho objedná
+v **Předplatném** formulářem „Převod obsahu ze starého webu“ (adresa
+starého webu, co převést, jak se k obsahu dostaneme, kontaktní osoba,
+potvrzení práv k obsahu). Vznikne zálohová faktura s QR platbou (výchozí
+1 500 Kč jednorázově, mění se v Nastavení služby). Po potvrzení platby
+v konzoli najdete objednávku u společenství; obsah naimportujete nástroji
+níže a převod označíte jako hotový – kontaktní osoba dostane e-mail.
+Samotný import se nespouští automaticky.
+
 Aktuality, dokumenty, kontakty a název lze nahrát ze souboru JSON
 (formát `svj-import-1`) připraveného převodem původního webu:
 

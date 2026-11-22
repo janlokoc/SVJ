@@ -23,6 +23,7 @@
         <?php foreach (EDITIONS as $ek => $en): ?><td data-label="<?= $en ?>"><input type="number" name="lim_<?= $ek ?>_<?= $lk ?>" value="<?= e($v['lim_' . $ek . '_' . $lk]) ?>" min="0" required aria-label="<?= e($ln . ' – ' . $en) ?>"></td><?php endforeach ?></tr><?php endforeach ?>
     </tbody></table>
     <p class="hint">Funkce edic (které části webu jsou ve Standardu a v Premium) jsou dané v kódu v <code>app/plan_lib.php</code>. Každou placenou funkci si web v edici Zdarma může jednou na <?= PLAN_TRIAL_DAYS ?> dní vyzkoušet.</p>
+    <label>Jednorázový převod obsahu ze starého webu (Kč) <input type="number" name="price_migration" value="<?= e($v['price_migration']) ?>" min="0" required></label>
     <label>Vlastní doména společenství (Kč za rok) <input type="number" name="price_domain" value="<?= e($v['price_domain']) ?>" min="0" required></label>
     <label>Pokyny pro společenství, které doménu už vlastní <textarea name="domain_dns" rows="3" placeholder="Nastavte záznam A pro tabor48.cz a www.tabor48.cz na adresu 203.0.113.10"><?= e($v['domain_dns']) ?></textarea></label>
     <p class="hint">O doménu žádá správce společenství v části Předplatné. Žádost uvidíte u společenství; po zaplacení, nasměrování domény na server a zapnutí HTTPS ji tam zprovozníte.</p>

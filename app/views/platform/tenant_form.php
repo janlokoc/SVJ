@@ -52,6 +52,26 @@
     <div class="actions"><button class="btn btn-big" type="submit"><?= $new ? 'Založit web' : 'Uložit' ?></button><a class="btn btn-ghost" href="<?= url('/') ?>">Zrušit</a></div>
   </form>
   <?php if (!$new): ?>
+  <?php if (!empty($migration)): $mp = $migrationPayment; ?>
+  <div class="card" id="prevod">
+    <h2>Převod obsahu ze starého webu</h2>
+    <p><strong><a href="<?= e($migration['url']) ?>" rel="noopener noreferrer nofollow" target="_blank"><?= e($migration['url']) ?></a></strong> · <span class="status status-<?= ['ordered' => 'new', 'paid' => 'in_progress', 'done' => 'done'][$migration['status']] ?? 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span>
+      · objednáno <?= cz_datetime($migration['created_at']) ?><?= $mp ? ' · platba: ' . e(PAYMENT_STATUS[$mp['status']] ?? $mp['status']) . ' (VS ' . e($mp['vs']) . ', ' . money_czk((int) $mp['amount']) . ')' : '' ?></p>
+    <dl class="pay-data">
+      <dt>Rozsah</dt><dd><?= e(implode(', ', array_map(fn($k) => MIGRATION_SCOPE[$k] ?? $k, array_filter(explode(',', $migration['scope']))))) ?></dd>
+      <dt>Přístup</dt><dd><?= e(MIGRATION_ACCESS[$migration['access']] ?? '') ?></dd>
+      <dt>Kontakt</dt><dd><?= e($migration['contact_name']) ?>, <a href="mailto:<?= e($migration['contact_email']) ?>"><?= e($migration['contact_email']) ?></a><?= $migration['contact_phone'] !== '' ? ', ' . e($migration['contact_phone']) : '' ?></dd>
+      <?php if ($migration['note'] !== ''): ?><dt>Poznámka</dt><dd><?= nl2br(e($migration['note'])) ?></dd><?php endif ?>
+    </dl>
+    <?php if ($migration['status'] === 'ordered'): ?><p class="hint">Čeká na platbu – potvrdíte ji v části Platby. Do té doby na převodu nepracujte.</p>
+    <?php elseif ($migration['status'] === 'paid'): ?>
+      <p class="hint">Obsah naimportujete nástroji popsanými v README (Import obsahu ze starého webu), případně ručně. Potom převod označte jako hotový – kontaktní osoba dostane e-mail.</p>
+      <form method="post" action="<?= url('/svj/' . $t['slug'] . '/prevod') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="do" value="done">
+        <label>Vzkaz pro společenství (nepovinné) <input type="text" name="done_note" maxlength="500" placeholder="Např. Převedeno 42 dokumentů a 18 aktualit; 3 soubory už na starém webu nebyly."></label>
+        <div class="actions"><button class="btn" type="submit">Označit převod jako hotový</button></div></form>
+    <?php else: ?><p>Dokončeno <?= cz_datetime($migration['done_at']) ?><?= $migration['done_note'] !== '' ? ' · ' . e($migration['done_note']) : '' ?></p><?php endif ?>
+  </div>
+  <?php endif ?>
   <?php if ($raw['domain_status'] !== ''): ?>
   <div class="card" id="domena">
     <h2>Vlastní doména (placený doplněk)</h2>

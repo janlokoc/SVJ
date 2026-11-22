@@ -145,6 +145,12 @@ SQL);
             CREATE TABLE feature_trials (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL, feature TEXT NOT NULL, started TEXT NOT NULL, ends TEXT NOT NULL, warned TEXT NOT NULL DEFAULT '', UNIQUE (tenant, feature));
             PRAGMA user_version = 8;");
     }
+    // Objednávky jednorázového převodu obsahu ze starého webu.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 9) {
+        $pdo->exec("CREATE TABLE migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL, url TEXT NOT NULL, scope TEXT NOT NULL DEFAULT '', access TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+            contact_name TEXT NOT NULL DEFAULT '', contact_email TEXT NOT NULL DEFAULT '', contact_phone TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'ordered', payment_id INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL, done_at TEXT NOT NULL DEFAULT '', done_note TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 9;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -314,7 +320,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '500', 'lim_standard_ai' => '30', 'lim_standard_polls' => '0',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '1000', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -322,7 +328,7 @@ const PLATFORM_DEFAULTS = [
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
-    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nPřevod obsahu ze stávajícího webu | 1 500 Kč jednorázově\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
+    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno'];
 
@@ -453,6 +459,22 @@ function billing_confirm(array $p, string $by): ?array
     $t = tenant_row($p['tenant']);
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
         return null;
+    }
+    if (($p['kind'] ?? '') === 'migration') {
+        $today = date('Y-m-d');
+        $year = date('Y');
+        $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+        pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+            [date('Y-m-d H:i:s'), $today, $today, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+        pq("UPDATE migrations SET status = 'paid' WHERE payment_id = ? AND status = 'ordered'", [$p['id']]);
+        $m = pq('SELECT * FROM migrations WHERE payment_id = ?', [$p['id']])->fetch();
+        $to = $m && filter_var($m['contact_email'], FILTER_VALIDATE_EMAIL) ? $m['contact_email'] : $t['owner_email'];
+        if ($to !== '') {
+            platform_mail($to, 'Platba za převod obsahu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za převod obsahu z webu " . $p['item'] . ".\n"
+                . "Na převodu začínáme pracovat; obvykle je hotový do 5 pracovních dnů. Kdybychom potřebovali přístup nebo podklady, ozveme se na tento e-mail.\n"
+                . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        }
+        return ['from' => $today, 'to' => $today];
     }
     $domain = ($p['kind'] ?? 'service') === 'domain';
     if (($p['kind'] ?? '') === 'ai') {
@@ -601,7 +623,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -754,6 +776,35 @@ function domain_renewals(): void
             . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
             . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
     }
+}
+
+// ---------- Jednorázový převod obsahu ze starého webu ----------
+
+/** Co lze převést (klíč => popis) a v jakém stavu může objednávka být. */
+const MIGRATION_SCOPE = ['aktuality' => 'Aktuality a oznámení', 'dokumenty' => 'Dokumenty ke stažení (PDF, Word, Excel)', 'kontakty' => 'Kontakty na výbor a správce', 'stranky' => 'Texty stránek (o domě, domovní řád…)', 'fotky' => 'Fotografie'];
+const MIGRATION_ACCESS = ['public' => 'Vše je na starém webu veřejně vidět', 'login' => 'Část je za přihlášením – přístup pošleme e-mailem', 'export' => 'Máme export nebo zálohu, pošleme ji'];
+const MIGRATION_STATUS = ['ordered' => 'čeká na platbu', 'paid' => 'zaplaceno, pracujeme na převodu', 'done' => 'hotovo', 'cancelled' => 'zrušeno'];
+
+/** Poslední nezrušená objednávka převodu tohoto webu (nebo null). */
+function migration_row(string $slug): ?array
+{
+    $m = pq("SELECT * FROM migrations WHERE tenant = ? AND status <> 'cancelled' ORDER BY id DESC LIMIT 1", [$slug])->fetch();
+    return $m ?: null;
+}
+function migration_payment(?array $m): ?array
+{
+    $p = $m && $m['payment_id'] ? pq('SELECT * FROM payments WHERE id = ?', [$m['payment_id']])->fetch() : null;
+    return $p ?: null;
+}
+/** Založí objednávku a výzvu k platbě. */
+function migration_order(array $t, array $in): array
+{
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,0,?,'migration',?)", [$t['slug'], pset_int('price_migration', 0, 1000000), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
+    $pid = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $pid), $pid]);
+    pq('INSERT INTO migrations (tenant, url, scope, access, note, contact_name, contact_email, contact_phone, payment_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        [$t['slug'], $in['url'], $in['scope'], $in['access'], $in['note'], $in['contact_name'], $in['contact_email'], $in['contact_phone'], $pid, date('Y-m-d H:i:s')]);
+    return migration_row($t['slug']);
 }
 
 // ---------- AI Plus: placený doplněk s vyšším měsíčním limitem AI pomocníka ----------

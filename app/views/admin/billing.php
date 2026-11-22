@@ -71,6 +71,61 @@
     </ul>
   </div>
 
+  <div class="card" id="prevod">
+    <h2>Převod obsahu ze starého webu</h2>
+    <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>
+    <?php if ($migration && $migration['status'] !== 'done'): $mp = $migrationPayment; ?>
+      <p>Objednávka převodu z <strong><?= e($migration['url']) ?></strong> ze dne <?= cz_date($migration['created_at']) ?>: <span class="status status-<?= $migration['status'] === 'paid' ? 'in_progress' : 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span></p>
+      <p class="muted">Převádíme: <?= e(implode(', ', array_map(fn($k) => mb_strtolower(MIGRATION_SCOPE[$k] ?? $k), array_filter(explode(',', $migration['scope']))))) ?>. Kontakt: <?= e($migration['contact_name']) ?>, <?= e($migration['contact_email']) ?>.</p>
+      <?php if ($migration['status'] === 'paid'): ?><p>Platbu jsme přijali. Převod bývá hotový do 5 pracovních dnů; kdybychom něco potřebovali, ozveme se na uvedený e-mail. Starý web neměníme ani nerušíme.</p>
+      <?php elseif ($mp): ?>
+        <?php if ($mp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($mp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
+        <div class="pay">
+          <?php if ($migrationQr): ?><div class="pay-qr"><?= $migrationQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
+          <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $mp['amount']) ?></strong> <small class="muted">jednorázově</small></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($mp['vs']) ?></code></dd></dl>
+        </div>
+        <?php if (!$iban): ?><p>Platební údaje Vám provozovatel pošle e-mailem.</p><?php endif ?>
+        <div class="actions">
+          <?php if ($mp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/prevod') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za převod jsem odeslal(a)</button></form><?php endif ?>
+          <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $mp['id']) ?>">Zálohová faktura k tisku</a>
+          <?php if ($mp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/prevod') ?>" data-confirm="Zrušit objednávku převodu?"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
+        </div>
+      <?php endif ?>
+    <?php else: ?>
+      <?php if ($migration): ?><div class="flash flash-ok">Převod z <?= e($migration['url']) ?> byl dokončen <?= cz_date($migration['done_at']) ?>.<?= $migration['done_note'] !== '' ? ' ' . e($migration['done_note']) : '' ?></div><?php endif ?>
+      <p>Máte obsah na starém webu (Webnode, Wix, WordPress, vlastní stránky)? Přeneseme ho za Vás – <strong><?= money_czk($price) ?> jednorázově</strong>, v kterékoli edici.</p>
+      <div class="req-box">
+        <strong>Co k převodu potřebujeme</strong>
+        <ol>
+          <li><strong>Adresu starého webu</strong> a informaci, zda je obsah veřejně vidět. Je-li část za přihlášením, domluvíme přístup e-mailem – hesla do formuláře nepište.</li>
+          <li><strong>Co převést</strong> – aktuality, dokumenty, kontakty, texty stránek, fotografie.</li>
+          <li><strong>Potvrzení, že společenství má k obsahu práva</strong> a s převodem souhlasí. U dokumentů s osobními údaji (zápisy, seznamy vlastníků) nám napište, které mají být jen pro přihlášené.</li>
+          <li><strong>Kontaktní osobu</strong>, které se můžeme zeptat, když si nebudeme jistí.</li>
+          <li><strong>Úhradu <?= money_czk($price) ?></strong> převodem na zálohovou fakturu s QR kódem. Pracovat začneme po připsání platby.</li>
+        </ol>
+        <p class="hint">Převod bývá hotový do 5 pracovních dnů od připsání platby a dodání podkladů. Starý web neměníme ani nerušíme. Nepřevádíme účty uživatelů a hesla, diskuze, formuláře ani vzhled starého webu. Převedené dokumenty se počítají do limitu úložiště Vaší edice<?= plan_limit('storage') ? ' (' . plan_limit('storage') . ' MB)' : '' ?>.</p>
+      </div>
+      <form method="post" action="<?= url('/admin/predplatne/prevod') ?>" class="form">
+        <?= csrf_field() ?><input type="hidden" name="action" value="order">
+        <label>Adresa starého webu <input type="text" name="url" value="<?= e($mf['url'] ?? '') ?>" placeholder="https://svj-zahradni.webnode.cz" required maxlength="300" inputmode="url" autocomplete="off"></label>
+        <fieldset class="checks"><legend>Co chcete převést</legend>
+          <?php foreach (MIGRATION_SCOPE as $sk => $sl): ?><label class="check"><input type="checkbox" name="scope[]" value="<?= $sk ?>"<?= in_array($sk, $mf['scope_list'] ?? ['aktuality', 'dokumenty', 'kontakty'], true) ? ' checked' : '' ?>> <span><?= e($sl) ?></span></label><?php endforeach ?>
+        </fieldset>
+        <fieldset class="checks"><legend>Jak se k obsahu dostaneme</legend>
+          <?php foreach (MIGRATION_ACCESS as $ak => $al): ?><label class="check"><input type="radio" name="access" value="<?= $ak ?>"<?= ($mf['access'] ?? 'public') === $ak ? ' checked' : '' ?> required> <span><?= e($al) ?></span></label><?php endforeach ?>
+        </fieldset>
+        <label>Poznámka (nepovinné) <textarea name="note" rows="3" maxlength="2000" placeholder="Např. zápisy ze shromáždění jen pro přihlášené, aktuality starší než 2 roky nepřevádět…"><?= e($mf['note'] ?? '') ?></textarea></label>
+        <div class="form-row">
+          <label>Kontaktní osoba <input type="text" name="contact_name" value="<?= e($mf['contact_name'] ?? user()['name']) ?>" required maxlength="120"></label>
+          <label>E-mail <input type="email" name="contact_email" value="<?= e($mf['contact_email'] ?? user()['email']) ?>" required></label>
+          <label>Telefon (nepovinné) <input type="tel" name="contact_phone" value="<?= e($mf['contact_phone'] ?? '') ?>" maxlength="40"></label>
+        </div>
+        <label class="check"><input type="checkbox" name="rights" required> <span>Potvrzuji, že společenství má k obsahu starého webu práva a s jeho převodem souhlasí.</span></label>
+        <div class="actions"><button class="btn" type="submit">Objednat převod za <?= money_czk($price) ?></button></div>
+      </form>
+    <?php endif ?>
+  </div>
+
   <div class="card" id="domena">
     <h2>Vlastní doména</h2>
     <?php if ($t['domain_status'] === 'active'): ?>
@@ -157,7 +212,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '') ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '')) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

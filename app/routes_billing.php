@@ -25,7 +25,8 @@ $route('GET', '/admin/predplatne', function () {
     $state = billing_state($t);
     $payment = $state['mode'] === 'free' ? null : billing_open($t);
     $iban = cz_iban(pset('account'));
-    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'edition' => $state['edition'],
+    render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'migration' => ($mig = migration_row(TENANT)), 'migrationPayment' => ($mp = migration_payment($mig)),
+        'migrationQr' => $mp && $iban && in_array($mp['status'], ['pending', 'claimed'], true) ? qr_svg(spayd($iban, (int) $mp['amount'], $mp['vs'], 'Prevod webu ' . $t['slug'], pset('recipient')), 'QR platba za převod obsahu') : '', 'edition' => $state['edition'],
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $dp['amount'], $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
@@ -150,6 +151,70 @@ $route('POST', '/admin/predplatne/ai', function () {
         flash('Objednávka AI Plus je zrušena.', 'info');
     }
     redirect('/admin/predplatne#ai');
+});
+$route('POST', '/admin/predplatne/prevod', function () {
+    $u = require_admin();
+    $t = tenant_row(TENANT);
+    $m = migration_row(TENANT);
+    $p = migration_payment($m);
+    $action = post('action');
+    if ($action === 'claim' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
+        audit('Převod obsahu: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Děkujeme. Jakmile platbu uvidíme na účtu, pustíme se do převodu.');
+        redirect('/admin/predplatne#prevod');
+    }
+    if ($action === 'cancel' && $m && $m['status'] === 'ordered' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'cancelled', note = 'objednávka zrušena správcem webu' WHERE id = ?", [$p['id']]);
+        pq("UPDATE migrations SET status = 'cancelled' WHERE id = ?", [$m['id']]);
+        audit('Převod obsahu: objednávka zrušena', $m['url']);
+        flash('Objednávka převodu je zrušena.', 'info');
+        redirect('/admin/predplatne#prevod');
+    }
+    if ($action !== 'order' || ($m && $m['status'] !== 'done')) {
+        redirect('/admin/predplatne#prevod');
+    }
+    $url = trim(post('url'));
+    if ($url !== '' && !preg_match('~^https?://~i', $url)) {
+        $url = 'https://' . $url;
+    }
+    $scope = array_values(array_intersect(array_keys(MIGRATION_SCOPE), (array) ($_POST['scope'] ?? [])));
+    $in = ['url' => mb_substr($url, 0, 300), 'scope' => implode(',', $scope), 'access' => isset(MIGRATION_ACCESS[post('access')]) ? post('access') : '', 'note' => mb_substr(trim(post('note')), 0, 2000),
+        'contact_name' => mb_substr(trim(post('contact_name')), 0, 120), 'contact_email' => trim(post('contact_email')), 'contact_phone' => mb_substr(trim(post('contact_phone')), 0, 40)];
+    $errors = [];
+    $host = (string) parse_url($in['url'], PHP_URL_HOST);
+    if (!filter_var($in['url'], FILTER_VALIDATE_URL) || !str_contains($host, '.')) {
+        $errors[] = 'Zadejte adresu starého webu, například https://svj-zahradni.webnode.cz.';
+    }
+    if (!$scope) {
+        $errors[] = 'Zaškrtněte, co chcete převést.';
+    }
+    if ($in['access'] === '') {
+        $errors[] = 'Vyberte, jak se k obsahu dostaneme.';
+    }
+    if ($in['contact_name'] === '' || !filter_var($in['contact_email'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Vyplňte kontaktní osobu a její e-mail.';
+    }
+    if (!isset($_POST['rights'])) {
+        $errors[] = 'Potvrďte prosím, že společenství má k obsahu práva a s převodem souhlasí.';
+    }
+    if ($errors) {
+        $_SESSION['migration_form'] = $in + ['scope_list' => $scope];
+        flash(implode(' ', $errors), 'error');
+        redirect('/admin/predplatne#prevod');
+    }
+    unset($_SESSION['migration_form']);
+    $m = migration_order($t, $in);
+    $p = migration_payment($m);
+    audit('Převod obsahu: objednávka', $in['url'] . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+    pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Objednávka převodu obsahu', TENANT . ' · ' . $in['url']]);
+    if (pset('contact_email') !== '') {
+        platform_mail(pset('contact_email'), 'Objednávka převodu obsahu: ' . $t['name'], 'Web ' . $t['name'] . ' (' . TENANT . ') objednal převod obsahu z ' . $in['url'] . ".\nRozsah: " . implode(', ', $scope)
+            . "\nPřístup: " . MIGRATION_ACCESS[$in['access']] . "\nKontakt: " . $in['contact_name'] . ', ' . $in['contact_email'] . ($in['contact_phone'] !== '' ? ', ' . $in['contact_phone'] : '')
+            . ($in['note'] !== '' ? "\nPoznámka: " . $in['note'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
+    }
+    flash('Převod je objednán. Pustíme se do něj po připsání platby – údaje jsou níže.');
+    redirect('/admin/predplatne#prevod');
 });
 $route('POST', '/admin/predplatne/edice', function () {
     require_admin();

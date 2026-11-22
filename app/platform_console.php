@@ -168,7 +168,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -190,6 +190,20 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         }
         flash($message, $ok ? 'ok' : 'error');
         redirect('/svj/' . $slug);
+    }
+    if ($METHOD === 'POST' && $action === '/prevod') {
+        $m = migration_row($slug);
+        if ($m && $m['status'] === 'paid' && post('do') === 'done') {
+            pq("UPDATE migrations SET status = 'done', done_at = ?, done_note = ? WHERE id = ?", [date('Y-m-d H:i:s'), mb_substr(trim(post('done_note')), 0, 500), $m['id']]);
+            platform_log('Převod obsahu dokončen', $slug . ' · ' . $m['url']);
+            $to = filter_var($m['contact_email'], FILTER_VALIDATE_EMAIL) ? $m['contact_email'] : $t['owner_email'];
+            if ($to !== '') {
+                platform_mail($to, 'Převod obsahu je hotový – ' . $t['name'], "Dobrý den,\n\nobsah z webu " . $m['url'] . " jsme převedli na " . rtrim(tenant_url($t), '/') . ".\n"
+                    . (trim(post('done_note')) !== '' ? trim(post('done_note')) . "\n" : '') . "Projděte si ho prosím a napište nám, kdyby něco chybělo nebo bylo jinak, než má být.");
+            }
+            flash('Převod je označen jako hotový a kontaktní osoba dostala e-mail.');
+        }
+        redirect('/svj/' . $slug . '#prevod');
     }
     if ($METHOD === 'POST' && $action === '/domena') {
         $domain = $t['domain_request'];
@@ -282,6 +296,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),
+        'migration' => ($mig = migration_row($slug)), 'migrationPayment' => migration_payment($mig),
         'domainPayment' => pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'domain' ORDER BY id DESC LIMIT 1", [$slug])->fetch() ?: null,
         'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : (string) (tenant_row($slug)['domain_request'] ?? '')),
         'domainDns' => ($raw = tenant_row($slug)) && $raw['domain_request'] !== '' ? domain_registered($raw['domain_request']) : null, 'raw' => $raw]);
@@ -322,7 +337,7 @@ if ($PATH === '/platby' || preg_match('~^/platby/(\d+)/(potvrdit|zrusit)$~', $PA
             $period = billing_confirm($p, $super['email']);
             if ($period) {
                 platform_log('Potvrzení platby', $p['tenant'] . ' · ' . $p['amount'] . ' Kč · VS ' . $p['vs'] . ' · zaplaceno do ' . $period['to']);
-                flash('Platba potvrzena, předplatné je uhrazeno do ' . cz_date($period['to']) . '.');
+                flash(($p['kind'] ?? '') === 'migration' ? 'Platba potvrzena. Převod obsahu teď čeká na provedení – najdete ho u společenství.' : 'Platba potvrzena, zaplaceno do ' . cz_date($period['to']) . '.');
             } else {
                 flash('Společenství k této platbě už neexistuje.', 'error');
             }
@@ -347,7 +362,7 @@ if ($PATH === '/nastaveni') {
         $in['signup_open'] = isset($_POST['signup_open']) ? '1' : '0';
         $in['demo_auto'] = isset($_POST['demo_auto']) ? '1' : '0';
         $in['period'] = 'year';
-        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
+        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
             }
