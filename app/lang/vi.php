@@ -376,4 +376,8 @@ return [
     'Zaplatit měsíční zálohu' => 'Thanh toán tạm ứng hằng tháng',
     'vyrovnáno' => 'đã cân bằng',
     'Údaje nahrává výbor z účetnictví a platí k uvedenému dni; platba odeslaná později se tu projeví až po další aktualizaci.' => 'Số liệu do ban quản trị tải lên từ sổ sách kế toán và có hiệu lực đến ngày ghi; khoản thanh toán gửi sau sẽ hiển thị sau lần cập nhật tiếp theo.',
+    'Chyba webu' => 'Lỗi trang web',
+    'Nahlásit chybu webu nebo nápad' => 'Báo lỗi trang web hoặc góp ý',
+    'Na webu něco nefunguje' => 'Trang web có gì đó không hoạt động',
+    'Nápad, jak web zlepšit' => 'Ý tưởng cải thiện trang web',
 ];

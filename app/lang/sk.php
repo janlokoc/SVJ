@@ -376,4 +376,8 @@ return [
     'Zaplatit měsíční zálohu' => 'Zaplatiť mesačnú zálohu',
     'vyrovnáno' => 'vyrovnané',
     'Údaje nahrává výbor z účetnictví a platí k uvedenému dni; platba odeslaná později se tu projeví až po další aktualizaci.' => 'Údaje nahráva výbor z účtovníctva a platia k uvedenému dňu; platba odoslaná neskôr sa tu prejaví až po ďalšej aktualizácii.',
+    'Chyba webu' => 'Chyba webu',
+    'Nahlásit chybu webu nebo nápad' => 'Nahlásiť chybu webu alebo nápad',
+    'Na webu něco nefunguje' => 'Na webe niečo nefunguje',
+    'Nápad, jak web zlepšit' => 'Nápad, ako web zlepšiť',
 ];

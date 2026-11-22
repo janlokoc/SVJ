@@ -226,7 +226,7 @@ code { font: 600 1.05em ui-monospace, "Cascadia Mono", Menlo, monospace; backgro
 .post-card p:last-child { margin: 0; color: var(--muted); }
 .post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .6rem; font-size: .9rem; color: var(--muted); font-weight: 600; margin-bottom: .5rem; }
 .tag { display: inline-flex; align-items: center; gap: .25rem; font-size: .78rem; font-weight: 700; padding: .12rem .55rem; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
-.tag-pin { background: var(--accent-soft); color: var(--accent); }
+.tag-pin { background: var(--accent-soft); color: color-mix(in srgb, var(--accent) 82%, var(--ink)); }
 .tag-lock { background: var(--soft); color: var(--primary); }
 .article h1 { font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem); }
 .article .prose { font-size: 1.12rem; margin-bottom: 2rem; }
@@ -305,7 +305,7 @@ legend { font-weight: 700; padding-inline: .4rem; }
 .ticket h3 { margin-bottom: .25rem; }
 .ticket-form { margin: 1rem 0 .75rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .status { flex: none; font-size: .8rem; font-weight: 700; padding: .2rem .7rem; border-radius: 999px; white-space: nowrap; }
-.status-new { background: var(--accent-soft); color: var(--accent); }
+.status-new { background: var(--accent-soft); color: color-mix(in srgb, var(--accent) 82%, var(--ink)); }
 .status-in_progress { background: var(--warn-soft); color: var(--warn); }
 .status-done { background: var(--ok-soft); color: var(--ok); }
 .page > h2 { margin-top: 2.5rem; }
@@ -734,8 +734,12 @@ html[data-style="vecna"] .site-header .site-nav li a:hover, html[data-style="vec
 html[data-style="vecna"] .site-header .site-nav li a[aria-current], html[data-style="vecna"] .site-header .nav-more details.is-active > summary { background: var(--on-primary); color: var(--primary); }
 html[data-style="vecna"] .site-header .btn-ghost, html[data-style="vecna"] .site-header .nav-toggle, html[data-style="vecna"] .site-header .report-link { border-color: color-mix(in srgb, var(--on-primary) 50%, transparent); color: var(--on-primary); background: transparent; }
 html[data-style="vecna"] .site-header .btn:not(.btn-ghost, .btn-accent) { background: var(--on-primary); color: var(--primary); border-color: var(--on-primary); }
-html[data-style="vecna"] .site-header .nav-more ul a { color: var(--ink); }
-html[data-style="vecna"] .site-header .nav-more ul a[aria-current] { background: var(--primary); color: var(--on-primary); }
+/* Rozbalená nabídka má na počítači vlastní (světlé nebo tmavé) pozadí, proto v ní text nesmí zdědit barvu z barevné hlavičky. */
+@media (min-width: 1101px) {
+  html[data-style="vecna"] .site-header .site-nav .nav-more ul li a { color: var(--ink); }
+  html[data-style="vecna"] .site-header .site-nav .nav-more ul li a:hover { background: var(--surface-2); }
+  html[data-style="vecna"] .site-header .site-nav .nav-more ul li a[aria-current] { background: var(--primary); color: var(--on-primary); }
+}
 html[data-style="vecna"] .hero { background: var(--surface); border-bottom: 3px solid var(--primary); padding-block: clamp(1.5rem, 4vw, 3rem); }
 html[data-style="vecna"] .hero h1 { font-size: clamp(2.2rem, 1.4rem + 4vw, 3.6rem); font-weight: 700; line-height: 1.05; }
 html[data-style="vecna"] .h1-sub { font-style: normal; font-weight: 700; }
@@ -1034,3 +1038,4 @@ body.lp .editions .edition:hover { transform: translateY(-5px); box-shadow: 0 18
 .storage-card.is-full .bar::-moz-progress-bar { background: var(--accent); }
 .storage-order { display: flex; flex-wrap: wrap; gap: .8rem; align-items: end; margin: 0; }
 .storage-order label { display: grid; gap: .3rem; font-weight: 600; flex: 1 1 240px; }
+.report-scope { padding: .7rem .9rem; border-radius: 10px; background: var(--warn-soft); color: var(--ink); font-size: .95rem; }

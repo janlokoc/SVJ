@@ -1,6 +1,6 @@
 <div class="wrap page narrow">
-  <h1>Nahlásit problém nebo nápad</h1>
-  <p class="lead">Něco nefunguje, nebo Vás napadlo, jak web zlepšit? Napište nám.</p>
+  <h1>Nahlásit chybu webu nebo nápad</h1>
+  <p class="lead">Něco na webu nefunguje, nebo Vás napadlo, jak ho zlepšit? Napište nám.</p>
   <?php require __DIR__ . '/../_errors.php'; ?>
   <div class="card"><?php $inDialog = false; require __DIR__ . '/_form.php'; ?></div>
   <?php if (!empty($mine)): ?>

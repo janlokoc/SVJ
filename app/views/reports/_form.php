@@ -5,10 +5,14 @@
   <input type="hidden" name="url" value="<?= e(post('url') !== '' ? post('url') : report_page_url($back ?? '/')) ?>" data-report-url>
   <input type="hidden" name="title" value="<?= e(post('title')) ?>" data-report-title>
   <input type="hidden" name="viewport" value="<?= e(post('viewport')) ?>" data-report-viewport>
+  <?php if (empty($GLOBALS['IS_PLATFORM'])): $toFaults = user() && feature_on('zavady'); ?>
+  <div class="report-scope"><strong>Tohle hlášení se týká jen webu</strong> – dostane ho <?= reports_central() ? 'provozovatel webové služby (technická podpora)' : 'správce tohoto webu' ?>, ne výbor ani správa domu.
+    Závadu v domě (topení, výtah, světlo, úklid) sem prosím nepište: <a href="<?= url($toFaults ? '/zavady' : '/kontakty') ?>"><?= $toFaults ? 'nahlaste ji výboru v části Závady a požadavky' : 'kontakty na výbor a havarijní čísla najdete zde' ?></a>.</div>
+  <?php endif ?>
   <div class="report-types" role="radiogroup" aria-label="Druh hlášení">
     <?php foreach (REPORT_TYPES as $k => $label): ?><label class="check"><input type="radio" name="type" value="<?= $k ?>"<?= post('type', 'bug') === $k ? ' checked' : '' ?>> <span><?= e($label) ?></span></label><?php endforeach ?>
   </div>
-  <label>Co se stalo nebo co navrhujete? <textarea name="body" rows="5" required minlength="5" maxlength="5000"><?= e(post('body')) ?></textarea></label>
+  <label>Co na webu nefunguje nebo co navrhujete? <textarea name="body" rows="5" required minlength="5" maxlength="5000"><?= e(post('body')) ?></textarea></label>
   <?php if ($anon): ?><label>Váš e-mail (pro odpověď) <input type="email" name="email" value="<?= e(post('email')) ?>" required autocomplete="email"></label><?php endif ?>
   <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
   <div class="report-shot">

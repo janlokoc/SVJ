@@ -376,4 +376,8 @@ return [
     'Zaplatit měsíční zálohu' => 'Сплатити щомісячний аванс',
     'vyrovnáno' => 'розраховано',
     'Údaje nahrává výbor z účetnictví a platí k uvedenému dni; platba odeslaná později se tu projeví až po další aktualizaci.' => 'Дані завантажує правління з бухгалтерії, вони чинні на зазначену дату; платіж, надісланий пізніше, з’явиться після наступного оновлення.',
+    'Chyba webu' => 'Помилка сайту',
+    'Nahlásit chybu webu nebo nápad' => 'Повідомити про помилку сайту або ідею',
+    'Na webu něco nefunguje' => 'На сайті щось не працює',
+    'Nápad, jak web zlepšit' => 'Ідея, як покращити сайт',
 ];

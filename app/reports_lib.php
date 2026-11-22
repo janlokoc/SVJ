@@ -4,7 +4,7 @@ declare(strict_types=1);
 // Hlášení problémů a nápadů od uživatelů (a automaticky zachycené chyby webu). Na platformě pro více SVJ je vyřizuje
 // hlavní správce v konzoli, na webu jednoho společenství jeho správci v administraci.
 
-const REPORT_TYPES = ['bug' => 'Problém nebo chyba', 'idea' => 'Nápad na zlepšení'];
+const REPORT_TYPES = ['bug' => 'Na webu něco nefunguje', 'idea' => 'Nápad, jak web zlepšit'];
 const REPORT_STATUS = ['new' => 'Nové', 'in_progress' => 'Řeší se', 'planned' => 'Plánujeme', 'done' => 'Vyřešeno', 'rejected' => 'Nebudeme řešit'];
 const REPORT_STATUS_CLASS = ['new' => 'new', 'in_progress' => 'in_progress', 'planned' => 'in_progress', 'done' => 'done', 'rejected' => 'rsvp-no'];
 

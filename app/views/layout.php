@@ -83,7 +83,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <?php endif ?>
       </ul>
       <div class="nav-user">
-        <a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit problém nebo nápad"><?= icon('flag') ?><span>Nahlásit</span></a>
+        <a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit chybu webu nebo nápad na jeho zlepšení"><?= icon('flag') ?><span>Chyba webu</span></a>
         <?php if ($u): ?>
           <?php if ($u['role'] === 'admin'): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>
           <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($u['name']) ?></strong><small><?= e(user_badge($u)) ?></small></span></a>
