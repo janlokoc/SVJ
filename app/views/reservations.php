@@ -7,10 +7,12 @@
     <?= csrf_field() ?>
     <label>Co <select name="resource_id" id="res-resource"><?php foreach ($resources as $r): ?><option value="<?= $r['id'] ?>"<?= (int) post('resource_id') === (int) $r['id'] ? ' selected' : '' ?>><?= e($r['name']) ?></option><?php endforeach ?></select></label>
     <div class="form-row">
-      <label>Den <input type="date" name="res_date" value="<?= e(post('res_date') ?: date('Y-m-d')) ?>" min="<?= date('Y-m-d') ?>" required></label>
+      <label>Den (první) <input type="date" name="res_date" value="<?= e(post('res_date') ?: date('Y-m-d')) ?>" min="<?= date('Y-m-d') ?>" required></label>
+      <label>Poslední den <small class="muted">(jen u rezervace na více dní)</small> <input type="date" name="res_date_to" value="<?= e(post('res_date_to')) ?>" min="<?= date('Y-m-d') ?>"></label>
       <label>Od <input type="time" name="time_from" value="<?= e(post('time_from')) ?>" required></label>
       <label>Do <input type="time" name="time_to" value="<?= e(post('time_to')) ?>" required></label>
     </div>
+    <p class="hint">Potřebujete prostor na víc dní po sobě? Vyplňte i poslední den – čas od–do pak platí pro každý den zvlášť. Najednou lze rezervovat nejvýše 14 dní.</p>
     <label>Poznámka (nepovinné) <input type="text" name="note" value="<?= e(post('note')) ?>" maxlength="255"></label>
     <button class="btn" type="submit">Rezervovat</button>
     <?php foreach ($resources as $r): if ($r['note']): ?><p class="hint"><strong><?= e($r['name']) ?>:</strong> <?= e($r['note']) ?></p><?php endif; endforeach ?>

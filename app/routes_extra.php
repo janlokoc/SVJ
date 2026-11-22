@@ -121,15 +121,39 @@ $reservationsPage = function () {
         if (!preg_match($time, $from) || !preg_match($time, $to) || $from >= $to) {
             $errors[] = 'Zadejte čas od–do; konec musí být po začátku.';
         }
-        if (!$errors && val('SELECT 1 FROM reservations WHERE resource_id = ? AND res_date = ? AND time_from < ? AND time_to > ?', [$rid, $day, $to, $from])) {
-            $errors[] = 'V tomto čase už má rezervaci někdo jiný. Zvolte jiný čas.';
+        // Rezervace na více dní po sobě: stejný čas každý den až do zvoleného posledního dne (nejvýše 14 dní).
+        $last = post('res_date_to') !== '' ? post('res_date_to') : $day;
+        $days = [];
+        if (!$errors) {
+            if (!valid_date($last) || $last < $day) {
+                $errors[] = 'Poslední den rezervace musí být stejný nebo pozdější než první.';
+            } elseif ((strtotime($last) - strtotime($day)) / 86400 >= 14) {
+                $errors[] = 'Najednou lze rezervovat nejvýše 14 dní po sobě. Delší dobu domluvte s výborem.';
+            } elseif ($last > date('Y-m-d', time() + 90 * 86400)) {
+                $errors[] = 'Rezervovat lze ode dneška nejvýše 90 dní dopředu.';
+            } else {
+                for ($d = $day; $d <= $last; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+                    $days[] = $d;
+                }
+            }
         }
-        if (!$errors && (int) val('SELECT COUNT(*) FROM reservations WHERE user_id = ? AND res_date >= ?', [$u['id'], date('Y-m-d')]) >= 10) {
-            $errors[] = 'Máte už 10 nadcházejících rezervací. Některou nejdřív zrušte.';
+        $taken = [];
+        foreach ($days as $d) {
+            if (val('SELECT 1 FROM reservations WHERE resource_id = ? AND res_date = ? AND time_from < ? AND time_to > ?', [$rid, $d, $to, $from])) {
+                $taken[] = cz_date($d);
+            }
+        }
+        if ($taken) {
+            $errors[] = count($days) === 1 ? 'V tomto čase už má rezervaci někdo jiný. Zvolte jiný čas.' : 'V tomto čase už má rezervaci někdo jiný v těchto dnech: ' . implode(', ', $taken) . '. Zvolte jiný čas nebo jiné dny.';
+        }
+        if (!$errors && (int) val('SELECT COUNT(*) FROM reservations WHERE user_id = ? AND res_date >= ?', [$u['id'], date('Y-m-d')]) + count($days) > 30) {
+            $errors[] = 'Můžete mít nejvýše 30 nadcházejících rezervovaných dnů. Některou rezervaci nejdřív zrušte.';
         }
         if (!$errors) {
-            q('INSERT INTO reservations (resource_id, user_id, res_date, time_from, time_to, note) VALUES (?,?,?,?,?,?)', [$rid, $u['id'], $day, $from, $to, mb_substr(post('note'), 0, 255)]);
-            flash('Rezervace je uložena.');
+            foreach ($days as $d) {
+                q('INSERT INTO reservations (resource_id, user_id, res_date, time_from, time_to, note) VALUES (?,?,?,?,?,?)', [$rid, $u['id'], $d, $from, $to, mb_substr(post('note'), 0, 255)]);
+            }
+            flash(count($days) === 1 ? 'Rezervace je uložena.' : 'Rezervace je uložena na ' . count($days) . ' dní: ' . cz_date($day) . ' – ' . cz_date($last) . '.');
             redirect('/rezervace');
         }
         http_response_code(422);
