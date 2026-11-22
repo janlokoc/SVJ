@@ -36,4 +36,13 @@
     <?php if (!$u['id']): ?><p class="hint">Po uložení se zobrazí dočasné heslo, které uživateli předáte.</p><?php endif ?>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit uživatele</button><a class="btn btn-ghost" href="<?= url('/admin/uzivatele') ?>">Zrušit</a></div>
   </form>
+  <?php if ($u['id'] && (int) $u['id'] !== (int) user()['id']): ?>
+  <form method="post" action="<?= url('/admin/uzivatele/' . $u['id'] . '/smazat') ?>" class="card form" data-confirm="Opravdu smazat účet „<?= e($u['name']) ?>“?">
+    <h2>Smazat účet</h2>
+    <?= csrf_field() ?>
+    <p>Účet se smaže natrvalo. Příspěvky v diskuzi, hlášené závady a odevzdané hlasy zůstanou, jen bez jména. Kdo se má jen dočasně nepřihlašovat, tomu stačí vypnout „Účet je aktivní“.</p>
+    <button class="btn btn-accent" type="submit">Smazat uživatele</button>
+  </form>
+  <?php elseif ($u['id']): ?><p class="hint">Vlastní účet smazat nejde. Může to udělat jiný správce.</p>
+  <?php endif ?>
 </div>

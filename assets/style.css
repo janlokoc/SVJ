@@ -617,3 +617,17 @@ div.stat:hover { border-color: var(--line); }
 .print-doc.invoice p { line-height: 1.6; }
 @media print { .demo-bar { display: none; } .invoice .qr { width: 42mm; height: 42mm; } }
 @media (min-width: 1101px) and (max-width: 1190px) { .user-link .user-id { display: none; } }
+
+/* V administraci je vedle menu méně místa: tabulka se přeskládá do řádků pod sebe dřív, aby sloupec s akcemi (Smazat…) nezmizel za okrajem. */
+.admin-shell > main { container-type: inline-size; }
+@container (max-width: 900px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; }
+  .table tr { padding: .6rem 0; border-top: 1px solid var(--line); }
+  .table tr:first-child { border-top: 0; }
+  .table td { border: 0; padding: .2rem .9rem; }
+  .table td[data-label]:not(:first-child)::before { content: attr(data-label) ": "; color: var(--muted); font-size: .85rem; }
+  .table td:empty { display: none; }
+  .t-actions { text-align: left; white-space: normal; }
+  .t-actions > * { margin: .3rem 1rem 0 0; }
+}
