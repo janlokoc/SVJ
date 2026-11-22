@@ -19,6 +19,21 @@ $route('GET', '/vitejte/([a-f0-9]{64})', function (string $token) {
     redirect('/admin');
 });
 
+// Vstup podpory provozovatele: jednorázový odkaz z konzole platformy, platí 2 minuty.
+$route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
+    $d = (array) json_decode(setting('support_login'), true);
+    q("DELETE FROM settings WHERE `key` = 'support_login'");
+    $u = isset($d['uid']) ? one('SELECT * FROM users WHERE id = ? AND active = 1', [(int) $d['uid']]) : null;
+    if (!$u || !hash_equals((string) ($d['hash'] ?? ''), hash('sha256', $token)) || time() > (int) ($d['expires'] ?? 0)) {
+        flash('Odkaz pro vstup podpory už neplatí. Vytvořte v konzoli platformy nový.', 'error');
+        redirect('/');
+    }
+    login_user($u);
+    $_SESSION['support'] = (string) $d['by'];
+    audit('support_login', 'jako ' . $u['email'] . ' · důvod: ' . (string) ($d['reason'] ?? ''));
+    redirect($u['role'] === 'admin' ? '/admin' : '/');
+});
+
 $route('GET', '/admin/predplatne', function () {
     require_admin();
     $t = tenant_row(TENANT);

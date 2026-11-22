@@ -313,6 +313,14 @@ automatické vystavování (viz výše).
   daňový doklad s DIČ, základem daně a DPH. Sazba se ukládá u každé platby,
   takže zaplacené doklady se změnou nastavení nemění; čekající platby se
   přepočtou. Podobu dokladů si nechte potvrdit účetní.
+- **Podpora (konzole → společenství → Podpora: přihlášení a hesla):** hlavní
+  správce může poslat kterémukoli účtu odkaz na nové heslo (platí 24 hodin,
+  zobrazí se i v konzoli), vypnout správci dvoufázové ověření a vstoupit do
+  webu jako jeho správce. Vstup vyžaduje důvod, je jednorázovým odkazem
+  (2 minuty), zapisuje se do záznamů společenství i platformy a po celou
+  dobu je na webu červený pruh „Režim podpory“. V tomto režimu nejde měnit
+  heslo ani účet, za který je podpora přihlášena, ani zrušit web; každá
+  akce je v záznamech označena. Heslo uživatele se vstupem nemění.
 - **Průvodce pro nového správce:** Administrace → Průvodce nastavením
   (a karta na přehledu) vede správce kroky od údajů společenství přes import
   jednotek a obyvatel, kontakty a dokumenty po oznámení sousedům. U každého

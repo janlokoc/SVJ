@@ -150,12 +150,34 @@
     <p><a href="<?= url('/platby') ?>">Potvrdit nebo zrušit platbu →</a></p>
   </div>
   <?php endif ?>
+  <div class="card" id="podpora">
+    <h2>Podpora: přihlášení a hesla</h2>
+    <?php if (!empty($tenantEnter)): ?><div class="flash flash-info">Vstup jako <?= e($tenantEnter['name']) ?> je připraven a zapsán do záznamů. Odkaz platí 2 minuty a jen jednou. <a class="btn btn-small" href="<?= e($tenantEnter['link']) ?>" rel="noreferrer">Otevřít web v režimu podpory</a></div><?php endif ?>
+    <?php if (!empty($tenantReset)): ?><div class="flash flash-<?= $tenantReset['sent'] ? 'ok' : 'error' ?>"><?= $tenantReset['sent'] ? 'Odkaz na nové heslo jsme poslali na ' . e($tenantReset['email']) . '.' : 'E-mail na ' . e($tenantReset['email']) . ' se nepodařilo odeslat.' ?> Odkaz platí 24 hodin; můžete ho předat i jinou cestou:<br><code class="break"><?= e($tenantReset['link']) ?></code></div><?php endif ?>
+    <p class="hint">Zapomenuté heslo si každý obnoví sám odkazem „Zapomněli jste heslo?“ na přihlašovací stránce. Tady pomůžete, když mu e-mail nechodí, ztratil telefon s ověřovacím kódem, nebo potřebujete vidět web jeho očima.</p>
+    <table class="table"><thead><tr><th>Správce webu</th><th>Poslední přihlášení</th><th>Pomoc</th></tr></thead><tbody>
+    <?php foreach ($supportAdmins as $a): ?><tr>
+      <td data-label="Správce webu"><strong><?= e($a['name']) ?></strong><br><small class="muted"><?= e($a['email']) ?><?= $a['totp_enabled'] ? ' · dvoufázové ověření' : '' ?></small></td>
+      <td data-label="Poslední přihlášení"><?= $a['last_login_at'] ? cz_datetime($a['last_login_at']) : '<span class="muted">zatím nikdy</span>' ?></td>
+      <td data-label="Pomoc" class="support-actions">
+        <form method="post" action="<?= url('/svj/' . $t['slug'] . '/heslo') ?>" class="inline-form" data-confirm="Poslat na <?= e($a['email']) ?> odkaz pro nastavení nového hesla?"><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Poslat odkaz na nové heslo</button></form>
+        <?php if ($a['totp_enabled']): ?><form method="post" action="<?= url('/svj/' . $t['slug'] . '/overeni') ?>" class="inline-form" data-confirm="Vypnout dvoufázové ověření účtu <?= e($a['email']) ?>? Udělejte to jen na ověřenou žádost."><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Vypnout dvoufázové ověření</button></form><?php endif ?>
+        <form method="post" action="<?= url('/svj/' . $t['slug'] . '/vstoupit') ?>" class="support-enter"><?= csrf_field() ?><input type="hidden" name="user" value="<?= (int) $a['id'] ?>">
+          <input type="text" name="reason" placeholder="Důvod vstupu" aria-label="Důvod vstupu jako <?= e($a['name']) ?>" maxlength="200" required><button class="btn btn-small" type="submit">Připravit vstup jako tento správce</button></form>
+      </td></tr><?php endforeach ?>
+    </tbody></table>
+    <?php if (!$supportAdmins): ?><p class="empty">Web nemá žádného aktivního správce. Přidejte ho níže.</p><?php endif ?>
+    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/heslo') ?>" class="form"><?= csrf_field() ?>
+      <div class="form-row"><label>Jiný účet na tomto webu (e-mail) <input type="email" name="email" required></label></div>
+      <button class="btn btn-small btn-ghost" type="submit">Poslat odkaz na nové heslo</button></form>
+    <p class="hint">Vstup jako správce Vás přihlásí do webu společenství v režimu podpory: nahoře je po celou dobu výrazný pruh, vstup i s důvodem se zapíše do záznamů společenství (správce ho tam vidí) i platformy a v režimu podpory nejde měnit heslo ani účet, za který jste přihlášeni. Používejte ho jen na žádost společenství.</p>
+  </div>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/spravce') ?>" class="card form">
     <h2>Přidat správce tohoto webu</h2>
     <?= csrf_field() ?>
     <div class="form-row"><label>Jméno a příjmení <input type="text" name="name" id="ta-name" required></label><label>E-mail <input type="email" name="email" id="ta-email" required></label></div>
     <button class="btn" type="submit">Vytvořit účet a zobrazit pozvánku</button>
-    <p class="hint">Do obsahu webu společenství hlavní správce nevidí; přístup má jen jeho výbor. Vytvoření účtu správce se zapisuje do záznamů platformy.</p>
+    <p class="hint">Vytvoření účtu správce se zapisuje do záznamů platformy.</p>
   </form>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/import') ?>" enctype="multipart/form-data" class="card form">
     <h2>Import obsahu ze starého webu</h2>

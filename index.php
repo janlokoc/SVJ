@@ -216,6 +216,11 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
 
 // Edice: web se nikdy nepozastavuje. Funkce, která není v edici, jde vyzkoušet; po skončení zkoušky zůstává jen pro čtení.
 $GLOBALS['BILLING'] = TENANT !== '' ? billing_state($tenantRow) : ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => 'premium'];
+// V režimu podpory nejde měnit účet, za který je podpora přihlášena, ani rušit celý web.
+if (!empty($_SESSION['support']) && $METHOD === 'POST' && (str_starts_with($PATH, '/muj-ucet') || $PATH === '/admin/predplatne/zrusit-web')) {
+    flash('V režimu podpory nejde měnit heslo ani účet, za který jste přihlášeni, ani rušit web. Tohle musí udělat správce společenství sám.', 'error');
+    redirect(str_starts_with($PATH, '/muj-ucet') ? '/muj-ucet' : '/admin/predplatne');
+}
 if (TENANT !== '' && !$needsSetup && ($planFeature = plan_feature_for($PATH)) !== null && !plan_has($planFeature)) {
     $planState = plan_state($planFeature);
     $inAdminPath = str_starts_with($PATH, '/admin');

@@ -168,7 +168,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -287,6 +287,41 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         }
         redirect('/svj/' . $slug);
     }
+    // Podpora: vstup do webu jako jeho uživatel, odkaz na nové heslo, vypnutí dvoufázového ověření.
+    if ($METHOD === 'POST' && in_array($action, ['/vstoupit', '/heslo', '/overeni'], true)) {
+        $pdo = tenant_pdo($slug);
+        $find = $pdo->prepare(post('email') !== '' ? 'SELECT * FROM users WHERE email = ? AND active = 1' : 'SELECT * FROM users WHERE id = ? AND active = 1');
+        $find->execute([post('email') !== '' ? post('email') : (int) post('user')]);
+        $u = $find->fetch();
+        $reason = mb_substr(trim(post('reason')), 0, 200);
+        if (!$u) {
+            flash('Takový aktivní účet na webu tohoto společenství není.', 'error');
+        } elseif ($action === '/vstoupit') {
+            if (mb_strlen($reason) < 3) {
+                flash('Napište důvod vstupu (například číslo požadavku nebo kdo o pomoc požádal). Zapíše se do záznamů společenství.', 'error');
+            } else {
+                $token = bin2hex(random_bytes(32));
+                tenant_set($slug, 'support_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => (int) $u['id'], 'by' => $super['email'], 'reason' => $reason], JSON_UNESCAPED_UNICODE));
+                platform_log('Vstup podpory do webu', $slug . ' · jako ' . $u['email'] . ' · ' . $reason);
+                // Prohlížeč nedovolí formuláři přesměrovat na jinou adresu, proto odkaz ukážeme jako tlačítko.
+                $_SESSION['tenant_enter'] = ['name' => $u['name'], 'link' => tenant_url($t, '/podpora-vstup/' . $token)];
+            }
+        } elseif ($action === '/heslo') {
+            $token = bin2hex(random_bytes(32));
+            $pdo->prepare('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?')->execute([hash('sha256', $token), date('Y-m-d H:i:s', time() + 86400), $u['id']]);
+            $link = tenant_url($t, ($u['password_hash'] === NO_PASSWORD ? '/pozvanka/' : '/obnova-hesla/') . $token);
+            $sent = platform_mail($u['email'], 'Nové heslo na webu ' . $t['name'], "Dobrý den,\n\nna Vaši žádost posíláme odkaz, kterým si nastavíte nové heslo k účtu na webu " . $t['name'] . " (platí 24 hodin):\n" . $link
+                . "\n\nDokud si nové heslo nenastavíte, platí to dosavadní. Pokud jste o nové heslo nežádali, zprávu ignorujte.");
+            platform_log('Odkaz na nové heslo', $slug . ' · ' . $u['email'] . ($sent ? '' : ' · e-mail se nepodařilo odeslat'));
+            $_SESSION['tenant_reset'] = ['name' => $u['name'], 'email' => $u['email'], 'link' => $link, 'sent' => $sent];
+        } elseif ((int) $u['totp_enabled'] === 1) {
+            $pdo->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?')->execute([$u['id']]);
+            platform_mail($u['email'], 'Dvoufázové ověření bylo vypnuto – ' . $t['name'], "Dobrý den,\n\nna Vaši žádost jsme u Vašeho účtu na webu " . $t['name'] . " vypnuli dvoufázové ověření. Přihlásíte se e-mailem a heslem; ověření si pak znovu zapněte v části Můj účet.\n\nPokud jste o to nežádali, ozvěte se nám prosím hned.");
+            platform_log('Vypnutí dvoufázového ověření', $slug . ' · ' . $u['email']);
+            flash('Dvoufázové ověření účtu ' . $u['email'] . ' je vypnuté. Uživatel o tom dostal e-mail.');
+        }
+        redirect('/svj/' . $slug . '#podpora');
+    }
     if ($METHOD === 'POST' && $action === '/spravce') {
         $pdo = tenant_pdo($slug);
         $email = post('email');
@@ -335,6 +370,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
+        'supportAdmins' => tenant_pdo($slug)->query("SELECT id, name, email, last_login_at, totp_enabled, password_hash FROM users WHERE role = 'admin' AND active = 1 ORDER BY id")->fetchAll(), 'tenantEnter' => (function () { $r = $_SESSION['tenant_enter'] ?? null; unset($_SESSION['tenant_enter']); return $r; })(), 'tenantReset' => (function () { $r = $_SESSION['tenant_reset'] ?? null; unset($_SESSION['tenant_reset']); return $r; })(),
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),

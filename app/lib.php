@@ -482,6 +482,15 @@ function is_staging(): bool
     return (app_config()['env'] ?? '') === 'staging';
 }
 /** Pruh nahoře na každé stránce zkušebního prostředí. */
+/** Pruh přes celou šířku, dokud je do webu přihlášena podpora provozovatele za některého uživatele. */
+function support_bar(): string
+{
+    if (empty($_SESSION['support']) || !($u = user())) {
+        return '';
+    }
+    return '<div class="support-bar" role="status"><span><strong>Režim podpory.</strong> Jste přihlášeni jako ' . e($u['name']) . ' (' . e($u['email']) . '). Vše, co uděláte, se zapisuje do záznamů společenství.</span>'
+        . '<form method="post" action="' . url('/odhlaseni') . '">' . csrf_field() . '<button type="submit">Ukončit režim podpory</button></form></div>';
+}
 function staging_bar(): string
 {
     return is_staging() ? '<div class="staging-bar" role="note">Zkušební prostředí – data se mohou kdykoli smazat, e-maily neodcházejí skutečným lidem.</div>' : '';
@@ -1026,6 +1035,10 @@ function login_user(array $u): void
 function audit(string $action, string $detail = '', ?int $userId = null): void
 {
     $GLOBALS['AUDITED'] = true;
+    // Co se stalo v režimu podpory, je v záznamech poznat.
+    if (!empty($_SESSION['support']) && $action !== 'support_login') {
+        $detail = trim($detail . ' [podpora provozovatele: ' . $_SESSION['support'] . ']');
+    }
     $uid = $userId ?? ($_SESSION['uid'] ?? null);
     $name = $uid ? (string) val('SELECT name FROM users WHERE id = ?', [$uid]) : '';
     $detail = mb_substr($detail, 0, 1000);

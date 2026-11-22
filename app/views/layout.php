@@ -62,6 +62,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 </head>
 <body<?= $inAdmin ? ' class="in-admin"' : '' ?>
 <?= staging_bar() ?>>
+<?= support_bar() ?>
 <a class="skip" href="#obsah">Přeskočit na obsah</a>
 <header class="site-header">
   <div class="wrap header-row">
