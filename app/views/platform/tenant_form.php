@@ -12,7 +12,7 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <?php if ($new): ?>
-      <label>Adresa webu <span class="slug-row"><input type="text" name="slug" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><span>.<?= e(platform_domain()) ?></span></span></label>
+      <label>Adresa webu <span class="slug-row"><?php if (platform_paths()): ?><span><?= e(platform_domain()) ?>/</span><?php endif ?><input type="text" name="slug" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><?php if (!platform_paths()): ?><span>.<?= e(platform_domain()) ?></span><?php endif ?></span></label>
       <p class="hint">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
     <?php endif ?>
     <label>Název společenství <input type="text" name="name" value="<?= e($t['name']) ?>" required placeholder="SVJ Zahrádecká 372"></label>

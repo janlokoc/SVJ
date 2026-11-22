@@ -7,7 +7,7 @@
     <h2>Služba a registrace</h2>
     <label>Název služby <input type="text" name="service_name" value="<?= e($v['service_name']) ?>" required></label>
     <label class="check"><input type="checkbox" name="signup_open"<?= $v['signup_open'] === '1' ? ' checked' : '' ?>> <span>Registrace je otevřená <small>Kdokoli si může z úvodní stránky sám založit web společenství. Po vypnutí zakládáte weby jen Vy.</small></span></label>
-    <label class="check"><input type="checkbox" name="demo_auto"<?= $v['demo_auto'] === '1' ? ' checked' : '' ?>> <span>Ukázkový web <small>Na adrese demo.<?= e(platform_domain()) ?> běží smyšlené společenství jen pro čtení a úvodní stránka na něj odkazuje. Pokud neexistuje, založí se sám. Po vypnutí ho můžete smazat v seznamu společenství.</small></span></label>
+    <label class="check"><input type="checkbox" name="demo_auto"<?= $v['demo_auto'] === '1' ? ' checked' : '' ?>> <span>Ukázkový web <small>Na adrese <?= e(tenant_address('demo')) ?> běží smyšlené společenství jen pro čtení a úvodní stránka na něj odkazuje. Pokud neexistuje, založí se sám. Po vypnutí ho můžete smazat v seznamu společenství.</small></span></label>
     <div class="form-row">
       <label>Zkušební doba zdarma (dní) <input type="number" name="trial_days" value="<?= e($v['trial_days']) ?>" min="0" max="365" required></label>
       <label>Web běží po splatnosti ještě (dní) <input type="number" name="grace_days" value="<?= e($v['grace_days']) ?>" min="0" max="365" required></label>

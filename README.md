@@ -123,6 +123,11 @@ oddělená data: vlastní databázi, soubory i přihlášení ve složce
    adresy směrovat do téže složky s webem. Běžný sdílený hosting to
    zpravidla neumí – počítejte s vlastním serverem (VPS) nebo hostingem,
    který zástupné subdomény podporuje.
+   **Bez subdomén:** s nastavením
+   `'platform' => ['domain' => 'svj.cz', 'mode' => 'path']` jsou weby
+   složkami hlavní domény (`svj.cz/tabor`, `svj.cz/zahradecka`). Stačí
+   běžný certifikát pro `svj.cz` a žádný zástupný DNS záznam, takže to
+   zvládne i běžný hosting. Viz „Subdomény, nebo složky" níže.
 3. Na adrese hlavní domény je veřejná úvodní stránka služby s ceníkem
    a registrací; konzole **hlavního správce** je na adrese `/sprava`.
    První účet se vytvoří instalačním kódem ze souboru
@@ -141,6 +146,29 @@ např. `svj_{tenant}`, a účet musí mít právo databáze zakládat.
 
 Nástroje z příkazové řádky pracují se společenstvím zvoleným proměnnou
 prostředí: `SVJ_TENANT=tabor php tools/reset-password.php e-mail`.
+
+### Subdomény, nebo složky
+
+| | Subdomény (`tabor.svj.cz`) | Složky (`svj.cz/tabor`) |
+|---|---|---|
+| DNS a certifikát | zástupný záznam `*.svj.cz` a zástupný certifikát | jen `svj.cz`, běžný certifikát |
+| Hosting | server nebo hosting se zástupnými subdoménami | jakýkoli hosting s PHP |
+| Oddělení webů v prohlížeči | každý web je samostatný původ | všechny weby sdílejí jeden původ |
+
+Data, soubory i přihlášení jsou v obou variantách oddělené na serveru
+stejně. Ve variantě se složkami má každý web vlastní přihlašovací
+cookie platnou jen pro svou složku. Prohlížeč ale weby na jedné doméně
+nepovažuje za navzájem cizí, takže případná chyba typu vložení skriptu
+do jednoho webu by mohla zasáhnout i ostatní – u subdomén by zůstala
+uvnitř jednoho webu. Web proto nedovoluje vkládat vlastní HTML ani
+skripty a posílá přísná bezpečnostní pravidla stránky.
+
+Variantu zvolte před spuštěním. Pozdější přepnutí změní adresy všech
+webů: staré odkazy v e-mailech a záložkách přestanou fungovat a
+všichni se musí znovu přihlásit. Adresy `sprava`, `registrace`,
+`podminky` a několik dalších patří platformě a nejdou použít jako
+adresa společenství. Vlastní doména společenství funguje v obou
+variantách.
 
 ### Registrace, zkušební doba a předplatné
 
@@ -201,7 +229,8 @@ platformu, přesuňte jeho data pod vlastní adresu:
 Web pak běží na `tabor.<doména>` se stejnými účty a hesly; hlavní doména
 zobrazuje úvodní stránku služby a `/sprava` konzoli hlavního správce.
 Na vlastním počítači fungují adresy `tabor.localhost:8080` v běžných
-prohlížečích bez dalšího nastavení.
+prohlížečích bez dalšího nastavení; ve variantě se složkami je to
+`localhost:8080/tabor`.
 
 ### Import obsahu ze starého webu
 

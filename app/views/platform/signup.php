@@ -10,8 +10,8 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <label>Název společenství <input type="text" name="name" id="signup-name" value="<?= e($s['name']) ?>" required minlength="3" maxlength="120" placeholder="SVJ Zahradní 12" autofocus></label>
-    <label>Adresa webu <span class="slug-row"><input type="text" name="slug" id="signup-slug" value="<?= e($s['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" maxlength="39" required placeholder="zahradni"
-      data-slug-from="#signup-name" data-slug-check="<?= url('/registrace/adresa') ?>" data-slug-status="#slug-status" autocomplete="off"><span>.<?= e(platform_domain()) ?></span></span></label>
+    <label>Adresa webu <span class="slug-row"><?php if (platform_paths()): ?><span><?= e(platform_domain()) ?>/</span><?php endif ?><input type="text" name="slug" id="signup-slug" value="<?= e($s['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" maxlength="39" required placeholder="zahradni"
+      data-slug-from="#signup-name" data-slug-check="<?= url('/registrace/adresa') ?>" data-slug-status="#slug-status" autocomplete="off"><?php if (!platform_paths()): ?><span>.<?= e(platform_domain()) ?></span><?php endif ?></span></label>
     <p class="hint" id="slug-status" role="status">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
     <label>Adresa domu (nepovinné) <input type="text" name="address" value="<?= e($s['address']) ?>" maxlength="200" placeholder="Zahradní 12, Brno"></label>
     <div class="actions"><button class="btn btn-big" type="submit">Pokračovat na vzhled</button></div>
@@ -19,7 +19,7 @@
   <?php elseif ($step === 2): ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
-    <p>Vyberte vzhled webu <strong><?= e($s['slug'] . '.' . platform_domain()) ?></strong>. Později ho můžete kdykoli změnit v nastavení.</p>
+    <p>Vyberte vzhled webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Později ho můžete kdykoli změnit v nastavení.</p>
     <div class="look-cards" role="radiogroup" aria-label="Vzhled webu">
       <?php $n = 0; foreach (LOOKS as $look => $label): $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
         <label class="look-card"><input type="radio" name="look" value="<?= $look ?>"<?= ($s['look'] ?: 'les') === $look ? ' checked' : '' ?>><?php require __DIR__ . '/_mini.php'; ?><span><?= e($label) ?></span></label>
@@ -30,7 +30,7 @@
   <?php else: $trial = pset_int('trial_days', 0, 365); ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
-    <p>Poslední krok: účet správce webu <strong><?= e($s['slug'] . '.' . platform_domain()) ?></strong>. Další správce i obyvatele pak přidáte v administraci.</p>
+    <p>Poslední krok: účet správce webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Další správce i obyvatele pak přidáte v administraci.</p>
     <label>Jméno a příjmení <input type="text" name="person" value="<?= e($s['person']) ?>" required minlength="3" maxlength="120" autocomplete="name" autofocus></label>
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>

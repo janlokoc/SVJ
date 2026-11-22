@@ -62,4 +62,4 @@ foreach (['name', 'title', 'accent', 'tagline', 'full', 'unit_prefix', 'entrance
     }
 }
 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', 'příkazová řádka', 'Převod webu pod platformu', $slug]);
-echo "Hotovo. Web běží na adrese $slug." . platform_domain() . " – účty a hesla zůstávají stejné.\nHlavní doména " . platform_domain() . " teď zobrazuje úvodní stránku služby; konzole hlavního správce je na /sprava.\n";
+echo "Hotovo. Web běží na adrese " . tenant_address($slug) . " – účty a hesla zůstávají stejné.\nHlavní doména " . platform_domain() . " teď zobrazuje úvodní stránku služby; konzole hlavního správce je na /sprava.\n";

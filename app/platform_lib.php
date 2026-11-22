@@ -10,6 +10,18 @@ function platform_domain(): string
 {
     return strtolower((string) (app_config()['platform']['domain'] ?? ''));
 }
+/** Weby společenství jako složky hlavní domény (svj.cz/tabor) místo subdomén (tabor.svj.cz) – stačí běžný certifikát HTTPS. */
+function platform_paths(): bool
+{
+    return (app_config()['platform']['mode'] ?? '') === 'path';
+}
+/** Adresa webu společenství bez https://, jak ji uvidí lidé. */
+function tenant_address(string $slug): string
+{
+    return platform_paths() ? platform_domain() . '/' . $slug : $slug . '.' . platform_domain();
+}
+/** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
+const PLATFORM_PATHS = ['sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -110,6 +122,9 @@ function tenant_url(array $t, string $path = '/'): string
 {
     $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
     $port = preg_match('/:(\d+)$/', (string) ($_SERVER['HTTP_HOST'] ?? ''), $m) ? ':' . $m[1] : '';
+    if ($t['custom_domain'] === '' && platform_paths()) {
+        return ($https ? 'https' : 'http') . '://' . platform_domain() . $port . '/' . $t['slug'] . $path;
+    }
     return ($https ? 'https' : 'http') . '://' . ($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['slug'] . '.' . platform_domain()) . $port . $path;
 }
 function tenant_storage(string $slug): string
@@ -300,7 +315,7 @@ function slug_problem(string $slug): ?string
     if (!preg_match('/^[a-z0-9][a-z0-9-]{1,38}$/', $slug) || str_ends_with($slug, '-')) {
         return 'Adresa smí obsahovat jen malá písmena bez diakritiky, číslice a pomlčku (2–39 znaků).';
     }
-    if (in_array($slug, RESERVED_SLUGS, true) || in_array($slug, ['sprava', 'registrace', 'cenik', 'podpora', 'help', 'demo', 'test', 'app', 'blog', 'ns1', 'ns2', 'mx', 'pop', 'imap', 'webmail'], true)) {
+    if (in_array($slug, RESERVED_SLUGS, true) || in_array($slug, PLATFORM_PATHS, true) || in_array($slug, ['sprava', 'registrace', 'cenik', 'podpora', 'help', 'demo', 'test', 'app', 'blog', 'ns1', 'ns2', 'mx', 'pop', 'imap', 'webmail'], true)) {
         return 'Tato adresa je vyhrazená, zvolte prosím jinou.';
     }
     return tenant_row($slug) ? 'Tato adresa už je obsazená, zvolte prosím jinou.' : null;
@@ -549,7 +564,7 @@ function platform_cleanup(): void
             pq("UPDATE payments SET status = 'cancelled', note = 'web smazán po zkušební době' WHERE tenant = ? AND status = 'pending'", [$t['slug']]);
             pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', '', 'Automatické smazání společenství',
                 $t['slug'] . ' · ' . $t['name'] . ' · zkušební doba skončila ' . $t['trial_ends'] . ', upozorněno ' . substr($warned, 0, 10) . ' na ' . $t['owner_email']]);
-            tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . $t['slug'] . '.' . platform_domain() . ") jsme smazali včetně všech dat, protože po skončení zkušební doby "
+            tenant_notify($t, 'deleted', 'Web byl smazán – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " (" . tenant_address($t['slug']) . ") jsme smazali včetně všech dat, protože po skončení zkušební doby "
                 . cz_date($t['trial_ends']) . " nebyl uhrazen.\n\nKdykoli si můžete založit nový: " . platform_url('/registrace'));
             continue;
         }

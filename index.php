@@ -41,11 +41,24 @@ if ($PATH === '/index.php') {
 $IS_PLATFORM = false;
 if (platform_enabled()) {
     $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
-    if ($host === platform_domain() || $host === 'www.' . platform_domain()) {
+    $onMain = $host === platform_domain() || $host === 'www.' . platform_domain();
+    $tenantRow = null;
+    // Weby jako složky hlavní domény (svj.cz/tabor): první část adresy určí společenství a zbytek je adresa uvnitř jeho webu.
+    if ($onMain && platform_paths() && preg_match('~^/([a-z0-9][a-z0-9-]{1,38})(/.*)?$~', $PATH, $pm) && !in_array($pm[1], PLATFORM_PATHS, true) && ($tenantRow = tenant_row($pm[1]))) {
+        // Adresa bez lomítka na konci (svj.cz/tabor) se sjednotí na svj.cz/tabor/ – přihlašovací cookie platí pro cestu /tabor/.
+        if (($pm[2] ?? '') === '' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !str_ends_with((string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_PATH), '/')) {
+            header('Location: ' . $BASE . '/' . $pm[1] . '/' . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : ''), true, 301);
+            exit;
+        }
+        $GLOBALS['ASSET_BASE'] = $BASE;
+        $BASE .= '/' . $pm[1];
+        $PATH = '/' . trim($pm[2] ?? '', '/');
+    }
+    if ($onMain && !$tenantRow) {
         $IS_PLATFORM = true;
         boot_tenant('');
     } else {
-        $tenantRow = tenant_by_host($host);
+        $tenantRow ??= tenant_by_host($host);
         if (!$tenantRow || !$tenantRow['active']) {
             http_response_code($tenantRow ? 503 : 404);
             header('Content-Type: text/html; charset=utf-8');
@@ -72,7 +85,8 @@ if (!is_dir($sessionDir)) {
 session_save_path($sessionDir);
 ini_set('session.gc_probability', '1');
 ini_set('session.gc_divisor', '100');
-session_name('svj_session');
+// Ve variantě se složkami sdílejí všechny weby jednu doménu, proto má každý vlastní název i cestu přihlašovací cookie.
+session_name(!$IS_PLATFORM && platform_enabled() && platform_paths() && empty($tenantRow['custom_domain']) ? 'svj_s_' . str_replace('-', '_', TENANT) : 'svj_session');
 session_set_cookie_params(['lifetime' => 0, 'path' => $BASE . '/', 'httponly' => true, 'samesite' => 'Lax', 'secure' => $https]);
 session_start();
 // Přihlášení platí jen pro web, na kterém vzniklo: relaci nejde přenést na web jiného společenství ani do konzole platformy.
@@ -176,6 +190,7 @@ if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
     }
     flash('V ukázce se změny neukládají. Na Vašem vlastním webu by se tato akce provedla.', 'info');
     $ref = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    $ref = $BASE !== '' && str_starts_with($ref, $BASE) ? (string) substr($ref, strlen($BASE)) : $ref;
     redirect(preg_match('~^/(?![/\\\\])~', $ref) ? $ref : '/');
 }
 

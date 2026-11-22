@@ -40,7 +40,7 @@ $features = [
 <section class="lp-band"><div class="wrap lp-section">
   <h2>Jak začít</h2>
   <ol class="lp-steps">
-    <li><strong>Zvolte název a adresu</strong><span>Například <code>zahradni.<?= e(platform_domain()) ?></code>.</span></li>
+    <li><strong>Zvolte název a adresu</strong><span>Například <code><?= e(tenant_address('zahradni')) ?></code>.</span></li>
     <li><strong>Vyberte vzhled</strong><span>Pět barevných návrhů; kdykoli ho změníte a nahrajete vlastní logo.</span></li>
     <li><strong>Vytvořte si účet správce</strong><span>Hned potom jste v administraci a můžete zvát vlastníky.</span></li>
   </ol>

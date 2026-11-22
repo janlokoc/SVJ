@@ -46,7 +46,7 @@ if ($PATH === '/registrace/adresa' && $METHOD === 'GET') {
     $slug = strtolower(trim((string) ($_GET['adresa'] ?? '')));
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
-    echo json_encode(['ok' => slug_problem($slug) === null, 'message' => slug_problem($slug) ?? 'Adresa ' . $slug . '.' . platform_domain() . ' je volná.'], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['ok' => slug_problem($slug) === null, 'message' => slug_problem($slug) ?? 'Adresa ' . tenant_address($slug) . ' je volná.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 if ($PATH === '/registrace/hotovo' && !empty($_SESSION['signup_done'])) {
