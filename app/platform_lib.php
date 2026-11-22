@@ -8,7 +8,10 @@ const RESERVED_SLUGS = ['www', 'admin', 'api', 'mail', 'smtp', 'ftp', 'static', 
 
 function platform_domain(): string
 {
-    return strtolower((string) (app_config()['platform']['domain'] ?? ''));
+    $domain = strtolower((string) (app_config()['platform']['domain'] ?? ''));
+    // Další adresy téhož serveru (např. IP adresa počítače v domácí síti při zkoušení z telefonu): kdo přišel přes ně, dostává odkazy na ně.
+    $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+    return $domain !== '' && $host !== '' && in_array($host, array_map('strtolower', (array) (app_config()['platform']['aliases'] ?? [])), true) ? $host : $domain;
 }
 /** Weby společenství jako složky hlavní domény (svj.cz/tabor) místo subdomén (tabor.svj.cz) – stačí běžný certifikát HTTPS. */
 function platform_paths(): bool

@@ -196,6 +196,35 @@ zautomatizovat serverem Caddy („on-demand TLS“): adresa
 `https://<doména platformy>/domena-povolena?domain=…` odpoví 200 jen pro
 zprovozněné domény společenství, takže Caddy vystaví certifikát jen jim.
 
+### Zkoušení z telefonu v domácí síti
+
+Web spuštěný na vlastním počítači otevřete z telefonu na stejné Wi-Fi:
+
+1. Server spusťte tak, aby poslouchal na všech adresách:
+   `php -S 0.0.0.0:8080 index.php`.
+2. Zjistěte IP adresu počítače v síti (na Macu `ipconfig getifaddr en0`).
+3. Na platformě pro více SVJ použijte variantu se složkami a IP adresu
+   přidejte mezi další adresy v `storage/config.php`:
+   `'platform' => ['domain' => 'localhost', 'mode' => 'path', 'aliases' => ['192.168.1.20']]`.
+   (Subdomény jako `tabor.localhost` z telefonu otevřít nejdou.)
+4. V telefonu otevřete `http://192.168.1.20:8080/` (web jednoho SVJ), nebo
+   `http://192.168.1.20:8080/tabor/` (platforma).
+
+Vestavěný server PHP je jen na zkoušení; do ostrého provozu nepatří.
+
+### Kolik společenství jedna instalace unese
+
+Měřeno na zkušebních 300 společenstvích (SQLite, varianta se složkami,
+jeden proces PHP): stránka webu 2–4 ms, přehled všech společenství
+v konzoli 0,4 s. Samotná aplikace tedy stovky webů zvládá; dřív narazíte
+na limity hostingu:
+
+- **odesílání e-mailů** – sdílené hostingy povolují řádově stovky zpráv
+  za hodinu; pozvánka pro jeden větší dům limit vyčerpá,
+- **místo na disku** – dokumenty jednoho domu mají desítky až stovky MB,
+- **počet databází** – s MySQL potřebuje každé společenství vlastní
+  databázi, což běžný hosting nedovolí; pro více SVJ proto použijte SQLite.
+
 ### Registrace, zkušební doba a předplatné
 
 - Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →
@@ -320,6 +349,10 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
 U textu aktuality, hromadného e-mailu a odpovědi na závadu nabídne
 tlačítka: napsat návrh z poznámek, uhladit, zkrátit, navrhnout odpověď.
 Výsledek pole přepíše a jde jedním kliknutím vrátit.
+
+Jakmile je na serveru nastaven, mají ho všechny weby zapnutý a v ceně;
+správce společenství ho může v Nastavení vypnout. Úvodní stránka služby
+ho pak uvádí mezi funkcemi.
 
 Zapnutí:
 

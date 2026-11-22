@@ -447,6 +447,9 @@ $route('POST', '/admin/nastaveni', function () {
         }
         $save($k, $v);
     }
+    if (ai_configured()) {   // volba se ukládá jen tam, kde je pomocník na serveru k dispozici – jinak by se omylem vypnul
+        $save('ai_enabled', isset($_POST['ai_enabled']) ? '1' : '0');
+    }
     // Menu: zaškrtnuté části se zobrazují, ostatní se schovají.
     $shown = (array) ($_POST['features'] ?? []);
     $save('hidden_features', implode(',', array_values(array_diff(array_keys(FEATURES), $shown))));

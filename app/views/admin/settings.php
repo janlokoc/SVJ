@@ -65,6 +65,7 @@
     <fieldset>
       <legend>Pozvánky členů domácnosti</legend>
       <label class="check"><input type="checkbox" name="invite_enabled"<?= setting_on('invite_enabled') ? ' checked' : '' ?>> Vlastníci mohou sami pozvat manžela, manželku nebo spoluvlastníka</label>
+      <?php if (ai_configured()): ?><label class="check"><input type="checkbox" name="ai_enabled"<?= setting_on('ai_enabled', true) ? ' checked' : '' ?>> <span>AI pomocník pro výbor <small>Pomáhá psát oznámení, e-maily a odpovědi na závady. Je v ceně. Text, který mu správce zadá, se odesílá ke zpracování společnosti Anthropic; po vypnutí se tlačítka pomocníka nezobrazují.</small></span></label><?php endif ?>
       <label class="check"><input type="checkbox" name="invite_by_tenants"<?= setting_on('invite_by_tenants', false) ? ' checked' : '' ?>> <span>Zvát mohou i nájemníci <small>Člověk pozvaný nájemníkem je vždy veden jako nájemník.</small></span></label>
       <div class="form-row">
         <label>Pozvaný vlastníkem je veden jako

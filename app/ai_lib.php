@@ -42,9 +42,14 @@ function ai_sdk_ready(): bool
     return $ready;
 }
 /** Pomocník je k dispozici: klíč v nastavení serveru, knihovna na místě a správce webu ho nemá vypnutý. */
+/** Na serveru je pomocník nastaven (klíč a knihovna), bez ohledu na to, zda ho konkrétní web má zapnutý. */
+function ai_configured(): bool
+{
+    return ai_settings()['key'] !== '' && ai_sdk_ready();
+}
 function ai_available(): bool
 {
-    return ai_settings()['key'] !== '' && setting('ai_off') !== '1' && ai_sdk_ready();
+    return ai_settings()['key'] !== '' && setting_on('ai_enabled', true) && ai_sdk_ready();
 }
 function ai_used(): int
 {

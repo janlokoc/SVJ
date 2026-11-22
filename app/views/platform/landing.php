@@ -10,6 +10,7 @@ $features = [
     ['Jednotky a vlastníci', 'Seznam jednotek s podíly, import vlastníků z katastru, pozvánky pro členy domácnosti.'],
     ['Odečty, rezervace, klíče', 'Samoodečty měřidel, rezervace společných prostor, evidence klíčů a čipů, termíny revizí.'],
     ['Bezpečnost a zálohy', 'Dvoufázové přihlášení, nesmazatelné záznamy o práci správců a záloha celého webu jedním tlačítkem.'],
+    ...(ai_configured() ? [['AI pomocník v ceně', 'Z pár poznámek napíše oznámení nebo e-mail vlastníkům, uhladí text a navrhne odpověď na nahlášenou závadu. Bez příplatku.']] : []),
     ['Pět jazyků', 'Čeština, slovenština, angličtina, ukrajinština a vietnamština – každý obyvatel si přepne sám.'],
 ];
 ?>
@@ -71,6 +72,7 @@ $features = [
     <div>
       <h3>Podpora a úpravy</h3>
       <table class="table price-table"><tbody>
+        <?php if (ai_configured()): ?><tr><td>AI pomocník pro výbor</td><td class="t-actions"><strong>v ceně</strong></td></tr><?php endif ?>
         <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '') { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
           <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
         <?php endforeach ?>
