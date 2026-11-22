@@ -748,3 +748,34 @@ html[data-style="vlidna"] .event-date { border-radius: 20px; }
 html[data-style="vlidna"] .site-header { border-bottom: 0; }
 html[data-style="vlidna"] .brand-text strong { font-weight: 800; }
 html[data-style="vlidna"] .table { border-width: 2px; }
+
+/* ===== Ankety, zápis, vývěska, platby na jednotku ===== */
+.survey-title { margin: 0; font-size: 1.25rem; }
+.survey-form { margin: .75rem 0; gap: .5rem; }
+.survey-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(80px, 180px) auto; gap: .75rem; align-items: center; padding: .25rem 0; }
+.survey-row strong { white-space: nowrap; }
+.is-debt { color: var(--accent); } .is-ok { color: var(--ok); }
+.pay-unit .pay { margin-top: 1rem; }
+.fill { border-bottom: 1px dotted var(--muted); min-width: 12rem; display: inline-block; }
+.fill-block { display: block; min-height: 5rem; border: 1px dashed var(--line); border-radius: 8px; padding: .6rem .8rem; color: var(--muted); }
+.minutes-hash { font-size: .8rem; color: var(--muted); overflow-wrap: anywhere; }
+.minutes-hash code { font-size: .78rem; }
+.board-card { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; border: 2px solid var(--ink); border-radius: var(--radius); padding: 1.5rem; margin-top: 1.5rem; }
+.board-card .qr { width: 220px; height: 220px; }
+.bare { display: block; }
+.board { padding: clamp(1rem, 3vw, 2.5rem); max-width: 1500px; margin-inline: auto; }
+.board-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; border-bottom: 3px solid var(--primary); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+.board-head h1 { margin: 0; font-size: clamp(2rem, 1.2rem + 3vw, 3.6rem); }
+.board-date { font-size: clamp(1rem, .8rem + 1vw, 1.5rem); font-weight: 600; color: var(--muted); margin: 0; }
+.board-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: clamp(1.5rem, 4vw, 3rem); align-items: start; }
+.board-post { border-top: 1px solid var(--line); padding: 1rem 0; }
+.board-post h3 { font-size: clamp(1.3rem, 1rem + 1vw, 1.9rem); margin-bottom: .3rem; }
+.board-post p { margin: 0; font-size: clamp(1rem, .9rem + .4vw, 1.25rem); }
+.board-post.is-pinned { border-top: 3px solid var(--accent); }
+.board aside { display: grid; gap: 1rem; }
+.board aside h2 { margin: .5rem 0 0; }
+.board-qr { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+.board-qr .qr { width: 130px; height: 130px; flex: none; }
+.board-qr p { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 800px) { .board-grid { grid-template-columns: minmax(0, 1fr); } .survey-row { grid-template-columns: minmax(0, 1fr) auto; } .survey-row .meter { grid-column: 1 / -1; grid-row: 2; } }
+@media print { .fill-block { border: 0; padding: 0; color: #000; min-height: 0; } .fill { border: 0; } .board-card { break-inside: avoid; } }

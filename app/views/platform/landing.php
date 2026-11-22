@@ -95,6 +95,7 @@ $features = [
   <details class="lp-faq"><summary>Co se stane po zkušební době?</summary><p>V administraci najdete platební údaje s QR kódem a před koncem zkušební doby Vám přijde připomenutí e-mailem. Když se rozhodnete nepokračovat, nic neplatíte – web se po <?= pset_int('grace_days', 0, 365) ?> dnech pozastaví.</p></details>
   <details class="lp-faq"><summary>Jak se platí?</summary><p>Bankovním převodem. V administraci najdete zálohovou fakturu s QR kódem; po připsání platby vystavíme fakturu. Platba kartou zatím není k dispozici.</p></details>
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
+  <?php if (pset('hosting_note') !== ''): ?><details class="lp-faq"><summary>Kde jsou data uložena?</summary><p><?= e(pset('hosting_note')) ?></p></details><?php endif ?>
   <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. Správce si kdykoli stáhne úplnou zálohu webu včetně dokumentů – i po skončení předplatného.</p></details>
   <details class="lp-faq"><summary>Můžeme mít vlastní doménu?</summary><p>Ano, web může běžet i na Vaší doméně. Nastavení je v ceníku jako samostatná položka.</p></details>
   <div class="actions lp-final"><?= $cta() ?></div>

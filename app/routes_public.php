@@ -311,6 +311,17 @@ $route('POST', '/obnova-hesla/([a-f0-9]{64})', $resetPassword);
 
 // ---------- Logo společenství ----------
 
+// Popis webu pro telefon: díky němu jde web „přidat na plochu“ a otevírat jako aplikaci.
+$route('GET', '/manifest.webmanifest', function () {
+    header('Content-Type: application/manifest+json; charset=utf-8');
+    header('Cache-Control: public, max-age=3600');
+    $color = LOOK_COLORS[site('look')] ?? LOOK_COLORS['les'];
+    echo json_encode(['name' => site('name'), 'short_name' => mb_substr(site('title'), 0, 12), 'start_url' => url('/'), 'scope' => url('/'), 'display' => 'standalone', 'lang' => 'cs',
+        'background_color' => '#ffffff', 'theme_color' => $color,
+        'icons' => [['src' => asset('icon-192.png'), 'sizes' => '192x192', 'type' => 'image/png'], ['src' => asset('icon-512.png'), 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any maskable']]],
+        JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+});
 $route('GET', '/logo', function () {
     $file = setting('logo');
     if (!preg_match('/^[a-f0-9]{32}\.(png|jpe?g)$/', $file) || !is_file(UPLOAD_DIR . '/' . $file)) {

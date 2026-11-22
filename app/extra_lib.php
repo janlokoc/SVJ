@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
 const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 
@@ -122,6 +122,13 @@ function crud_defs(): array
             'lead' => 'Evidence vydaných klíčů a čipů: komu, kdy a zda byly vráceny.',
             'fields' => ['label' => ['Označení (např. čip č. 12, klíč od kolárny)', 'text', true], 'unit_id' => ['Jednotka', 'select', false, $units], 'holder' => ['Komu vydáno', 'text'],
                 'issued_at' => ['Vydáno dne', 'date'], 'returned_at' => ['Vráceno dne', 'date'], 'note' => ['Poznámka', 'text']]],
+        'ukoly' => ['table' => 'tasks', 'title' => 'Úkoly a usnesení', 'one' => 'úkol', 'name' => 'title', 'order' => 'done, due_date IS NULL, due_date, id DESC',
+            'lead' => 'Co se na shromáždění nebo na výboru rozhodlo, kdo to má zařídit a do kdy. Vidí jen správci.',
+            'fields' => ['title' => ['Co je potřeba udělat', 'text', true], 'assignee' => ['Kdo to má na starosti', 'text'], 'due_date' => ['Termín', 'date'],
+                'source' => ['Z čeho úkol vzešel (usnesení, schůze)', 'text'], 'note' => ['Poznámka', 'text'], 'done' => ['Hotovo', 'check']]],
+        'dodavatele' => ['table' => 'suppliers', 'title' => 'Dodavatelé', 'one' => 'dodavatele', 'name' => 'name', 'order' => 'field, name',
+            'lead' => 'Firmy a řemeslníci, se kterými dům spolupracuje. Dodavatele pak můžete přiřadit k nahlášené závadě.',
+            'fields' => ['name' => ['Název nebo jméno', 'text', true], 'field' => ['Obor (instalatér, výtahy, úklid…)', 'text'], 'phone' => ['Telefon', 'text'], 'email' => ['E-mail', 'text'], 'note' => ['Poznámka', 'text']]],
         'odecty' => ['table' => 'readings', 'title' => 'Odečty měřidel', 'one' => 'odečet', 'name' => 'read_date', 'order' => 'read_date DESC, id DESC',
             'lead' => 'Stavy měřidel, které obyvatelé nahlásili sami nebo které jste zapsali za ně.',
             'fields' => ['unit_id' => ['Jednotka', 'select', true, fn() => unit_options()], 'kind' => ['Měřidlo', 'select', true, fn() => READING_KINDS], 'meter_no' => ['Číslo měřidla', 'text'],
@@ -177,7 +184,7 @@ function daily_tasks(): void
 
 /** Tabulky v pořadí, v jakém je lze obnovit (nejdřív ty, na které se ostatní odkazují). */
 const BACKUP_TABLES = ['users', 'units', 'user_units', 'posts', 'documents', 'post_documents', 'contacts', 'events', 'event_documents', 'forum_posts', 'tickets',
-    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log'];
+    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log', 'surveys', 'survey_options', 'survey_answers', 'tasks', 'suppliers', 'unit_accounts'];
 
 function backup_data(): array
 {

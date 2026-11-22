@@ -44,6 +44,7 @@
       <label>Telefon <input type="text" name="op_phone" value="<?= e($v['op_phone']) ?>"></label>
     </div>
     <label>Zápis v rejstříku <input type="text" name="op_register" value="<?= e($v['op_register']) ?>" placeholder="Zapsáno u Krajského soudu v Brně, oddíl C, vložka 12345"></label>
+    <label>Kde jsou data uložena (zobrazí se v častých otázkách) <input type="text" name="hosting_note" value="<?= e($v['hosting_note']) ?>" placeholder="Servery v České republice, denní zálohy na druhé místo v EU."></label>
     <h2>Faktury</h2>
     <div class="form-row">
       <label>Splatnost zálohové faktury (dní) <input type="number" name="invoice_due_days" value="<?= e($v['invoice_due_days']) ?>" min="0" max="90" required></label>

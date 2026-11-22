@@ -271,7 +271,7 @@ Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pr
 Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a poté údaje smaže, nejpozději do 6 měsíců, ledaže právní předpis ukládá jejich další uchování.
 TXT;
 const PLATFORM_DEFAULTS = [
-    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'trial_days' => '30', 'grace_days' => '14',
+    'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '60', 'price_domain' => '999', 'domain_dns' => '', 'hosting_note' => '', 'trial_days' => '30', 'grace_days' => '14',
     'period' => 'year', 'price_first' => '999', 'price_next' => '1499',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
@@ -466,10 +466,10 @@ function cz_iban(string $account): ?string
     return 'CZ' . sprintf('%02d', 98 - $mod97($bban . '123500')) . $bban;
 }
 /** Text QR platby (český standard „QR Platba“, formát SPAYD), který přečte bankovní aplikace. */
-function spayd(string $iban, int $amount, string $vs, string $message, string $recipient = ''): string
+function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = ''): string
 {
     $clean = fn(string $s, int $max) => substr(trim(str_replace('*', ' ', strtoupper(ascii_text($s)))), 0, $max);
-    return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK*X-VS:' . $vs . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
+    return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '') . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
 }
 /** Jednou denně: připomene blížící se konec zkušební doby nebo předplatného a upozorní na pozastavení. */
 function platform_daily(): void

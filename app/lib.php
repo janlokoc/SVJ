@@ -23,6 +23,7 @@ if (PHP_SAPI === 'cli') {
 const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська', 'vi' => 'Tiếng Việt'];
 const STYLES = ['klasik' => 'Klasická – patkové nadpisy, klidné karty', 'modern' => 'Moderní – bezpatkové písmo, vzdušné plochy', 'vecna' => 'Věcná – rovné hrany, barevná hlavička',
     'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy'];
+const LOOK_COLORS = ['les' => '#1d5446', 'more' => '#1b4f72', 'cihla' => '#8c3b2a', 'grafit' => '#2f3a45', 'svestka' => '#5b2a6e'];
 const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá'];
 /** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
 const FEATURES = [
@@ -32,6 +33,9 @@ const FEATURES = [
     'diskuze' => ['Diskuze', ['/diskuze'], ['/admin/diskuze']],
     'zavady' => ['Závady a požadavky', ['/zavady'], ['/admin/zavady']],
     'hlasovani' => ['Hlasování', ['/hlasovani'], ['/admin/hlasovani']],
+    'ankety' => ['Ankety', ['/ankety'], ['/admin/ankety']],
+    'platby' => ['Platby a zálohy', ['/platby'], ['/admin/platby']],
+    'terminy' => ['Termíny', ['/terminy'], []],
     'odecty' => ['Odečty měřidel', ['/odecty'], ['/admin/odecty']],
     'rezervace' => ['Rezervace', ['/rezervace'], ['/admin/rezervace', '/admin/prostory']],
 ];
@@ -116,6 +120,7 @@ function db_mysql(string $tenant): PDO
         seed_for($pdo, $tenant);
         $pdo->exec("INSERT INTO settings (`key`, value) VALUES ('schema_version', '6')");
         $pdo->commit();
+        schema_v7($pdo, true);
         return $pdo;
     }
     $mysqlVersion = (int) $pdo->query("SELECT value FROM settings WHERE `key` = 'schema_version'")->fetchColumn();
@@ -135,7 +140,34 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 6) {
         $pdo->exec("UPDATE settings SET value = '6' WHERE `key` = 'schema_version'");
     }
+    if ($mysqlVersion < 7) {
+        schema_v7($pdo, true);
+    }
     return $pdo;
+}
+/** Sedmá verze databáze: ankety, úkoly výboru, dodavatelé, platby na jednotku a dodavatel u závady. */
+function schema_v7(PDO $pdo, bool $mysql): void
+{
+    $id = $mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    $s = fn(int $n) => $mysql ? "VARCHAR($n) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''";
+    $text = $mysql ? 'TEXT NULL' : "TEXT NOT NULL DEFAULT ''";
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $int = $mysql ? 'INT' : 'INTEGER';
+    $statements = [
+        "CREATE TABLE surveys (id $id, title {$s(255)}, body $text, closes_at {$s(10)}, anonymous $int NOT NULL DEFAULT 1, published $int NOT NULL DEFAULT 1, created_at {$s(19)})$end",
+        "CREATE TABLE survey_options (id $id, survey_id $int NOT NULL, label {$s(255)}, sort $int NOT NULL DEFAULT 0, FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE)$end",
+        "CREATE TABLE survey_answers (survey_id $int NOT NULL, user_id $int NOT NULL, option_id $int NOT NULL, answered_at {$s(19)}, PRIMARY KEY (survey_id, user_id),
+            FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE, FOREIGN KEY (option_id) REFERENCES survey_options(id) ON DELETE CASCADE, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)$end",
+        "CREATE TABLE tasks (id $id, title {$s(255)}, note $text, assignee {$s(191)}, due_date " . ($mysql ? 'DATE NULL' : 'TEXT') . ", done $int NOT NULL DEFAULT 0, source {$s(255)}, created_at {$s(19)})$end",
+        "CREATE TABLE suppliers (id $id, name {$s(191)}, field {$s(191)}, phone {$s(60)}, email {$s(191)}, note $text)$end",
+        "CREATE TABLE unit_accounts (unit_id $int PRIMARY KEY, prescribed " . ($mysql ? 'DECIMAL(12,2)' : 'REAL') . " NOT NULL DEFAULT 0, balance " . ($mysql ? 'DECIMAL(12,2)' : 'REAL') . " NOT NULL DEFAULT 0, vs {$s(20)},
+            as_of {$s(10)}, note {$s(255)}, reminded_at {$s(19)}, FOREIGN KEY (unit_id) REFERENCES units(id) ON DELETE CASCADE)$end",
+        'ALTER TABLE tickets ADD COLUMN supplier_id ' . $int . ' NULL',
+    ];
+    foreach ($statements as $sql) {
+        $pdo->exec($sql);
+    }
+    $mysql ? $pdo->exec("UPDATE settings SET value = '7' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 7');
 }
 function db(): PDO
 {
@@ -176,6 +208,7 @@ function open_database(string $storage, string $tenant): PDO
         seed_for($pdo, $tenant);
         $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
+        schema_v7($pdo, false);
         return $pdo;
     }
     $version = (int) $pdo->query('PRAGMA user_version')->fetchColumn();
@@ -280,6 +313,9 @@ SQL);
         $pdo->exec(file_get_contents(__DIR__ . '/schema.v6.sql'));
         $pdo->exec('PRAGMA user_version = 6');
         $pdo->commit();
+    }
+    if ($version < 7) {
+        schema_v7($pdo, false);
     }
     return $pdo;
 }
@@ -1152,6 +1188,9 @@ const ADMIN_ACTIONS = [
     '/admin/terminy/novy' => ['Nový termín', null, null],
     '/admin/terminy/(\d+)' => ['Úprava termínu', 'events', 'title'],
     '/admin/terminy/(\d+)/smazat' => ['Smazání termínu', 'events', 'title'],
+    '/admin/ankety/nova' => ['Nová anketa', null, null],
+    '/admin/ankety/(\d+)' => ['Úprava ankety', 'surveys', 'title'],
+    '/admin/ankety/(\d+)/smazat' => ['Smazání ankety', 'surveys', 'title'],
     '/admin/terminy/(\d+)/ucast' => ['Zápis účasti na shromáždění', 'events', 'title'],
     '/admin/uzivatele/novy' => ['Založení účtu', null, null],
     '/admin/uzivatele/(\d+)' => ['Úprava účtu', 'users', 'email'],

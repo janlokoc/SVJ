@@ -225,7 +225,7 @@ $route('POST', '/diskuze/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/zavady', function () {
     $u = require_login();
-    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => all('SELECT * FROM tickets WHERE user_id = ? ORDER BY id DESC', [$u['id']])]);
+    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => all('SELECT t.*, s.name AS supplier_name FROM tickets t LEFT JOIN suppliers s ON s.id = t.supplier_id WHERE t.user_id = ? ORDER BY t.id DESC', [$u['id']])]);
 });
 
 $route('POST', '/zavady', function () {

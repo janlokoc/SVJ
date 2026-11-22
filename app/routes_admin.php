@@ -371,7 +371,7 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/admin/zavady', function () {
     require_admin();
-    render('admin/tickets', ['title' => 'Závady a požadavky', 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
+    render('admin/tickets', ['title' => 'Závady a požadavky', 'suppliers' => all('SELECT * FROM suppliers ORDER BY field, name'), 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
         FROM tickets t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.status = 'done', t.id DESC")]);
 });
 $route('POST', '/admin/zavady/(\d+)', function (int $id) {
@@ -381,8 +381,9 @@ $route('POST', '/admin/zavady/(\d+)', function (int $id) {
     // Správce může opravit i text hlášení; prázdná pole nechávají původní znění.
     $subject = post('subject') !== '' ? mb_substr(post('subject'), 0, 150) : $t['subject'];
     $body = post('body') !== '' ? mb_substr(post('body'), 0, 5000) : $t['body'];
-    q("UPDATE tickets SET status = ?, admin_note = ?, subject = ?, location = ?, body = ?, updated_at = datetime('now','localtime') WHERE id = ?",
-        [$status, post('admin_note'), $subject, isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'], $body, $id]);
+    $supplier = ctype_digit(post('supplier_id')) && val('SELECT 1 FROM suppliers WHERE id = ?', [post('supplier_id')]) ? (int) post('supplier_id') : null;
+    q("UPDATE tickets SET status = ?, admin_note = ?, subject = ?, location = ?, body = ?, supplier_id = ?, updated_at = datetime('now','localtime') WHERE id = ?",
+        [$status, post('admin_note'), $subject, isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'], $body, $supplier, $id]);
     flash('Uloženo.');
     redirect('/admin/zavady');
 });

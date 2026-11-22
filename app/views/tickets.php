@@ -15,7 +15,7 @@
     <?php foreach ($tickets as $t): ?>
       <article class="ticket">
         <header><h3><?= e($t['subject']) ?></h3><span class="status status-<?= e($t['status']) ?>"><?= TICKET_STATUS[$t['status']] ?></span></header>
-        <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?></p>
+        <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?><?= !empty($t['supplier_name']) ? ' · řeší: <span translate="no">' . e($t['supplier_name']) . '</span>' : '' ?></p>
         <div class="prose"><?= format_text($t['body']) ?></div>
         <?php if ($t['admin_note']): ?><div class="callout"><strong>Odpověď výboru:</strong> <?= format_text($t['admin_note']) ?></div><?php endif ?>
       </article>

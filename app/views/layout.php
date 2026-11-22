@@ -2,7 +2,7 @@
 $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
-$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/terminy' => 'Termíny', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
+$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
 // Schované části webu z menu vypadnou.
 $hiddenPaths = [];
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
@@ -14,7 +14,8 @@ $nav = array_diff_key($nav, array_flip($hiddenPaths));
 $more = array_diff_key($more, array_flip($hiddenPaths));
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
-    '/admin/hlasovani' => 'Hlasování', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
+    '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
+    '/admin/vyveska' => 'Vývěska', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
     '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Rezervace', '/admin/prostory' => 'Prostory', '/admin/klice' => 'Klíče a čipy',
     '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
 if (!reports_central()) {
@@ -47,6 +48,9 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <title><?= e(!empty($title) ? $title . ' · ' . site('name') : trim(site('name') . ' ' . site('accent'))) ?></title>
 <meta name="description" content="<?= e(site('full')) ?> – aktuality, dokumenty a kontakty.">
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
+<link rel="manifest" href="<?= url('/manifest.webmanifest') ?>">
+<link rel="apple-touch-icon" href="<?= asset('icon-192.png') ?>">
+<meta name="theme-color" content="<?= e(LOOK_COLORS[site('look')] ?? LOOK_COLORS['les']) ?>">
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>
@@ -96,10 +100,10 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <?php endif ?>
 <?php if ($inAdmin):
     // Položky administrace seskupené podle toho, k čemu slouží; skupina bez dostupných položek se nezobrazí.
-    $adminGroups = ['Obsah webu' => ['/admin/aktuality', '/admin/dokumenty', '/admin/kontakty', '/admin/terminy'],
-        'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/zavady'],
-        'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/klice'],
-        'Provoz domu' => ['/admin/odecty', '/admin/revize', '/admin/rezervace', '/admin/prostory'],
+    $adminGroups = ['Obsah webu' => ['/admin/aktuality', '/admin/dokumenty', '/admin/kontakty', '/admin/terminy', '/admin/vyveska'],
+        'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/ankety', '/admin/zavady'],
+        'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/klice'],
+        'Provoz domu' => ['/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace', '/admin/prostory'],
         'Správa webu' => ['/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/hlaseni']];
     $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : str_starts_with($path, $href);
     $adminCurrent = 'Přehled';
