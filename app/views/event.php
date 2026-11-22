@@ -8,11 +8,17 @@
     <a class="btn btn-small btn-ghost" href="<?= e(google_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer">Google Kalendář</a>
     <a class="more" href="<?= url('/terminy') ?>">Všechny termíny <?= icon('arrow') ?></a></p>
 
-  <?php if ($ev['program'] !== ''): ?><h2>Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
-  <?php if ($evDocs): ?><h2>Podklady</h2><?php $docs = $evDocs; require __DIR__ . '/_doclist.php'; ?><?php endif ?>
-  <?php if ($evPolls): ?><h2>Hlasování</h2><ul class="thread-list"><?php foreach ($evPolls as $pl): ?><li><a href="<?= url('/hlasovani/' . $pl['id']) ?>"><span class="thread-title"><?= e($pl['title']) ?></span><span class="thread-meta"><?= POLL_STATES[poll_state($pl)] ?></span></a></li><?php endforeach ?></ul><?php endif ?>
   <?php if ($ev['rsvp']): ?>
     <section class="rsvp">
+      <?php if ($att['units']): ?>
+      <div class="quorum<?= $att['quorate'] ? ' is-ok' : '' ?>">
+        <p class="eyebrow">Zatím přihlášeno</p>
+        <p class="quorum-num"><?= percent_cz($att['percent']) ?> <small><?= $att['byShare'] ? 'všech hlasů' : 'jednotek' ?></small></p>
+        <div class="meter" role="img" aria-label="Přihlášeno <?= percent_cz($att['percent']) ?>, potřeba více než <?= $att['threshold'] ?> %"><span class="meter-fill" data-width="<?= round(min(100, $att['percent']), 1) ?>"></span><span class="meter-mark" data-left="<?= $att['threshold'] ?>"></span></div>
+        <p><?= $att['quorate'] ? 'Podle přihlášek bude shromáždění usnášeníschopné.' : 'Aby bylo shromáždění usnášeníschopné, je potřeba více než ' . $att['threshold'] . ' %.' ?></p>
+        <p class="quorum-counts">Z <?= $att['units'] ?> jednotek: přijde osobně <strong><?= $att['counts']['yes'] ?></strong>, v zastoupení <strong><?= $att['counts']['proxy'] ?></strong>, nepřijde <strong><?= $att['counts']['no'] ?></strong>, zatím bez odpovědi <strong><?= $att['counts']['none'] ?></strong>.</p>
+      </div>
+      <?php endif ?>
       <h2>Přijdete?</h2>
       <?php if (!$mine): ?>
         <p class="note">Účast potvrzuje vlastník za svou jednotku. K Vašemu účtu zatím není přiřazena žádná jednotka, nebo nejste vedeni jako vlastník – obraťte se prosím na výbor.</p>
@@ -34,16 +40,11 @@
         </form>
       <?php endforeach ?>
       <?php if ($mine && $open): ?><p class="hint">Za jednotku stačí jedna odpověď, kterou může kdykoli změnit kterýkoli z jejích vlastníků. Pro zastoupení je potřeba plná moc – vzor najdete v <a href="<?= url('/dokumenty?kategorie=formulare') ?>">Dokumentech</a>.</p><?php endif ?>
-
-      <?php if ($att['units']): ?>
-      <div class="quorum<?= $att['quorate'] ? ' is-ok' : '' ?>">
-        <p class="eyebrow">Zatím přihlášeno</p>
-        <p class="quorum-num"><?= percent_cz($att['percent']) ?> <small><?= $att['byShare'] ? 'všech hlasů' : 'jednotek' ?></small></p>
-        <div class="meter" role="img" aria-label="Přihlášeno <?= percent_cz($att['percent']) ?>, potřeba více než <?= $att['threshold'] ?> %"><span class="meter-fill" data-width="<?= round(min(100, $att['percent']), 1) ?>"></span><span class="meter-mark" data-left="<?= $att['threshold'] ?>"></span></div>
-        <p><?= $att['quorate'] ? 'Podle přihlášek bude shromáždění usnášeníschopné.' : 'Aby bylo shromáždění usnášeníschopné, je potřeba více než ' . $att['threshold'] . ' %.' ?></p>
-      </div>
-      <?php endif ?>
     </section>
   <?php endif ?>
+
+  <?php if ($ev['program'] !== ''): ?><h2>Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
+  <?php if ($evDocs): ?><h2>Podklady</h2><?php $docs = $evDocs; require __DIR__ . '/_doclist.php'; ?><?php endif ?>
+  <?php if ($evPolls): ?><h2>Hlasování</h2><ul class="thread-list"><?php foreach ($evPolls as $pl): ?><li><a href="<?= url('/hlasovani/' . $pl['id']) ?>"><span class="thread-title"><?= e($pl['title']) ?></span><span class="thread-meta"><?= POLL_STATES[poll_state($pl)] ?></span></a></li><?php endforeach ?></ul><?php endif ?>
   <?php if (is_admin()): ?><p><a class="btn btn-small btn-ghost" href="<?= url('/admin/terminy/' . $ev['id'] . '/ucast') ?>">Přehled účasti pro výbor</a></p><?php endif ?>
 </div>
