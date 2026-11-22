@@ -20,8 +20,9 @@
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hlavni-menu"><?= icon('menu') ?><span>Menu</span></button>
     <nav class="site-nav" id="hlavni-menu" aria-label="Hlavní menu">
       <ul>
-        <li><a href="<?= url('/') ?>#funkce">Co web umí</a></li>
-        <li><a href="<?= url('/') ?>#vzhledy">Vzhledy</a></li>
+        <li><a href="<?= url('/') ?>#funkce">Čím se lišíme</a></li>
+        <li><a href="<?= url('/') ?>#vzhledy">Šablony</a></li>
+        <li><a href="<?= url('/') ?>#vse">Funkce</a></li>
         <li><a href="<?= url('/') ?>#cenik">Ceník</a></li>
         <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
       </ul>

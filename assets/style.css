@@ -784,3 +784,26 @@ html[data-style="vlidna"] .table { border-width: 2px; }
 .ai-status { font-size: .9rem; font-weight: 600; color: var(--ok); }
 .ai-status.is-bad { color: var(--accent); }
 .ai-box .hint { flex-basis: 100%; margin: 0; font-size: .82rem; }
+
+/* ===== Úvodní stránka služby: čím se lišíme, šablony, přehled funkcí ===== */
+.lp-points { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem .6rem; padding: 0; margin: 0 0 1.5rem; }
+.lp-points li { padding: .25rem .8rem; border-radius: 999px; background: var(--soft); color: var(--primary); font-weight: 600; font-size: .92rem; }
+.lp-unique { list-style: none; counter-reset: u; padding: 0; margin: 2rem 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 1.25rem; }
+.lp-unique li { counter-increment: u; position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.5rem 1.5rem 1.4rem; box-shadow: var(--shadow); }
+.lp-unique li::before { content: counter(u, decimal-leading-zero); display: block; font: 500 1.1rem var(--display); color: var(--accent); margin-bottom: .6rem; letter-spacing: .04em; }
+.lp-unique h3 { font-size: 1.3rem; margin-bottom: .4rem; }
+.lp-unique p { margin: 0; color: var(--muted); }
+.lp-unique li:first-child { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.lp-unique li:first-child p { color: color-mix(in srgb, var(--on-primary) 82%, transparent); }
+.lp-unique li:first-child::before { color: var(--on-primary); opacity: .75; }
+.lp-style-form { margin-top: 1.5rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+.lp-style-form .look-picker { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); max-width: 900px; }
+.lp-style-form .look { display: flex; align-items: center; gap: .6rem; padding: .5rem .7rem; border: 1.5px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; background: var(--bg); }
+.lp-looks figcaption { display: grid; gap: .1rem; }
+.lp-looks figcaption span { color: var(--muted); font-weight: 400; font-size: .88rem; }
+.lp-band-soft { background: var(--soft); border-color: transparent; }
+.lp-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1.5rem 2.5rem; margin-top: 1.5rem; }
+.lp-groups h3 { font-size: 1.05rem; border-bottom: 2px solid var(--primary); padding-bottom: .4rem; }
+.lp-check { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+.lp-check li { position: relative; padding-left: 1.5rem; color: var(--ink); font-size: .97rem; line-height: 1.4; }
+.lp-check li::before { content: ""; position: absolute; left: .1rem; top: .35rem; width: .7rem; height: .4rem; border-left: 2.5px solid var(--ok); border-bottom: 2.5px solid var(--ok); transform: rotate(-45deg); }
