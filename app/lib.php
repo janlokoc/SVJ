@@ -312,7 +312,7 @@ function site(string $key): string
 /** Označení vchodů v domě; první prázdná položka znamená „bez vchodu“. */
 function entrances(): array
 {
-    $list = array_values(array_unique(array_filter(array_map(fn($x) => mb_strtoupper(trim($x)), explode(',', site('entrances'))), fn($x) => preg_match('/^[\p{L}\p{N}]{1,3}$/u', $x))));
+    $list = array_values(array_unique(array_filter(array_map(fn($x) => mb_strtoupper(trim($x)), explode(',', site('entrances'))), fn($x) => preg_match('/^[\p{L}\p{N}]{1,5}$/u', $x))));
     return ['', ...array_slice($list, 0, 26)];
 }
 function unit_prefix(): string
@@ -644,6 +644,14 @@ function import_external_files(int $limit): array
     foreach ($rows as $r) {
         $ext = strtolower(pathinfo($r['original_name'], PATHINFO_EXTENSION));
         $data = in_array($ext, ALLOWED_EXT, true) ? http_download($r['external_url']) : null;
+        if (($data === null || $data === '') && in_array($ext, ALLOWED_EXT, true)) {
+            // Některé soubory má původní web uložené pod názvem bez diakritiky, i když na ně odkazuje s diakritikou.
+            $cut = strrpos($r['external_url'], '/') + 1;
+            $plain = rawurlencode(strip_accents(rawurldecode(substr($r['external_url'], $cut))));
+            if ($plain !== substr($r['external_url'], $cut)) {
+                $data = http_download(substr($r['external_url'], 0, $cut) . $plain);
+            }
+        }
         if ($data === null || $data === '') {
             $failed++;
             q("UPDATE documents SET external_url = replace(external_url, 'https://', 'https-failed://') WHERE id = ?", [$r['id']]);
@@ -654,9 +662,20 @@ function import_external_files(int $limit): array
         q('UPDATE documents SET filename = ?, size = ?, external_url = NULL WHERE id = ?', [$name, strlen($data), $r['id']]);
         $done++;
     }
-    // Neúspěšné pokusy vrátíme zpět, aby šly zkusit znovu při dalším spuštění.
-    q("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
-    return [$done, $failed, (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL')];
+    // Neúspěšné se odloží, dokud se nevyzkouší všechny ostatní – jinak by se pořád dokola zkoušely tytéž nedostupné soubory.
+    // Teprve když nezbývá nic nevyzkoušeného, vrátí se zpět a příští spuštění je zkusí znovu.
+    $untried = (int) val("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%'");
+    if ($untried === 0) {
+        q("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
+    }
+    return [$done, $failed, $untried];
+}
+function strip_accents(string $s): string
+{
+    static $map = ['á' => 'a', 'č' => 'c', 'ď' => 'd', 'é' => 'e', 'ě' => 'e', 'í' => 'i', 'ň' => 'n', 'ó' => 'o', 'ř' => 'r', 'š' => 's', 'ť' => 't', 'ú' => 'u', 'ů' => 'u', 'ý' => 'y', 'ž' => 'z',
+        'Á' => 'A', 'Č' => 'C', 'Ď' => 'D', 'É' => 'E', 'Ě' => 'E', 'Í' => 'I', 'Ň' => 'N', 'Ó' => 'O', 'Ř' => 'R', 'Š' => 'S', 'Ť' => 'T', 'Ú' => 'U', 'Ů' => 'U', 'Ý' => 'Y', 'Ž' => 'Z',
+        'ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ľ' => 'l', 'ĺ' => 'l', 'ô' => 'o', 'ŕ' => 'r', 'Ä' => 'A', 'Ö' => 'O', 'Ü' => 'U', 'Ľ' => 'L', 'Ô' => 'O'];
+    return strtr($s, $map);
 }
 function post_documents(int $postId): array
 {
@@ -1035,20 +1054,20 @@ function parse_cadastre(string $text): array
     $cps = array_values(array_unique(array_column($units, 'cp')));
     sort($cps);
     $letters = array_values(array_filter(entrances()));
+    // Má-li dům víc čísel popisných, než kolik je nastaveno vchodů (typicky dům, kde se jednotky značí „3024/7“),
+    // označí se vchody přímo čísly popisnými a jednotka se jmenuje stejně jako v katastru.
+    $byCp = count($cps) > count($letters);
     $total = 0.0;
     foreach ($units as &$u) {
-        $u['entrance'] = $letters[array_search($u['cp'], $cps, true)] ?? '';
+        $u['entrance'] = $byCp ? (string) $u['cp'] : ($letters[array_search($u['cp'], $cps, true)] ?? '');
         $u['share'] = $u['num'] . '/' . $u['den'];
         $u['owner_contact'] = mb_substr(implode("\n", array_map(fn($o) => $o['contact'], $u['owners'])), 0, 2000);
         $u['owner_note'] = mb_substr(implode('; ', array_map(fn($o) => $o['name'] . (count($u['owners']) > 1 ? ' (' . $o['share'] . ')' : ''), $u['owners'])), 0, 255);
         $total += $u['num'] / $u['den'];
     }
     unset($u);
-    if (count($cps) > count($letters)) {
-        $warnings[] = 'Stavba má víc čísel popisných než vchodů A–D; jednotky z dalších vchodů zůstaly bez označení vchodu.';
-    }
     uasort($units, fn($a, $b) => [$a['cp'], (int) $a['number']] <=> [$b['cp'], (int) $b['number']]);
-    return ['units' => $units, 'warnings' => $warnings, 'total' => $total];
+    return ['units' => $units, 'warnings' => $warnings, 'total' => $total, 'by_cp' => $byCp ? array_map('strval', $cps) : []];
 }
 
 // ---------- Import uživatelů a pozvánky od správce ----------

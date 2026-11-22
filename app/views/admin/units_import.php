@@ -10,12 +10,15 @@
     <p class="hint">Na webu nahlizenidokn.cuzk.gov.cz otevřete stránku stavby (bytového domu), označte celý její obsah (Ctrl+A), zkopírujte (Ctrl+C) a vložte sem. Před uložením uvidíte náhled.</p>
     <div class="actions">
       <button class="btn<?= $parsed && $parsed['units'] ? ' btn-ghost' : '' ?>" type="submit" name="action" value="preview">Zobrazit náhled</button>
-      <?php if ($parsed && $parsed['units']): ?><button class="btn btn-big" type="submit" name="action" value="save">Uložit <?= count($parsed['units']) ?> jednotek</button><?php endif ?>
+      <?php if ($parsed && $parsed['units']): $extra = count(array_diff_key($existing, array_flip(array_map(fn($u) => $u['entrance'] . '/' . $u['number'], $parsed['units'])))); if ($extra): ?>
+        <label class="check"><input type="checkbox" name="remove_others"> <span>Smazat <?= $extra ?> jednotek, které ve výpisu z katastru nejsou <small>Jen jednotky, ke kterým není přiřazen žádný účet. Hodí se po dřívějším chybném importu.</small></span></label>
+      <?php endif ?><button class="btn btn-big" type="submit" name="action" value="save">Uložit <?= count($parsed['units']) ?> jednotek</button><?php endif ?>
     </div>
   </form>
   <?php if ($parsed && $parsed['units']): ?>
     <h2>Náhled</h2>
     <p>Nalezeno jednotek: <strong><?= count($parsed['units']) ?></strong>. Součet podílů: <strong><?= percent_cz($parsed['total'] * 100) ?></strong><?= abs($parsed['total'] - 1) < 0.0001 ? ' – sedí.' : ' – nevychází na 100 %, zkontrolujte, zda je text úplný.' ?></p>
+    <?php if ($parsed['by_cp']): ?><div class="flash flash-info">Dům má <?= count($parsed['by_cp']) ?> čísel popisných (<?= e(implode(', ', $parsed['by_cp'])) ?>). Vchody se označí těmito čísly a jednotky se budou jmenovat stejně jako v katastru, například <?= e(array_key_first($parsed['units'])) ?>.</div><?php endif ?>
     <?php foreach ($parsed['warnings'] as $w): ?><div class="flash flash-info"><?= e($w) ?></div><?php endforeach ?>
     <p class="hint">Uložením se u existujících jednotek přepíše vlastník dle evidence a podíl. Patro, poznámka a přiřazené účty zůstanou. Adresy vlastníků z katastru se uloží k jednotce pro seznam členů a doručování; vidí je jen správci webu.</p>
     <table class="table">
@@ -23,7 +26,7 @@
       <tbody>
       <?php foreach ($parsed['units'] as $key => $u): $ex = $existing[$u['entrance'] . '/' . $u['number']] ?? null; ?>
         <tr>
-          <td data-label="Jednotka"><strong><?= e(unit_name($u)) ?></strong></td>
+          <td data-label="Jednotka"><strong><?= e($parsed['by_cp'] ? $u['entrance'] . '/' . $u['number'] : unit_name($u)) ?></strong></td>
           <td data-label="V katastru"><?= e($key) ?></td>
           <td data-label="Vlastník dle evidence"><?= e($u['owner_note']) ?></td>
           <td data-label="Podíl"><?= e($u['share']) ?></td>

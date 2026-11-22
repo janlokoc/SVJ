@@ -24,7 +24,7 @@
         </g>
         <g class="house-door">
           <?php foreach ($doors as $i => $l): $x = 10 + $i * 100; ?>
-            <rect x="<?= $x + 36 ?>" y="152" width="24" height="38" rx="3"/><text x="<?= $x + 48 ?>" y="178" text-anchor="middle"><?= e(mb_strtolower($l)) ?></text>
+            <rect x="<?= $x + 36 ?>" y="152" width="24" height="38" rx="3"/><text x="<?= $x + 48 ?>" y="178" text-anchor="middle"><?= mb_strlen($l) <= 2 ? e(mb_strtolower($l)) : '' ?></text>
           <?php endforeach ?>
         </g>
         <rect class="house-ground" x="0" y="190" width="<?= $hw ?>" height="4" rx="2"/>

@@ -66,6 +66,14 @@
     <button class="btn" type="submit">Vytvořit účet a zobrazit pozvánku</button>
     <p class="hint">Do obsahu webu společenství hlavní správce nevidí; přístup má jen jeho výbor. Vytvoření účtu správce se zapisuje do záznamů platformy.</p>
   </form>
+  <form method="post" action="<?= url('/svj/' . $t['slug'] . '/import') ?>" enctype="multipart/form-data" class="card form">
+    <h2>Import obsahu ze starého webu</h2>
+    <?= csrf_field() ?>
+    <p>Nahraje aktuality, dokumenty, kontakty a název ze souboru připraveného převodem původního webu (formát JSON). Účty, jednotky ani hlasování se nemění.</p>
+    <label>Soubor s obsahem <input type="file" name="file" accept=".json,application/json" required></label>
+    <label class="check"><input type="checkbox" name="replace" checked> <span>Nahradit dosavadní aktuality, dokumenty a kontakty <small>Hodí se u nově založeného webu, který obsahuje jen uvítací text. Bez zaškrtnutí se obsah přidá ke stávajícímu.</small></span></label>
+    <button class="btn" type="submit" data-confirm-import>Importovat obsah</button>
+  </form>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/smazat') ?>" class="card form" data-confirm="Opravdu nenávratně smazat web „<?= e($t['name']) ?>“ včetně všech dat?">
     <h2>Smazat společenství</h2>
     <?= csrf_field() ?>

@@ -695,7 +695,24 @@ $cadastreImport = function () {
         }
         $parsed = parse_cadastre($text);
         if ($parsed['units'] && post('action') === 'save') {
-            $new = $updated = 0;
+            $new = $updated = $removed = 0;
+            if ($parsed['by_cp']) {
+                // Vchody se označí čísly popisnými a jednotky se jmenují jako v katastru (bez společné předpony).
+                foreach (['site_entrances' => implode(',', $parsed['by_cp']), 'site_unit_prefix' => ''] as $k => $v) {
+                    q('DELETE FROM settings WHERE `key` = ?', [$k]);
+                    q('INSERT INTO settings (`key`, value) VALUES (?,?)', [$k, $v]);
+                }
+            }
+            if (isset($_POST['remove_others'])) {
+                // Úklid po dřívějším chybném importu: jednotky, které ve výpisu nejsou a nikdo k nim není přiřazen.
+                $keep = array_map(fn($u) => $u['entrance'] . '/' . $u['number'], $parsed['units']);
+                foreach (all('SELECT u.id, u.entrance, u.number FROM units u WHERE NOT EXISTS (SELECT 1 FROM user_units uu WHERE uu.unit_id = u.id)') as $old) {
+                    if (!in_array($old['entrance'] . '/' . $old['number'], $keep, true)) {
+                        q('DELETE FROM units WHERE id = ?', [$old['id']]);
+                        $removed++;
+                    }
+                }
+            }
             foreach ($parsed['units'] as $u) {
                 $id = val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$u['entrance'], $u['number']]);
                 if ($id) {
@@ -706,8 +723,9 @@ $cadastreImport = function () {
                     $new++;
                 }
             }
-            audit('units_imported', "nových $new, aktualizovaných $updated");
-            flash("Import hotov: nových jednotek $new, aktualizovaných $updated. Účty přiřazené k jednotkám zůstaly beze změny.");
+            audit('units_imported', "nových $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : ''));
+            setting('__reset');
+            flash("Import hotov: nových jednotek $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : '') . '. Účty přiřazené k jednotkám zůstaly beze změny.');
             redirect('/admin/jednotky');
         }
     }

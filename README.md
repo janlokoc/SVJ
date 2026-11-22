@@ -195,6 +195,22 @@ zobrazuje úvodní stránku služby a `/sprava` konzoli hlavního správce.
 Na vlastním počítači fungují adresy `tabor.localhost:8080` v běžných
 prohlížečích bez dalšího nastavení.
 
+### Import obsahu ze starého webu
+
+Aktuality, dokumenty, kontakty a název lze nahrát ze souboru JSON
+(formát `svj-import-1`) připraveného převodem původního webu:
+
+- v konzoli hlavního správce na stránce společenství, část **Import
+  obsahu ze starého webu**, nebo
+- příkazem `SVJ_TENANT=adresa php tools/import-content.php soubor.json`
+  (na webu jednoho SVJ bez `SVJ_TENANT`; `--pridat` obsah nepřepíše,
+  jen přidá).
+
+Dokumenty se nejdřív založí jako odkazy na původní web. Skutečné soubory
+stáhne správce společenství tlačítkem v administraci na stránce Přehled,
+nebo příkaz `php tools/import-webnode.php`. Soubory, které už původní
+web nevydá, zůstanou jako odkaz.
+
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
 
 ## Hlášení problémů a nápadů
