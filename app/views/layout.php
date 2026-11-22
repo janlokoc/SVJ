@@ -2,7 +2,7 @@
 $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
-$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
+$more = $u ? ['/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/terminy' => 'Termíny', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
 // Schované části webu z menu vypadnou.
 $hiddenPaths = [];
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {

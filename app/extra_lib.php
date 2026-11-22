@@ -327,3 +327,81 @@ function import_content(PDO $pdo, array $data, bool $replace): array|string
     }
     return $n;
 }
+
+// ---------- Termíny do kalendáře (formát iCalendar, který umí Google, Apple i Outlook) ----------
+
+/** Začátek a konec termínu: [začátek, konec, celodenní]. Čas „18:00“ nebo „18.00“ se rozpozná, jinak je termín celodenní. */
+function event_times(array $ev): array
+{
+    if (preg_match('/(\d{1,2})[:.](\d{2})/', (string) $ev['event_time'], $m) && (int) $m[1] < 24 && (int) $m[2] < 60) {
+        $start = strtotime($ev['event_date'] . sprintf(' %02d:%02d:00', $m[1], $m[2]));
+        return [$start, $start + 2 * 3600, false];
+    }
+    $start = strtotime($ev['event_date'] . ' 00:00:00');
+    return [$start, strtotime($ev['event_date'] . ' +1 day'), true];
+}
+function ics_text(string $s): string
+{
+    return str_replace(["\\", ';', ',', "\r\n", "\n", "\r"], ["\\\\", '\;', '\,', '\n', '\n', ''], trim($s));
+}
+/** Kalendář se zadanými termíny. Řádky se podle normy lámou po 75 bajtech. */
+function ics_calendar(array $events): string
+{
+    $host = preg_replace('/[^A-Za-z0-9.\-]/', '', (string) parse_url(absolute_url('/'), PHP_URL_HOST)) ?: 'svj';
+    $lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SVJ web//CS', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:' . ics_text(site('name')), 'X-WR-TIMEZONE:Europe/Prague',
+        'BEGIN:VTIMEZONE', 'TZID:Europe/Prague', 'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT',
+        'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD', 'END:VTIMEZONE'];
+    foreach ($events as $ev) {
+        [$start, $end, $allDay] = event_times($ev);
+        $about = trim($ev['note'] . ($ev['program'] !== '' ? "\n\nProgram:\n" . $ev['program'] : '') . "\n\n" . absolute_url('/terminy/' . $ev['id']));
+        array_push($lines, 'BEGIN:VEVENT', 'UID:termin-' . (int) $ev['id'] . '@' . $host, 'DTSTAMP:' . gmdate('Ymd\THis\Z'),
+            $allDay ? 'DTSTART;VALUE=DATE:' . date('Ymd', $start) : 'DTSTART;TZID=Europe/Prague:' . date('Ymd\THis', $start),
+            $allDay ? 'DTEND;VALUE=DATE:' . date('Ymd', $end) : 'DTEND;TZID=Europe/Prague:' . date('Ymd\THis', $end),
+            'SUMMARY:' . ics_text($ev['title'] . ' – ' . site('name')), 'DESCRIPTION:' . ics_text($about));
+        if ($ev['place'] !== '') {
+            $lines[] = 'LOCATION:' . ics_text($ev['place']);
+        }
+        array_push($lines, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' . ics_text($ev['title']), 'TRIGGER:-P1D', 'END:VALARM', 'END:VEVENT');
+    }
+    $lines[] = 'END:VCALENDAR';
+    $out = '';
+    foreach ($lines as $line) {
+        while (strlen($line) > 73) {
+            $cut = 73;
+            while ($cut > 0 && (ord($line[$cut]) & 0xC0) === 0x80) {
+                $cut--;   // nelámat uprostřed znaku
+            }
+            $out .= substr($line, 0, $cut) . "\r\n ";
+            $line = substr($line, $cut);
+        }
+        $out .= $line . "\r\n";
+    }
+    return $out;
+}
+function send_ics(string $body, string $filename): never
+{
+    header('Content-Type: text/calendar; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Cache-Control: private, max-age=300');
+    echo $body;
+    exit;
+}
+function google_calendar_url(array $ev): string
+{
+    [$start, $end, $allDay] = event_times($ev);
+    return 'https://calendar.google.com/calendar/render?' . http_build_query(['action' => 'TEMPLATE', 'text' => $ev['title'] . ' – ' . site('name'),
+        'dates' => $allDay ? date('Ymd', $start) . '/' . date('Ymd', $end) : date('Ymd\THis', $start) . '/' . date('Ymd\THis', $end), 'ctz' => 'Europe/Prague',
+        'details' => trim($ev['note'] . "\n" . absolute_url('/terminy/' . $ev['id'])), 'location' => $ev['place']]);
+}
+/** Tajná část adresy, na které si kalendářové aplikace samy stahují všechny termíny (přihlásit se neumějí). */
+function calendar_token(): string
+{
+    $t = setting('calendar_token');
+    if (!preg_match('/^[a-f0-9]{32}$/', $t)) {
+        $t = bin2hex(random_bytes(16));
+        q('DELETE FROM settings WHERE `key` = ?', ['calendar_token']);
+        q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['calendar_token', $t]);
+        setting('__reset');
+    }
+    return $t;
+}

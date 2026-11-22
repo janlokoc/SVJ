@@ -631,3 +631,10 @@ div.stat:hover { border-color: var(--line); }
   .t-actions { text-align: left; white-space: normal; }
   .t-actions > * { margin: .3rem 1rem 0 0; }
 }
+.event-row { display: flex; gap: 1.1rem; align-items: flex-start; }
+.event-row .event-title { margin: 0 0 .15rem; font-size: 1.25rem; }
+.event-row .event-title a { color: inherit; text-decoration: none; }
+.cal-actions { margin: .75rem 0 0; }
+.cal-feed { margin-top: 2rem; }
+.cal-feed code { user-select: all; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .event-row { flex-direction: column; } }

@@ -243,6 +243,29 @@ $route('POST', '/zavady', function () {
 
 // ---------- Účast na shromáždění ----------
 
+$route('GET', '/terminy', function () {
+    require_login();
+    render('events', ['title' => 'Termíny',
+        'upcoming' => all("SELECT * FROM events WHERE event_date >= date('now','localtime') ORDER BY event_date, event_time"),
+        'past' => all("SELECT * FROM events WHERE event_date < date('now','localtime') ORDER BY event_date DESC LIMIT 20"),
+        'feed' => absolute_url('/kalendar/' . calendar_token() . '.ics')]);
+});
+// Jeden termín jako soubor do kalendáře. Nejbližší termín je vidět i na úvodní stránce, proto ho smí stáhnout kdokoli; ostatní jen přihlášení.
+$route('GET', '/terminy/(\d+)\.ics', function (int $id) {
+    $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
+    $next = one("SELECT id FROM events WHERE event_date >= date('now','localtime') ORDER BY event_date LIMIT 1");
+    if (!$next || (int) $next['id'] !== $id) {
+        require_login();
+    }
+    send_ics(ics_calendar([$ev]), 'termin-' . $id . '.ics');
+});
+// Odběr všech termínů: kalendářová aplikace si adresu s tajným kódem stahuje sama a nové termíny se v ní objeví bez dalšího klikání.
+$route('GET', '/kalendar/([a-f0-9]{32})\.ics', function (string $token) {
+    if (!hash_equals(calendar_token(), $token)) {
+        not_found();
+    }
+    send_ics(ics_calendar(all("SELECT * FROM events WHERE event_date >= ? ORDER BY event_date", [date('Y-m-d', time() - 60 * 86400)])), 'terminy.ics');
+});
 $route('GET', '/terminy/(\d+)', function (int $id) {
     $u = require_login();
     $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();

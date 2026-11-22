@@ -1,9 +1,12 @@
 <?php $t = strtotime($ev['event_date']); ?>
 <div class="wrap page narrow">
-  <p class="crumbs"><a href="<?= url('/') ?>">← Úvod</a></p>
+  <p class="crumbs"><a href="<?= url('/terminy') ?>">← Termíny</a></p>
   <p class="eyebrow"><?= weekday_name((int) date('w', $t)) ?> <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?></p>
   <h1><?= e($ev['title']) ?></h1>
   <p class="lead"><?= e(implode(' · ', array_filter([$ev['place'], $ev['note']]))) ?></p>
+  <p class="actions cal-actions"><a class="btn btn-small" href="<?= url('/terminy/' . $ev['id'] . '.ics') ?>"><?= icon('doc') ?> Přidat do kalendáře</a>
+    <a class="btn btn-small btn-ghost" href="<?= e(google_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer">Google Kalendář</a>
+    <a class="more" href="<?= url('/terminy') ?>">Všechny termíny <?= icon('arrow') ?></a></p>
 
   <?php if ($ev['program'] !== ''): ?><h2>Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
   <?php if ($evDocs): ?><h2>Podklady</h2><?php $docs = $evDocs; require __DIR__ . '/_doclist.php'; ?><?php endif ?>
