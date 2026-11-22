@@ -129,7 +129,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?><?php if (isset($planAdmin[$href]) && ($ps = plan_state($planAdmin[$href])) !== 'on'): ?> <span class="plan-tag"><?= $ps === 'trial' ? 'zkouška' : e(EDITIONS[PLAN_FEATURES[$planAdmin[$href]][0]]) ?></span><?php endif ?></a></li><?php endforeach ?></ul>
       </div>
     <?php endforeach ?>
-    <?php if (plan_managed() && isset($adminNav['/admin/predplatne'])): ?>
+    <?php if (plan_managed()): ?>
       <div class="admin-group admin-planned"><span class="admin-label">Připravujeme</span>
         <ul><?php foreach (PLANNED_FEATURES as $pk => $pf): $ph = '/admin/predplatne/funkce/' . $pk; ?><li><a href="<?= url($ph) ?>"<?= $path === $ph ? ' aria-current="page"' : '' ?> title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?> <span class="plan-tag">již brzy</span></a></li><?php endforeach ?></ul>
       </div>

@@ -8,7 +8,8 @@
   <section><h2>Edice a cena</h2><p><strong><?= e($price) ?></strong></p><p><?= e($d['note']) ?></p><p class="hint">Edice i cena jsou předběžné a mohou se do spuštění změnit.</p></section>
 </div>
 <div class="card card-soft feature-notify">
-  <?php if ($notified): ?><p><strong>Dáme Vám vědět, až bude funkce hotová.</strong></p>
+  <?php if (!empty($GLOBALS['DEMO'])): ?><p><strong>Tuto funkci připravujeme.</strong> Ve vlastním webu si tady necháte poslat zprávu, až bude hotová.</p>
+  <?php elseif ($notified): ?><p><strong>Dáme Vám vědět, až bude funkce hotová.</strong></p>
   <?php else: ?>
   <form method="post" action="<?= e($notifyUrl) ?>" class="feature-notify-form"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($key) ?>">
     <?php if ($askEmail): ?><span class="hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></span>

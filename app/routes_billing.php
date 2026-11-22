@@ -124,7 +124,7 @@ $route('GET', '/admin/predplatne/funkce/([a-z0-9-]+)', function (string $key) {
     if (!isset(PLANNED_FEATURES[$key])) {
         not_found();
     }
-    feature_view($key, TENANT);
+    feature_view($key, !empty($GLOBALS['DEMO']) ? '' : TENANT);   // prokliky z ukázkového webu se počítají jako návštěvníci, ne jako společenství
     render('admin/feature', ['title' => PLANNED_FEATURES[$key][0], 'key' => $key,
         'notified' => (bool) pq('SELECT 1 FROM feature_interest WHERE feature = ? AND tenant = ?', [$key, TENANT])->fetchColumn()]);
 });

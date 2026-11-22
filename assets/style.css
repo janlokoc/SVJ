@@ -949,3 +949,7 @@ body.lp .lp-section { padding-block: clamp(2rem, 1.2rem + 3vw, 3.5rem); }
 input[type=date], input[type=time], input[type=datetime-local], input[type=month] { -webkit-appearance: none; appearance: none; display: block; box-sizing: border-box; min-width: 0; max-width: 100%; }
 input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-and-time-value, input[type=datetime-local]::-webkit-date-and-time-value { text-align: left; min-height: 1.4em; }
 .form-row > *, .form > * { min-width: 0; }
+.dash-planned { margin-top: 2.5rem; }
+.planned-chips { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.planned-chips a { display: inline-flex; align-items: center; gap: .3rem; padding: .4rem .8rem; border: 1px dashed var(--line); border-radius: 999px; text-decoration: none; color: var(--ink); background: var(--surface); }
+.planned-chips a:hover { border-style: solid; border-color: var(--primary); }

@@ -41,4 +41,11 @@
     </tbody>
   </table>
   <?php endif ?>
+  <?php if (plan_managed()): ?>
+  <section class="dash-planned">
+    <h2>Na čem pracujeme</h2>
+    <p class="muted">Funkce, které pro weby společenství připravujeme. Klikněte na tu, která by se Vám hodila – podle zájmu rozhodujeme, co udělat dřív.</p>
+    <ul class="chips planned-chips"><?php foreach (PLANNED_FEATURES as $pk => $pf): ?><li><a href="<?= url('/admin/predplatne/funkce/' . $pk) ?>" title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?> <span class="plan-tag">již brzy</span></a></li><?php endforeach ?></ul>
+  </section>
+  <?php endif ?>
 </div>
