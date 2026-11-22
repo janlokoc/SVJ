@@ -4,7 +4,7 @@ $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
 $edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s vlastní doménou a AI zápisem.'];
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jedna šablona vzhledu, 5 barev', 'V patičce odkaz na službu'],
-    'standard' => ['Vše z edice Zdarma', 'Hlasování bez omezení, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Záloha všech dat ke stažení', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
+    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Záloha všech dat ke stažení', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
     'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Vlastní doména a vlastní certifikát v ceně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
 ];
 $edCompact = !empty($edCompact);

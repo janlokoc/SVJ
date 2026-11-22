@@ -26,6 +26,7 @@ $route('GET', '/admin/predplatne', function () {
     $payment = $state['mode'] === 'free' ? null : billing_open($t);
     $iban = cz_iban(pset('account'));
     render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'migration' => ($mig = migration_row(TENANT)), 'migrationPayment' => ($mp = migration_payment($mig)),
+        'storagePayment' => ($sp = storage_payment($t)), 'storageQr' => $sp && $iban ? qr_svg(spayd($iban, (int) $sp['amount'], $sp['vs'], 'Uloziste ' . $t['slug'], pset('recipient')), 'QR platba za úložiště') : '',
         'migrationQr' => $mp && $iban && in_array($mp['status'], ['pending', 'claimed'], true) ? qr_svg(spayd($iban, (int) $mp['amount'], $mp['vs'], 'Prevod webu ' . $t['slug'], pset('recipient')), 'QR platba za převod obsahu') : '', 'edition' => $state['edition'],
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, (int) $ap['amount'], $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
@@ -152,6 +153,32 @@ $route('POST', '/admin/predplatne/ai', function () {
         flash('Objednávka AI Plus je zrušena.', 'info');
     }
     redirect('/admin/predplatne#ai');
+});
+$route('POST', '/admin/predplatne/uloziste', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t || empty($t['billing'])) {
+        redirect('/admin/predplatne');
+    }
+    $p = storage_payment($t);
+    $action = post('action');
+    if ($action === 'claim' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
+        audit('Úložiště navíc: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Děkujeme. Jakmile platbu uvidíme na účtu, úložiště zvětšíme.');
+    } elseif ($action === 'cancel' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'cancelled', note = 'objednávka zrušena správcem webu' WHERE id = ?", [$p['id']]);
+        flash('Objednávka úložiště je zrušena.', 'info');
+    } elseif ($action === 'order') {
+        if ($p && $p['status'] === 'claimed') {
+            flash('Jednu platbu za úložiště jste už nahlásili. Počkejte prosím na její potvrzení.', 'error');
+        } else {
+            $p = storage_order($t, (int) post('packs'));
+            audit('Úložiště navíc: objednávka', $p['item'] . ' MB · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+            flash('Úložiště navíc je objednané. Zvětšíme ho po připsání platby – údaje jsou níže.');
+        }
+    }
+    redirect('/admin/predplatne#uloziste');
 });
 $route('POST', '/admin/predplatne/prevod', function () {
     $u = require_admin();

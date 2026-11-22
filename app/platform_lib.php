@@ -162,6 +162,10 @@ SQL);
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 11) {
         $pdo->exec("ALTER TABLE tenants ADD COLUMN auto_renew INTEGER NOT NULL DEFAULT 1; PRAGMA user_version = 11;");
     }
+    // Úložiště navíc jako placený doplněk.
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 12) {
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN storage_extra INTEGER NOT NULL DEFAULT 0; ALTER TABLE tenants ADD COLUMN storage_until TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 12;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -360,10 +364,10 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
-    'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '500', 'lim_standard_ai' => '30', 'lim_standard_polls' => '0',
-    'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '1000', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
+    'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
+    'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14',
@@ -570,6 +574,20 @@ function billing_confirm(array $p, string $by): ?array
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
         return null;
     }
+    if (($p['kind'] ?? '') === 'storage') {
+        $from = date('Y-m-d');
+        $to = date('Y-m-d', strtotime('+12 month -1 day'));
+        $year = date('Y');
+        $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+        pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+            [date('Y-m-d H:i:s'), $from, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+        pq('UPDATE tenants SET storage_extra = ?, storage_until = ? WHERE slug = ?', [(int) $p['item'], $to, $t['slug']]);
+        if ($t['owner_email'] !== '') {
+            platform_mail($t['owner_email'], 'Úložiště navíc je zapnuté – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . money_czk((int) $p['amount']) . " za úložiště navíc. Web " . $t['name'] . " má do "
+                . cz_date($to) . " o " . (int) $p['item'] . " MB místa více.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        }
+        return ['from' => $from, 'to' => $to];
+    }
     if (($p['kind'] ?? '') === 'migration') {
         $today = date('Y-m-d');
         $year = date('Y');
@@ -746,7 +764,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, (int) $p['amount'], $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -955,6 +973,37 @@ function domain_renewals(): void
             . ".\nPlatbu na další rok (" . money_czk((int) $p['amount']) . ", variabilní symbol " . $p['vs'] . ") najdete včetně QR kódu v administraci: " . tenant_url($t, '/admin/predplatne')
             . "\n\nBez úhrady web dál poběží na adrese " . tenant_address($t['slug']) . ", vlastní doménu ale po skončení období odpojíme.");
     }
+}
+
+// ---------- Úložiště navíc: balíčky nad limit edice, placené na rok ----------
+
+/** Kolik MB navíc má web právě zaplaceno. */
+function storage_extra_mb(?array $t): int
+{
+    return $t && ($t['storage_until'] ?? '') !== '' && $t['storage_until'] >= date('Y-m-d') ? (int) $t['storage_extra'] : 0;
+}
+function storage_payment(array $t): ?array
+{
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'storage' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
+    return $p ?: null;
+}
+/** Objednávka balíčků úložiště na rok; 'item' nese počet MB. Platí pro celý počet balíčků (nahrazuje dosavadní). */
+function storage_order(array $t, int $packs): ?array
+{
+    $packs = max(1, min(20, $packs));
+    $mb = $packs * pset_int('storage_pack_mb', 1, 100000);
+    $amount = $packs * pset_int('price_storage', 0, 1000000);
+    if ($p = storage_payment($t)) {
+        if ($p['status'] === 'claimed') {
+            return $p;
+        }
+        pq('UPDATE payments SET amount = ?, item = ? WHERE id = ?', [$amount, (string) $mb, $p['id']]);
+        return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
+    }
+    pq("INSERT INTO payments (tenant, amount, months, created_at, kind, item) VALUES (?,?,12,?,'storage',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), (string) $mb]);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
 }
 
 // ---------- Jednorázový převod obsahu ze starého webu ----------

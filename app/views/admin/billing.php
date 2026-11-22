@@ -89,6 +89,30 @@
     </ul>
   </div>
 
+  <div class="card" id="uloziste">
+    <h2>Úložiště dokumentů</h2>
+    <?php $stUsed = $usage['storage']['used']; $stLimit = $usage['storage']['limit']; $stExtra = storage_extra_mb($t); $packMb = pset_int('storage_pack_mb', 1, 100000); $packPrice = pset_int('price_storage', 0, 1000000); ?>
+    <p>Využito <strong><?= number_format($stUsed, 0, ',', "\u{a0}") ?> MB<?= $stLimit ? ' z ' . number_format($stLimit, 0, ',', "\u{a0}") . ' MB' : '' ?></strong><?= $stLimit ? '' : ' – bez omezení' ?><?= $stExtra ? ' (edice ' . ($stLimit - $stExtra) . ' MB + ' . $stExtra . ' MB navíc do ' . cz_date($t['storage_until']) . ')' : '' ?>.</p>
+    <?php if ($stLimit): ?><progress class="bar bar-wide" value="<?= min($stUsed, $stLimit) ?>" max="<?= $stLimit ?>"></progress><?php endif ?>
+    <?php if ($storagePayment): $sp = $storagePayment; ?>
+      <h3>Platba za <?= (int) $sp['item'] ?> MB navíc na 1 rok</h3>
+      <?php if ($sp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($sp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
+      <div class="pay"><?php if ($storageQr): ?><div class="pay-qr"><?= $storageQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= money_czk((int) $sp['amount']) ?></strong></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($sp['vs']) ?></code></dd></dl></div>
+      <div class="actions">
+        <?php if ($sp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/uloziste') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za úložiště jsem odeslal(a)</button></form><?php endif ?>
+        <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $sp['id']) ?>">Zálohová faktura k tisku</a>
+        <?php if ($sp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/uloziste') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
+      </div>
+    <?php elseif ($stLimit && $packPrice): ?>
+      <p><strong>Potřebujete víc místa?</strong> Přikupte si úložiště navíc: <?= $packMb ?> MB za <?= money_czk($packPrice) ?> ročně, v kterékoli edici.<?= $edition !== 'premium' ? ' Vyšší edice má úložiště větší (' . implode(', ', array_map(fn($e) => EDITIONS[$e] . ' ' . pset_int('lim_' . $e . '_storage', 0, 10000000) . ' MB', array_slice(['standard', 'premium'], $edition === 'free' ? 0 : 1))) . ').' : '' ?></p>
+      <form method="post" action="<?= url('/admin/predplatne/uloziste') ?>" class="storage-order"><?= csrf_field() ?><input type="hidden" name="action" value="order">
+        <label>Kolik místa navíc <select name="packs"><?php foreach ([1, 2, 4, 10] as $n): ?><option value="<?= $n ?>">+ <?= number_format($n * $packMb, 0, ',', "\u{a0}") ?> MB · <?= money_czk($n * $packPrice) ?> / rok</option><?php endforeach ?></select></label>
+        <button class="btn" type="submit">Objednat úložiště navíc</button></form>
+      <?php if ($stExtra): ?><p class="hint">Nová objednávka nahradí dosavadní balíček (<?= $stExtra ?> MB do <?= cz_date($t['storage_until']) ?>) a platí rok od připsání platby.</p><?php endif ?>
+    <?php endif ?>
+  </div>
+
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
     <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>
@@ -254,7 +278,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : '')) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= money_czk((int) $p['amount']) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'storage' ? '<br><small class="muted">úložiště +' . (int) $p['item'] . ' MB</small>' : (($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : ''))) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

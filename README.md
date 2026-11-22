@@ -288,6 +288,12 @@ automatické vystavování (viz výše).
   faktura na další období a správci přijde upozornění. Nic se nestrhává –
   platí se převodem. Správce může prodlužování v Předplatném vypnout;
   edice pak doběhne a web přejde na edici Zdarma.
+- **Úložiště:** výchozí limity jsou 50 MB (Zdarma), 100 MB (Standard)
+  a 500 MB (Premium). Správce vidí stav v Nastavení webu a v Předplatném;
+  od 80 % zaplnění dostane upozornění. V kterékoli edici si může přikoupit
+  **úložiště navíc** (výchozí 500 MB za 290 Kč ročně, nastavitelné; cena 0
+  nabídku vypne) – platí se stejně jako edice, QR platbou.
+- Standard má výchozí limit 5 hlasování ročně, Premium bez omezení.
 - **Záloha dat ke stažení** je součástí placených edic (v edici Zdarma
   ji lze jednou na 30 dní vyzkoušet). Vlastní údaje si každý uživatel
   stáhne v kterékoli edici.

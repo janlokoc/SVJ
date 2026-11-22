@@ -1,5 +1,18 @@
 <div class="wrap page narrow">
   <header class="page-head"><h1>Nastavení webu</h1></header>
+  <?php if (plan_managed()): $stUsed = plan_used('storage'); $stLimit = plan_limit('storage'); $stPct = $stLimit ? min(100, (int) round(100 * $stUsed / $stLimit)) : 0;
+    $stFiles = (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NOT NULL') + (int) val('SELECT COUNT(*) FROM ticket_files'); $hasBilling = ($GLOBALS['BILLING']['mode'] ?? 'free') !== 'free'; ?>
+  <section class="card storage-card<?= $stLimit && $stPct >= 100 ? ' is-full' : ($stLimit && $stPct >= 80 ? ' is-near' : '') ?>" id="uloziste">
+    <h2>Úložiště dokumentů</h2>
+    <p>Využito <strong><?= number_format($stUsed, 0, ',', "\u{a0}") ?> MB<?= $stLimit ? ' z ' . number_format($stLimit, 0, ',', "\u{a0}") . ' MB' : '' ?></strong><?= $stLimit ? ' (' . $stPct . ' %)' : ' – bez omezení' ?> · <?= $stFiles ?> <?= $stFiles === 1 ? 'soubor' : ($stFiles >= 2 && $stFiles <= 4 ? 'soubory' : 'souborů') ?> (dokumenty a přílohy závad).</p>
+    <?php if ($stLimit): ?><progress class="bar bar-wide" value="<?= min($stUsed, $stLimit) ?>" max="<?= $stLimit ?>"></progress><?php endif ?>
+    <?php if ($stLimit && $stPct >= 100): ?><p><strong>Úložiště je plné.</strong> Další soubory nepůjdou nahrát, dokud neuvolníte místo nebo úložiště nezvětšíte. Web běží dál a nic se nemaže.</p>
+    <?php elseif ($stLimit && $stPct >= 80): ?><p><strong>Místo dochází.</strong> Zbývá <?= max(0, $stLimit - $stUsed) ?> MB.</p><?php endif ?>
+    <?php if ($stLimit && $hasBilling): ?><p class="actions"><a class="btn<?= $stPct >= 80 ? '' : ' btn-small btn-ghost' ?>" href="<?= url('/admin/predplatne') ?>#uloziste">Přikoupit úložiště navíc</a>
+      <?php if (plan_edition() !== 'premium'): ?><a class="btn btn-small btn-ghost" href="<?= url('/admin/predplatne') ?>#edice">Vyšší edice s větším úložištěm</a><?php endif ?></p><?php endif ?>
+    <p class="hint">Místo uvolníte smazáním starých souborů v <a href="<?= url('/admin/dokumenty') ?>">Dokumentech</a>. Fotografie u závad se před nahráním samy zmenšují.</p>
+  </section>
+  <?php endif ?>
   <form method="post" enctype="multipart/form-data" class="card form">
     <?= csrf_field() ?>
     <fieldset>

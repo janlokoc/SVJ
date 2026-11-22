@@ -19,8 +19,8 @@ const PLAN_LIMITS = [
 ];
 const PLAN_LIMIT_DEFAULTS = [
     'free' => ['admins' => 1, 'users' => 30, 'mails' => 50, 'storage' => 50, 'ai' => 5, 'polls' => 1],
-    'standard' => ['admins' => 3, 'users' => 150, 'mails' => 1000, 'storage' => 500, 'ai' => 30, 'polls' => 0],
-    'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 1000, 'ai' => 300, 'polls' => 0],
+    'standard' => ['admins' => 3, 'users' => 150, 'mails' => 1000, 'storage' => 100, 'ai' => 30, 'polls' => 5],
+    'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 500, 'ai' => 300, 'polls' => 0],
 ];
 
 /**
@@ -81,7 +81,12 @@ function plan_limit_of(string $edition, string $key): int
 /** Limit platný pro tento web; 0 = bez omezení. */
 function plan_limit(string $key): int
 {
-    return plan_managed() ? plan_limit_of(plan_edition(), $key) : 0;
+    if (!plan_managed()) {
+        return 0;
+    }
+    $limit = plan_limit_of(plan_edition(), $key);
+    // K limitu úložiště se přičítají zaplacené balíčky navíc.
+    return $key === 'storage' && $limit > 0 ? $limit + storage_extra_mb(plan_tenant()) : $limit;
 }
 function plan_storage_mb(): float
 {
@@ -123,6 +128,9 @@ function plan_limit_error(string $key, int $add = 1): ?string
         default => 'použití',
     };
     $next = plan_edition() === 'free' ? 'Standard' : 'Premium';
+    if ($key === 'storage') {
+        return 'Úložiště je plné: využito ' . number_format(plan_used($key), 0, ',', "\u{a0}") . ' z ' . number_format($limit, 0, ',', "\u{a0}") . ' MB. Nic se nemaže a web běží dál – místo uvolníte smazáním starých souborů, nebo si v části Předplatné přikoupíte úložiště navíc či přejdete na vyšší edici.';
+    }
     return 'Edice ' . EDITIONS[plan_edition()] . ' má limit ' . number_format($limit, 0, ',', "\u{a0}") . ' ' . $what . ' (využito ' . number_format(plan_used($key), 0, ',', "\u{a0}")
         . '). Nic se nemaže a web běží dál – pro vyšší limit přejděte v části Předplatné na edici ' . $next . '.';
 }
