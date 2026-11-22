@@ -26,7 +26,7 @@
         <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
         <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
       </ul>
-      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Nahlásit chybu webu nebo nápad na jeho zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
+      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
     </nav>
   </div>
 </header>

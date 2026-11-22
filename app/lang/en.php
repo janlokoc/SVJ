@@ -376,8 +376,8 @@ return [
     'Zaplatit měsíční zálohu' => 'Pay the monthly advance',
     'vyrovnáno' => 'settled',
     'Údaje nahrává výbor z účetnictví a platí k uvedenému dni; platba odeslaná později se tu projeví až po další aktualizaci.' => 'The figures are uploaded by the committee from the accounts and are valid as of the date shown; a payment sent later will appear after the next update.',
-    'Chyba webu' => 'Website bug',
-    'Nahlásit chybu webu nebo nápad' => 'Report a website bug or an idea',
+    'Podpora webu' => 'Website support',
+    'Podpora webu – problém nebo nápad' => 'Website support – a problem or an idea',
     'Na webu něco nefunguje' => 'Something on the website doesn\'t work',
     'Nápad, jak web zlepšit' => 'An idea to improve the website',
 ];
