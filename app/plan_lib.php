@@ -29,16 +29,16 @@ const PLAN_LIMIT_DEFAULTS = [
  */
 const PLAN_FEATURES = [
     'ankety' => ['standard', 'Ankety', 'Rychlé zjištění názoru sousedů – termín brigády, barva fasády, zájem o kolárnu.', '~^/(admin/)?ankety(/|$)~'],
-    'platby' => ['standard', 'Platby na jednotku', 'Každý vlastník vidí své zálohy a nedoplatky, výbor posílá upomínky.', '~^/(admin/)?platby(/|$)~'],
+    'platby' => ['premium', 'Platby na jednotku', 'Každý vlastník vidí své zálohy a nedoplatky, výbor posílá upomínky.', '~^/(admin/)?platby(/|$)~'],
     'odecty' => ['standard', 'Odečty měřidel', 'Obyvatelé zapisují stavy vodoměrů a měřičů sami, výbor má přehled.', '~^/(admin/)?odecty(/|$)~'],
-    'rezervace' => ['standard', 'Rezervace', 'Rezervace společenské místnosti, sušárny nebo parkovacího místa.', '~^/(admin/)?(rezervace|prostory)(/|$)~'],
+    'rezervace' => ['premium', 'Rezervace', 'Rezervace společenské místnosti, sušárny nebo parkovacího místa.', '~^/(admin/)?(rezervace|prostory)(/|$)~'],
     'revize' => ['standard', 'Revize', 'Hlídání termínů revizí a kontrol s upozorněním předem.', '~^/admin/revize(/|$)~'],
     'klice' => ['standard', 'Klíče a čipy', 'Evidence, kdo má který klíč a čip.', '~^/admin/klice(/|$)~'],
     'ukoly' => ['standard', 'Úkoly a usnesení', 'Co kdo slíbil zařídit a do kdy – úkoly z jednání výboru a shromáždění.', '~^/admin/ukoly(/|$)~'],
     'dodavatele' => ['standard', 'Dodavatelé', 'Kontakty a smlouvy s dodavateli, přiřazení k závadám.', '~^/admin/dodavatele(/|$)~'],
     'zapis' => ['standard', 'Zápis ze shromáždění', 'Zápis sestavený z účasti, programu a výsledků hlasování, připravený k tisku.', '~^/admin/terminy/\d+/zapis$~'],
     'sablony' => ['standard', 'Všechny šablony vzhledu', 'Pět šablon webu místo jedné základní.', null],
-    'jazyky' => ['standard', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
+    'jazyky' => ['premium', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],
 ];
 
@@ -126,6 +126,22 @@ function plan_limit_error(string $key, int $add = 1): ?string
         . '). Nic se nemaže a web běží dál – pro vyšší limit přejděte v části Předplatné na edici ' . $next . '.';
 }
 
+/**
+ * Funkce přesunuté ze Standardu do Premium: klíč => den přesunu. Web, který si Standard zaplatil před tímto dnem,
+ * je má dál až do konce tehdy zaplaceného období.
+ */
+const PLAN_MOVED = ['platby' => '2026-11-22', 'rezervace' => '2026-11-22', 'jazyky' => '2026-11-22'];
+function plan_kept(string $feature): bool
+{
+    static $paid = null;
+    if (!isset(PLAN_MOVED[$feature]) || plan_edition() !== 'standard') {
+        return false;
+    }
+    if ($paid === null) {
+        $paid = (string) pq("SELECT MIN(paid_at) FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid' AND (item = 'standard' OR item = '') AND period_to >= ?", [TENANT, date('Y-m-d')])->fetchColumn();
+    }
+    return $paid !== '' && substr($paid, 0, 10) < PLAN_MOVED[$feature];
+}
 /** Zkoušení funkcí tohoto webu: klíč => ['started' => …, 'ends' => …]. */
 function plan_trials(bool $reload = false): array
 {
@@ -145,7 +161,7 @@ function plan_trials(bool $reload = false): array
  */
 function plan_state(string $feature): string
 {
-    if (!isset(PLAN_FEATURES[$feature]) || !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK[PLAN_FEATURES[$feature][0]]) {
+    if (!isset(PLAN_FEATURES[$feature]) || !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK[PLAN_FEATURES[$feature][0]] || plan_kept($feature)) {
         return 'on';
     }
     $trial = plan_trials()[$feature] ?? null;

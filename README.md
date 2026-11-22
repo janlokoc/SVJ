@@ -247,6 +247,9 @@ automatické vystavování (viz výše).
   měsíc, úložiště, použití AI, hlasování za rok) a funkcemi. Ceny a limity
   se nastavují v konzoli v **Nastavení služby**; 0 = bez omezení. Které
   funkce patří do které edice, je v `PLAN_FEATURES` v `app/plan_lib.php`.
+  Platby na jednotku, rezervace a jazykové verze jsou v Premium; web se
+  Standardem zaplaceným před jejich přesunem (`PLAN_MOVED`) je má do konce
+  zaplaceného období.
 - **Limity nebrání v používání.** Po dosažení limitu web běží dál a nic se
   nemaže – jen nejde přidat další účet, odeslat další hromadný e-mail,
   nahrát další soubor nebo založit další hlasování.

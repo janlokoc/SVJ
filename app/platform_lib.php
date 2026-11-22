@@ -921,15 +921,19 @@ function cert_reminders(): void
 // ---------- Připravované funkce a zájem o ně ----------
 
 /** klíč → [název, popis, předpokládaná cena nebo ''] – funkce, které ještě nejsou hotové; zájem o ně se sbírá tlačítkem. */
+/**
+ * Připravované funkce: klíč => [název, popis, kde a za kolik budou, krátký název do menu administrace].
+ * Edice a ceny jsou předběžné – slouží k tomu, aby zájem odpovídal skutečné nabídce.
+ */
 const PLANNED_FEATURES = [
-    'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'doplněk'],
-    'ai-asistent' => ['AI asistent pro obyvatele', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – kdykoli, i v noci.', 'doplněk'],
-    'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'podle počtu zpráv'],
-    'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk'],
-    'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'doplněk'],
-    'push' => ['Upozornění do telefonu', 'Nové oznámení nebo připomenutí hlasování přímo na displej, bez e-mailu.', 'v ceně'],
-    'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'za hlasování'],
-    'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'doplněk'],
+    'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · asi 49 Kč za hodinu nahrávky', 'Zápis z nahrávky'],
+    'ai-asistent' => ['AI asistent pro obyvatele', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – kdykoli, i v noci.', 'doplněk k Premium · asi 990 Kč ročně', 'AI asistent'],
+    'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
+    'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
+    'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
+    'push' => ['Upozornění do telefonu', 'Nové oznámení nebo připomenutí hlasování přímo na displej, bez e-mailu.', 'Standard a Premium · v ceně', 'Upozornění do telefonu'],
+    'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
+    'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'Premium · v ceně', 'Párování plateb'],
 ];
 /**
  * Podrobný popis připravovaných funkcí pro stránku s detailem:
@@ -940,49 +944,49 @@ const PLANNED_DETAILS = [
         'lead' => 'Schůzi nahrajete na telefon, nahrávku vložíte na web a dostanete návrh zápisu.',
         'problem' => 'Zápis ze shromáždění bývá nejméně oblíbená práce ve výboru. Zapisovatel během schůze nestíhá poslouchat i psát, zápis pak vzniká týdny po schůzi z paměti a vlastníci se dohadují, co kdo vlastně řekl. Dnes už pomocník umí zápis napsat z poznámek nebo z hotového přepisu – přepis si ale musíte obstarat sami.',
         'how' => ['Nahrajete zvukový soubor ze schůze (telefon, diktafon, záznam online schůzky).', 'Služba nahrávku přepíše do textu a rozliší, kdy mluví kdo.', 'AI z přepisu sestaví zápis podle programu: průběh jednání, návrhy, výsledky hlasování, úkoly a termíny.', 'Zapisovatel návrh projde, opraví a vytiskne nebo uloží do Dokumentů. Nahrávka se po zpracování smaže.'],
-        'note' => 'Placený doplněk – přepis zvuku je výpočetně drahý, cena bude podle délky nahrávky. Účastníci musí o nahrávání vědět.',
+        'note' => 'Bude v edici Premium, platit se bude navíc podle délky nahrávky (asi 49 Kč za hodinu) – přepis zvuku je výpočetně drahý. Účastníci musí o nahrávání vědět.',
     ],
     'ai-asistent' => [
         'lead' => 'Sousedé se zeptají webu a dostanou odpověď podle Vašich stanov, domovního řádu a oznámení.',
         'problem' => 'Výbor odpovídá pořád na stejné otázky: kdy se smí vrtat, kam s kočárkem, kdy bude vyúčtování, komu hlásit kapající radiátor. Odpovědi přitom v dokumentech na webu jsou, jen je nikdo nehledá.',
         'how' => ['Přihlášený obyvatel položí otázku běžnou řečí, česky i v dalších jazycích webu.', 'Asistent odpoví jen podle dokumentů a oznámení Vašeho domu a uvede, odkud odpověď vzal.', 'Když odpověď v podkladech není, řekne to a nabídne předání dotazu výboru.', 'Výbor vidí, na co se lidé ptají nejčastěji, a ví, co na webu doplnit.'],
-        'note' => 'Placený doplněk. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu.',
+        'note' => 'Doplněk k edici Premium, asi 990 Kč ročně. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu.',
     ],
     'sms' => [
         'lead' => 'Důležité zprávy dojdou i těm, kdo e-mail nečtou.',
         'problem' => 'Část vlastníků, hlavně starších, e-maily nečte nebo e-mail vůbec nemá. O odstávce vody, havárii nebo termínu shromáždění se tak dozvědí pozdě a výbor jim musí volat nebo obcházet byty.',
         'how' => ['U oznámení, pozvánky nebo havárie zaškrtnete „poslat i SMS“.', 'Zpráva odejde na telefonní čísla, která mají vlastníci a nájemníci na webu uvedená.', 'Vyberete příjemce: celý dům, jeden vchod, nebo jen ty, kdo nemají e-mail.', 'U každé zprávy uvidíte, komu byla doručena.'],
-        'note' => 'Platí se podle počtu odeslaných zpráv (zhruba 1–2 Kč za SMS), bez měsíčního paušálu.',
+        'note' => 'Doplněk od edice Standard. Platí se podle počtu odeslaných zpráv (asi 1,50 Kč za SMS), bez měsíčního paušálu.',
     ],
     'katastr' => [
         'lead' => 'Web sám pozná, že byt změnil majitele.',
         'problem' => 'Vlastník má změnu nahlásit, ale často to neudělá. Výbor pak posílá pozvánky a předpisy záloh původnímu majiteli, seznam pro hlasování neodpovídá skutečnosti a usnesení se dá kvůli tomu napadnout.',
         'how' => ['Web pravidelně porovnává seznam jednotek s údaji v katastru nemovitostí.', 'Při změně vlastníka nebo podílu upozorní výbor e-mailem a v administraci.', 'Jedním kliknutím změnu převezmete do evidence jednotek, včetně hlasovacích podílů.', 'Před shromážděním dostanete přehled změn od posledního hlasování.'],
-        'note' => 'Placený doplněk – dálkový přístup do katastru je zpoplatněný státem, cena bude podle počtu jednotek.',
+        'note' => 'Doplněk od edice Standard, asi 490 Kč ročně – dálkový přístup do katastru je zpoplatněný státem, u velkých domů může být cena vyšší.',
     ],
     'insolvence' => [
         'lead' => 'Upozornění, když se dlužník dostane do insolvence – dokud je čas přihlásit pohledávku.',
         'problem' => 'Na přihlášení pohledávky do insolvenčního řízení má společenství jen dva měsíce od rozhodnutí o úpadku. Když si toho výbor nevšimne, o dlužné zálohy zpravidla přijde a doplatí je ostatní vlastníci.',
         'how' => ['Web denně kontroluje vlastníky jednotek v insolvenčním rejstříku.', 'Při nálezu pošle výboru upozornění s číslem řízení a lhůtou pro přihlášení pohledávky.', 'U jednotky uvidíte stav řízení a dlužnou částku z evidence plateb.', 'Volitelně i hlídání exekucí a zástav zapsaných u jednotky v katastru.'],
-        'note' => 'Placený doplněk. Insolvenční rejstřík je veřejný, kontrola se týká jen vlastníků Vašich jednotek.',
+        'note' => 'Bude v ceně edice Premium. Insolvenční rejstřík je veřejný, kontrola se týká jen vlastníků Vašich jednotek.',
     ],
     'push' => [
         'lead' => 'Nové oznámení se objeví na displeji telefonu jako zpráva z aplikace.',
         'problem' => 'E-maily ze společenství zapadnou mezi reklamou a nástěnku u vchodu si přečte málokdo. O odstávce nebo o běžícím hlasování se tak lidé dozvědí, až když je pozdě.',
         'how' => ['Obyvatel si web přidá na plochu telefonu a povolí upozornění.', 'Při novém oznámení, havárii nebo zahájení hlasování mu přijde zpráva na displej.', 'Každý si sám zvolí, o čem chce vědět (oznámení, hlasování, závady, termíny).', 'Před koncem hlasování přijde připomenutí těm, kdo ještě nehlasovali.'],
-        'note' => 'Bude v ceně webu, bez příplatku. Na iPhonu funguje po přidání webu na plochu.',
+        'note' => 'Bude v ceně edic Standard a Premium, bez příplatku. Na iPhonu funguje po přidání webu na plochu.',
     ],
     'bankid' => [
         'lead' => 'Hlasující se ověří přes svou banku – stejně jako na úřadech.',
         'problem' => 'U hlasování mimo shromáždění (per rollam) se dá namítnout, že hlasoval někdo jiný než vlastník. U běžných věcí to nevadí, u půjčky, velké rekonstrukce nebo změny stanov ale může spor o platnost stát roky.',
         'how' => ['U vybraného hlasování zapnete ověření bankovní identitou.', 'Vlastník před odesláním hlasu potvrdí totožnost ve svém bankovnictví.', 'K hlasu se uloží záznam o ověření, který obstojí jako důkaz.', 'Ostatní hlasování běží dál bez ověřování, jako dnes.'],
-        'note' => 'Platí se za hlasování podle počtu ověření (banky účtují jednotky korun za ověření).',
+        'note' => 'Doplněk k edici Premium. Platí se podle počtu ověření, asi 15 Kč za jedno (banky účtují jednotky korun za ověření).',
     ],
     'banka' => [
         'lead' => 'Stav záloh a nedoplatků se aktualizuje sám podle účtu společenství.',
         'problem' => 'Dnes musí výbor nebo správce stav plateb do webu nahrávat ručně z tabulky. Údaje proto zastarávají, vlastníci se ptají, zda jejich platba došla, a upomínky chodí i těm, kdo už zaplatili.',
         'how' => ['Web si z banky stahuje výpis z účtu společenství (jen pro čtení, platit z něj nemůže).', 'Platby spáruje s jednotkami podle variabilního symbolu.', 'Vlastník vidí, které zálohy má uhrazené, výbor vidí aktuální nedoplatky.', 'Upomínky odejdou jen těm, kdo opravdu dluží.'],
-        'note' => 'Placený doplněk. Nejdřív pro banky s veřejným rozhraním (Fio, ČSOB, Česká spořitelna, KB, Raiffeisenbank).',
+        'note' => 'Bude v ceně edice Premium. Nejdřív pro banky s veřejným rozhraním (Fio, ČSOB, Česká spořitelna, KB, Raiffeisenbank).',
     ],
 ];
 /** Otisk návštěvníka pro počítání unikátních prokliků; mění se každý den a nedá se z něj zjistit adresa. */

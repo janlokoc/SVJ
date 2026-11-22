@@ -5,7 +5,7 @@
 <div class="feature-detail">
   <section><h2>Jaký problém to řeší</h2><p><?= e($d['problem']) ?></p></section>
   <section><h2>Co přesně to bude dělat</h2><ol><?php foreach ($d['how'] as $step): ?><li><?= e($step) ?></li><?php endforeach ?></ol></section>
-  <section><h2>Cena a podmínky</h2><p><?= e($d['note']) ?></p></section>
+  <section><h2>Edice a cena</h2><p><strong><?= e($price) ?></strong></p><p><?= e($d['note']) ?></p><p class="hint">Edice i cena jsou předběžné a mohou se do spuštění změnit.</p></section>
 </div>
 <div class="card card-soft feature-notify">
   <?php if ($notified): ?><p><strong>Dáme Vám vědět, až bude funkce hotová.</strong></p>
