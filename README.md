@@ -272,6 +272,15 @@ automatické vystavování (viz výše).
   smaže včetně dat. Kontaktní osobě chodí upozornění 14 a 3 dny předem;
   bez prokazatelně odeslaného upozornění se nic nemaže a přihlášení lhůtu
   vynuluje. Odeslaná upozornění jsou v konzoli v části Záznamy.
+- **Ruční nastavení předplatného:** hlavní správce může u kteréhokoli
+  společenství v konzoli (karta Předplatné) nastavit edici a datum, do
+  kdy platí, prodloužit ji o měsíc nebo rok, ukončit ji, nebo placení
+  vypnout úplně – bez platby a faktury (dar, sleva, platba mimo systém).
+  Tamtéž zapne, prodlouží nebo ukončí zkoušku jednotlivé funkce. Každá
+  změna se zapíše do Záznamů; společenství lze poslat e-mail.
+- **Přechod mezi edicemi:** při přechodu na vyšší edici se od ceny odečte
+  nevyčerpaná část té dosavadní. Na nižší edici lze přejít až po skončení
+  zaplaceného období.
 - Web založený hlavním správcem v konzoli s vypnutou volbou „Web je
   placený“ nemá žádné limity a nic neplatí.
 - Vlastní doména je od edice Standard za příplatek, v Premium v ceně.

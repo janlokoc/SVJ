@@ -139,6 +139,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <?php endif ?>
 
 <main id="obsah">
+  <?php if (!empty($GLOBALS['PLAN_READONLY']) && is_admin()): $ro = PLAN_FEATURES[$GLOBALS['PLAN_READONLY']]; ?><div class="wrap"><div class="flash flash-info" translate="no">Zkouška funkce „<?= e($ro[1]) ?>“ skončila. Vše, co v ní je, zůstává uložené a viditelné, ale nejde nic přidat ani změnit. <a href="<?= url('/admin/predplatne') ?>#edice">Přejít na edici <?= e(EDITIONS[$ro[0]]) ?></a></div></div><?php endif ?>
   <?php if ($billingNote !== ''): ?><div class="wrap"><div class="flash flash-info bill-note" translate="no"><?= e($billingNote) ?> <a href="<?= url('/admin/predplatne') ?>">Zobrazit platební údaje</a></div></div><?php endif ?>
   <?php if ($flash): ?>
     <div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div>

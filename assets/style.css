@@ -936,3 +936,6 @@ body.lp .lp-section { padding-block: clamp(2rem, 1.2rem + 3vw, 3.5rem); }
 .file-bar h1 { flex: 1 1 200px; font-size: 1.4rem; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .file-frame { display: block; width: 100%; height: 80vh; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .file-image { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.plan-line { margin: 0 0 1rem; color: var(--muted); }
+.plan-line strong { color: var(--ink); }
+.board-back { text-align: center; margin: 1.5rem 0 0; font-size: .9rem; opacity: .7; }

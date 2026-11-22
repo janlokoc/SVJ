@@ -30,9 +30,12 @@ if ($edCompact) {
     <ul class="lp-check"><?php foreach ($edExtra[$ek] as $line): ?><li><?= e($line) ?></li><?php endforeach ?></ul>
     <?php if ($edView === 'landing'): ?>
       <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : ($edCompact ? 'Začít zdarma' : 'Začít zdarma, přejít později') ?></a>
-    <?php elseif ($ek !== 'free' && !empty($t['billing'])): ?>
+    <?php elseif ($ek !== 'free' && !empty($t['billing']) && billing_order_problem($t, $ek)): ?>
+      <p class="hint">Přechod možný po <?= cz_date($t['paid_until']) ?>, kdy skončí zaplacená edice <?= e(EDITIONS[$edNow]) ?>.</p>
+    <?php elseif ($ek !== 'free' && !empty($t['billing'])): $edCredit = billing_credit($t, $ek); ?>
       <form method="post" action="<?= url('/admin/predplatne/edice') ?>"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
         <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
+      <?php if ($edCredit): ?><p class="hint">Zaplatíte <?= money_czk(max(0, $price - $edCredit)) ?> – odečteme <?= money_czk($edCredit) ?> za nevyčerpanou část edice <?= e(EDITIONS[$edNow]) ?>.</p><?php endif ?>
     <?php endif ?>
   </section>
   <?php endforeach ?>

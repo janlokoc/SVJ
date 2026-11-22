@@ -37,6 +37,7 @@
     <p class="hint">Doménu musí její majitel nasměrovat na tento server; web pak poběží na ní i na adrese platformy.</p>
     <label>Interní poznámka <input type="text" name="note" value="<?= e($t['note']) ?>"></label>
     <?php if ($new): ?><label class="check"><input type="checkbox" name="seed_tabor"> <span>Naplnit ukázkovým obsahem SVJ Tábor 48 <small>Dokumenty, kontakty a aktuality z původního webu svjtabor48.webnode.cz. Pro ostatní společenství nechte vypnuté.</small></span></label><?php endif ?>
+    <?php if ($new): ?>
     <h2>Předplatné</h2>
     <label class="check"><input type="checkbox" name="billing"<?= $t['billing'] ? ' checked' : '' ?>> <span>Web je placený <small>Web se řídí edicemi: bez platby běží v edici Zdarma, po zaplacení ve Standardu nebo Premium. Vypnuté = web běží bez jakéhokoli omezení a nic neplatí (domluva s provozovatelem).</small></span></label>
     <div class="form-row">
@@ -44,6 +45,12 @@
       <label>Zaplaceno do <input type="date" name="paid_until" value="<?= e($t['paid_until']) ?>"></label>
       <label>Zaplacená edice <select name="plan"><?php foreach (['' => '– (Standard)', 'standard' => 'Standard', 'premium' => 'Premium'] as $pk => $pl): ?><option value="<?= $pk ?>"<?= ($t['plan'] ?? '') === $pk ? ' selected' : '' ?>><?= $pl ?></option><?php endforeach ?></select></label>
     </div>
+    <?php else: ?>
+    <h2>Kontakt pro platby a upozornění</h2>
+    <input type="hidden" name="trial_ends" value="<?= e($t['trial_ends']) ?>"><input type="hidden" name="paid_until" value="<?= e($t['paid_until']) ?>"><input type="hidden" name="plan" value="<?= e($t['plan'] ?? '') ?>">
+    <?php if ($t['billing']): ?><input type="hidden" name="billing" value="1"><?php endif ?>
+    <p class="hint">Edici a platnost předplatného nastavíte níže v části Předplatné.</p>
+    <?php endif ?>
     <div class="form-row">
       <label>Kontaktní osoba <input type="text" name="owner_name" value="<?= e($t['owner_name']) ?>"></label>
       <label>E-mail pro připomenutí plateb <input type="email" name="owner_email" value="<?= e($t['owner_email']) ?>"></label>
@@ -52,6 +59,35 @@
     <div class="actions"><button class="btn btn-big" type="submit"><?= $new ? 'Založit web' : 'Uložit' ?></button><a class="btn btn-ghost" href="<?= url('/') ?>">Zrušit</a></div>
   </form>
   <?php if (!$new): ?>
+  <div class="card" id="predplatne">
+    <h2>Předplatné</h2>
+    <p>Teď: <strong><?= $bstate['mode'] === 'free' ? 'bez placení a bez omezení' : 'edice ' . e(EDITIONS[$bstate['edition']]) ?></strong><?= match ($bstate['mode']) { 'paid' => ' · zaplaceno do ' . cz_date($bstate['until']) . ' (ještě ' . $bstate['days'] . ' dní)', 'trial' => ' · Standard na zkoušku do ' . cz_date($bstate['until']),
+      'grace' => ' · po splatnosti od ' . cz_date($bstate['until']) . ', za ' . max(0, pset_int('grace_days', 0, 365) + $bstate['days']) . ' dní přejde na Zdarma', 'basic' => $bstate['until'] !== '' ? ' · placená edice skončila ' . cz_date($bstate['until']) : ' · nikdy neplatil', default => '' } ?></p>
+    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/predplatne') ?>" class="form">
+      <?= csrf_field() ?>
+      <div class="form-row">
+        <label>Edice <select name="edition"><?php foreach (['standard' => 'Standard', 'premium' => 'Premium', 'free' => 'Zdarma (ukončit placenou edici)', 'unlimited' => 'Bez placení a bez omezení'] as $ek => $el): ?><option value="<?= $ek ?>"<?= ($bstate['mode'] === 'free' ? 'unlimited' : $bstate['edition']) === $ek ? ' selected' : '' ?>><?= $el ?></option><?php endforeach ?></select></label>
+        <label>Platí do <input type="date" name="until" value="<?= e($t['paid_until'] !== '' && $t['paid_until'] >= date('Y-m-d') ? $t['paid_until'] : date('Y-m-d', strtotime('+1 year'))) ?>" min="<?= date('Y-m-d') ?>"></label>
+      </div>
+      <label>Důvod (uloží se do záznamů; při odeslání e-mailu ho uvidí i společenství) <input type="text" name="reason" maxlength="200" placeholder="Např. platba hotově, dárek za doporučení, oprava po reklamaci"></label>
+      <label class="check"><input type="checkbox" name="notify"> <span>Poslat kontaktní osobě e-mail o nastavení předplatného</span></label>
+      <div class="actions">
+        <button class="btn" type="submit" name="do" value="set">Nastavit do zvoleného data</button>
+        <button class="btn btn-ghost" type="submit" name="do" value="year">Prodloužit o rok</button>
+        <button class="btn btn-ghost" type="submit" name="do" value="month">Prodloužit o měsíc</button>
+      </div>
+      <p class="hint">Nastavení nevytváří platbu ani fakturu – slouží pro dary, slevy, platby mimo systém a opravy. „Prodloužit“ počítá od konce dosavadního období stejné edice, jinak ode dneška. Běžné platby potvrzujte v části Platby.</p>
+    </form>
+    <h3>Zkoušení funkcí</h3>
+    <table class="table"><thead><tr><th>Funkce</th><th>Edice</th><th>Stav</th><th></th></tr></thead><tbody>
+      <?php $edRank = $bstate['mode'] === 'free' ? 2 : EDITION_RANK[$bstate['edition']]; foreach (PLAN_FEATURES as $fk => [$fmin, $fname]): $tr = $trials[$fk] ?? null; $in = $edRank >= EDITION_RANK[$fmin]; $running = $tr && $tr['ends'] >= date('Y-m-d'); ?>
+      <tr><td data-label="Funkce"><?= e($fname) ?></td><td data-label="Edice"><?= e(EDITIONS[$fmin]) ?></td>
+        <td data-label="Stav"><?= $in ? '<span class="status status-done">v edici</span>' : ($running ? '<span class="status status-in_progress">zkouška do ' . cz_date($tr['ends']) . '</span>' : ($tr ? '<span class="status status-new">zkouška skončila ' . cz_date($tr['ends']) . '</span>' : '<span class="muted">nezkoušel</span>')) ?></td>
+        <td class="t-actions"><?php if (!$in): ?><form method="post" action="<?= url('/svj/' . $t['slug'] . '/zkouska') ?>"><?= csrf_field() ?><input type="hidden" name="feature" value="<?= e($fk) ?>">
+          <button class="btn btn-small btn-ghost" type="submit" name="do" value="extend"><?= $running ? '+' . PLAN_TRIAL_DAYS . ' dní' : 'Zapnout na ' . PLAN_TRIAL_DAYS . ' dní' ?></button><?php if ($running): ?> <button class="link-danger" type="submit" name="do" value="end">Ukončit</button><?php endif ?></form><?php endif ?></td></tr>
+      <?php endforeach ?>
+    </tbody></table>
+  </div>
   <?php if (!empty($migration)): $mp = $migrationPayment; ?>
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>

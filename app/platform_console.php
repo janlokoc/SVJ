@@ -168,7 +168,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -190,6 +190,42 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         }
         flash($message, $ok ? 'ok' : 'error');
         redirect('/svj/' . $slug);
+    }
+    if ($METHOD === 'POST' && $action === '/predplatne') {
+        $edition = post('edition');
+        $before = billing_state($t);
+        $base = max(date('Y-m-d'), $t['paid_until'] !== '' && tenant_edition($t) === $edition ? $t['paid_until'] : '');
+        $until = match (post('do')) {
+            'year' => date('Y-m-d', strtotime($base . ' +1 year')),
+            'month' => date('Y-m-d', strtotime($base . ' +1 month')),
+            default => post('until'),
+        };
+        if (in_array($edition, ['standard', 'premium'], true) && (!valid_date($until) || $until < date('Y-m-d'))) {
+            flash('Zadejte datum, do kdy má předplatné platit (dnešní nebo pozdější).', 'error');
+        } elseif (billing_set($t, $edition, $until)) {
+            $label = ['unlimited' => 'bez placení a omezení', 'free' => 'Zdarma'][$edition] ?? EDITIONS[$edition] . ' do ' . cz_date($until);
+            $was = $before['mode'] === 'free' ? 'bez placení' : EDITIONS[$before['edition']] . ($before['until'] !== '' ? ' do ' . $before['until'] : '');
+            platform_log('Ruční nastavení předplatného', $slug . ' · ' . $was . ' → ' . $label . (trim(post('reason')) !== '' ? ' · ' . trim(post('reason')) : ''));
+            if (isset($_POST['notify']) && $t['owner_email'] !== '' && in_array($edition, ['standard', 'premium'], true)) {
+                tenant_notify($t, 'manual', 'Předplatné nastaveno – ' . $t['name'], "Dobrý den,\n\nweb " . $t['name'] . " má nově edici " . EDITIONS[$edition] . " do " . cz_date($until) . ".\n"
+                    . (trim(post('reason')) !== '' ? trim(post('reason')) . "\n" : '') . "Přehled edice a limitů najdete v administraci: " . tenant_url($t, '/admin/predplatne'));
+            }
+            flash('Předplatné nastaveno: ' . $label . '.');
+        } else {
+            flash('Předplatné se nepodařilo nastavit.', 'error');
+        }
+        redirect('/svj/' . $slug . '#predplatne');
+    }
+    if ($METHOD === 'POST' && $action === '/zkouska') {
+        $feature = post('feature');
+        if (isset(PLAN_FEATURES[$feature])) {
+            $cur = pq('SELECT ends FROM feature_trials WHERE tenant = ? AND feature = ?', [$slug, $feature])->fetchColumn();
+            $ends = post('do') === 'end' ? '' : date('Y-m-d', strtotime(max(date('Y-m-d'), (string) $cur) . ' +' . PLAN_TRIAL_DAYS . ' day'));
+            trial_set($slug, $feature, $ends);
+            platform_log('Zkouška funkce nastavena ručně', $slug . ' · ' . PLAN_FEATURES[$feature][1] . ' · ' . ($ends === '' ? 'ukončena' : 'do ' . $ends));
+            flash($ends === '' ? 'Zkouška je ukončena.' : 'Zkouška funkce „' . PLAN_FEATURES[$feature][1] . '“ běží do ' . cz_date($ends) . '.');
+        }
+        redirect('/svj/' . $slug . '#predplatne');
     }
     if ($METHOD === 'POST' && $action === '/prevod') {
         $m = migration_row($slug);
@@ -296,6 +332,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 50', [$slug])->fetchAll(), 'deleteOn' => tenant_delete_date($t),
+        'bstate' => billing_state($t), 'trials' => array_column(pq('SELECT feature, started, ends FROM feature_trials WHERE tenant = ?', [$slug])->fetchAll(), null, 'feature'),
         'migration' => ($mig = migration_row($slug)), 'migrationPayment' => migration_payment($mig),
         'domainPayment' => pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'domain' ORDER BY id DESC LIMIT 1", [$slug])->fetch() ?: null,
         'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : (string) (tenant_row($slug)['domain_request'] ?? '')),

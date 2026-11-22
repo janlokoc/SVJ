@@ -23,4 +23,5 @@
       <div class="board-qr"><?= qr_svg(absolute_url('/'), 'QR kód webu') ?><p>Celý web společenství:<br><strong><?= e(preg_replace('~^https?://~', '', rtrim(absolute_url('/'), '/'))) ?></strong></p></div>
     </aside>
   </div>
+  <p class="board-back no-print"><a href="<?= url('/') ?>">← Zpět na web</a></p>
 </main>

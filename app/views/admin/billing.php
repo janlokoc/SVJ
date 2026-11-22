@@ -10,7 +10,7 @@
     <?php elseif ($state['mode'] === 'trial'): ?>
       <p>Váš web má edici Standard na zkoušku do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Potom přejde na edici Zdarma – poběží dál, jen s jejími limity.</p>
     <?php elseif ($state['mode'] === 'paid'): ?>
-      <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong>.</p>
+      <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní). Měsíc před koncem Vám připravíme platbu na další rok a pošleme připomenutí; bez prodloužení web přejde na edici Zdarma.</p>
     <?php else: ?>
       <p>Předplatné skončilo <strong><?= cz_date($state['until']) ?></strong>. Web zatím běží beze změny; bez úhrady přejde za <?= max(0, pset_int('grace_days', 0, 365) + $state['days']) ?> dní na edici Zdarma. Nic se nemaže.</p>
     <?php endif ?>
@@ -41,7 +41,7 @@
         <?php if (pset('recipient') !== ''): ?><dt>Příjemce</dt><dd><?= e(pset('recipient')) ?></dd><?php endif ?>
       </dl>
     </div>
-    <p class="hint">Platba se páruje podle variabilního symbolu. Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
+    <p class="hint">Platba se páruje podle variabilního symbolu. <?= (int) $payment['amount'] < edition_price((string) ($payment['item'] ?? 'standard')) ? 'Částka je snížená o nevyčerpanou část dosavadní edice. ' : '' ?>Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
     <?php else: ?>
       <p>Částka: <strong><?= money_czk((int) $payment['amount']) ?></strong>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
       <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>

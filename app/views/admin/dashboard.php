@@ -5,6 +5,10 @@
   <?php elseif ($adminsWithout2fa): ?><div class="flash flash-info">Správců bez dvoufázového ověření: <?= $adminsWithout2fa ?>. Požádejte je, ať si ho zapnou ve svém účtu.</div><?php endif ?>
   <?php if ($failed24 >= 20): ?><div class="flash flash-error">Za posledních 24 hodin bylo <?= $failed24 ?> neúspěšných pokusů o přihlášení. Podívejte se do <a href="<?= url('/admin/zaznamy?jen-problemy') ?>">Záznamů</a>.</div><?php endif ?>
   <?php if ($maintenanceDue): ?><div class="flash flash-<?= maintenance_state($maintenanceDue[0]['next_date']) === 'overdue' ? 'error' : 'info' ?>">Blíží se termín revize: <?= e(implode('; ', array_map(fn($m) => $m['title'] . ' (' . cz_date($m['next_date']) . (maintenance_state($m['next_date']) === 'overdue' ? ', po termínu' : '') . ')', $maintenanceDue))) ?>. <a href="<?= url('/admin/revize') ?>">Otevřít revize</a></div><?php endif ?>
+  <?php if (plan_managed() && ($bs = $GLOBALS['BILLING'] ?? null) && $bs['mode'] !== 'free'): $activeTrials = array_filter(plan_trials(), fn($tr) => $tr['ends'] >= date('Y-m-d') && plan_state($tr['feature']) === 'trial'); ?>
+  <p class="plan-line">Edice <strong><?= e(EDITIONS[$bs['edition']]) ?></strong><?= match ($bs['mode']) { 'paid' => ' · zaplaceno do ' . cz_date($bs['until']), 'trial' => ' · na zkoušku do ' . cz_date($bs['until']), 'grace' => ' · předplatné skončilo ' . cz_date($bs['until']), default => ' · bez časového omezení' } ?><?php foreach ($activeTrials as $tr): ?> · zkouška „<?= e(PLAN_FEATURES[$tr['feature']][1]) ?>“ do <?= cz_date($tr['ends']) ?><?php endforeach ?>
+    · <a href="<?= url('/admin/predplatne') ?>">Předplatné a limity</a></p>
+  <?php endif ?>
   <div class="stat-grid">
     <a class="stat" href="<?= url('/admin/aktuality') ?>"><span class="stat-num"><?= $stats['posts'] ?></span><span>aktualit</span></a>
     <a class="stat" href="<?= url('/admin/dokumenty') ?>"><span class="stat-num"><?= $stats['documents'] ?></span><span>dokumentů</span></a>

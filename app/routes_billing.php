@@ -239,9 +239,14 @@ $route('POST', '/admin/predplatne/edice', function () {
         flash('Jednu platbu jste už nahlásili jako odeslanou. Počkejte prosím na její potvrzení.', 'error');
         redirect('/admin/predplatne#platba');
     }
+    if ($problem = billing_order_problem($t, $edition)) {
+        flash($problem, 'info');
+        redirect('/admin/predplatne#edice');
+    }
+    $credit = billing_credit($t, $edition);
     $p = billing_order($t, $edition);
     audit('Předplatné: objednávka edice', EDITIONS[$edition] . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
-    flash('Edice ' . EDITIONS[$edition] . ' je objednaná. Zapne se po připsání platby – údaje jsou níže.');
+    flash('Edice ' . EDITIONS[$edition] . ' je objednaná. Zapne se po připsání platby – údaje jsou níže.' . ($credit ? ' Od ceny jsme odečetli ' . money_czk($credit) . ' za nevyčerpanou část edice ' . EDITIONS[tenant_edition($t)] . '.' : ''));
     redirect('/admin/predplatne#platba');
 });
 $route('POST', '/admin/predplatne/zkusit', function () {

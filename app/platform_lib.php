@@ -427,11 +427,74 @@ function period_label(): string
 {
     return 'rok';
 }
+/**
+ * Hlavní správce nastaví předplatné ručně (dar, sleva, platba mimo systém, oprava): edice a den, do kdy platí.
+ * 'free' předplatné ukončí (web přejde na edici Zdarma), 'unlimited' vypne placení úplně.
+ */
+function billing_set(array $t, string $edition, string $until): bool
+{
+    if ($edition === 'unlimited') {
+        pq("UPDATE tenants SET billing = 0, reminded = '' WHERE slug = ?", [$t['slug']]);
+        return true;
+    }
+    if ($edition === 'free') {
+        pq("UPDATE tenants SET billing = 1, paid_until = '', trial_ends = '', plan = '', reminded = '' WHERE slug = ?", [$t['slug']]);
+        return true;
+    }
+    if (!in_array($edition, ['standard', 'premium'], true) || !valid_date($until)) {
+        return false;
+    }
+    pq("UPDATE tenants SET billing = 1, paid_until = ?, plan = ?, reminded = '' WHERE slug = ?", [$until, $edition, $t['slug']]);
+    return true;
+}
+/** Hlavní správce zapne nebo prodlouží zkoušku funkce (i opakovaně), případně ji ukončí. */
+function trial_set(string $slug, string $feature, string $ends): void
+{
+    if (!isset(PLAN_FEATURES[$feature])) {
+        return;
+    }
+    if ($ends === '') {
+        pq('UPDATE feature_trials SET ends = ? WHERE tenant = ? AND feature = ?', [date('Y-m-d', strtotime('-1 day')), $slug, $feature]);
+        return;
+    }
+    if (pq('SELECT 1 FROM feature_trials WHERE tenant = ? AND feature = ?', [$slug, $feature])->fetchColumn()) {
+        pq("UPDATE feature_trials SET ends = ?, warned = '' WHERE tenant = ? AND feature = ?", [$ends, $slug, $feature]);
+    } else {
+        pq('INSERT INTO feature_trials (tenant, feature, started, ends) VALUES (?,?,?,?)', [$slug, $feature, date('Y-m-d'), $ends]);
+    }
+}
 /** Otevřená výzva k platbě za edici (nejvýše jedna na společenství), nebo null. */
 function billing_open(array $t): ?array
 {
     $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
     return $p ?: null;
+}
+/**
+ * Kolik Kč zbývá z už zaplacené nižší edice: při přechodu na vyšší se nevyčerpaná část odečte od ceny.
+ * Počítá se z poslední přijaté platby za edici a ze zbývajících dnů zaplaceného období.
+ */
+function billing_credit(array $t, string $edition): int
+{
+    $now = tenant_edition($t);
+    if ($t['paid_until'] === '' || $t['paid_until'] < date('Y-m-d') || !isset(EDITION_RANK[$edition]) || EDITION_RANK[$edition] <= EDITION_RANK[$now]) {
+        return 0;
+    }
+    $p = pq("SELECT amount, period_from, period_to FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid' AND period_to = ? ORDER BY id DESC LIMIT 1", [$t['slug'], $t['paid_until']])->fetch();
+    if (!$p || $p['period_from'] === '') {
+        return 0;   // období nastavil ručně hlavní správce – není z čeho počítat
+    }
+    $total = max(1, (int) round((strtotime($p['period_to']) - strtotime($p['period_from'])) / 86400) + 1);
+    $left = max(0, (int) round((strtotime($p['period_to']) - strtotime(date('Y-m-d'))) / 86400));
+    return (int) floor((int) $p['amount'] * min($left, $total) / $total);
+}
+/** Proč teď edici objednat nejde (nebo null): na nižší edici se přechází až po skončení zaplaceného období. */
+function billing_order_problem(array $t, string $edition): ?string
+{
+    $now = tenant_edition($t);
+    if (isset(EDITION_RANK[$edition]) && $t['paid_until'] >= date('Y-m-d') && EDITION_RANK[$edition] < EDITION_RANK[$now]) {
+        return 'Edici ' . EDITIONS[$now] . ' máte zaplacenou do ' . cz_date($t['paid_until']) . '. Na edici ' . EDITIONS[$edition] . ' můžete přejít po tomto datu – o zaplacené období tak nepřijdete.';
+    }
+    return null;
 }
 /** Výzva k platbě za edici na rok; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění. */
 function billing_order(array $t, string $edition): ?array
@@ -439,7 +502,10 @@ function billing_order(array $t, string $edition): ?array
     if (!isset(EDITIONS[$edition]) || $edition === 'free') {
         return null;
     }
-    $amount = edition_price($edition);
+    if (billing_order_problem($t, $edition)) {
+        return null;
+    }
+    $amount = max(0, edition_price($edition) - billing_credit($t, $edition));
     $p = billing_open($t);
     if ($p && $p['status'] === 'claimed') {
         return $p;
@@ -640,7 +706,7 @@ function demo_create(): void
 
 // ---------- Upozornění společenstvím a automatické mazání nezaplacených zkušebních webů ----------
 
-const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'free' => 'přechod na edici Zdarma', 'trial7' => 'končí zkouška funkce (7 dní)', 'trial2' => 'končí zkouška funkce (2 dny)', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
+const NOTICE_KINDS = ['soon' => 'blíží se konec období', 'due' => 'období skončilo', 'free' => 'přechod na edici Zdarma', 'manual' => 'předplatné nastaveno ručně', 'trial7' => 'končí zkouška funkce (7 dní)', 'trial2' => 'končí zkouška funkce (2 dny)', 'locked' => 'web pozastaven', 'del14' => 'web bude smazán (první upozornění)',
     'del3' => 'web bude smazán (poslední upozornění)', 'deleted' => 'web byl smazán', 'domain' => 'končí předplatné vlastní domény', 'cert' => 'končí platnost nahraného certifikátu'];
 
 /** Pošle upozornění kontaktní osobě společenství a zapíše, komu, kdy a zda se ho podařilo odeslat. */
