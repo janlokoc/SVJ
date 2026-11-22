@@ -16,12 +16,18 @@ if ($edCompact) {
         'premium' => ['Platby na jednotku, rezervace, jazyky', 'Účty obyvatel: ' . $n('premium', 'users', 'účet', 'účtů'), 'Vlastní doména v ceně'],
     ];
 } ?>
-<div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
+<div class="editions<?= $edCompact ? ' editions-compact' : '' ?>"<?= $edView === 'landing' ? ' data-reveal-group="up"' : '' ?>>
   <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); $priceMonth = edition_price($ek, 'month'); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
     <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
     <?php if ($price): ?><p class="edition-monthly">nebo <?= money_czk($priceMonth) ?> měsíčně</p><?php endif ?>
+    <?php if ($edCompact): ?><div class="edition-more" id="edice-<?= $ek ?>"><div><ul class="edition-limits">
+      <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
+      <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
+      <?php endforeach ?>
+    </ul></div></div>
+    <button class="edition-toggle" type="button" aria-expanded="false" aria-controls="edice-<?= $ek ?>" data-collapse-toggle><span data-more>Zobrazit limity</span><span data-less hidden>Skrýt limity</span> <?= icon('chevron') ?></button><?php endif ?>
     <?php if (!$edCompact): ?><p class="muted"><?= e($edNotes[$ek]) ?></p>
     <ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>

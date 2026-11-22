@@ -7,7 +7,7 @@ $benefits = [
     ['Hotovo za pět minut', 'Zvolíte adresu a vzhled, vytvoříte si účet a můžete zvát sousedy. Nic se neinstaluje.'],
 ];
 ?>
-<section class="hero lp-hero lp-hero-simple">
+<section class="hero lp-hero lp-hero-simple lp-animated">
   <div class="wrap hero-grid">
     <div class="hero-text">
       <h1>Web Vašeho SVJ <span class="h1-sub">zdarma a za pět minut</span></h1>
@@ -23,26 +23,26 @@ $benefits = [
 </section>
 
 <section class="wrap lp-section" id="funkce">
-  <ul class="lp-benefits">
+  <ul class="lp-benefits" data-reveal-group>
     <?php foreach ($benefits as [$h, $p]): ?><li><h2><?= e($h) ?></h2><p><?= e($p) ?></p></li><?php endforeach ?>
   </ul>
   <p class="lp-more"><a href="<?= url('/funkce') ?>">Všechny funkce <?= icon('arrow') ?></a></p>
 </section>
 
 <section class="wrap lp-section" id="vzhledy">
-  <h2>Pět šablon, každá v pěti barvách</h2>
-  <div class="lp-looks look-cards lp-looks-plain">
+  <h2 data-reveal>Pět šablon, každá v pěti barvách</h2>
+  <div class="lp-looks look-cards lp-looks-plain" data-reveal-group="zoom">
     <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong></figcaption></figure><?php endforeach ?>
   </div>
 </section>
 
 <section class="wrap lp-section" id="cenik">
-  <h2>Kolik to stojí</h2>
+  <h2 data-reveal>Kolik to stojí</h2>
   <?php $edView = 'landing'; $edCompact = true; require __DIR__ . '/_editions.php'; ?>
   <p class="lp-more"><a href="<?= url('/cenik') ?>">Podrobný ceník, limity a doplňky <?= icon('arrow') ?></a></p>
 </section>
 
-<section class="wrap lp-section narrow" id="otazky">
+<section class="wrap lp-section narrow" id="otazky" data-reveal>
   <h2>Časté otázky</h2>
   <details class="lp-faq"><summary>Je web opravdu zdarma?</summary><p>Ano. Edice Zdarma nemá časové omezení a nechceme po Vás platební kartu. Má limity (počet účtů, správců a hromadných e-mailů) a v patičce odkaz na službu. Když limit vyčerpáte, web běží dál.</p></details>
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>

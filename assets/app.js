@@ -269,3 +269,28 @@ document.querySelectorAll('input[type=file][data-shrink]').forEach((input) => in
   input.files = dt.files;
 }));
 
+// Úvodní stránka: prvky při posouvání „přilétnou“. Schovají se jen ty, které jsou při načtení pod okrajem okna,
+// takže bez JavaScriptu i při omezeném pohybu je vše normálně vidět.
+(() => {
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const items = [];
+  document.querySelectorAll('[data-reveal-group]').forEach((group) => {
+    [...group.children].forEach((child, i) => { child.dataset.reveal = group.dataset.revealGroup || 'up'; child.dataset.revealDelay = Math.min(i, 6); items.push(child); });
+  });
+  document.querySelectorAll('[data-reveal]').forEach((el) => { if (!items.includes(el)) items.push(el); });
+  if (!items.length || still || !('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver((entries) => entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); } }), { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+  items.forEach((el) => { if (el.getBoundingClientRect().top > window.innerHeight * 0.92) { el.classList.add('will-reveal'); io.observe(el); } });
+})();
+// Rozbalení podrobností (limity edice) s plynulým otevřením
+document.querySelectorAll('[data-collapse-toggle]').forEach((btn) => btn.addEventListener('click', () => {
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  // Karty vedle sebe (edice) se rozbalují společně, aby šly limity porovnat a karty zůstaly stejně vysoké.
+  const group = btn.closest('.editions');
+  (group ? group.querySelectorAll('[data-collapse-toggle]') : [btn]).forEach((b) => {
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.getElementById(b.getAttribute('aria-controls')).classList.toggle('is-open', open);
+    b.querySelector('[data-more]').hidden = open; b.querySelector('[data-less]').hidden = !open;
+  });
+}));
+
