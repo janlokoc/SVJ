@@ -272,14 +272,10 @@ automatické vystavování (viz výše).
   smaže včetně dat. Kontaktní osobě chodí upozornění 14 a 3 dny předem;
   bez prokazatelně odeslaného upozornění se nic nemaže a přihlášení lhůtu
   vynuluje. Odeslaná upozornění jsou v konzoli v části Záznamy.
-- **Měsíční platba:** edici lze platit i měsíčně. Měsíční cena je roční
-  cena ÷ 12 zvýšená o přirážku z Nastavení služby (výchozí 30 %; Standard
-  161 Kč, Premium 324 Kč). Platí se trvalým příkazem: QR kód podle
-  standardu QR Platba (`FRQ:1M`) ho v bankovní aplikaci předvyplní,
-  variabilní symbol zůstává každý měsíc stejný. Každou připsanou platbu
-  potvrdíte v Platbách; edice se prodlouží o měsíc a vystaví se faktura.
-  Podpora trvalého příkazu z QR kódu se mezi bankami liší – na stránce je
-  i ruční postup a QR pro jednorázovou platbu prvního měsíce.
+- **Platby:** edice se platí jen ročně (zálohová faktura s QR kódem,
+  platba převodem). Vedle toho jsou roční doplňky (vlastní doména,
+  úložiště navíc, AI Plus) a jednorázové platby (převod starého webu).
+  Měsíční platba se nenabízí.
 - **Zrušení webu správcem:** správce společenství může v Předplatném
   požádat o smazání celého webu (opíše adresu webu a zadá heslo). Web se
   smaže po 7 dnech; do té doby běží, všichni správci dostanou e-mail
@@ -303,17 +299,17 @@ automatické vystavování (viz výše).
 - **Doporučení a kredity:** každé společenství má v Předplatném svůj odkaz
   (`…/?ref=KÓD`). Kdo se přes něj zaregistruje, dostane slevu na první
   roční platbu (výchozí 150 Kč). Doporučitel dostane odměnu (výchozí
-  300 Kč), jakmile doporučené společenství poprvé zaplatí rok, při
-  měsíčním placení po třetí platbě – jen jednou za každé společenství.
+  300 Kč), jakmile doporučené společenství poprvé zaplatí roční edici – jen
+  jednou za každé společenství.
   Odměna se připíše jako kredit a sama se odečte od příští roční platby;
   nevyplácí se. Obě částky jsou v Nastavení služby (0 = vypnuto). Sám sebe
   (stejný kontaktní e-mail) doporučit nejde.
   Správce vidí počet otevření odkazu, registrací a platících, stav každého
   doporučeného společenství (zaregistrovalo se, zkouší funkce, objednalo,
-  platí měsíčně, zaplatilo) a kolik kreditu získal a uplatnil.
+  zaplatilo) a kolik kreditu získal a uplatnil.
 - **DPH:** v Nastavení služby (Faktury a DPH) lze zapnout „Provozovatel je
   plátce DPH“ a sazbu. Ceny v nastavení i v ceníku jsou **bez DPH**; daň se
-  připočte k platbě (QR kód, zálohová faktura, trvalý příkaz) a faktura je
+  připočte k platbě (QR kód, zálohová faktura) a faktura je
   daňový doklad s DIČ, základem daně a DPH. Sazba se ukládá u každé platby,
   takže zaplacené doklady se změnou nastavení nemění; čekající platby se
   přepočtou. Podobu dokladů si nechte potvrdit účetní.

@@ -181,6 +181,11 @@ SQL);
         // Ceny jsou bez DPH: u platby si pamatujeme sazbu, která se k ní připočítává (0 = neplátce).
         $pdo->exec("ALTER TABLE payments ADD COLUMN vat_rate INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 15;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 16) {
+        // Měsíční placení je zrušené: nezaplacené měsíční výzvy se ruší, zaplacené období doběhne.
+        $pdo->exec("UPDATE payments SET status = 'cancelled' WHERE kind = 'service' AND months = 1 AND status IN ('pending','claimed');
+            UPDATE tenants SET period = 'year'; PRAGMA user_version = 16;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -379,7 +384,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'monthly_surcharge' => '30', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -555,22 +560,19 @@ function billing_order_problem(array $t, string $edition): ?string
     }
     return null;
 }
-/**
- * Výzva k platbě za edici na rok nebo na měsíc; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění.
- * Měsíční platba je dražší o přirážku z nastavení (roční cena / 12 + přirážka) a platí se trvalým příkazem se stále stejným variabilním symbolem.
- */
-function billing_order(array $t, string $edition, string $period = 'year'): ?array
+/** Výzva k platbě za edici na rok; variabilní symbol páruje platbu na účtu. Nahlášenou platbu už nemění. */
+function billing_order(array $t, string $edition): ?array
 {
-    $months = $period === 'month' ? 1 : 12;
+    $months = 12;
     if (!isset(EDITIONS[$edition]) || $edition === 'free') {
         return null;
     }
     if (billing_order_problem($t, $edition)) {
         return null;
     }
-    $amount = $months === 1 ? edition_price($edition, 'month') : max(0, edition_price($edition) - billing_credit($t, $edition));
-    // Kredit za doporučení se odečítá jen u roční platby (trvalý příkaz potřebuje stále stejnou částku) a strhne se až při potvrzení platby.
-    $discount = $months === 12 ? min($amount, max(0, (int) ($t['credit'] ?? 0))) : 0;
+    $amount = max(0, edition_price($edition) - billing_credit($t, $edition));
+    // Kredit za doporučení se strhne až při potvrzení platby.
+    $discount = min($amount, max(0, (int) ($t['credit'] ?? 0)));
     $amount -= $discount;
     $p = billing_open($t);
     if ($p && $p['status'] === 'claimed') {
@@ -656,13 +658,8 @@ function billing_confirm(array $p, string $by): ?array
         }
         return ['from' => $from, 'to' => $to];
     }
-    $monthly = (int) $p['months'] === 1;
-    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = ?, billing = 1, auto_renew = 1, reminded = '', credit = MAX(0, credit - ?) WHERE slug = ?", [$to, $edition, $monthly ? 'month' : 'year', (int) ($p['discount'] ?? 0), $t['slug']]);
+    pq("UPDATE tenants SET paid_until = ?, plan = ?, period = 'year', billing = 1, auto_renew = 1, reminded = '', credit = MAX(0, credit - ?) WHERE slug = ?", [$to, $edition, (int) ($p['discount'] ?? 0), $t['slug']]);
     referral_reward($t, $p);
-    if ($monthly) {
-        // Trvalý příkaz posílá každý měsíc stejnou částku se stejným variabilním symbolem – další platbu proto čekáme pod týmž symbolem.
-        pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, vs) VALUES (" . vat_rate_now() . ",?,?,1,?,'service',?,?)", [$t['slug'], edition_price($edition, 'month'), date('Y-m-d H:i:s'), $edition, $p['vs']]);
-    }
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
             . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
@@ -704,12 +701,12 @@ function cz_iban(string $account): ?string
     return 'CZ' . sprintf('%02d', 98 - $mod97($bban . '123500')) . $bban;
 }
 /** Text QR platby (český standard „QR Platba“, formát SPAYD), který přečte bankovní aplikace. */
-function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = '', bool $standing = false): string
+function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = ''): string
 {
     $clean = fn(string $s, int $max) => substr(trim(str_replace('*', ' ', strtoupper(ascii_text($s)))), 0, $max);
     return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '')
         // Trvalý příkaz podle standardu QR Platba: první platba dnes, opakování každý měsíc, bez data ukončení.
-        . ($standing ? '*DT:' . date('Ymd') . '*FRQ:1M*DH:1' : '') . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
+        . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
 }
 /** Jednou denně: připomene blížící se konec placené edice a přechod na edici Zdarma, konec zkoušky funkcí a uklidí nepoužívané weby. */
 function platform_daily(): void
@@ -723,11 +720,10 @@ function platform_daily(): void
         if ($s['until'] === '') {
             continue;   // edice Zdarma od začátku – není co připomínat
         }
-        $monthly = ($t['period'] ?? 'year') === 'month';
         $key = match (true) {
             $s['mode'] === 'basic' => 'free:' . $s['until'],
-            $s['mode'] === 'grace' && (!$monthly || $s['days'] <= -5) => 'due:' . $s['until'],
-            !$monthly && $s['mode'] !== 'grace' && $s['days'] <= 14 => 'soon:' . $s['until'],
+            $s['mode'] === 'grace' => 'due:' . $s['until'],
+            $s['mode'] !== 'grace' && $s['days'] <= 14 => 'soon:' . $s['until'],
             default => '',
         };
         if ($key === '' || $key === $t['reminded']) {
@@ -737,7 +733,7 @@ function platform_daily(): void
         $what = $t['paid_until'] === '' ? 'zkušební doba' : 'předplatné edice ' . EDITIONS[$s['edition'] === 'free' ? ($t['plan'] ?: 'standard') : $s['edition']];
         // Před koncem zaplaceného období rovnou připravíme výzvu k platbě na další rok.
         if ($renews && $s['mode'] !== 'basic' && $t['paid_until'] !== '' && !billing_open($t)) {
-            billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition'], $monthly ? 'month' : 'year');
+            billing_order($t, $s['edition'] === 'free' ? 'standard' : $s['edition']);
         }
         $link = tenant_url($t, '/admin/predplatne');
         [$subject, $body] = match ($s['mode']) {
@@ -1125,18 +1121,14 @@ function referral_register(string $code, array $new): void
     pq('INSERT OR IGNORE INTO referrals (referrer, referred, referred_name, created_at) VALUES (?,?,?,?)', [$ref['slug'], $new['slug'], $new['name'], date('Y-m-d H:i:s')]);
 }
 /**
- * Odměna doporučiteli: připíše se jako kredit ve chvíli, kdy doporučené společenství poprvé zaplatí rok,
- * nebo při třetí měsíční platbě. Za každé doporučené společenství jen jednou.
+ * Odměna doporučiteli: připíše se jako kredit ve chvíli, kdy doporučené společenství poprvé zaplatí roční edici.
+ * Za každé doporučené společenství jen jednou.
  */
 function referral_reward(array $paid, array $payment): void
 {
     $r = pq("SELECT * FROM referrals WHERE referred = ? AND rewarded_at = ''", [$paid['slug']])->fetch();
     $amount = pset_int('referral_reward', 0, 100000);
     if (!$r || $amount === 0) {
-        return;
-    }
-    $monthsPaid = (int) pq("SELECT COALESCE(SUM(months), 0) FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid'", [$paid['slug']])->fetchColumn();
-    if ((int) $payment['months'] !== 12 && $monthsPaid < 3) {
         return;
     }
     $ref = tenant_row($r['referrer']);
@@ -1155,7 +1147,7 @@ function referral_reward(array $paid, array $payment): void
 /**
  * Přehled doporučení jednoho společenství: každé doporučené s aktuálním stavem a souhrn.
  * Stavy: registered (jen se zaregistrovalo), trying (zkouší placené funkce), ordered (objednalo edici, čeká se na platbu),
- * monthly (platí měsíčně, odměna po třetí platbě), converted (zaplatilo – kredit připsán), gone (web už neexistuje).
+ * converted (zaplatilo – kredit připsán), gone (web už neexistuje).
  */
 function referral_overview(array $t): array
 {
@@ -1170,11 +1162,7 @@ function referral_overview(array $t): array
         } elseif (!$ref) {
             $state = 'gone';
         } else {
-            $paidMonths = (int) pq("SELECT COALESCE(SUM(months), 0) FROM payments WHERE tenant = ? AND kind = 'service' AND status = 'paid'", [$ref['slug']])->fetchColumn();
-            if ($paidMonths > 0) {
-                $state = 'monthly';
-                $note = $paidMonths . ' ze 3 měsíčních plateb';
-            } elseif (pq("SELECT 1 FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') LIMIT 1", [$ref['slug']])->fetchColumn()) {
+            if (pq("SELECT 1 FROM payments WHERE tenant = ? AND kind = 'service' AND status IN ('pending','claimed') LIMIT 1", [$ref['slug']])->fetchColumn()) {
                 $state = 'ordered';
             } elseif (pq('SELECT 1 FROM feature_trials WHERE tenant = ? AND ends >= ? LIMIT 1', [$ref['slug'], date('Y-m-d')])->fetchColumn()) {
                 $state = 'trying';
@@ -1188,7 +1176,7 @@ function referral_overview(array $t): array
         'earned' => array_sum(array_map(fn($r) => (int) $r['amount'], $converted)), 'used' => $used, 'credit' => (int) ($t['credit'] ?? 0), 'reward' => $reward];
 }
 const REFERRAL_STATES = ['registered' => ['Zaregistrovalo se', 'new'], 'trying' => ['Zkouší placené funkce', 'in_progress'], 'ordered' => ['Objednalo edici, čeká se na platbu', 'in_progress'],
-    'monthly' => ['Platí měsíčně', 'in_progress'], 'converted' => ['Zaplatilo – kredit připsán', 'done'], 'gone' => ['Web už neexistuje', 'new']];
+    'converted' => ['Zaplatilo – kredit připsán', 'done'], 'gone' => ['Web už neexistuje', 'new']];
 
 // ---------- Úložiště navíc: balíčky nad limit edice, placené na rok ----------
 

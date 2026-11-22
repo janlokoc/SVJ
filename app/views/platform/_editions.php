@@ -17,11 +17,10 @@ if ($edCompact) {
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>"<?= $edView === 'landing' ? ' data-reveal-group="up"' : '' ?>>
-  <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); $priceMonth = edition_price($ek, 'month'); ?>
+  <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
     <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
-    <?php if ($price): ?><p class="edition-monthly">nebo <?= money_czk($priceMonth) ?> měsíčně</p><?php endif ?>
     <?php if ($edCompact): ?><div class="edition-more" id="edice-<?= $ek ?>"><div><ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
       <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
@@ -41,8 +40,7 @@ if ($edCompact) {
       <p class="hint">Přechod možný po <?= cz_date($t['paid_until']) ?>, kdy skončí zaplacená edice <?= e(EDITIONS[$edNow]) ?>.</p>
     <?php elseif ($ek !== 'free' && !empty($t['billing'])): $edCredit = billing_credit($t, $ek); ?>
       <form method="post" action="<?= url('/admin/predplatne/edice') ?>" class="edition-order"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
-        <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit" name="period" value="year"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button>
-        <button class="btn btn-small btn-ghost" type="submit" name="period" value="month">Platit měsíčně · <?= money_czk($priceMonth) ?></button></form>
+        <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
       <?php if ($edCredit): ?><p class="hint">Zaplatíte <?= money_czk(max(0, $price - $edCredit)) ?> – odečteme <?= money_czk($edCredit) ?> za nevyčerpanou část edice <?= e(EDITIONS[$edNow]) ?>.</p><?php endif ?>
     <?php endif ?>
   </section>

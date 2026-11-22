@@ -32,8 +32,8 @@ $route('GET', '/admin/predplatne', function () {
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($ap), $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($dp), $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
-        'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient'), (int) $payment['months'] === 1), (int) $payment['months'] === 1 ? 'QR kód pro trvalý příkaz' : 'QR platba') : '',
-        'qrOnce' => $payment && $iban && (int) $payment['months'] === 1 ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR jednorázová platba') : '',
+        'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
+
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
 });
 $route('GET', '/admin/predplatne/doklad/(\d+)', function (int $id) {
@@ -272,10 +272,9 @@ $route('POST', '/admin/predplatne/edice', function () {
         flash($problem, 'info');
         redirect('/admin/predplatne#edice');
     }
-    $period = post('period') === 'month' ? 'month' : 'year';
-    $credit = $period === 'year' ? billing_credit($t, $edition) : 0;
-    $p = billing_order($t, $edition, $period);
-    audit('Předplatné: objednávka edice', EDITIONS[$edition] . ($period === 'month' ? ' měsíčně' : ' ročně') . ' · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+    $credit = billing_credit($t, $edition);
+    $p = billing_order($t, $edition);
+    audit('Předplatné: objednávka edice', EDITIONS[$edition] . ' na rok · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
     flash('Edice ' . EDITIONS[$edition] . ' je objednaná. Zapne se po připsání platby – údaje jsou níže.' . ($credit ? ' Od ceny jsme odečetli ' . money_czk($credit) . ' za nevyčerpanou část edice ' . EDITIONS[tenant_edition($t)] . '.' : ''));
     redirect('/admin/predplatne#platba');
 });
@@ -308,7 +307,7 @@ $route('POST', '/admin/predplatne/prodluzovani', function () {
         pq("UPDATE payments SET status = 'cancelled', note = 'automatické prodlužování vypnuto správcem webu' WHERE tenant = ? AND kind = 'service' AND status = 'pending'", [TENANT]);
     }
     audit('Předplatné: automatické prodlužování ' . ($on ? 'zapnuto' : 'vypnuto'));
-    flash($on ? 'Automatické prodlužování je zapnuté.' : 'Automatické prodlužování je vypnuté. Edice doběhne do konce zaplaceného období a potom web přejde na edici Zdarma.' . (($t['period'] ?? 'year') === 'month' ? ' Nezapomeňte zrušit trvalý příkaz ve své bance.' : ''), $on ? 'ok' : 'info');
+    flash($on ? 'Automatické prodlužování je zapnuté.' : 'Automatické prodlužování je vypnuté. Edice doběhne do konce zaplaceného období a potom web přejde na edici Zdarma.', $on ? 'ok' : 'info');
     redirect('/admin/predplatne');
 });
 // Zrušení celého webu na žádost správce: smaže se po týdnu, do té doby lze žádost vzít zpět. V ukázkovém webu to nejde.

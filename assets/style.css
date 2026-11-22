@@ -982,7 +982,7 @@ input[type=date]::-webkit-date-and-time-value, input[type=time]::-webkit-date-an
 .chat-head h1 { margin-bottom: .2rem; }
 .nav-count { display: inline-block; min-width: 1.3em; padding: 0 .4em; margin-left: .3em; border-radius: 999px; background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700; text-align: center; line-height: 1.5; }
 
-.edition-monthly { margin: -.3rem 0 0; color: var(--muted); font-size: .93rem; }
+
 .edition-order { display: grid; gap: .4rem; }
 .danger-zone { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .danger-zone summary { cursor: pointer; }

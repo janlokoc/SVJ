@@ -12,7 +12,7 @@
     <?php elseif ($state['mode'] === 'paid'): ?>
       <p>Zaplaceno do <strong><?= cz_date($state['until']) ?></strong> (ještě <?= $state['days'] ?> dní).</p>
       <?php if (!empty($t['auto_renew'])): ?>
-      <div class="renew-box"><p><strong>Předplatné se prodlužuje automaticky.</strong> <?= ($t['period'] ?? 'year') === 'month' ? 'Každou měsíční platbu z Vašeho trvalého příkazu připíšeme a edici prodloužíme o další měsíc.' : 'Před koncem období Vám připravíme zálohovou fakturu na další rok a pošleme upozornění e-mailem.' ?> Nic se nestrhává bez Vás – platíte převodem.</p>
+      <div class="renew-box"><p><strong>Předplatné se prodlužuje automaticky.</strong> Před koncem období Vám připravíme zálohovou fakturu na další rok a pošleme upozornění e-mailem. Nic se nestrhává bez Vás – platíte převodem.</p>
         <form method="post" action="<?= url('/admin/predplatne/prodluzovani') ?>" data-confirm="Vypnout automatické prodlužování? Edice doběhne do <?= cz_date($state['until']) ?> a potom web přejde na edici Zdarma."><?= csrf_field() ?><input type="hidden" name="action" value="off"><button class="btn btn-small btn-ghost" type="submit">Zrušit prodlužování</button></form></div>
       <?php else: ?>
       <div class="renew-box is-off"><p><strong>Automatické prodlužování je vypnuté.</strong> Edice doběhne do <?= cz_date($state['until']) ?> a potom web přejde na edici Zdarma. Nic se nemaže.<?= ($t['period'] ?? 'year') === 'month' ? ' Nezapomeňte zrušit trvalý příkaz ve své bance.' : '' ?></p>
@@ -35,32 +35,21 @@
 
   <?php if ($payment): ?>
   <div class="card" id="platba">
-    <?php $monthlyPay = (int) $payment['months'] === 1; ?>
-    <h2>Platba za edici <?= e(EDITIONS[$payment['item']] ?? 'Standard') ?> <?= $monthlyPay ? '– měsíčně trvalým příkazem' : 'na 1 rok' ?></h2>
+    <h2>Platba za edici <?= e(EDITIONS[$payment['item']] ?? 'Standard') ?> na 1 rok</h2>
     <?php if ($payment['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($payment['claimed_at']) ?>. Čeká na potvrzení provozovatelem – obvykle do dvou pracovních dnů.</div><?php endif ?>
     <?php if ($iban): ?>
     <div class="pay">
-      <div class="pay-qr"><?= $qr ?><small><?= $monthlyPay ? 'QR kód pro trvalý příkaz' : 'Načtěte v bankovní aplikaci' ?></small></div>
+      <div class="pay-qr"><?= $qr ?><small>Načtěte v bankovní aplikaci</small></div>
       <dl class="pay-data">
-        <dt>Částka</dt><dd><strong><?= pay_money($payment) ?></strong><?= pay_vat_hint($payment) ?><?= $monthlyPay ? ' <small class="muted">každý měsíc</small>' : '' ?></dd>
+        <dt>Částka</dt><dd><strong><?= pay_money($payment) ?></strong><?= pay_vat_hint($payment) ?></dd>
         <dt>Číslo účtu</dt><dd><?= e(str_starts_with(strtoupper(trim(pset('account'))), 'CZ') ? $iban : pset('account')) ?></dd>
         <dt>IBAN</dt><dd><?= e(trim(chunk_split($iban, 4, ' '))) ?></dd>
         <dt>Variabilní symbol</dt><dd><code><?= e($payment['vs']) ?></code></dd>
         <?php if (pset('recipient') !== ''): ?><dt>Příjemce</dt><dd><?= e(pset('recipient')) ?></dd><?php endif ?>
       </dl>
     </div>
-    <?php if ($monthlyPay): ?>
-    <div class="callout"><strong>Jak nastavit trvalý příkaz</strong>
-      <ol><li>Načtěte QR kód v bankovní aplikaci – vyplní částku, účet, variabilní symbol i měsíční opakování. Před potvrzením zkontrolujte, že aplikace nabízí <strong>trvalý příkaz</strong>, ne jednorázovou platbu.</li>
-        <li>Pokud Vaše banka trvalý příkaz z QR kódu neumí, zadejte ho ručně: <?= pay_money($payment) ?> každý měsíc na účet <?= e(pset('account')) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</li>
-        <li>Variabilní symbol zůstává každý měsíc stejný. Každou připsanou platbu potvrdíme a edici prodloužíme o měsíc.</li></ol>
-      <?php if (!empty($qrOnce)): ?><details><summary>Chci zatím zaplatit jen první měsíc jednorázově</summary><div class="pay-qr"><?= $qrOnce ?><small>Jednorázová platba <?= pay_money($payment) ?></small></div></details><?php endif ?>
-    </div>
-    <p class="hint">Měsíční platba vyjde ročně na <?= money_czk((int) $payment['amount'] * 12) ?>; při roční platbě je to <?= money_czk(edition_price((string) ($payment['item'] ?? 'standard'))) ?>. Trvalý příkaz zrušíte kdykoli ve své bance – edice pak doběhne do konce zaplaceného měsíce a web přejde na edici Zdarma.</p>
-    <?php else: ?>
     <?php if ((int) ($payment['discount'] ?? 0) > 0): ?><p class="flash flash-ok">Od ceny je odečten kredit <?= money_czk((int) $payment['discount']) ?>.</p><?php endif ?>
     <p class="hint">Platba se páruje podle variabilního symbolu. <?= (int) $payment['amount'] < edition_price((string) ($payment['item'] ?? 'standard')) ? 'Částka je snížená o nevyčerpanou část dosavadní edice. ' : '' ?>Edici zapneme po připsání platby na účet<?= ($payment['item'] ?? '') === $edition && $state['mode'] === 'paid' ? ' a prodloužíme o rok od ' . cz_date(date('Y-m-d', strtotime($state['until'] . ' +1 day'))) : ', na rok ode dne připsání' ?>.</p>
-    <?php endif ?>
     <?php else: ?>
       <p>Částka: <strong><?= pay_money($payment) ?></strong><?= pay_vat_hint($payment) ?>, variabilní symbol <code><?= e($payment['vs']) ?></code>.</p>
       <p>Platební údaje Vám provozovatel pošle e-mailem<?= pset('contact_email') !== '' ? ' – případně napište na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>' : '' ?>.</p>
@@ -101,7 +90,7 @@
       <li><strong><?= $ref['converted'] ?></strong><span>platících</span></li>
       <li class="is-credit"><strong><?= money_czk($ref['credit']) ?></strong><span>kredit k uplatnění</span></li>
     </ul>
-    <?php if ($ref['credit'] > 0): ?><p class="flash flash-ok">Kredit <?= money_czk($ref['credit']) ?> se odečte od příští roční platby za edici<?= $state['mode'] === 'paid' && ($t['period'] ?? 'year') === 'year' ? ' – tedy při prodloužení po ' . cz_date($state['until']) : '' ?>.<?= ($t['period'] ?? 'year') === 'month' ? ' Platíte měsíčně trvalým příkazem, u kterého se částka nemění; kredit uplatníte přechodem na roční platbu.' : '' ?></p><?php endif ?>
+    <?php if ($ref['credit'] > 0): ?><p class="flash flash-ok">Kredit <?= money_czk($ref['credit']) ?> se odečte od příští roční platby za edici<?= $state['mode'] === 'paid' ? ' – tedy při prodloužení po ' . cz_date($state['until']) : '' ?>.</p><?php endif ?>
     <label>Váš odkaz pro doporučení <input type="text" value="<?= e($refLink) ?>" readonly data-select-all></label>
     <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($refLink) ?>">Zkopírovat odkaz</button>
       <a class="btn btn-small btn-ghost" href="mailto:?subject=<?= rawurlencode('Web pro naše společenství – doporučení') ?>&amp;body=<?= rawurlencode("Dobrý den,\n\npro web našeho společenství používáme tuto službu a jsme s ní spokojení. Základní web je zdarma:\n" . $refLink . "\n\nS pozdravem") ?>">Poslat e-mailem</a></p>
@@ -115,7 +104,7 @@
       <?php endforeach ?>
     </tbody></table>
     <?php endif ?>
-    <p class="hint">Kredit získáte, jakmile doporučené společenství poprvé zaplatí roční edici (při měsíčním placení po třetí platbě), za každé jednou. Celkem jste získali <?= money_czk($ref['earned']) ?>, z toho uplatnili <?= money_czk($ref['used']) ?>. Kredit se nevyplácí v penězích.</p>
+    <p class="hint">Kredit získáte, jakmile doporučené společenství poprvé zaplatí roční edici, za každé jednou. Celkem jste získali <?= money_czk($ref['earned']) ?>, z toho uplatnili <?= money_czk($ref['used']) ?>. Kredit se nevyplácí v penězích.</p>
   </div>
   <?php endif ?>
 
