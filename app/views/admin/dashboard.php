@@ -9,6 +9,7 @@
   <p class="plan-line">Edice <strong><?= e(EDITIONS[$bs['edition']]) ?></strong><?= match ($bs['mode']) { 'paid' => ' · zaplaceno do ' . cz_date($bs['until']), 'trial' => ' · na zkoušku do ' . cz_date($bs['until']), 'grace' => ' · předplatné skončilo ' . cz_date($bs['until']), default => ' · bez časového omezení' } ?><?php foreach ($activeTrials as $tr): ?> · zkouška „<?= e(PLAN_FEATURES[$tr['feature']][1]) ?>“ do <?= cz_date($tr['ends']) ?><?php endforeach ?>
     · <a href="<?= url('/admin/predplatne') ?>">Předplatné a limity</a></p>
   <?php endif ?>
+  <?php if ($jp = join_pending_count()): ?><div class="flash flash-info">Žádosti o přiřazení k jednotce čekají na schválení: <?= $jp ?>. <a href="<?= url('/admin/uzivatele/zadosti') ?>">Ověřit a schválit</a></div><?php endif ?>
   <?php $onb = onboarding_summary(); if ($onb['waiting'] && !$onb['hidden']): ?>
   <div class="card onb-card">
     <div class="onb-card-head"><h2>Průvodce nastavením</h2><span class="onb-count"><?= $onb['done'] ?> z <?= $onb['total'] ?> hotovo</span></div>

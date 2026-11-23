@@ -1117,3 +1117,20 @@ code.break { word-break: break-all; }
 .prompt-list li { padding: .7rem .9rem; border: 1px solid var(--line); border-left: 3px solid var(--primary); border-radius: 10px; background: var(--surface); }
 .prompt-list q { display: block; font-weight: 600; quotes: "„" "“"; }
 .prompt-list span { display: block; color: var(--muted); font-size: .92rem; margin-top: .2rem; }
+
+/* Přiřazení k jednotce přes odkaz */
+.join-link-body { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: flex-start; }
+.join-link-body > div:first-child { flex: 1 1 320px; min-width: 0; }
+.join-url { width: 100%; font-family: ui-monospace, monospace; font-size: .9rem; }
+.join-qr { flex: 0 0 auto; }
+.join-qr svg { width: 150px; height: 150px; }
+.join-list { display: grid; gap: 1rem; margin-bottom: 2rem; }
+.join-req header { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+.join-req h3 { margin: 0; }
+.join-check { background: var(--soft); border-radius: 10px; padding: .7rem 1rem; margin: .8rem 0; }
+.join-check ul { margin: .3rem 0 .4rem; padding-left: 1.2rem; }
+.join-approve { margin-top: .6rem; }
+.join-reject { margin-top: .6rem; }
+.join-reject summary { cursor: pointer; color: var(--muted); }
+.join-kind { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.join-kind legend { font-weight: 600; margin-bottom: .3rem; }

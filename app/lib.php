@@ -127,6 +127,7 @@ function db_mysql(string $tenant): PDO
         schema_v7($pdo, true);
         schema_v8($pdo, true);
         schema_v9($pdo, true);
+        schema_v10($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -156,7 +157,21 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 9) {
         schema_v9($pdo, true);
     }
+    if ($mysqlVersion < 10) {
+        schema_v10($pdo, true);
+    }
     return $pdo;
+}
+/** Desátá verze databáze: žádosti obyvatel o přiřazení k jednotce (přes odkaz od výboru, schvaluje správce). */
+function schema_v10(PDO $pdo, bool $mysql): void
+{
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $s = fn(int $n) => $mysql ? "VARCHAR($n) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''";
+    $int = $mysql ? 'INT' : 'INTEGER';
+    $pdo->exec('CREATE TABLE unit_requests (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ", name {$s(120)}, email {$s(190)}, phone {$s(40)}, kind {$s(10)}, unit_id $int NOT NULL, note {$s(500)}, status {$s(10)},"
+        . " created_at {$s(19)}, decided_at {$s(19)}, decided_by $int NULL, decision_note {$s(300)}, user_id $int NULL, ip {$s(45)})$end");
+    $pdo->exec('CREATE INDEX unit_requests_status ON unit_requests (status)');
+    $mysql ? $pdo->exec("UPDATE settings SET value = '10' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 10');
 }
 /** Devátá verze databáze: přílohy (fotografie, dokumenty) u nahlášených závad. */
 function schema_v9(PDO $pdo, bool $mysql): void
@@ -261,6 +276,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v7($pdo, false);
         schema_v8($pdo, false);
         schema_v9($pdo, false);
+        schema_v10($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -375,6 +391,9 @@ SQL);
     }
     if ($version < 9) {
         schema_v9($pdo, false);
+    }
+    if ($version < 10) {
+        schema_v10($pdo, false);
     }
     return $pdo;
 }

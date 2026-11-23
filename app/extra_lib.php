@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
 const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 

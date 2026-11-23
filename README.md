@@ -337,6 +337,17 @@ automatické vystavování (viz výše).
   webu, ukončení služby a lhůty pro oznámení změn. Texty uložené
   v Nastavení služby mají přednost před výchozími – po aktualizaci je tam
   porovnejte. Před spuštěním je nechte projít právníkem.
+- **Přiřazení k jednotce přes odkaz:** v Uživatelích → „Odkaz pro
+  obyvatele“ správce zapne odkaz (s QR kódem na nástěnku) a rozešle ho.
+  Obyvatel vyplní jméno, e-mail, jednotku a zda je vlastník, nebo
+  nájemník. Účet nevznikne, dokud správce žádost neschválí; před
+  schválením musí potvrdit, že e-mail ověřil (stránka ukazuje vlastníka
+  podle evidence z katastru, kdo už je k jednotce přiřazen a jestli na
+  stejnou jednotku čeká víc žádostí). Po schválení přijde pozvánka
+  s odkazem na nastavení hesla; existujícímu účtu se jednotka jen přidá.
+  Odkaz jde vypnout nebo vyměnit, formulář má ochranu proti robotům
+  a limit 5 žádostí za hodinu z jedné adresy. Vyřízené žádosti se po
+  30 dnech mažou.
 - **Průvodce pro nového správce:** Administrace → Průvodce nastavením
   (a karta na přehledu) vede správce kroky od údajů společenství přes import
   jednotek a obyvatel, kontakty a dokumenty po oznámení sousedům. U každého
