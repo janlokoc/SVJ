@@ -27,7 +27,7 @@
       <label>Celý název (patička, plná moc) <input type="text" name="site_full" value="<?= e(site('full')) ?>"></label>
       <label>Řádek nad názvem na úvodní stránce <input type="text" name="site_tagline" value="<?= e(site('tagline')) ?>"></label>
       <p class="h-small">Šablona</p>
-      <?php if (plan_managed() && !plan_has('sablony')): ?><p class="callout">V edici <?= e(EDITIONS[plan_edition()]) ?> web používá šablonu Klasická. Ostatní šablony jsou součástí edice Standard – <a href="<?= url('/admin/predplatne') ?>#funkce"><?= plan_state('sablony') === 'available' ? 'vyzkoušejte je na ' . PLAN_TRIAL_DAYS . ' dní zdarma' : 'zkouška už skončila, přejděte na Standard' ?></a>.</p><?php endif ?>
+      <?php if (plan_managed() && !plan_has('sablony')): ?><p class="callout">V edici <?= e(EDITIONS[plan_edition()]) ?> má web jeden pevný vzhled: šablonu Klasická a barvy Les, bez vlastního loga. Další šablony, barvy a logo jsou součástí edice Standard – <a href="<?= url('/admin/predplatne') ?>#funkce"><?= plan_state('sablony') === 'available' ? 'vyzkoušejte je na ' . PLAN_TRIAL_DAYS . ' dní zdarma' : 'zkouška už skončila, přejděte na Standard' ?></a>.</p><?php endif ?>
       <?php $plusOk = !plan_managed() || plan_has('vzhledy-plus'); if (!$plusOk && plan_has('sablony')): ?><p class="callout">Šablony a barvy se štítkem Premium patří do edice Premium – <a href="<?= url('/admin/predplatne') ?>#funkce"><?= plan_state('vzhledy-plus') === 'available' ? 'vyzkoušejte je na ' . PLAN_TRIAL_DAYS . ' dní zdarma' : 'přejděte na Premium' ?></a>. Vybrat je můžete i teď; web je začne používat, jakmile budou dostupné.</p><?php endif ?>
       <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
         <?php foreach (STYLES as $style => $label): $look = isset(LOOKS[site('look')]) ? site('look') : 'les'; $miniName = site('title'); ?>
@@ -37,12 +37,13 @@
       <p class="h-small">Barvy</p>
       <div class="look-picker" role="radiogroup" aria-label="Barvy webu">
         <?php foreach (LOOKS as $k => $label): ?>
-          <label class="look look-<?= $k ?>"><input type="radio" name="site_look" value="<?= $k ?>"<?= site('look') === $k ? ' checked' : '' ?>><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e($label) ?></span><?= !$plusOk && in_array($k, PREMIUM_LOOKS, true) ? '<span class="plan-tag look-tag">Premium</span>' : '' ?></label>
+          <label class="look look-<?= $k ?>"><input type="radio" name="site_look" value="<?= $k ?>"<?= site('look') === $k ? ' checked' : '' ?>><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e($label) ?></span><?= plan_managed() && !plan_has('sablony') && $k !== 'les' ? '<span class="plan-tag look-tag">' . (in_array($k, PREMIUM_LOOKS, true) ? 'Premium' : 'Standard') . '</span>' : (!$plusOk && in_array($k, PREMIUM_LOOKS, true) ? '<span class="plan-tag look-tag">Premium</span>' : '') ?></label>
         <?php endforeach ?>
       </div>
+      <?php if (plan_managed() && !plan_has('sablony')): ?><p class="hint">Vlastní logo je součástí edice Standard.</p><?php else: ?>
       <label>Logo (PNG nebo JPG do 1 MB, nepovinné) <input type="file" name="logo" accept=".png,.jpg,.jpeg"></label>
       <?php if (setting('logo') !== ''): ?><p class="logo-current"><img src="<?= url('/logo') ?>?v=<?= e(substr(setting('logo'), 0, 8)) ?>" alt="Současné logo"> <label class="check"><input type="checkbox" name="logo_remove"> Odebrat logo</label></p><?php endif ?>
-      <p class="hint">Logo nahradí znak domečků vlevo nahoře. Nejlépe vypadá čtvercový nebo široký obrázek s průhledným pozadím.</p>
+      <p class="hint">Logo nahradí znak domečků vlevo nahoře. Nejlépe vypadá čtvercový nebo široký obrázek s průhledným pozadím.</p><?php endif ?>
       <label>Jazyk webu <select name="site_lang"><?php foreach (LANGS as $k => $label): ?><option value="<?= $k ?>"<?= site('lang') === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
       <p class="hint">Výchozí jazyk pro návštěvníky. Každý si může jazyk přepnout sám v patičce webu. Administrace zůstává česky.</p>
     </fieldset>

@@ -43,6 +43,13 @@ function onboarding_steps(): array
         'oznameni' => ['start', 'Dát vědět sousedům', 'Až je web připravený, pošlete všem e-mail s adresou webu a vyvěste ji na nástěnku ve vchodu.',
             '/admin/zpravy/nova', 'Napsat e-mail', $n('SELECT COUNT(*) FROM mailings') > 0, true],
     ];
+    // Edice Zdarma: vzhled se nenastavuje a druhého správce edice nedovolí – takové kroky se nenabízejí.
+    if (function_exists('plan_managed') && plan_managed() && !plan_has('sablony')) {
+        unset($steps['vzhled']);
+    }
+    if (function_exists('plan_limit') && plan_limit('admins') === 1) {
+        unset($steps['zastup']);
+    }
     // Druhého správce edice Zdarma neumožňuje – krok by jen mátl.
     if (function_exists('plan_limit') && plan_managed() && plan_limit('admins') === 1) {
         unset($steps['zastup']);

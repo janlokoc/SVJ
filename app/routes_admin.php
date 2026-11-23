@@ -499,7 +499,9 @@ $route('POST', '/admin/nastaveni', function () {
     }
     $save = fn(string $k, string $v) => q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', [$k, $v]);
     // Logo: obrázek PNG nebo JPG; staré se při výměně smaže.
-    if (($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+    if (plan_managed() && !plan_has('sablony')) {
+        // Edice Zdarma: bez vlastního loga (případné dřívější logo zůstává uložené a vrátí se s edicí Standard).
+    } elseif (($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
         $ext = strtolower(pathinfo((string) $_FILES['logo']['name'], PATHINFO_EXTENSION));
         $up = in_array($ext, ['png', 'jpg', 'jpeg'], true) && (int) $_FILES['logo']['size'] <= 1048576 ? store_upload($_FILES['logo']) : 'Logo musí být obrázek PNG nebo JPG do 1 MB.';
         if (is_string($up)) {

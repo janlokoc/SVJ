@@ -67,7 +67,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <header class="site-header">
   <div class="wrap header-row">
     <a class="brand" href="<?= url('/') ?>" aria-label="<?= e(site('name')) ?> – úvodní stránka">
-      <?php if (setting('logo') !== ''): ?><img class="brand-logo" src="<?= url('/logo') ?>?v=<?= e(substr(setting('logo'), 0, 8)) ?>" alt="">
+      <?php if (site_logo_used() !== ''): ?><img class="brand-logo" src="<?= url('/logo') ?>?v=<?= e(substr(site_logo_used(), 0, 8)) ?>" alt="">
       <?php else: ?>      <svg class="brand-mark" viewBox="0 0 44 32" aria-hidden="true"><rect x="1" y="9" width="9" height="22" rx="1.5"/><rect x="12" y="3" width="9" height="28" rx="1.5"/><rect x="23" y="9" width="9" height="22" rx="1.5"/><rect x="34" y="3" width="9" height="28" rx="1.5"/></svg><?php endif ?>
       <span class="brand-text"><strong><?= e(site('title')) ?></strong><small><?= e(trim('SVJ' . (site('accent') !== '' ? ' · ' . site('accent') : ''))) ?></small></span>
     </a>

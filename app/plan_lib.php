@@ -18,7 +18,7 @@ const PLAN_LIMITS = [
     'storage' => ['Úložiště dokumentů', 'MB'],   // poslední: v ceníku i přehledech se ukazuje na konci
 ];
 const PLAN_LIMIT_DEFAULTS = [
-    'free' => ['admins' => 1, 'users' => 30, 'mails' => 50, 'storage' => 50, 'ai' => 5, 'polls' => 1],
+    'free' => ['admins' => 1, 'users' => 10, 'mails' => 30, 'storage' => 5, 'ai' => 5, 'polls' => 1],
     'standard' => ['admins' => 3, 'users' => 150, 'mails' => 500, 'storage' => 100, 'ai' => 30, 'polls' => 5],
     'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 500, 'ai' => 300, 'polls' => 0],
 ];
@@ -38,7 +38,7 @@ const PLAN_FEATURES = [
     'dodavatele' => ['standard', 'Dodavatelé', 'Kontakty a smlouvy s dodavateli, přiřazení k závadám.', '~^/admin/dodavatele(/|$)~'],
     'zapis' => ['standard', 'Zápis ze shromáždění', 'Zápis sestavený z účasti, programu a výsledků hlasování, připravený k tisku.', '~^/admin/terminy/\d+/zapis$~'],
     'zaloha' => ['standard', 'Záloha dat ke stažení', 'Úplná záloha webu včetně dokumentů ke stažení a obnovení.', '~^/admin/zaloha(/|$)~'],
-    'sablony' => ['standard', 'Všechny šablony vzhledu', 'Pět šablon webu místo jedné základní.', null],
+    'sablony' => ['standard', 'Šablony, barvy a logo', 'Pět šablon a pět barev webu a vlastní logo. Edice Zdarma má jeden pevný vzhled bez přizpůsobení.', null],
     'vzhledy-plus' => ['premium', 'Deset šablon a deset barev', 'Dalších pět šablon (Cedule, Panelák, Činžák, Čitelná, Vývěska) a pět barevných variant.', null],
     'jazyky' => ['premium', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],

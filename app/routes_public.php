@@ -379,7 +379,7 @@ $route('GET', '/manifest.webmanifest', function () {
     exit;
 });
 $route('GET', '/logo', function () {
-    $file = setting('logo');
+    $file = site_logo_used();
     if (!preg_match('/^[a-f0-9]{32}\.(png|jpe?g)$/', $file) || !is_file(UPLOAD_DIR . '/' . $file)) {
         not_found();
     }

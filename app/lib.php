@@ -43,11 +43,19 @@ function site_style_used(): string
     }
     return $style;
 }
-/** Barvy, které web skutečně použije: prémiové barvy jen v Premium (nebo na zkoušku), jinak Les. */
+/** Barvy, které web skutečně použije: edice Zdarma má jen Les, prémiové barvy jen Premium (nebo zkouška). */
 function site_look_used(): string
 {
     $look = site('look');
+    if (plan_managed() && !plan_has('sablony')) {
+        return 'les';
+    }
     return isset(LOOKS[$look]) && (!in_array($look, PREMIUM_LOOKS, true) || plan_has('vzhledy-plus')) ? $look : 'les';
+}
+/** Vlastní logo se ukazuje od edice Standard; v edici Zdarma web nemá žádné přizpůsobení vzhledu. */
+function site_logo_used(): string
+{
+    return plan_managed() && !plan_has('sablony') ? '' : setting('logo');
 }
 /** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
 const FEATURES = [

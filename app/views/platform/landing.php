@@ -32,6 +32,7 @@ $benefits = [
 
 <section class="wrap lp-section" id="vzhledy">
   <h2>Pět šablon v pěti barvách, v Premium deset a deset</h2>
+  <p class="lead">Šablony, barvy a vlastní logo jsou od edice Standard. Edice Zdarma má jeden pevný vzhled.</p>
   <div class="lp-looks look-cards lp-looks-plain">
     <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong></figcaption></figure><?php endforeach ?>
   </div>
