@@ -1442,6 +1442,7 @@ const PLANNED_FEATURES = [
     'push' => ['Upozornění do telefonu', 'Nové oznámení nebo připomenutí hlasování přímo na displej, bez e-mailu.', 'Standard a Premium · v ceně', 'Upozornění do telefonu'],
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
     'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'Premium · v ceně', 'Párování plateb'],
+    'napojeni-ai' => ['Napojení na vlastního AI asistenta', 'Člen výboru si web připojí ke svému AI nástroji a běžnou řečí se ptá na závady, dokumenty a termíny nebo si nechá připravit koncept oznámení.', 'Premium · cena se upřesní', 'Napojení AI'],
 ];
 /**
  * Podrobný popis připravovaných funkcí pro stránku s detailem:
@@ -1485,6 +1486,12 @@ const PLANNED_DETAILS = [
                 ['Nový správce webu', 'Poradí s ovládáním webu („jak přidám nájemníka“, „jak vyhlásím hlasování“) a pomůže roztřídit obsah převedený ze starého webu.', 'Web zvládne i ten, kdo ho předtím neviděl.', ''],
             ],
         ],
+    ],
+    'napojeni-ai' => [
+        'lead' => 'Web společenství si připojíte k AI nástroji, který už používáte, a pracujete s ním na dálku běžnou řečí.',
+        'problem' => 'Kdo ve výboru používá AI asistenta, dnes mezi ním a webem přepisuje ručně: zkopíruje hlášené závady, nechá si napsat odpověď a tu zase vloží zpátky. Přehled o tom, co v domě hoří, si musí proklikat stránku po stránce.',
+        'how' => ['Správce si ve svém účtu vytvoří osobní přístup pro AI nástroj; má přesně jeho oprávnění, nic navíc.', 'V AI nástroji se pak zeptá třeba „které závady jsou otevřené déle než měsíc“ nebo „co je na programu příštího shromáždění“.', 'Asistent umí připravit koncept aktuality, e-mailu nebo odpovědi na závadu. Zveřejnění a odeslání vždy potvrzuje člověk na webu.', 'Vše, co asistent přečte nebo připraví, je vidět v Záznamech. Přístup lze kdykoli zrušit a výbor může funkci pro celý web vypnout.'],
+        'note' => 'Bude v edici Premium; cenu upřesníme. Používá standard MCP, který podporuje řada AI nástrojů. Data, která si asistent přečte, zpracovává AI nástroj, který si uživatel sám zvolil – za jeho výběr odpovídá společenství.',
     ],
     'sms' => [
         'lead' => 'Důležité zprávy dojdou i těm, kdo e-mail nečtou.',
