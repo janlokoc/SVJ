@@ -268,8 +268,8 @@ automatické vystavování (viz výše).
 - Z úvodní stránky si kdokoli sám založí web: název a adresa → vzhled →
   účet správce. Web běží hned, **zdarma a bez časového omezení** (edice
   Zdarma). Žádná zkušební doba ani platební karta.
-- **Tři edice** – Zdarma, Standard (výchozí 1 490 Kč ročně) a Premium
-  (2 990 Kč ročně). Liší se limity (správci, účty, hromadné e-maily za
+- **Tři edice** – Zdarma, Standard (výchozí 2 990 Kč ročně) a Premium
+  (5 990 Kč ročně). Liší se limity (správci, účty, hromadné e-maily za
   měsíc, úložiště, použití AI, hlasování za rok) a funkcemi. Ceny a limity
   se nastavují v konzoli v **Nastavení služby**; 0 = bez omezení. Které
   funkce patří do které edice, je v `PLAN_FEATURES` v `app/plan_lib.php`.

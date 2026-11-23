@@ -193,6 +193,12 @@ SQL);
         // Standard: 500 hromadných e-mailů měsíčně místo 1 000 – jen pokud provozovatel výchozí hodnotu neměnil.
         $pdo->exec("UPDATE platform_settings SET value = '500' WHERE key = 'lim_standard_mails' AND value = '1000'; PRAGMA user_version = 17;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 18) {
+        // Nové ceny: Standard 2 990 Kč, Premium 5 990 Kč ročně – jen pokud provozovatel výchozí ceny neměnil.
+        // Už vystavené výzvy k platbě a zaplacená období se nemění.
+        $pdo->exec("UPDATE platform_settings SET value = '5990' WHERE key = 'price_premium' AND value = '2990';
+            UPDATE platform_settings SET value = '2990' WHERE key = 'price_standard' AND value = '1490'; PRAGMA user_version = 18;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -417,7 +423,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '500', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -824,7 +830,7 @@ function pay_money(array $p): string
 function pay_vat_hint(array $p): string
 {
     $rate = (int) ($p['vat_rate'] ?? 0);
-    return $rate > 0 ? ' <small class="muted">(' . pay_money($p) . ' + DPH ' . $rate . "\u{a0}%)</small>" : '';
+    return $rate > 0 ? ' <small class="muted">(' . money_czk((int) $p['amount']) . ' + DPH ' . $rate . "\u{a0}%)</small>" : '';
 }
 /** Věta k ceníkům: ceny jsou bez DPH. */
 function vat_note(): string
