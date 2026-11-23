@@ -1573,3 +1573,4 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 
 .push-state { font-weight: 600; }
 .push-devices { margin: .3rem 0 .8rem; padding-left: 1.2rem; }
+.welcome .card + .card { margin-top: 1.2rem; }

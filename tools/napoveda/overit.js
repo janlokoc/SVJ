@@ -270,6 +270,25 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const g2 = got.shift() || {};
     check(/Nová aktualita: Odstávka vody/.test(g2.msg?.body || '') && /\/aktuality\/\d+$/.test(g2.msg?.url || ''), 'upozornění na novou aktualitu: ' + JSON.stringify(g2));
     step('Po zveřejnění aktuality přišlo obyvateli upozornění „' + (g2.msg?.body || '') + '“ s odkazem na aktualitu.');
+    // Kdo si upozornění do telefonu v účtu vypne, tomu nechodí – zkušební ano.
+    run(`UPDATE users SET push_notify = 0 WHERE email = '${who.owner}'`);
+    await admin.goto(T + '/admin/aktuality/nova'); await admin.fill('[name=title]', 'Úklid sklepů'); await admin.fill('[name=body]', 'V sobotu.'); await admin.click('main form button[type=submit]');
+    check(got.length === 0, 'vypnutá upozornění se neposílají'); got.length = 0;
+    run(`UPDATE users SET push_notify = 1 WHERE email = '${who.owner}'`);
+    step('Když si obyvatel v účtu upozornění do telefonu vypne, nová aktualita mu nepřijde.');
+    // Přijetí pozvánky v telefonu → první obrazovka je uvítání s upozorněními a volbou, jak dávat vědět.
+    const token = crypto.randomBytes(32).toString('hex'); const tokHash = crypto.createHash('sha256').update(token).digest('hex');
+    run(`INSERT INTO users (name, email, role, kind, password_hash, invite_hash, invite_expires) VALUES ('Lucie Malá', 'lucie.mala@example.cz', 'resident', 'owner', '!', '${tokHash}', datetime('now', '+7 day'))`);
+    const nuCtx = await b2.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' }); await nuCtx.grantPermissions(['notifications'], { origin: new URL(T).origin });
+    const nu = await nuCtx.newPage(); nu.setDefaultTimeout(10000);
+    await nu.goto(T + '/pozvanka/' + token); await nu.fill('[name=password]', 'Navod-pozvanka-2027'); await nu.fill('[name=password2]', 'Navod-pozvanka-2027'); await nu.click('main form button[type=submit]');
+    await nu.waitForURL('**/vitejte'); await nu.waitForFunction(() => document.querySelector('.push-state') && document.querySelector('.push-state').textContent !== '');
+    check(await nu.isVisible('[data-push-on]') && (await text(nu)).includes('Jak Vám máme dávat vědět'), 'uvítání po pozvánce s upozorněními');
+    step('Po nastavení hesla z pozvánky se jako první otevře uvítání: zapnutí upozornění do telefonu a volba „e-mailem / do telefonu“.');
+    await shot(nu.locator('main'), 'push-0-uvitani.jpg', 1300);
+    await nu.uncheck('[name=email_notify]'); await nu.click('button:has-text("Hotovo, pokračovat na web")');
+    check(sql("SELECT email_notify || push_notify FROM users WHERE email = 'lucie.mala@example.cz'") === '01', 'volba způsobu upozorňování uložena'); step('Volba „jen do telefonu“ se uložila a web pokračoval na úvodní stránku.');
+    await nuCtx.close();
     // Zobrazení upozornění službou v prohlížeči (service worker): doručíme push přímo přes nástroje prohlížeče.
     const pcCtx = await b2.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ' }); await pcCtx.grantPermissions(['notifications'], { origin: new URL(T).origin }); const pc = await pcCtx.newPage(); await login(pc, who.owner); await pc.goto(T + '/muj-ucet#upozorneni');
     await pc.waitForFunction(() => navigator.serviceWorker.controller !== null || document.querySelector('.push-state').textContent !== '');

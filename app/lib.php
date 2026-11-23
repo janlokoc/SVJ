@@ -166,6 +166,7 @@ function db_mysql(string $tenant): PDO
         schema_v12($pdo, true);
         schema_v13($pdo, true);
         schema_v14($pdo, true);
+        schema_v15($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -210,7 +211,16 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 14) {
         schema_v14($pdo, true);
     }
+    if ($mysqlVersion < 15) {
+        schema_v15($pdo, true);
+    }
     return $pdo;
+}
+/** Patnáctá verze databáze: uživatel si volí, zda chce upozornění do telefonu (vedle e-mailu). */
+function schema_v15(PDO $pdo, bool $mysql): void
+{
+    $pdo->exec('ALTER TABLE users ADD COLUMN push_notify ' . ($mysql ? 'TINYINT' : 'INTEGER') . ' NOT NULL DEFAULT 1');
+    $mysql ? $pdo->exec("UPDATE settings SET value = '15' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 15');
 }
 /** Čtrnáctá verze databáze: zařízení přihlášená k upozorněním do telefonu (Web Push). */
 function schema_v14(PDO $pdo, bool $mysql): void
@@ -367,6 +377,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v12($pdo, false);
         schema_v13($pdo, false);
         schema_v14($pdo, false);
+        schema_v15($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -496,6 +507,9 @@ SQL);
     }
     if ($version < 14) {
         schema_v14($pdo, false);
+    }
+    if ($version < 15) {
+        schema_v15($pdo, false);
     }
     return $pdo;
 }

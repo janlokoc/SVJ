@@ -65,7 +65,7 @@ $route('POST', '/push/odhlasit', function () use ($pushJson) {
 });
 $route('POST', '/push/zkouska', function () {
     $u = require_login();
-    $n = push_notify([(int) $u['id']], site('name'), 'Zkušební upozornění – funguje to.', '/muj-ucet');
+    $n = push_notify([(int) $u['id']], site('name'), 'Zkušební upozornění – funguje to.', '/muj-ucet', true);
     flash($n ? "Zkušební upozornění odešlo na $n zařízení. Mělo by se za chvíli objevit na displeji." : 'Upozornění se nepodařilo doručit. Zkuste je na zařízení vypnout a znovu zapnout.', $n ? 'ok' : 'error');
     redirect('/muj-ucet#upozorneni');
 });
@@ -78,6 +78,18 @@ $route('GET', '/apple-touch-icon.png', function () {
     header('Cache-Control: public, max-age=86400');
     echo app_icon_png(LOOK_COLORS[site_look_used()] ?? LOOK_COLORS['les'], $file);
     exit;
+});
+
+// Uvítání po přijetí pozvánky: první věc po nastavení hesla je zapnout upozornění a zvolit, jak dávat vědět.
+$route('GET', '/vitejte', function () {
+    $u = require_login();
+    render('welcome', ['title' => 'Vítejte', 'u' => $u]);
+});
+$route('POST', '/vitejte', function () {
+    $u = require_login();
+    q('UPDATE users SET email_notify = ?, push_notify = ? WHERE id = ?', [isset($_POST['email_notify']) ? 1 : 0, plan_has('push') ? (isset($_POST['push_notify']) ? 1 : 0) : (int) ($u['push_notify'] ?? 1), $u['id']]);
+    flash('Vítejte na webu. Nastavení upozornění najdete kdykoli v části Můj účet.');
+    redirect('/');
 });
 
 /** Srozumitelný název zařízení z identifikace prohlížeče (pro seznam v účtu). */

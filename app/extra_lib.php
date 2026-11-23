@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 15;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
 const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo (měřič tepla)', 'itn' => 'Indikátory topení', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 
@@ -178,6 +178,7 @@ function daily_tasks(): void
     foreach (all("SELECT email FROM users WHERE role = 'admin' AND active = 1") as $admin) {
         send_mail($admin['email'], 'Blíží se termín revize – ' . site('name'), $text);
     }
+    push_notify(push_admin_ids(), site('name'), count($due) === 1 ? 'Blíží se termín revize: ' . $due[0]['title'] : 'Blíží se termín ' . count($due) . ' revizí a kontrol', '/admin/revize');
     foreach ($due as $m) {
         q('UPDATE maintenance SET reminded_for = next_date WHERE id = ?', [$m['id']]);
     }

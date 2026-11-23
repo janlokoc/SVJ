@@ -10,7 +10,9 @@
       <label>Jméno a příjmení <input type="text" name="name" value="<?= e($u['name']) ?>" required></label>
       <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>" autocomplete="tel"></label>
       <p class="hint">Telefon vidí jen výbor – kvůli řešení závad a požadavků.</p>
+      <p class="h-small">Jak Vám máme dávat vědět</p>
       <label class="check"><input type="checkbox" name="email_notify"<?= $u['email_notify'] ? ' checked' : '' ?>> <span>Posílat mi důležité zprávy výboru e-mailem <small>Například pozvánky na shromáždění nebo oznámení o odstávkách.</small></span></label>
+      <?php if (plan_has('push')): ?><label class="check"><input type="checkbox" name="push_notify"<?= !isset($u['push_notify']) || $u['push_notify'] ? ' checked' : '' ?>> <span>Posílat upozornění do telefonu <small>Na zařízeních, kde jste je zapnuli (níže v části Upozornění do telefonu).</small></span></label><?php endif ?>
       <?php if (feature_on('zpravy')): ?><label class="check"><input type="checkbox" name="chat_off"<?= !empty($u['chat_off']) ? ' checked' : '' ?>> <span>Nechci dostávat zprávy od sousedů <small>Výbor, kontrolní komise a správci webu Vám napsat mohou vždy; Vy můžete psát komukoli.</small></span></label><?php endif ?>
       <button class="btn" type="submit">Uložit údaje</button>
     </form>
@@ -30,11 +32,7 @@
         <p class="muted">Upozornění do telefonu tento web zatím nemá zapnutá (jsou součástí edice Standard).</p>
       <?php else: $devices = all('SELECT * FROM push_subs WHERE user_id = ? ORDER BY id', [$u['id']]); ?>
         <p>Nové aktuality, zprávy od výboru a sousedů, změny u Vašich závad a měsíční spotřeba Vám přijdou na displej jako zpráva z aplikace.</p>
-        <div data-push data-key="<?= e(push_public_key()) ?>" data-sw="<?= e(url('/sw.js')) ?>" data-scope="<?= e(url('/')) ?>" data-sub="<?= e(url('/push/prihlasit')) ?>" data-unsub="<?= e(url('/push/odhlasit')) ?>" data-csrf="<?= e(csrf_token()) ?>">
-          <p class="push-state" aria-live="polite"></p>
-          <div class="actions"><button class="btn" type="button" data-push-on hidden>Zapnout upozornění na tomto zařízení</button><button class="btn btn-ghost" type="button" data-push-off hidden>Vypnout na tomto zařízení</button></div>
-          <p class="hint push-ios" hidden>Na iPhonu a iPadu fungují upozornění jen u webu přidaného na plochu: v Safari klepněte na <strong>Sdílet → Přidat na plochu</strong>, web otevřete z plochy a tady upozornění zapněte.</p>
-        </div>
+        <?php require __DIR__ . '/_push_box.php'; ?>
         <?php if ($devices): ?>
           <p class="h-small">Zařízení s upozorněním</p>
           <ul class="push-devices"><?php foreach ($devices as $d): ?><li><?= e($d['device'] ?: 'zařízení') ?> <small class="muted">od <?= e(cz_date(substr($d['created_at'], 0, 10))) ?><?= $d['last_ok'] !== '' ? ' · naposledy doručeno ' . e(cz_datetime($d['last_ok'])) : '' ?></small></li><?php endforeach ?></ul>

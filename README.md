@@ -594,6 +594,11 @@ upozornění na daném zařízení; na iPhonu/iPadu jen u webu přidaného na pl
 (iOS 16.4+). Upozornění přijdou na: novou aktualitu, hromadnou zprávu výboru,
 zprávu od souseda, změnu stavu vlastního hlášení závady a měsíční spotřebu.
 
+Po přijetí pozvánky se jako první otevře **uvítání** (`/vitejte`): zapnutí
+upozornění na zařízení a volba, jak dávat vědět (e-mailem / do telefonu).
+Volbu lze kdykoli změnit v účtu; výbor dostává do telefonu i upozornění na
+blížící se revize a nové žádosti o přiřazení k jednotce.
+
 Bez knihoven a bez placené služby: zprávu zašifruje web (RFC 8291) a podepíše
 klíčem VAPID (`storage/vapid.pem`, vznikne sám), doručí ji push služba
 prohlížeče (Google, Mozilla, Apple, Microsoft). Server posílá jen na tyto

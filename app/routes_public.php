@@ -278,8 +278,7 @@ $acceptInvite = function (string $token) {
             q("UPDATE users SET password_hash = ?, invite_hash = NULL, invite_expires = NULL, last_login_at = datetime('now','localtime') WHERE id = ?", [password_hash($pass, PASSWORD_DEFAULT), $inv['id']]);
             login_user(one('SELECT * FROM users WHERE id = ?', [$inv['id']]));
             audit('invite_accepted', $inv['email']);
-            flash('Vítejte! Účet je aktivní.');
-            redirect('/');
+            redirect('/vitejte');
         }
         http_response_code(422);
     }

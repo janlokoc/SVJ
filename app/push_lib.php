@@ -121,7 +121,7 @@ function push_deliver(array $sub, array $msg): int
  * Upozorní uživatele na všech jejich zařízeních. Zařízení, která push služba už nezná (404, 410), se smažou.
  * Vrací počet doručených zpráv. Bez funkce „push“ v edici webu nic nedělá.
  */
-function push_notify(array $userIds, string $title, string $body, string $path = '/'): int
+function push_notify(array $userIds, string $title, string $body, string $path = '/', bool $force = false): int
 {
     $userIds = array_values(array_unique(array_filter(array_map('intval', $userIds))));
     if (!$userIds || !function_exists('plan_has') || !plan_has('push')) {
@@ -129,7 +129,9 @@ function push_notify(array $userIds, string $title, string $body, string $path =
     }
     $msg = ['title' => mb_substr($title, 0, 80), 'body' => mb_substr($body, 0, 200), 'url' => absolute_url($path), 'icon' => asset('icon-192.png')];
     $ok = 0;
-    foreach (all('SELECT * FROM push_subs WHERE user_id IN (' . implode(',', $userIds) . ')') as $sub) {
+    // Kdo si v účtu upozornění do telefonu vypnul, tomu nechodí (zkušební upozornění ano – o to si řekl sám).
+    $sql = 'SELECT s.* FROM push_subs s JOIN users u ON u.id = s.user_id WHERE u.active = 1 AND s.user_id IN (' . implode(',', $userIds) . ')' . ($force ? '' : ' AND u.push_notify = 1');
+    foreach (all($sql) as $sub) {
         $code = push_deliver($sub, $msg);
         if ($code >= 200 && $code < 300) {
             $ok++;
@@ -141,6 +143,11 @@ function push_notify(array $userIds, string $title, string $body, string $path =
         }
     }
     return $ok;
+}
+/** Správci webu (pro upozornění na revize, žádosti apod.). */
+function push_admin_ids(): array
+{
+    return array_map('intval', array_column(all("SELECT id FROM users WHERE role = 'admin' AND active = 1"), 'id'));
 }
 /** Všichni aktivní uživatelé s alespoň jedním zařízením pro upozornění. */
 function push_all_user_ids(): array

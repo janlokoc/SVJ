@@ -76,6 +76,7 @@ $joinForm = function (string $token) {
             foreach (all("SELECT email FROM users WHERE role = 'admin' AND active = 1") as $a) {
                 send_mail($a['email'], 'Nová žádost o přiřazení k jednotce – ' . site('name'), $adminText);
             }
+            push_notify(push_admin_ids(), site('name'), 'Nová žádost o přiřazení k jednotce ' . $unit . ': ' . $in['name'], '/admin/uzivatele/zadosti');
             $done = true;
         }
         if ($errors) {

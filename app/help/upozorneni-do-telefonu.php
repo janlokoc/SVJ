@@ -1,5 +1,9 @@
 <p>Web domu si můžete dát na plochu telefonu jako aplikaci – bez obchodu s aplikacemi a bez instalace. Pak Vám na displej chodí upozornění: nové aktuality, zprávy od výboru a sousedů, změny u Vašich hlášení závad a měsíční spotřeba.</p>
 
+<h2>Hned po přijetí pozvánky</h2>
+<p>Kdo si z pozvánky nastaví heslo, uvidí jako první obrazovku <strong>Vítejte</strong>: tady rovnou zapne upozornění na tomto zařízení a zvolí, jak mu máme dávat vědět – e-mailem, do telefonu, nebo obojím. Na iPhonu je potřeba nejdřív web přidat na plochu (níže).</p>
+<?= help_fig('push-0-uvitani.jpg', 'Uvítání po přijetí pozvánky v telefonu.') ?>
+
 <h2>1. Přidejte si web na plochu</h2>
 <h3>iPhone a iPad</h3>
 <ol>
