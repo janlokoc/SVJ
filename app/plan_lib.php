@@ -11,10 +11,10 @@ const PLAN_TRIAL_DAYS = 30;
 /** Limity edic: klíč => [název, jednotka]. Hodnoty jsou v Nastavení služby (lim_<edice>_<klíč>), 0 = bez omezení. */
 const PLAN_LIMITS = [
     'admins' => ['Správci webu', ''],
+    'polls' => ['Hlasování ročně', ''],
     'users' => ['Účty obyvatel', ''],
     'mails' => ['Hromadné e-maily měsíčně', ''],
     'ai' => ['AI pomocník měsíčně', ''],
-    'polls' => ['Hlasování ročně', ''],
     'storage' => ['Úložiště dokumentů', 'MB'],   // poslední: v ceníku i přehledech se ukazuje na konci
 ];
 const PLAN_LIMIT_DEFAULTS = [
