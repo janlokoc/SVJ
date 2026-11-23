@@ -1,19 +1,19 @@
 <?php /** Tři edice vedle sebe. $edView = 'admin' (objednávka) nebo 'landing' (registrace). V administraci je $edition aktuální edice. */
 $edNow = $edView === 'admin' ? ($edition ?? 'free') : '';
 $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
-$edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s vlastní doménou a AI zápisem.'];
+$edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s platbami na jednotku, rezervacemi a AI zápisem.'];
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jedna šablona vzhledu, 5 barev', 'V patičce odkaz na službu'],
     'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Záloha všech dat ke stažení', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
-    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Vlastní doména a vlastní certifikát v ceně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
+    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Vlastní doména za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
 ];
 $edCompact = !empty($edCompact);
 if ($edCompact) {
-    $n = fn(string $ed, string $k, string $one, string $many) => ($v = $lim($ed, $k)) ? 'až ' . number_format($v, 0, ',', "\u{a0}") . ' ' . ($v === 1 ? $one : $many) : 'bez omezení';
+    // Krátký výčet toho, co edice přidává oproti nižší; počty (účty, e-maily…) jsou v limitech výše, tady se neopakují.
     $edExtra = [
-        'free' => ['Veřejný web a část pro obyvatele', 'Účty obyvatel: ' . $n('free', 'users', 'účet', 'účtů'), 'Jedna šablona, 5 barev'],
-        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Účty obyvatel: ' . $n('standard', 'users', 'účet', 'účtů'), 'Všech 5 šablon'],
-        'premium' => ['Platby na jednotku, rezervace, jazyky', 'Účty obyvatel: ' . $n('premium', 'users', 'účet', 'účtů'), 'Vlastní doména v ceně'],
+        'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jedna šablona, 5 barev'],
+        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Revize, odečty, klíče, úkoly a dodavatelé', 'Všech 5 šablon, bez odkazu v patičce, záloha dat'],
+        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace prostor a jazykové verze webu', 'AI zápis ze shromáždění, přednostní podpora'],
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>"<?= $edView === 'landing' ? ' data-reveal-group="up"' : '' ?>>

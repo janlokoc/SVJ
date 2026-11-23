@@ -103,11 +103,7 @@ $route('POST', '/admin/predplatne/domena', function () {
             redirect('/admin/predplatne#domena');
         }
         pq("UPDATE tenants SET domain_request = ?, domain_status = 'requested' WHERE slug = ?", [$domain, TENANT]);
-        $included = plan_edition() === 'premium';   // v edici Premium je doména v ceně
-        if ($included) {
-            pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$t['paid_until'], TENANT]);
-        }
-        $p = $included ? ['vs' => 'v ceně edice Premium'] : domain_payment_create(tenant_row(TENANT), $domain);
+        $p = domain_payment_create(tenant_row(TENANT), $domain);   // doména je doplněk za příplatek ve Standardu i Premium
         audit('Vlastní doména: žádost', $domain . ($own ? ' (doménu už vlastníme)' : ' (zajistit registraci)'));
         pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Žádost o vlastní doménu', TENANT . ' · ' . $domain . ($own ? ' · doménu vlastní' : ' · zajistit registraci')]);
         if (pset('contact_email') !== '') {

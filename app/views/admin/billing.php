@@ -195,9 +195,9 @@
       <p>Žádost o doménu <strong><?= e($t['domain_request']) ?></strong> je odeslaná. <?= $t['domain_until'] !== '' ? 'Platbu jsme přijali; doménu zprovozňujeme a dáme Vám vědět e-mailem.' : 'Po přijetí platby ji zprovozníme, obvykle do několika pracovních dnů.' ?></p>
       <?php if (pset('domain_dns') !== ''): ?><div class="callout"><strong>Pokud doménu už vlastníte,</strong> nastavte u svého registrátora: <div class="prose"><?= format_text(pset('domain_dns')) ?></div></div><?php endif ?>
     <?php elseif ($edition === 'free'): ?>
-      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>. Vlastní doména je k dispozici od edice Standard (příplatek <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně), v edici Premium je v ceně.</p>
+      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>. Vlastní doména je k dispozici od edice Standard (příplatek <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně) – ve Standardu i v Premium.</p>
     <?php else: ?>
-      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>, <?= $edition === 'premium' ? 'v edici Premium bez příplatku' : 'za ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně (v edici Premium je v ceně)' ?>. Doménu Vám zaregistrujeme, nebo připojíme tu, kterou už máte. Správa webu se nemění – jen adresa.</p>
+      <p>Web může běžet na Vaší vlastní adrese, například <strong>tabor48.cz</strong>, za <?= money_czk(pset_int('price_domain', 0, 1000000)) ?> ročně. Doménu Vám zaregistrujeme, nebo připojíme tu, kterou už máte. Správa webu se nemění – jen adresa.</p>
       <form method="post" action="<?= url('/admin/predplatne/domena') ?>" class="form">
         <?= csrf_field() ?><input type="hidden" name="action" value="request">
         <label>Požadovaná doména <input type="text" name="domain" placeholder="tabor48.cz" required maxlength="100" autocomplete="off"></label>

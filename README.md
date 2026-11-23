@@ -393,7 +393,7 @@ automatické vystavování (viz výše).
   zaplaceného období.
 - Web založený hlavním správcem v konzoli s vypnutou volbou „Web je
   placený“ nemá žádné limity a nic neplatí.
-- Vlastní doména je od edice Standard za příplatek, v Premium v ceně.
+- Vlastní doména je doplněk za příplatek k edici Standard i Premium (v žádné edici není v ceně).
   Dřívější doplněk AI Plus nahradila edice Premium.
 - Platby se nepárují s bankou automaticky: hlavní správce po připsání
   na účet platbu v konzoli v části **Platby** potvrdí a předplatné se
