@@ -18,7 +18,7 @@ const PLAN_LIMITS = [
     'storage' => ['Úložiště dokumentů', 'MB'],   // poslední: v ceníku i přehledech se ukazuje na konci
 ];
 const PLAN_LIMIT_DEFAULTS = [
-    'free' => ['admins' => 1, 'users' => 10, 'mails' => 30, 'storage' => 5, 'ai' => 5, 'polls' => 1],
+    'free' => ['admins' => 1, 'users' => 20, 'mails' => 30, 'storage' => 5, 'ai' => 5, 'polls' => 1],
     'standard' => ['admins' => 3, 'users' => 150, 'mails' => 500, 'storage' => 100, 'ai' => 30, 'polls' => 5],
     'premium' => ['admins' => 0, 'users' => 0, 'mails' => 0, 'storage' => 500, 'ai' => 300, 'polls' => 0],
 ];
