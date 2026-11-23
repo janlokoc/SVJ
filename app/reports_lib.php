@@ -142,11 +142,16 @@ function report_auto(Throwable $e): void
 /** Uloží rozhodnutí správce (stav, odpověď uživateli, interní poznámka); novou odpověď pošle autorovi e-mailem. */
 function report_admin_save(array $r, string $by): void
 {
-    $status = isset(REPORT_STATUS[post('status')]) ? post('status') : $r['status'];
-    $reply = mb_substr(post('reply'), 0, 5000);
+    report_update($r, isset(REPORT_STATUS[post('status')]) ? post('status') : $r['status'], post('reply'), post('note'), $by);
+}
+/** Změní stav, odpověď a interní poznámku hlášení; novou odpověď nebo změnu stavu pošle autorovi e-mailem (formulář v konzoli i MCP). */
+function report_update(array $r, string $status, string $reply, string $note, string $by): void
+{
+    $status = isset(REPORT_STATUS[$status]) ? $status : $r['status'];
+    $reply = mb_substr($reply, 0, 5000);
     $changedReply = $reply !== (string) $r['reply'];
     rq('UPDATE reports SET status = ?, reply = ?, note = ?, updated_at = ?, replied_at = ?, replied_by = ? WHERE id = ?',
-        [$status, $reply, mb_substr(post('note'), 0, 5000), date('Y-m-d H:i:s'), $changedReply ? date('Y-m-d H:i:s') : $r['replied_at'], $changedReply ? $by : $r['replied_by'], $r['id']]);
+        [$status, $reply, mb_substr($note, 0, 5000), date('Y-m-d H:i:s'), $changedReply ? date('Y-m-d H:i:s') : $r['replied_at'], $changedReply ? $by : $r['replied_by'], $r['id']]);
     if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && ($changedReply && $reply !== '' || $status !== $r['status']) && $r['type'] !== 'auto') {
         $text = "Dobrý den,\n\nk Vašemu hlášení ze dne " . cz_date($r['created_at']) . " („" . mb_strimwidth($r['body'], 0, 120, '…') . "“):\n\nStav: " . REPORT_STATUS[$status] . ($reply !== '' ? "\n\n" . $reply : '') . "\n\nDěkujeme, že pomáháte web zlepšovat.";
         reports_central() ? platform_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status], $text) : send_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status] . ' – ' . site('name'), $text);

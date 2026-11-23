@@ -1,6 +1,6 @@
 <?php $tabs = ['open' => 'K vyřízení', 'done' => 'Vyřešeno', 'rejected' => 'Nebudeme řešit', 'auto' => 'Chyby webu', 'all' => 'Vše']; $openN = ($counts['new'] ?? 0) + ($counts['in_progress'] ?? 0) + ($counts['planned'] ?? 0); ?>
 <div class="wrap page">
-  <header class="page-head"><h1>Hlášení</h1><p class="lead">Problémy a nápady, které poslali uživatelé tlačítkem Nahlásit, a chyby, které web zachytil sám. Nových: <?= (int) ($counts['new'] ?? 0) ?>, k vyřízení celkem: <?= $openN ?>.</p></header>
+  <header class="page-head"><h1>Hlášení</h1><p class="lead">Problémy a nápady, které poslali uživatelé tlačítkem Nahlásit, a chyby, které web zachytil sám. Nových: <?= (int) ($counts['new'] ?? 0) ?>, k vyřízení celkem: <?= $openN ?>.<?php if (reports_central()): ?> <a href="<?= url('/pristup-ai') ?>">Přístup pro AI (MCP)<?= pset('mcp_token_hash') !== '' ? ' – zapnuto' : '' ?></a><?php endif ?></p></header>
   <p class="chips"><?php foreach ($tabs as $k => $label): ?><a class="chip<?= $filter === $k ? ' is-active' : '' ?>" href="<?= url($base) ?>?stav=<?= $k ?>"<?= $filter === $k ? ' aria-current="true"' : '' ?>><?= e($label) ?></a> <?php endforeach ?></p>
   <?php if (!$rows): ?><p class="empty">V tomto výběru nejsou žádná hlášení.</p><?php else: ?>
   <table class="table">

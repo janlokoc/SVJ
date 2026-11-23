@@ -155,6 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^/vzhled/(svetly|tmavy|
     header('Location: ' . url(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_starts_with($back, '/vzhled') ? $back : '/'), true, 303);
     exit;
 }
+if ($IS_PLATFORM && preg_match('~^/sprava(/mcp(?:/[A-Za-z0-9_\-]{20,})?)$~', $PATH, $mcpPath)) {
+    // MCP server pro hlášení: vlastní ověření klíčem, bez formulářového tokenu a bez přihlášení do konzole.
+    $PATH = $mcpPath[1];
+    require __DIR__ . '/app/platform_mcp.php';
+    exit;
+}
 if ($IS_PLATFORM) {
     $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
     $GLOBALS['LAYOUT'] = 'platform/layout';

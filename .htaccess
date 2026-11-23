@@ -3,6 +3,8 @@ AddDefaultCharset UTF-8
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
+# Hlavička Authorization (klíč pro MCP server) se má dostat až do PHP
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 # Soubory vzhledu se servírují přímo, vše ostatní obsluhuje index.php
 RewriteRule ^assets/ - [L]
 RewriteRule ^index\.php$ - [L]

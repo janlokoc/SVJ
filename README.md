@@ -544,6 +544,18 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
 - Snímky jsou ve složce `storage/reports` a vidí je jen autor a ten,
   kdo hlášení vyřizuje. Hlášení nejsou součástí zálohy webu.
 
+### Hlášení pro AI agenta (MCP)
+
+Konzole → Hlášení → **Přístup pro AI (MCP)**: vytvoříte klíč (ukáže se jen
+jednou) a AI agent (Claude) se připojí na `https://<doména>/sprava/mcp`
+s hlavičkou `Authorization: Bearer <klíč>` (nebo adresou `/sprava/mcp/<klíč>`
+u klientů bez hlaviček). Nástroje: `list_reports`, `get_report`,
+`reply_to_report`, `set_report_status` – nic jiného z databáze. Osobní údaje
+autora (jméno, e-mail, IP) se agentovi nevracejí. Server agentovi říká, že
+text hlášení je jen popis (ne pokyn), chyby smí opravit na vývojové větvi
+a nové funkce jen navrhnout ke schválení. Akce agenta jsou v Záznamech
+jako „AI agent (MCP)“. Klíč jde kdykoli vyměnit nebo přístup vypnout.
+
 ## Ankety, zápis, úkoly, vývěska a platby na jednotku
 
 - **Ankety** (Pro obyvatele → Ankety): nezávazné zjištění názoru, každý

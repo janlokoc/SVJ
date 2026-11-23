@@ -564,6 +564,25 @@ if ($PATH === '/nastaveni') {
     render('platform/settings', ['title' => 'Nastavení služby', 'errors' => $errors, 'v' => $values]);
     exit;
 }
+if ($PATH === '/pristup-ai') {
+    // Klíč pro MCP server hlášení: ukáže se jen jednou, uloží se jen jeho otisk.
+    $newKey = null;
+    if ($METHOD === 'POST' && post('do') === 'new') {
+        $newKey = rtrim(strtr(base64_encode(random_bytes(30)), '+/', '-_'), '=');
+        pset_save('mcp_token_hash', hash('sha256', $newKey));
+        pset_save('mcp_token_created', date('Y-m-d H:i'));
+        pset_save('mcp_token_last', '');
+        platform_log('Přístup pro AI: nový klíč');
+    } elseif ($METHOD === 'POST' && post('do') === 'off') {
+        pset_save('mcp_token_hash', '');
+        platform_log('Přístup pro AI: vypnut');
+        flash('Přístup pro AI je vypnutý. Dosavadní klíč už nefunguje.');
+        redirect('/pristup-ai');
+    }
+    render('platform/ai_access', ['title' => 'Přístup pro AI k hlášením', 'newKey' => $newKey, 'on' => pset('mcp_token_hash') !== '',
+        'created' => pset('mcp_token_created'), 'last' => pset('mcp_token_last'), 'endpoint' => report_page_url('/mcp')]);
+    exit;
+}
 if ($PATH === '/hlaseni' || str_starts_with($PATH, '/hlaseni/')) {
     report_admin_page('/hlaseni', substr($PATH, 8), $METHOD, $super['email']);
     exit;
