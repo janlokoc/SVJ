@@ -1111,7 +1111,12 @@ function smtp_send(array $c, string $from, string $to, string $subject, array $h
     @fwrite($fp, "QUIT\r\n");
     fclose($fp);
     if (!$ok) {
-        $GLOBALS['MAIL_ERROR'] = 'SMTP server odmítl zprávu: ' . mb_substr($err, 0, 200);
+        $hint = match (true) {
+            str_contains($err, '5.7.9') || str_contains($err, 'InvalidSecondFactor') => ' Účet má dvoufázové ověření: místo běžného hesla vytvořte „heslo aplikace“ (u Googlu: myaccount.google.com/apppasswords) a vložte ho do storage/config.php.',
+            str_starts_with($err, '535') || str_contains($err, '5.7.8') => ' Jméno nebo heslo nesedí – zkontrolujte user a password v storage/config.php.',
+            default => '',
+        };
+        $GLOBALS['MAIL_ERROR'] = 'SMTP server odmítl zprávu: ' . mb_substr($err, 0, 200) . $hint;
     }
     return $ok;
 }
