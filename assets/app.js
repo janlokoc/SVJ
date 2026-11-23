@@ -140,6 +140,26 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
   btn.addEventListener('click', () => { btn.setAttribute('aria-expanded', String(btn.parentElement.classList.toggle('is-open'))); });
 })();
 
+// Levé menu administrace: výška vždy jen do spodního okraje okna, aby šlo posunout samo až na konec,
+// i když nad ním je lišta (ukázka, podpora) nebo je obsah vpravo krátký.
+(() => {
+  const menu = document.querySelector('.admin-menu');
+  if (!menu) return;
+  let queued = false;
+  const fit = () => {
+    queued = false;
+    if (getComputedStyle(menu).position !== 'sticky') { menu.style.maxHeight = ''; return; }
+    const top = Math.max(0, menu.getBoundingClientRect().top);
+    menu.style.maxHeight = Math.max(160, window.innerHeight - top) + 'px';
+  };
+  const queue = () => { if (!queued) { queued = true; requestAnimationFrame(fit); } };
+  ['scroll', 'resize', 'orientationchange'].forEach((ev) => window.addEventListener(ev, queue, { passive: true }));
+  fit();
+  // Aktivní položku hned po načtení ukázat, i když je v menu hodně dole.
+  const current = menu.querySelector('[aria-current]');
+  if (current && current.offsetTop > menu.clientHeight - 40) menu.scrollTop = current.offsetTop - menu.clientHeight / 2;
+})();
+
 // Výběr vzhledu: při změně barev se náhledy šablon přebarví hned
 document.querySelectorAll('.look-picker input[type=radio]').forEach((radio) => radio.addEventListener('change', () => {
   radio.form.querySelectorAll('.look-cards .mini').forEach((m) => { m.dataset.look = radio.value; });
