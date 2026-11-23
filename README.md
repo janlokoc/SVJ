@@ -106,6 +106,43 @@ V Administraci → Nastavení vyplňte adresu odesílatele na doméně webu
 návodu poskytovatele – jinak zprávy často končí ve spamu. Před prvním
 rozesláním pošlete zkušební zprávu sami sobě.
 
+**Odesílání přes SMTP.** Pokud hosting `mail()` neumí, nebo web běží na
+vlastním počítači (tam `mail()` zprávu jen předá místnímu programu, který
+ji nikam nedoručí), doplňte do `storage/config.php` SMTP server svého
+e-mailu:
+
+```php
+'smtp' => ['host' => 'smtp.seznam.cz', 'port' => 465, 'secure' => 'ssl',
+           'user' => 'vybor@vase-domena.cz', 'password' => '…'],
+```
+
+`secure` je `ssl` (port 465) nebo `tls` (STARTTLS, port 587). U Gmailu je
+potřeba „heslo aplikace“. Adresa odesílatele v Nastavení musí patřit
+k tomuto účtu. Heslo patří jen do `storage/config.php` (není v Gitu) – nikam
+ho neposílejte. Zkušební zpráva poctivě řekne, kam e-mail opravdu šel: při
+běhu na vlastním počítači bez SMTP a ve zkušebním prostředí bez
+`staging_mail` hlásí, že se nic nedoručilo.
+
+### Dálkové odečty měřidel
+
+Od 1. 1. 2027 musí být měřiče tepla, teplé vody a indikátory topných
+nákladů odečitatelné na dálku (zákon 406/2000 Sb., § 7 odst. 11–12) a
+obyvatelé mají každý měsíc dostat informaci o spotřebě (vyhláška
+67/2013 Sb., § 8a). Studená voda povinná není.
+
+V Administraci → Odečty měřidel → **Dálkové odečty a import**:
+
+- zvolíte, která měřidla se odečítají na dálku – u nich obyvatel stav
+  nezadává (výchozí: teplá voda, teplo, indikátory),
+- nahrajete CSV od odečtové firmy (sloupce web pozná podle záhlaví:
+  jednotka nebo číslo měřidla, druh, stav, datum); před uložením je
+  náhled s chybnými řádky, opakované nahrání nic nezdvojí,
+- nebo zapnete **automatický příjem**: odečtová firma posílá `POST` na
+  tajnou adresu `/api/odecty/{klíč}` (CSV nebo JSON
+  `[{"unit":"A/2","meter_no":"TV-1","kind":"tv","amount":41.27,"date":"2027-01-31"}]`),
+- obyvatelé vidí spotřebu po měsících na stránce Odečty a web jim
+  (ručně, nebo automaticky 5. den v měsíci) pošle e-mail s upozorněním.
+
 Limit velikosti nahrávaného souboru určuje hosting (`upload_max_filesize`
 a `post_max_size` v nastavení PHP).
 

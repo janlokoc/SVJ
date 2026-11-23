@@ -29,6 +29,11 @@ return [
     // Zkušební prostředí: pruh na každé stránce, zákaz indexování a e-maily jen na jednu adresu (bez ní se neodesílají).
     // 'env' => 'staging', 'staging_mail' => 'vy@example.cz',
 
+    // Odesílání e-mailů přes SMTP server (doporučeno na vlastním počítači a tam, kde hosting neumí funkci mail()).
+    // Seznam: host smtp.seznam.cz, port 465, secure ssl; Gmail: smtp.gmail.com, 465, ssl a „heslo aplikace“;
+    // Brevo: smtp-relay.brevo.com, 587, tls. Odesílatel (Nastavení webu → e-mail odesílatele) musí patřit k tomuto účtu.
+    // 'smtp' => ['host' => 'smtp.seznam.cz', 'port' => 465, 'secure' => 'ssl', 'user' => 'vy@seznam.cz', 'password' => '…'],
+
     // 'ai' => ['api_key' => 'sk-ant-…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 30],
 
     'db' => [

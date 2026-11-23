@@ -190,7 +190,8 @@ if ($dbProblem !== null) {
 }
 
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
-if ($METHOD === 'POST') {
+// Adresa pro příjem odečtů ze strojů (odečtová firma, sběrnice) se ověřuje tajným klíčem v adrese, ne formulářovým tokenem.
+if ($METHOD === 'POST' && !preg_match('~^/api/odecty/[a-f0-9]{40}$~', $PATH)) {
     check_csrf();
 }
 
@@ -316,6 +317,7 @@ require __DIR__ . '/app/routes_chat.php';
 require __DIR__ . '/app/routes_gdpr.php';
 require __DIR__ . '/app/routes_onboarding.php';
 require __DIR__ . '/app/routes_join.php';
+require __DIR__ . '/app/routes_meters.php';
 require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';

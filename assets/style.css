@@ -1430,3 +1430,6 @@ html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { b
 .ext-docs td { vertical-align: top; }
 .ext-upload { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: .4rem; }
 .ext-upload input[type=file] { max-width: 15rem; font-size: .85rem; }
+
+pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-radius: 8px; overflow-x: auto; font-size: .85rem; }
+.meter-monthly table td:first-child { font-weight: 600; white-space: nowrap; }

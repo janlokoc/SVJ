@@ -81,6 +81,8 @@ $readingsPage = function () {
         }
         if (!isset(READING_KINDS[post('kind')])) {
             $errors[] = 'Vyberte měřidlo.';
+        } elseif (in_array(post('kind'), remote_kinds(), true)) {
+            $errors[] = 'Toto měřidlo se odečítá na dálku – stav není potřeba zadávat.';
         }
         if (!is_numeric($amount) || (float) $amount < 0 || (float) $amount > 99999999) {
             $errors[] = 'Stav měřidla zadejte jako číslo (např. 123,45).';
@@ -97,7 +99,8 @@ $readingsPage = function () {
         http_response_code(422);
     }
     $rows = $mine ? all('SELECT r.*, u.name author FROM readings r LEFT JOIN users u ON u.id = r.user_id WHERE r.unit_id IN (' . implode(',', $mine) . ') ORDER BY r.read_date DESC, r.id DESC LIMIT 100') : [];
-    render('readings', ['title' => 'Odečty měřidel', 'errors' => $errors, 'rows' => $rows, 'units' => array_intersect_key(unit_options(), array_flip($mine))]);
+    render('readings', ['title' => 'Odečty měřidel', 'errors' => $errors, 'rows' => $rows, 'units' => array_intersect_key(unit_options(), array_flip($mine)),
+        'manualKinds' => array_diff_key(READING_KINDS, array_flip(remote_kinds())), 'remote' => remote_kinds(), 'monthly' => monthly_consumption($mine)]);
 };
 $route('GET', '/odecty', $readingsPage);
 $route('POST', '/odecty', $readingsPage);

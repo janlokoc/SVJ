@@ -152,6 +152,7 @@ function db_mysql(string $tenant): PDO
         schema_v8($pdo, true);
         schema_v9($pdo, true);
         schema_v10($pdo, true);
+        schema_v11($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -184,7 +185,16 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 10) {
         schema_v10($pdo, true);
     }
+    if ($mysqlVersion < 11) {
+        schema_v11($pdo, true);
+    }
     return $pdo;
+}
+/** Jedenáctá verze databáze: u odečtu je vidět, odkud přišel (ruční zadání, import souboru, automatický příjem). */
+function schema_v11(PDO $pdo, bool $mysql): void
+{
+    $pdo->exec('ALTER TABLE readings ADD COLUMN source ' . ($mysql ? "VARCHAR(10) NOT NULL DEFAULT 'manual'" : "TEXT NOT NULL DEFAULT 'manual'"));
+    $mysql ? $pdo->exec("UPDATE settings SET value = '11' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 11');
 }
 /** Desátá verze databáze: žádosti obyvatel o přiřazení k jednotce (přes odkaz od výboru, schvaluje správce). */
 function schema_v10(PDO $pdo, bool $mysql): void
@@ -301,6 +311,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v8($pdo, false);
         schema_v9($pdo, false);
         schema_v10($pdo, false);
+        schema_v11($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -418,6 +429,9 @@ SQL);
     }
     if ($version < 10) {
         schema_v10($pdo, false);
+    }
+    if ($version < 11) {
+        schema_v11($pdo, false);
     }
     return $pdo;
 }
@@ -1002,6 +1016,9 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
     if (is_staging()) {
         $catch = (string) (app_config()['staging_mail'] ?? '');
         if (!filter_var($catch, FILTER_VALIDATE_EMAIL)) {
+            // Bez adresy pro zachytávání se ve zkušebním prostředí nic neodesílá – jen se zapíše, co by odešlo.
+            @file_put_contents(ROOT_STORAGE . '/mail-staging.log', date('Y-m-d H:i:s') . "\t$to\t$subject\n", FILE_APPEND);
+            $GLOBALS['MAIL_LAST'] = 'staging-off';
             return true;
         }
         $subject = '[STAGING pro ' . $to . '] ' . $subject;
@@ -1025,8 +1042,101 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
         $body = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$body\r\n--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
             . chunk_split(base64_encode($html), 76, "\r\n") . "\r\n--$b--\r\n";
     }
+    $smtp = app_config()['smtp'] ?? null;
+    if (is_array($smtp) && !empty($smtp['host'])) {
+        $GLOBALS['MAIL_LAST'] = 'smtp';
+        return smtp_send($smtp, $from, $to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $headers, $body);
+    }
+    $GLOBALS['MAIL_LAST'] = 'mail';
     $params = preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$/', $from) ? '-f' . $from : '';
     return @mail($to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $body, $headers, $params);
+}
+/**
+ * Odeslání přes SMTP server (Seznam, Gmail, Brevo, hosting…). Konfigurace v storage/config.php:
+ * 'smtp' => ['host' => 'smtp.seznam.cz', 'port' => 465, 'secure' => 'ssl', 'user' => '…', 'password' => '…'].
+ * secure: 'ssl' (port 465), 'tls' (STARTTLS, port 587) nebo '' (bez šifrování – jen pro místní testovací server).
+ */
+function smtp_send(array $c, string $from, string $to, string $subject, array $headers, string $body): bool
+{
+    $secure = strtolower((string) ($c['secure'] ?? ((int) ($c['port'] ?? 587) === 465 ? 'ssl' : 'tls')));
+    $port = (int) ($c['port'] ?? ($secure === 'ssl' ? 465 : 587));
+    $err = '';
+    $fp = @stream_socket_client(($secure === 'ssl' ? 'ssl://' : 'tcp://') . $c['host'] . ':' . $port, $errno, $errstr, 15, STREAM_CLIENT_CONNECT,
+        stream_context_create(['ssl' => ['verify_peer' => true, 'verify_peer_name' => true, 'SNI_enabled' => true]]));
+    if (!$fp) {
+        $GLOBALS['MAIL_ERROR'] = 'Nepodařilo se připojit k ' . $c['host'] . ':' . $port . ' (' . $errstr . ').';
+        return false;
+    }
+    stream_set_timeout($fp, 20);
+    $read = function () use ($fp): string {
+        $out = '';
+        while (($line = fgets($fp, 1024)) !== false) {
+            $out .= $line;
+            if (strlen($line) < 4 || $line[3] === ' ') {
+                break;
+            }
+        }
+        return $out;
+    };
+    $cmd = function (string $line, array $ok) use ($fp, $read, &$err): bool {
+        if ($line !== '') {
+            fwrite($fp, $line . "\r\n");
+        }
+        $res = $read();
+        if (!in_array((int) substr($res, 0, 3), $ok, true)) {
+            $err = trim($res) !== '' ? trim(preg_replace('/\s+/', ' ', $res)) : 'server neodpověděl';
+            return false;
+        }
+        return true;
+    };
+    $host = preg_replace('/[^A-Za-z0-9.\-]/', '', (string) ($_SERVER['SERVER_NAME'] ?? 'localhost')) ?: 'localhost';
+    $ok = $cmd('', [220]) && $cmd('EHLO ' . $host, [250]);
+    if ($ok && $secure === 'tls') {
+        $ok = $cmd('STARTTLS', [220]) && stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT) && $cmd('EHLO ' . $host, [250]);
+    }
+    if ($ok && !empty($c['user'])) {
+        $ok = $cmd('AUTH LOGIN', [334]) && $cmd(base64_encode((string) $c['user']), [334]) && $cmd(base64_encode((string) ($c['password'] ?? '')), [235]);
+    }
+    $ok = $ok && $cmd('MAIL FROM:<' . $from . '>', [250]) && $cmd('RCPT TO:<' . $to . '>', [250, 251]) && $cmd('DATA', [354]);
+    if ($ok) {
+        $head = ['Date' => date('r'), 'To' => '<' . $to . '>', 'Subject' => $subject, 'Message-ID' => '<' . bin2hex(random_bytes(12)) . '@' . (explode('@', $from)[1] ?? $host) . '>'] + $headers;
+        $msg = '';
+        foreach ($head as $k => $v) {
+            $msg .= $k . ': ' . $v . "\r\n";
+        }
+        $msg .= "\r\n" . preg_replace('/^\./m', '..', str_replace(["\r\n", "\n"], ["\n", "\r\n"], $body));
+        fwrite($fp, $msg . "\r\n.\r\n");
+        $ok = $cmd('', [250]);
+    }
+    @fwrite($fp, "QUIT\r\n");
+    fclose($fp);
+    if (!$ok) {
+        $GLOBALS['MAIL_ERROR'] = 'SMTP server odmítl zprávu: ' . mb_substr($err, 0, 200);
+    }
+    return $ok;
+}
+/** Jak web posílá e-maily – pro poctivou zprávu správci, kam e-mail opravdu odešel. */
+function mail_route(): string
+{
+    if (is_staging()) {
+        return filter_var((string) (app_config()['staging_mail'] ?? ''), FILTER_VALIDATE_EMAIL) ? 'staging-catch' : 'staging-off';
+    }
+    if (!empty(app_config()['smtp']['host'])) {
+        return 'smtp';
+    }
+    // Na vlastním počítači (vestavěný server PHP) funkce mail() zprávu jen předá místnímu programu, který ji obvykle nikam nedoručí.
+    // Kdo má na počítači nastavené vlastní doručování (sendmail_path v php.ini), tomu věříme.
+    $custom = !in_array(trim((string) ini_get('sendmail_path')), ['', '/usr/sbin/sendmail -t -i', '/usr/sbin/sendmail -t'], true);
+    return PHP_SAPI === 'cli-server' && !$custom ? 'local' : 'mail';
+}
+function mail_route_note(): string
+{
+    return match (mail_route()) {
+        'staging-off' => 'Web běží jako zkušební prostředí bez adresy pro zachytávání e-mailů, takže se nic neodeslalo (jen se zapsalo do storage/mail-staging.log). Doplňte v storage/config.php staging_mail.',
+        'staging-catch' => 'Zkušební prostředí: e-mail šel na adresu ' . app_config()['staging_mail'] . ', ne skutečným příjemcům.',
+        'local' => 'Web běží na Vašem počítači bez nastaveného SMTP serveru. Počítač zprávu převzal, ale skutečně doručit ji nejspíš neumí. Pro opravdové odesílání doplňte v storage/config.php údaje SMTP (viz config.example.php).',
+        default => '',
+    };
 }
 
 // ---------- Jednotky ----------

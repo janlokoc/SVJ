@@ -1,6 +1,6 @@
 <div class="wrap page">
   <header class="page-head row"><h1><?= e($def['title']) ?></h1>
-    <span class="actions"><?php if ($slug === 'odecty'): ?><a class="btn btn-ghost" href="<?= url('/admin/odecty/export') ?>">Export do Excelu (CSV)</a><?php endif ?>
+    <span class="actions"><?php if ($slug === 'odecty'): ?><a class="btn" href="<?= url('/admin/odecty/dalkove') ?>">Dálkové odečty a import</a><a class="btn btn-ghost" href="<?= url('/admin/odecty/export') ?>">Export do Excelu (CSV)</a><?php endif ?>
       <a class="btn" href="<?= url("/admin/$slug/novy") ?>">+ Přidat <?= e($def['one']) ?></a></span></header>
   <p class="lead"><?= e($def['lead']) ?></p>
   <?php if (!$rows): ?><p class="empty">Zatím tu nic není.</p><?php else: ?>

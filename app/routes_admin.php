@@ -565,9 +565,15 @@ $mailForm = function () {
             $errors[] = $limitError;
         }
         if (!$errors && post('action') === 'test') {
-            send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html)
-                ? $notice = 'Zkušební zpráva byla předána k odeslání na ' . $admin['email'] . '. Zkontrolujte, že dorazila a nespadla do spamu.'
-                : $errors[] = 'Zkušební zprávu se nepodařilo odeslat. Server nejspíš nemá povolené odesílání e-mailů – ověřte to u poskytovatele hostingu.';
+            $route = mail_route();
+            if (in_array($route, ['staging-off', 'local'], true)) {
+                send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html);
+                $errors[] = 'Zkušební zpráva se skutečně neodeslala. ' . mail_route_note();
+            } elseif (send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html)) {
+                $notice = ($route === 'smtp' ? 'SMTP server převzal zkušební zprávu pro ' : 'Zkušební zpráva byla předána k odeslání na ') . $admin['email'] . '. Zkontrolujte, že dorazila a nespadla do spamu.' . (mail_route_note() !== '' ? ' ' . mail_route_note() : '');
+            } else {
+                $errors[] = 'Zkušební zprávu se nepodařilo odeslat. ' . ($GLOBALS['MAIL_ERROR'] ?? 'Server nejspíš nemá povolené odesílání e-mailů – ověřte to u poskytovatele hostingu.');
+            }
         } elseif (!$errors) {
             // Jednorázový klíč brání dvojímu odeslání při opakovaném kliknutí nebo obnovení stránky.
             if (!hash_equals((string) ($_SESSION['mail_nonce'] ?? ''), post('nonce')) || post('nonce') === '') {
@@ -589,7 +595,8 @@ $mailForm = function () {
                 }
                 q('UPDATE mailings SET sent_count = ?, failed_count = ?, failed_list = ? WHERE id = ?', [$sent, count($failed), implode("\n", $failed), $mailingId]);
                 audit('mailing_sent', $m['subject'] . ' · ' . $sent . ' příjemců');
-                flash("Zpráva byla předána k odeslání $sent příjemcům." . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed ? 'info' : 'ok');
+                $fake = in_array(mail_route(), ['staging-off', 'local'], true);
+                flash(($fake ? "Zpráva se skutečně nikomu nedoručila ($sent příjemců). " . mail_route_note() : "Zpráva byla předána k odeslání $sent příjemcům.") . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed || $fake ? 'info' : 'ok');
                 redirect('/admin/zpravy/' . $mailingId);
             }
         }
@@ -748,7 +755,7 @@ const AUDIT_LABELS = [
     'login' => 'Přihlášení', 'login_failed' => 'Neúspěšné přihlášení', 'login_2fa_failed' => 'Chybný ověřovací kód', 'logout' => 'Odhlášení',
     'setup' => 'Vytvoření prvního správce', 'setup_code_failed' => 'Chybný instalační kód', 'password_changed' => 'Změna hesla', 'gdpr_export' => 'Export osobních údajů', 'gdpr_erasure' => 'Zrušení účtu na vlastní žádost',
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
-    'cleanup' => 'Uvolnění místa (promazání starých záznamů)', 'join_requested' => 'Žádost o přiřazení k jednotce', 'join_approved' => 'Schválení přiřazení k jednotce', 'join_rejected' => 'Zamítnutí přiřazení k jednotce', 'join_link' => 'Odkaz pro přiřazení k jednotce', 'support_login' => 'Vstup podpory provozovatele (jen pro čtení)', 'support_logout' => 'Odchod podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
+    'cleanup' => 'Uvolnění místa (promazání starých záznamů)', 'meter_import' => 'Odečty: příjem dat', 'meter_notice' => 'Odečty: měsíční informace obyvatelům', 'meter_settings' => 'Odečty: nastavení dálkových odečtů', 'join_requested' => 'Žádost o přiřazení k jednotce', 'join_approved' => 'Schválení přiřazení k jednotce', 'join_rejected' => 'Zamítnutí přiřazení k jednotce', 'join_link' => 'Odkaz pro přiřazení k jednotce', 'support_login' => 'Vstup podpory provozovatele (jen pro čtení)', 'support_logout' => 'Odchod podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
     'unit_deleted' => 'Smazání jednotky', 'users_imported' => 'Import uživatelů', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];

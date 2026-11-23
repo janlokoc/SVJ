@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
-const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
+const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo (měřič tepla)', 'itn' => 'Indikátory topení', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 
 // ---------- Jednotky přihlášeného a viditelnost dokumentů ----------
 
@@ -130,7 +130,7 @@ function crud_defs(): array
             'lead' => 'Firmy a řemeslníci, se kterými dům spolupracuje. Dodavatele pak můžete přiřadit k nahlášené závadě.',
             'fields' => ['name' => ['Název nebo jméno', 'text', true], 'field' => ['Obor (instalatér, výtahy, úklid…)', 'text'], 'phone' => ['Telefon', 'text'], 'email' => ['E-mail', 'text'], 'note' => ['Poznámka', 'text']]],
         'odecty' => ['table' => 'readings', 'title' => 'Odečty měřidel', 'one' => 'odečet', 'name' => 'read_date', 'order' => 'read_date DESC, id DESC',
-            'lead' => 'Stavy měřidel, které obyvatelé nahlásili sami nebo které jste zapsali za ně.',
+            'lead' => 'Stavy měřidel – dálkové odečty od odečtové firmy, samoodečty obyvatel a opravy, které zapíšete Vy. Dálkové odečty nastavíte tlačítkem vpravo nahoře.',
             'fields' => ['unit_id' => ['Jednotka', 'select', true, fn() => unit_options()], 'kind' => ['Měřidlo', 'select', true, fn() => READING_KINDS], 'meter_no' => ['Číslo měřidla', 'text'],
                 'amount' => ['Stav', 'decimal', true], 'read_date' => ['Datum odečtu', 'date', true], 'note' => ['Poznámka', 'text']]],
     ];
@@ -163,6 +163,9 @@ function daily_tasks(): void
         return;
     }
     q("INSERT INTO settings (`key`, value) VALUES ('last_daily', ?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value", [date('Y-m-d')]);
+    if (function_exists('meter_daily')) {
+        meter_daily();   // měsíční informace o spotřebě (dálkové odečty)
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }
