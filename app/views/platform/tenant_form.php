@@ -9,7 +9,28 @@
       <div class="flash flash-info">Web zatím nemá žádného správce.<?php if ($setupCode): ?> Výbor si ho může vytvořit sám na adrese webu instalačním kódem <code><?= e($setupCode) ?></code>, nebo mu účet založte níže.<?php endif ?></div>
     <?php endif ?>
   <?php endif ?>
-  <form method="post" class="card form">
+  <?php if (!$new): ?>
+  <nav class="tenant-jump" aria-label="Části stránky">
+    <a href="#uzivatele">Uživatelé</a><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+  </nav>
+  <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
+  <details class="card tenant-users" id="uzivatele" open>
+    <summary><h2>Uživatelé webu</h2> <span class="muted">aktivních <?= count($active) ?> · přihlášeno za 30 dní <?= count($seen30) ?> · nikdy nepřihlášeno <?= count($never) ?></span></summary>
+    <table class="table">
+      <thead><tr><th>Uživatel</th><th>Role</th><th>Jednotky</th><th>Poslední přihlášení</th><th>Stav</th></tr></thead>
+      <tbody><?php foreach ($tenantUsers as $u): ?><tr<?= (int) $u['active'] ? '' : ' class="is-off"' ?>>
+        <td data-label="Uživatel"><strong><?= e($u['name']) ?></strong><br><small class="muted"><?= e($u['email']) ?></small></td>
+        <td data-label="Role"><?= $u['role'] === 'admin' ? '<strong>správce webu</strong>' : e(mb_strtolower(KINDS[$u['kind']] ?? $u['kind'])) ?><?= ($u['position'] ?? '') !== '' ? '<br><small class="muted">' . e(position_label($u)) . '</small>' : '' ?></td>
+        <td data-label="Jednotky"><?= $u['units'] !== '' ? e($u['units']) : '<span class="muted">—</span>' ?></td>
+        <td data-label="Poslední přihlášení"><?= $u['last_login_at'] ? cz_datetime($u['last_login_at']) : '<span class="muted">nikdy</span>' ?></td>
+        <td data-label="Stav"><?= !(int) $u['active'] ? '<span class="status status-new">vypnutý</span>' : ((int) $u['pending'] ? '<span class="status status-in_progress">čeká na přijetí pozvánky</span>' . ($u['invite_expires'] && $u['invite_expires'] < date('Y-m-d H:i:s') ? '<br><small class="muted">pozvánka vypršela</small>' : '') : '<span class="status status-done">aktivní</span>') ?><?= (int) $u['totp_enabled'] ? '<br><small class="muted">dvoufázové ověření</small>' : '' ?></td>
+      </tr><?php endforeach ?></tbody>
+    </table>
+    <p class="hint">Jen přehled účtů pro podporu. Obsah webu (aktuality, dokumenty, zprávy) se tu nezobrazuje; nahlédnout do něj jde jen přes režim podpory níže, který se zapisuje do záznamů společenství.</p>
+  </details>
+  <?php endif ?>
+  <?php endif ?>
+  <form method="post" class="card form" id="udaje">
     <?= csrf_field() ?>
     <?php if ($new): ?>
       <label>Adresa webu <span class="slug-row"><?php if (platform_main_paths()): ?><span><?= e(platform_main_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_main_domain()) ?>" aria-describedby="slug-fixed-note" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><?php if (!platform_main_paths()): ?><span>.<?= e(platform_main_domain()) ?></span><?php endif ?></span></label>
@@ -142,29 +163,13 @@
   </div>
   <?php endif ?>
   <?php if ($payments): ?>
-  <div class="card"><h2>Platby tohoto společenství</h2>
+  <div class="card" id="platby"><h2>Platby tohoto společenství</h2>
     <table class="table"><thead><tr><th>Var. symbol</th><th>Částka</th><th>Období</th><th>Stav</th></tr></thead><tbody>
     <?php foreach ($payments as $p): ?><tr><td data-label="Var. symbol"><code><?= e($p['vs']) ?></code></td><td data-label="Částka"><?= pay_money($p) ?></td>
       <td data-label="Období"><?= $p['period_from'] ? cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '—' ?></td><td data-label="Stav"><?= e(PAYMENT_STATUS[$p['status']]) ?></td></tr><?php endforeach ?>
     </tbody></table>
     <p><a href="<?= url('/platby') ?>">Potvrdit nebo zrušit platbu →</a></p>
   </div>
-  <?php endif ?>
-  <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
-  <details class="card tenant-users" id="uzivatele">
-    <summary><h2>Uživatelé webu</h2> <span class="muted">aktivních <?= count($active) ?> · přihlášeno za 30 dní <?= count($seen30) ?> · nikdy nepřihlášeno <?= count($never) ?></span></summary>
-    <table class="table">
-      <thead><tr><th>Uživatel</th><th>Role</th><th>Jednotky</th><th>Poslední přihlášení</th><th>Stav</th></tr></thead>
-      <tbody><?php foreach ($tenantUsers as $u): ?><tr<?= (int) $u['active'] ? '' : ' class="is-off"' ?>>
-        <td data-label="Uživatel"><strong><?= e($u['name']) ?></strong><br><small class="muted"><?= e($u['email']) ?></small></td>
-        <td data-label="Role"><?= $u['role'] === 'admin' ? '<strong>správce webu</strong>' : e(mb_strtolower(KINDS[$u['kind']] ?? $u['kind'])) ?><?= ($u['position'] ?? '') !== '' ? '<br><small class="muted">' . e(position_label($u)) . '</small>' : '' ?></td>
-        <td data-label="Jednotky"><?= $u['units'] !== '' ? e($u['units']) : '<span class="muted">—</span>' ?></td>
-        <td data-label="Poslední přihlášení"><?= $u['last_login_at'] ? cz_datetime($u['last_login_at']) : '<span class="muted">nikdy</span>' ?></td>
-        <td data-label="Stav"><?= !(int) $u['active'] ? '<span class="status status-new">vypnutý</span>' : ((int) $u['pending'] ? '<span class="status status-in_progress">čeká na přijetí pozvánky</span>' . ($u['invite_expires'] && $u['invite_expires'] < date('Y-m-d H:i:s') ? '<br><small class="muted">pozvánka vypršela</small>' : '') : '<span class="status status-done">aktivní</span>') ?><?= (int) $u['totp_enabled'] ? '<br><small class="muted">dvoufázové ověření</small>' : '' ?></td>
-      </tr><?php endforeach ?></tbody>
-    </table>
-    <p class="hint">Jen přehled účtů pro podporu. Obsah webu (aktuality, dokumenty, zprávy) se tu nezobrazuje; nahlédnout do něj jde jen přes režim podpory níže, který se zapisuje do záznamů společenství.</p>
-  </details>
   <?php endif ?>
   <div class="card" id="podpora">
     <h2>Podpora: přihlášení a hesla</h2>
