@@ -20,6 +20,9 @@
     $aiContext = 'Jednání: ' . $ev['title'] . ', ' . cz_date($ev['event_date'], true) . ($ev['event_time'] !== '' ? ' v ' . $ev['event_time'] : '') . ($ev['place'] !== '' ? ', ' . $ev['place'] : '')
         . "\nÚčast: " . percent_cz($att['percent']) . ' hlasů, shromáždění ' . ($att['quorate'] ? 'je' : 'není') . ' usnášeníschopné.'
         . ($ev['program'] !== '' ? "\nProgram:\n" . $ev['program'] : '');
+    foreach ($motions as $m) {
+        $aiContext .= "\nHlasování na shromáždění – " . $m['title'] . ': ' . ($m['res']['passed'] ? 'přijato' : 'nepřijato') . ' (pro ' . percent_cz($m['res']['yes']) . ' přítomných)';
+    }
     foreach ($polls as $p) {
         foreach ($p['res']['items'] as $it) {
             $aiContext .= "\nHlasování – " . $it['question'] . ': ' . ($it['passed'] ? 'přijato' : 'nepřijato');
