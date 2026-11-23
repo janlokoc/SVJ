@@ -155,6 +155,7 @@
     <?php endif ?>
   </div>
 
+  <?php $migratedOn = function_exists('tenant_migrated') ? tenant_migrated(TENANT) : ''; if ($migratedOn === '' || ($migration && in_array($migration['status'], ['ordered', 'paid'], true))): ?>
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
     <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>
@@ -209,6 +210,13 @@
       </form>
     <?php endif ?>
   </div>
+  <?php else: ?>
+  <div class="card" id="prevod">
+    <h2>Obsah ze starého webu</h2>
+    <p><span class="status status-done">Převedeno</span> Obsah ze starého webu je na tomto webu od <?= cz_date($migratedOn) ?>. Kdybyste potřebovali převést ještě jiný web, napište nám přes Podporu webu.</p>
+  </div>
+  <?php endif ?>
+
 
   <div class="card" id="domena">
     <h2>Vlastní doména</h2>

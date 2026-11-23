@@ -1386,6 +1386,25 @@ const MIGRATION_SCOPE = ['aktuality' => 'Aktuality a oznámení', 'dokumenty' =>
 const MIGRATION_ACCESS = ['public' => 'Vše je na starém webu veřejně vidět', 'login' => 'Část je za přihlášením – přístup pošleme e-mailem', 'export' => 'Máme export nebo zálohu, pošleme ji'];
 const MIGRATION_STATUS = ['ordered' => 'čeká na platbu', 'paid' => 'zaplaceno, pracujeme na převodu', 'done' => 'hotovo', 'cancelled' => 'zrušeno'];
 
+/** Obsah ze starého webu už je převedený: hotová objednávka převodu, nebo import obsahu v konzoli. Vrací datum, nebo ''. */
+function tenant_migrated(string $slug): string
+{
+    $m = pq("SELECT done_at FROM migrations WHERE tenant = ? AND status = 'done' ORDER BY id DESC LIMIT 1", [$slug])->fetchColumn();
+    if ($m) {
+        return substr((string) $m, 0, 10);
+    }
+    try {
+        $st = tenant_pdo($slug)->prepare("SELECT value FROM settings WHERE `key` = 'content_imported_at'");
+        $st->execute();
+        if ($v = (string) $st->fetchColumn()) {
+            return $v;
+        }
+    } catch (Throwable $e) {
+    }
+    // Weby převedené dřív, než se import začal značit: poznají se podle záznamu v konzoli.
+    $log = pq("SELECT at FROM platform_log WHERE action = 'Import obsahu' AND (detail = ? OR detail LIKE ?) ORDER BY id LIMIT 1", [$slug, $slug . ' ·%'])->fetchColumn();
+    return $log ? substr((string) $log, 0, 10) : '';
+}
 /** Poslední nezrušená objednávka převodu tohoto webu (nebo null). */
 function migration_row(string $slug): ?array
 {

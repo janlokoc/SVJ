@@ -35,7 +35,7 @@ function onboarding_steps(): array
         'termin' => ['obsah', 'Nejbližší termín', 'Shromáždění, odečty, revize nebo úklid. Termíny se ukazují na úvodní stránce a jdou přidat do kalendáře.',
             '/admin/terminy/novy', 'Přidat termín', $n('SELECT COUNT(*) FROM events') > 0, false],
         'prevod' => ['obsah', 'Obsah ze starého webu', 'Máte starší web? Dokumenty a aktuality můžete přenést sami, nebo si převod objednat. Pokud žádný starý web nemáte, krok přeskočte.',
-            '/admin/predplatne#prevod', 'Objednat převod', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && migration_row(TENANT) !== null, false],
+            '/admin/predplatne#prevod', 'Objednat převod', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== ''), false],
         'udaje-ochrana' => ['start', 'Ochrana osobních údajů', 'Přečtěte si text stránky „Ochrana osobních údajů“ a doplňte, kdo je ve Vašem společenství kontaktní osobou.',
             '/admin/nastaveni', 'Zkontrolovat text', false, true],
         'zastup' => ['start', 'Zástup správce', 'Druhý účet správce se hodí při dovolené nebo nemoci. Web nesmí stát na jednom člověku.',

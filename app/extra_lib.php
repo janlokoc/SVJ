@@ -353,6 +353,9 @@ function import_content(PDO $pdo, array $data, bool $replace): array|string
         error_log('SVJ web, import obsahu: ' . $e->getMessage());
         return 'Import se nepodařil a nic se nezměnilo. Zkontrolujte, že soubor je úplný.';
     }
+    // Obsah ze starého webu je převedený – převod se už nemá nabízet.
+    $pdo->prepare("DELETE FROM settings WHERE `key` = 'content_imported_at'")->execute();
+    $pdo->prepare("INSERT INTO settings (`key`, value) VALUES ('content_imported_at', ?)")->execute([date('Y-m-d')]);
     return $n;
 }
 
