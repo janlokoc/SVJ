@@ -97,6 +97,13 @@ a otevřít <http://localhost:8000>.
 6. V Administraci → Přehled stáhněte tlačítkem soubory ze starého webu
    (nebo `php tools/import-webnode.php`). Do té doby dokumenty odkazují na
    Webnode a po jeho zrušení by přestaly fungovat.
+7. **E-maily přes SMTP hostingu.** Na hostingu založte schránku pro
+   odesílání (např. `noreply@vase-domena.cz` nebo `vybor@…`) a její SMTP
+   údaje zapište do `storage/config.php` (`'smtp' => [...]`, viz
+   „Rozesílání e-mailů“). Stejnou adresu vyplňte jako odesílatele v
+   Nastavení – jinak ji SMTP server přepíše na přihlašovací účet. U domény
+   nastavte SPF, DKIM a DMARC. Testovací Gmail z vývoje z konfigurace
+   odstraňte. Pošlete si zkušební zprávu na soukromou i firemní adresu.
 
 ### Rozesílání e-mailů
 
