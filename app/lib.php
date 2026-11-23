@@ -167,6 +167,7 @@ function db_mysql(string $tenant): PDO
         schema_v13($pdo, true);
         schema_v14($pdo, true);
         schema_v15($pdo, true);
+        schema_v16($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -214,7 +215,16 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 15) {
         schema_v15($pdo, true);
     }
+    if ($mysqlVersion < 16) {
+        schema_v16($pdo, true);
+    }
     return $pdo;
+}
+/** Šestnáctá verze databáze: text z dokumentů pro hledání (NULL = zatím nepřečteno). */
+function schema_v16(PDO $pdo, bool $mysql): void
+{
+    $pdo->exec('ALTER TABLE documents ADD COLUMN content ' . ($mysql ? 'MEDIUMTEXT NULL' : 'TEXT'));
+    $mysql ? $pdo->exec("UPDATE settings SET value = '16' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 16');
 }
 /** Patnáctá verze databáze: uživatel si volí, zda chce upozornění do telefonu (vedle e-mailu). */
 function schema_v15(PDO $pdo, bool $mysql): void
@@ -378,6 +388,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v13($pdo, false);
         schema_v14($pdo, false);
         schema_v15($pdo, false);
+        schema_v16($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -510,6 +521,9 @@ SQL);
     }
     if ($version < 15) {
         schema_v15($pdo, false);
+    }
+    if ($version < 16) {
+        schema_v16($pdo, false);
     }
     return $pdo;
 }
@@ -787,6 +801,7 @@ function icon(string $name): string
         'arrow' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
         'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'menu' => '<path d="M4 7h16M4 12h16M4 17h16"/>',
+        'search' => '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
         'alert' => '<path d="M12 3 2 20h20zM12 10v4M12 17.5v.5"/>',
         'calendar' => '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
         'flag' => '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
@@ -996,7 +1011,7 @@ function import_external_files_into(PDO $pdo, string $uploadDir, int $limit, int
         }
         $name = bin2hex(random_bytes(16)) . '.' . $ext;
         file_put_contents($uploadDir . '/' . $name, $data);
-        $pdo->prepare('UPDATE documents SET filename = ?, size = ?, external_url = NULL WHERE id = ?')->execute([$name, strlen($data), $r['id']]);
+        $pdo->prepare('UPDATE documents SET filename = ?, size = ?, external_url = NULL, content = NULL WHERE id = ?')->execute([$name, strlen($data), $r['id']]);
         $done++;
     }
     $untried = (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND (external_url LIKE 'https://%' OR external_url LIKE 'http://%')")->fetchColumn();
@@ -1822,6 +1837,7 @@ require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/ai_lib.php';
 require_once __DIR__ . '/meters_lib.php';
 require_once __DIR__ . '/push_lib.php';
+require_once __DIR__ . '/search_lib.php';
 require_once __DIR__ . '/extra_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string

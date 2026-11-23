@@ -299,7 +299,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
             }
             $name = bin2hex(random_bytes(16)) . '.' . $ext;
             move_uploaded_file($f['tmp_name'], $dir . '/' . $name);
-            $pdo->prepare('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL WHERE id = ?')->execute([$name, mb_substr((string) $f['name'], 0, 200), (int) $f['size'], $id]);
+            $pdo->prepare('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL, content = NULL WHERE id = ?')->execute([$name, mb_substr((string) $f['name'], 0, 200), (int) $f['size'], $id]);
             platform_log('Ruční nahrání souboru ze starého webu', $slug . ' · ' . $doc['title']);
             flash('Soubor k dokumentu „' . $doc['title'] . '“ je nahraný.');
         }

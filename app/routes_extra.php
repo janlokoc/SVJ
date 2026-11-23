@@ -555,7 +555,7 @@ $route('POST', '/admin/dokumenty/zakladni', function () {
         if ($old['filename'] && preg_match('/^[a-f0-9]{32}\.[a-z]+$/', $old['filename'])) {
             @unlink(UPLOAD_DIR . '/' . $old['filename']);
         }
-        q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL, visibility = ?, doc_date = ? WHERE id = ?', [$filename, $original, $size, $visibility, date('Y-m-d'), $old['id']]);
+        q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL, content = NULL, visibility = ?, doc_date = ? WHERE id = ?', [$filename, $original, $size, $visibility, date('Y-m-d'), $old['id']]);
     } else {
         q('INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?,?,?,?,?,?,?)', [$def[0], $def[1], $visibility, $filename, $original, $size, date('Y-m-d')]);
         $id = (int) db()->lastInsertId();

@@ -86,6 +86,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <?php endif ?>
       </ul>
       <div class="nav-user">
+        <a class="search-link" href="<?= url('/hledat') ?>" title="Hledat na webu"><?= icon('search') ?><span>Hledat</span></a>
         <a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Podpora webu</span></a>
         <?php if ($u): ?>
           <?php if ($u['role'] === 'admin'): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>

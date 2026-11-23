@@ -617,6 +617,19 @@ prohlížeče (Google, Mozilla, Apple, Microsoft). Server posílá jen na tyto
 služby přes HTTPS. Ikonu na plochu (`/apple-touch-icon.png`) web kreslí
 v barvě svého vzhledu, od edice Standard s logem společenství.
 
+## Hledání
+
+Lupa **Hledat** v záhlaví (`/hledat?q=…`) prohledá aktuality, dokumenty –
+**včetně textu uvnitř souborů** (PDF, DOCX, XLSX, ODT, ODS) –, termíny,
+diskuzi, kontakty a závady; správcům navíc jednotky, účty a dodavatele.
+Háčky a čárky psát není potřeba, musí sedět všechna slova dotazu, výsledky
+mají zvýrazněný úryvek. Každý najde jen to, co smí vidět i na webu.
+
+Text z dokumentů se čte postupně (při hledání a v denní úloze) a ukládá
+v `documents.content`. PDF čte program `pdftotext`, pokud ho server má,
+jinak vlastní čtení v PHP (běžná PDF z Wordu, tiskáren a prohlížečů;
+naskenované obrázky bez textové vrstvy ne).
+
 ## Přílohy u závad
 
 K nahlášené závadě lze přiložit až 4 fotografie nebo dokumenty (JPG, PNG,

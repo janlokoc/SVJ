@@ -167,7 +167,7 @@ $docForm = function (int $id = 0) {
                     if ($doc['filename']) {
                         @unlink(UPLOAD_DIR . '/' . basename($doc['filename']));
                     }
-                    q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL WHERE id = ?', [$up[0], $up[1], $up[2], $id]);
+                    q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL, content = NULL WHERE id = ?', [$up[0], $up[1], $up[2], $id]);
                 }
             } else {
                 q('INSERT INTO documents (title, category, visibility, doc_date, filename, original_name, size, unit_id) VALUES (?,?,?,?,?,?,?,?)',

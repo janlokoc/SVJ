@@ -1574,3 +1574,19 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .push-state { font-weight: 600; }
 .push-devices { margin: .3rem 0 .8rem; padding-left: 1.2rem; }
 .welcome .card + .card { margin-top: 1.2rem; }
+
+/* Hledání */
+.search-link { display: inline-flex; align-items: center; gap: .35rem; text-decoration: none; color: inherit; font-weight: 600; padding: .35rem .5rem; border-radius: 8px; }
+.search-link svg { width: 1.15em; height: 1.15em; }
+.search-form { display: flex; gap: .6rem; margin: 0 0 1.2rem; }
+.search-form input { flex: 1; min-width: 0; font-size: 1.1rem; }
+.search-form .btn svg { width: 1.1em; height: 1.1em; }
+.search-jump { display: flex; flex-wrap: wrap; gap: .4rem .8rem; margin: .4rem 0 1.2rem; }
+.search-jump a { text-decoration: none; font-weight: 600; }
+.search-group h2 { font-size: 1.3rem; margin: 1.6rem 0 .6rem; }
+.search-results { list-style: none; padding: 0; margin: 0; display: grid; gap: .7rem; }
+.search-results li { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .8rem 1rem; }
+.search-results p { margin: .35rem 0 0; color: var(--muted); font-size: .95rem; }
+.search-results mark, .search-results strong mark { background: var(--accent-soft); color: inherit; padding: 0 .1em; border-radius: 3px; }
+@media (max-width: 560px) { .search-link span { display: none; } }
+.search-page > .hint:last-child { margin-top: 1.5rem; }

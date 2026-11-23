@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
 const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo (měřič tepla)', 'itn' => 'Indikátory topení', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 
@@ -165,6 +165,9 @@ function daily_tasks(): void
     q("INSERT INTO settings (`key`, value) VALUES ('last_daily', ?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value", [date('Y-m-d')]);
     if (function_exists('meter_daily')) {
         meter_daily();   // měsíční informace o spotřebě (dálkové odečty)
+    }
+    if (function_exists('search_index_pending')) {
+        search_index_pending(200, 8.0);   // text z nových dokumentů pro hledání
     }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
