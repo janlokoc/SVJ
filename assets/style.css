@@ -639,6 +639,10 @@ div.stat:hover { border-color: var(--line); }
 .demo-bar .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.5rem; padding-block: .55rem; }
 .demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .demo-actions form { margin: 0; }
+.demo-intro { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1rem; }
+.demo-back { display: inline-flex; align-items: center; gap: .35rem; color: var(--bg); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.demo-back .icon { transform: rotate(180deg); width: 1em; height: 1em; }
+.demo-back:hover { text-decoration-thickness: 2px; }
 .demo-bar .btn-ghost { color: var(--bg); border-color: color-mix(in srgb, var(--bg) 45%, transparent); }
 .lp-operator { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem 3rem; margin-top: 1rem; }
 .operator-box { margin-bottom: 1.5rem; }

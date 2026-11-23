@@ -12,5 +12,5 @@
       <button class="btn btn-big<?= $role === 'resident' ? '' : ' btn-ghost' ?>" type="submit"><?= e($btn) ?></button></form>
     <?php endforeach ?>
   </div>
-  <p class="hint">V ukázce se změny neukládají. Vlastní web si založíte zdarma: <a href="<?= e(platform_url('/registrace')) ?>">Založit web</a>.</p>
+  <p class="hint">V ukázce se změny neukládají. Vlastní web si založíte zdarma: <a href="<?= e(platform_url('/registrace')) ?>">Založit web</a>. <a href="<?= e(platform_url('/')) ?>">← Zpět na úvodní stránku <?= e(pset('service_name')) ?></a></p>
 </div>
