@@ -7,7 +7,6 @@
 # Spuštění:       ve složce webu  ./tools/tunel.sh      (ukončení: Ctrl+C)
 set -u
 cd "$(dirname "$0")/.." || exit 1
-PORT="${PORT:-8000}"
 
 if ! command -v cloudflared >/dev/null 2>&1; then
   echo "Chybí program cloudflared. Nainstalujte ho příkazem:  brew install cloudflared"
@@ -19,16 +18,27 @@ if [ -f storage/config.php ] && grep -q "'platform'" storage/config.php && ! gre
   exit 1
 fi
 
-# Server PHP – pokud už na portu neběží, spustí se a po skončení skriptu se zase vypne.
-PHP_PID=""
-if ! lsof -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-  php -S 127.0.0.1:"$PORT" index.php >/tmp/svj-php.log 2>&1 &
-  PHP_PID=$!
-  sleep 1
-fi
-LOG=$(mktemp -t svj-tunel)
-cleanup() { [ -n "$PHP_PID" ] && kill "$PHP_PID" 2>/dev/null; kill "${CF_PID:-0}" 2>/dev/null; rm -f "$LOG"; }
+cleanup() { kill "${PHP_PID:-0}" 2>/dev/null; kill "${CF_PID:-0}" 2>/dev/null; [ -n "${LOG:-}" ] && rm -f "$LOG"; }
 trap cleanup EXIT INT TERM
+
+# Vlastní server PHP pro tunel na volném portu – nikdy se nepřipojí k programu, který už na portu běží
+# (mohl by to být jiný web). Data jsou stejná jako u webu spuštěného ručně, protože jde o tutéž složku storage.
+port_busy() { lsof -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1 || nc -z 127.0.0.1 "$1" >/dev/null 2>&1; }
+if [ -n "${PORT:-}" ]; then
+  if port_busy "$PORT"; then echo "Port $PORT už používá jiný program. Zvolte jiný (PORT=8790 ./tools/tunel.sh), nebo ho nechte vybrat skript."; exit 1; fi
+else
+  PORT=8780
+  while port_busy "$PORT"; do PORT=$((PORT + 1)); done
+fi
+php -S 127.0.0.1:"$PORT" index.php >/tmp/svj-php.log 2>&1 &
+PHP_PID=$!
+sleep 1
+# Kontrola, že na portu opravdu odpovídá tento web (zná ho podle souboru assets/app.js z této složky).
+if ! curl -s "http://127.0.0.1:$PORT/assets/app.js" | grep -q "Menu administrace"; then
+  echo "Server PHP se nespustil správně. Výpis:"; cat /tmp/svj-php.log; exit 1
+fi
+echo "Server PHP běží na portu $PORT (jen pro tunel; ukončí se spolu se skriptem)."
+LOG=$(mktemp -t svj-tunel.XXXXXX)
 
 cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORT" >"$LOG" 2>&1 &
 CF_PID=$!
@@ -46,7 +56,7 @@ echo
 echo "Web je dostupný na:  $URL"
 if [ -f storage/config.php ] && grep -q "'platform'" storage/config.php; then
   echo "  konzole platformy:  $URL/sprava"
-  echo "  web společenství:   $URL/<adresa-společenství>/   (např. $URL/demo/)"
+  echo "  web společenství:   $URL/<adresa-společenství>/   (ukázka: $URL/demo/vstup)"
 fi
 echo
 echo "Adresa platí, dokud běží tento skript a počítač je zapnutý a nespí. Ukončení: Ctrl+C"

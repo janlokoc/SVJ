@@ -204,9 +204,13 @@ lidi.
 1. Jednou nainstalujte program: `brew install cloudflared`.
 2. V `storage/config.php` přidejte do části `platform` volbu `'tunnel' => true`:
    `'platform' => ['domain' => 'localhost', 'tunnel' => true]`.
-3. Ve složce webu spusťte `./tools/tunel.sh`. Skript spustí server PHP
-   (pokud neběží), otevře tunel a vypíše adresu
-   `https://<náhodná-slova>.trycloudflare.com`.
+3. Ve složce webu spusťte `./tools/tunel.sh`. Skript spustí vlastní
+   server PHP na volném portu (od 8780; port zabraný jiným programem
+   přeskočí, takže se nikdy nepřipojí k jinému webu), ověří, že odpovídá
+   tento web, otevře tunel a vypíše adresu
+   `https://<náhodná-slova>.trycloudflare.com`. Konkrétní port jde zvolit:
+   `PORT=8790 ./tools/tunel.sh`. Data jsou stejná jako u webu spuštěného
+   ručně.
 
 Na počítači dál platí `nazev.localhost:8000`. Přes tunel subdomény nejsou,
 proto se weby společenství otevírají jako složky:
