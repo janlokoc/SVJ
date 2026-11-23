@@ -1291,7 +1291,10 @@ code.break { word-break: break-all; }
 .look-petrolej .look-swatch i:nth-child(1) { background: #0e5a62; } .look-petrolej .look-swatch i:nth-child(2) { background: #8c4a1c; } .look-petrolej .look-swatch i:nth-child(3) { background: #eef4f4; }
 .look-pulnoc .look-swatch i:nth-child(1) { background: #1e2b5e; } .look-pulnoc .look-swatch i:nth-child(2) { background: #ad3a34; } .look-pulnoc .look-swatch i:nth-child(3) { background: #f1f2f8; }
 .look-malina .look-swatch i:nth-child(1) { background: #8b1d4d; } .look-malina .look-swatch i:nth-child(2) { background: #126d65; } .look-malina .look-swatch i:nth-child(3) { background: #f8f1f4; }
-.look-tag, .look-card .plan-tag { margin-left: auto; }
+.look-card .plan-tag { margin-left: auto; }
+/* Štítek Premium u barev: malý odznak na horním okraji, aby se vešel i do úzké dlaždice. */
+.look { position: relative; min-width: 0; }
+.look-tag { position: absolute; top: -.6rem; right: .5rem; margin: 0; padding: .05rem .4rem; background: var(--surface); border: 1px solid var(--line); line-height: 1.4; }
 
 /* ===================== Edice Premium: dalších pět šablon ===================== */
 /* Náhledy */
@@ -1478,3 +1481,4 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .attendance-table .t-actions select { max-width: 11rem; }
 .attendance-table .t-actions input[type=text] { max-width: 10rem; }
 .attendance-table td:nth-child(5) { font-size: .88rem; }
+.look-picker:has(.look-tag) { row-gap: 1rem; }
