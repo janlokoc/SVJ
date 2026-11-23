@@ -16,7 +16,7 @@ if ($edCompact) {
         'premium' => ['Platby na jednotku s upomínkami', 'Rezervace prostor a jazykové verze webu', 'AI zápis, přednostní podpora a beta program novinek'],
     ];
 } ?>
-<div class="editions<?= $edCompact ? ' editions-compact' : '' ?>"<?= $edView === 'landing' ? ' data-reveal-group="up"' : '' ?>>
+<div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
   <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
@@ -35,7 +35,7 @@ if ($edCompact) {
     </ul><?php endif ?>
     <ul class="lp-check"><?php foreach ($edExtra[$ek] as $line): ?><li><?= e($line) ?></li><?php endforeach ?></ul>
     <?php if ($edView === 'landing'): ?>
-      <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : ($edCompact ? 'Začít zdarma' : 'Začít zdarma, přejít později') ?></a>
+      <a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit web zdarma' : 'Založit a vyzkoušet ' . PLAN_TRIAL_DAYS . ' dní' ?></a>
     <?php elseif ($ek !== 'free' && !empty($t['billing']) && billing_order_problem($t, $ek)): ?>
       <p class="hint">Přechod možný po <?= cz_date($t['paid_until']) ?>, kdy skončí zaplacená edice <?= e(EDITIONS[$edNow]) ?>.</p>
     <?php elseif ($ek !== 'free' && !empty($t['billing'])): $edCredit = billing_credit($t, $ek); ?>

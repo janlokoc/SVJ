@@ -5,7 +5,7 @@
       <h1><?= e(site('title')) ?><?php if (site('accent') !== ''): ?> <span class="h1-sub"><?= e(site('accent')) ?></span><?php endif ?></h1>
       <p class="lead"><?= e(setting('intro')) ?></p>
       <div class="actions">
-        <a class="btn btn-big" href="<?= url('/aktuality') ?>">Aktuální oznámení <?= icon('arrow') ?></a>
+        <a class="btn btn-big" href="<?= url('/aktuality') ?>">Aktuální oznámení</a>
         <a class="btn btn-big btn-ghost" href="<?= url('/dokumenty') ?>">Dokumenty</a>
       </div>
     </div>
@@ -43,7 +43,7 @@
           <p class="event-meta"><?= e(implode(' · ', array_filter([weekday_name((int) date('w', $t)), $event['event_time'], $event['place']]))) ?></p>
           <?php if ($event['note']): ?><p class="event-note"><?= e($event['note']) ?></p><?php endif ?>
           <p class="event-rsvp"><a class="more" href="<?= url('/terminy/' . $event['id'] . '.ics') ?>">Přidat do kalendáře</a></p>
-          <?php if ($event['rsvp']): ?><p class="event-rsvp"><a class="more" href="<?= url('/terminy/' . $event['id']) ?>">Dát vědět, zda přijdu <?= icon('arrow') ?></a></p><?php endif ?>
+          <?php if ($event['rsvp']): ?><p class="event-rsvp"><a class="more" href="<?= url('/terminy/' . $event['id']) ?>">Dát vědět, zda přijdu</a></p><?php endif ?>
         </div>
       </div>
       <?php endif ?>
@@ -53,7 +53,7 @@
 
 <section class="wrap home-grid">
   <div>
-    <div class="section-head"><h2>Aktuality</h2><a class="more" href="<?= url('/aktuality') ?>">Všechny aktuality <?= icon('arrow') ?></a></div>
+    <div class="section-head"><h2>Aktuality</h2><a class="more" href="<?= url('/aktuality') ?>">Všechny aktuality</a></div>
     <?php if (!$posts): ?><p class="empty">Zatím tu nejsou žádné aktuality.</p><?php endif ?>
     <div class="post-list">
       <?php foreach ($posts as $p): require __DIR__ . '/_postcard.php'; endforeach ?>
@@ -67,7 +67,7 @@
           <li><span><?= e($c['role']) ?><small><?= e($c['name']) ?></small></span><a href="<?= e(tel_href($c['phone'])) ?>"><?= e($c['phone']) ?></a></li>
         <?php endforeach ?>
       </ul>
-      <a class="more" href="<?= url('/kontakty') ?>#havarie">Pravidla pro objednání servisu <?= icon('arrow') ?></a>
+      <a class="more" href="<?= url('/kontakty') ?>#havarie">Pravidla pro objednání servisu</a>
     </div>
     <div class="card">
       <h2>Rychlé odkazy</h2>

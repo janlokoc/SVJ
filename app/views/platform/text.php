@@ -8,5 +8,5 @@
       <?= $o['email'] !== '' ? '<br><a href="mailto:' . e($o['email']) . '">' . e($o['email']) . '</a>' : '' ?><?= $o['phone'] !== '' ? ' · ' . e($o['phone']) : '' ?></p><?php endif ?>
   </div>
   <div class="prose legal"><?= format_text($body) ?></div>
-  <?php if (!empty($also)): ?><p><a href="<?= url($also[0]) ?>"><?= e($also[1]) ?> →</a></p><?php endif ?>
+  <?php if (!empty($also)): ?><p><a href="<?= url($also[0]) ?>"><?= e($also[1]) ?></a></p><?php endif ?>
 </div>

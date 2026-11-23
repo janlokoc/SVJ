@@ -255,7 +255,7 @@
       <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
       <li><a href="<?= url('/admin/predplatne/funkce/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
         <span class="planned-desc"><?= e($desc) ?></span>
-        <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci →</span></span></a></li>
+        <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci</span></span></a></li>
       <?php endforeach ?>
     </ul>
   </div>

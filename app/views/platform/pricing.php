@@ -1,4 +1,4 @@
-<?php $cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma ' . icon('arrow') . '</a>' : ''; ?>
+<?php $cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma</a>' : ''; ?>
 <section class="wrap lp-section lp-page-head" id="cenik">
   <h1>Ceník</h1>
   <p class="lead">Web společenství je zdarma pro každého a bez časového omezení. Platíte až ve chvíli, kdy Vám přestanou stačit limity nebo chcete funkce navíc – a každou placenou funkci si předtím na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušíte.</p>
@@ -23,7 +23,7 @@
     <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
     <li><a href="<?= url('/pripravujeme/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
       <span class="planned-desc"><?= e($desc) ?></span>
-      <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci →</span></span></a></li>
+      <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci</span></span></a></li>
     <?php endforeach ?>
   </ul>
 </section>

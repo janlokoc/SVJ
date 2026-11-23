@@ -1,6 +1,6 @@
 <?php $flash = flash(); $service = pset('service_name'); ?>
 <!doctype html>
-<html lang="cs" data-look="les"<?= theme_attr() ?>>
+<html lang="cs" data-look="les" data-site="sluzba"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -26,7 +26,7 @@
         <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
         <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
       </ul>
-      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Vyzkoušet zdarma</a></div>
+      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Založit web zdarma</a></div>
     </nav>
   </div>
 </header>

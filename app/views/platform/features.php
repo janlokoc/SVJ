@@ -1,5 +1,5 @@
 <?php
-$cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma ' . icon('arrow') . '</a>' : '';
+$cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" href="' . url('/registrace') . '">Založit web zdarma</a>' : '';
 $ai = ai_configured();
 // Čím se web liší: věci, které výbor jinde skládá z několika nástrojů.
 $unique = [
@@ -24,7 +24,6 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
   <p class="lead">Všechno, co výbor potřebuje ke komunikaci se sousedy a ke správě domu, na jednom místě.</p>
 </section>
 <section class="wrap lp-section" id="funkce">
-  <p class="eyebrow">Na čem si zakládáme</p>
   <h2>Šest věcí, které tu máte pohromadě</h2>
   <ol class="lp-unique">
     <?php foreach ($unique as [$h, $p]): ?><li><h3><?= e($h) ?></h3><p><?= e($p) ?></p></li><?php endforeach ?>
@@ -32,7 +31,6 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 </section>
 
 <section class="lp-band" id="vzhledy"><div class="wrap lp-section">
-  <p class="eyebrow">Šablony a barvy</p>
   <h2>Pět šablon, každá v pěti barvách</h2>
   <p class="lead">Klasická, moderní, věcná, novinová nebo vlídná. Zkuste si přepnout barvy – a ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga.</p>
   <form class="lp-style-form">
@@ -43,7 +41,7 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
       <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
   </form>
-  <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo, '/vstup')) ?>">Prohlédnout si hotový web v ukázce <?= icon('arrow') ?></a></div><?php endif ?>
+  <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo, '/vstup')) ?>">Prohlédnout si hotový web v ukázce</a></div><?php endif ?>
 </div></section>
 
 <section class="wrap lp-section" id="vse">

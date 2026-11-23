@@ -662,6 +662,24 @@ Zálohujte složku `storage/` (nahrané soubory, nastavení a u SQLite i
 databáze). Při použití MySQL zálohujte navíc databázi – export nabízí
 administrace hostingu (phpMyAdmin).
 
+## Vzhled stránek služby a šablon
+
+- **Stránky služby** (úvodní stránka, Funkce, Ceník, registrace) mají vlastní
+  vzhled podle vchodu bytového domu: pozadí v barvě omítky, tmavě modrá jako
+  smaltovaná cedule s číslem domu a jediný teplý akcent – mosazné tlačítko
+  zvonku. Úvodní ilustrace je zvonkové tablo, na kterém jsou místo jmenovek
+  části webu (`app/views/platform/_tablo.php`); zvonky se při načtení jednou
+  postupně rozsvítí (při omezení pohybu v systému ne). Jinak se na stránce
+  nic nehýbe. Barvy a písmo jsou v `assets/style.css` pod
+  `[data-site="sluzba"]`, takže se nepletou do webů společenství.
+- **Písmo:** Archivo (nadpisy) a Atkinson Hyperlegible Next (text, navržené
+  pro dobrou čitelnost). Obě jsou uložená ve `assets/fonts` a šíří se pod
+  licencí SIL Open Font License 1.1 (texty licencí jsou vedle souborů písma).
+- **Šablony webů SVJ:** štítek nad nadpisem je obyčejná věta (jen Novinová
+  šablona si nechává verzálky), druhý řádek nadpisu (např. čísla popisná) je
+  klidný podnadpis, barva Les má místo krémové chladnější papír a hlubší
+  cihlovou. Tlačítka a odkazy jsou bez šipek.
+
 ## Struktura
 
 ```
