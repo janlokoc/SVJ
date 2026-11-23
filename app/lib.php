@@ -1735,3 +1735,31 @@ require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/ai_lib.php';
 require_once __DIR__ . '/extra_lib.php';
+/** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
+function cz_vocative(string $name): string
+{
+    $n = trim($name);
+    if ($n === '' || !preg_match('/^\p{Lu}\p{Ll}+$/u', $n)) {
+        return $n;
+    }
+    $fixed = ['Pavel' => 'Pavle', 'Karel' => 'Karle', 'Petr' => 'Petře', 'Alexandr' => 'Alexandře', 'Kryštof' => 'Kryštofe', 'Leoš' => 'Leoši', 'Zdeněk' => 'Zdeňku', 'Hynek' => 'Hynku', 'Daniel' => 'Danieli', 'Gabriel' => 'Gabrieli', 'Michael' => 'Michaeli', 'Rafael' => 'Rafaeli', 'Samuel' => 'Samueli', 'Emanuel' => 'Emanueli', 'Ivo' => 'Ivo', 'Hugo' => 'Hugo', 'Oto' => 'Oto'];
+    if (isset($fixed[$n])) {
+        return $fixed[$n];
+    }
+    // Ženská jména zakončená souhláskou se neskloňují.
+    if (in_array($n, ['Dagmar', 'Ester', 'Karin', 'Miriam', 'Ingrid', 'Carmen', 'Nikol', 'Ivet', 'Rút', 'Edit', 'Judit', 'Elizabet', 'Margit', 'Doris', 'Iris', 'Agnes', 'Kim'], true)) {
+        return $n;
+    }
+    $last = mb_substr($n, -1);
+    $last2 = mb_substr($n, -2);
+    return match (true) {
+        $last === 'a' => mb_substr($n, 0, -1) . 'o',                                   // Jana → Jano
+        $last2 === 'ek' && mb_strlen($n) > 3 => mb_substr($n, 0, -2) . 'ku',           // Marek → Marku
+        $last2 === 'ch' => $n . 'u',                                                   // Vojtěch → Vojtěchu
+        in_array($last, ['k', 'h', 'g'], true) => $n . 'u',                            // Dominik → Dominiku
+        in_array($last, ['š', 'ž', 'č', 'ř', 'c', 'j', 'x', 's', 'z'], true) => $n . 'i', // Tomáš → Tomáši, Matěj → Matěji
+        $last === 'r' && preg_match('/[^aeiouyáéíóúůý]r$/u', $n) => mb_substr($n, 0, -1) . 'ře',
+        (bool) preg_match('/[bdfjlmnprtv]$/u', $n) => $n . 'e',                         // Jan → Jane, Lukáš… Michal → Michale
+        default => $n,                                                                 // Marie, Lucie, Jiří, Ivo
+    };
+}

@@ -11,7 +11,7 @@
       </div>
       <?php else: ?>
       <div class="for-me">
-        <p class="for-me-hi">Dobrý den, <?= e(explode(' ', trim(user()['name']))[0]) ?>.</p>
+        <p class="for-me-hi">Dobrý den, <?= e(cz_vocative(explode(' ', trim(user()['name']))[0])) ?>.</p>
         <?php if ($mine): ?>
         <ul class="for-me-list">
           <?php foreach ($mine as [$what, $detail, $href, $urgent]): ?><li<?= $urgent ? ' class="is-urgent"' : '' ?>><a href="<?= url($href) ?>"><strong><?= e($what) ?></strong><span><?= e($detail) ?></span></a></li><?php endforeach ?>
