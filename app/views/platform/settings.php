@@ -51,10 +51,23 @@
     <label>Vlastní doména společenství (Kč za rok) <input type="number" name="price_domain" value="<?= e($v['price_domain']) ?>" min="0" required></label>
     <label>Pokyny pro společenství, které doménu už vlastní <textarea name="domain_dns" rows="3" placeholder="Nastavte záznam A pro tabor48.cz a www.tabor48.cz na adresu 203.0.113.10"><?= e($v['domain_dns']) ?></textarea></label>
     <p class="hint">O doménu žádá správce společenství v části Předplatné. Žádost uvidíte u společenství; po zaplacení, nasměrování domény na server a zapnutí HTTPS ji tam zprovozníte.</p>
-    <h2>AI pomocník</h2>
-    <p class="hint">Funguje, když je na serveru knihovna a klíč v <code>storage/config.php</code> (<?= function_exists('ai_configured') && ai_configured() ? 'nastaveno' : 'zatím nenastaveno' ?>). Spotřebu platíte Vy; kolik který web tento měsíc využil, vidíte v seznamu společenství.</p>
+    <h2 id="ai">AI pomocník a AI asistent</h2>
+    <?php $aiLib = function_exists('ai_sdk_ready') && ai_sdk_ready(); $aiKey = function_exists('ai_settings') && ai_settings()['key'] !== ''; ?>
+    <ul class="ai-status">
+      <li class="<?= $aiLib ? 'is-ok' : 'is-debt' ?>"><?= $aiLib ? '✓' : '✗' ?> Knihovna Anthropic na serveru<?= $aiLib ? '' : ' – chybí: ve složce webu spusťte <code>composer install</code>' ?></li>
+      <li class="<?= $aiKey ? 'is-ok' : 'is-debt' ?>"><?= $aiKey ? '✓' : '✗' ?> Klíč API v <code>storage/config.php</code><?= $aiKey ? '' : ' – chybí (postup níže)' ?></li>
+    </ul>
+    <details<?= $aiLib && $aiKey ? '' : ' open' ?>><summary>Jak AI zapnout</summary>
+      <ol>
+        <li>Na <a href="https://platform.claude.com" target="_blank" rel="noopener noreferrer">platform.claude.com</a> si založte účet pro vývojáře (Claude Console), v části Billing nabijte kredit a v části API keys vytvořte klíč. <strong>Předplatné aplikace Claude (Pro, Max, Team) k tomu použít nejde</strong> – API je samostatná služba placená podle spotřeby.</li>
+        <li>Ve složce webu spusťte <code>composer install</code> (stáhne oficiální knihovnu; na Macu nejdřív <code>brew install composer</code>).</li>
+        <li>Do <code>storage/config.php</code> přidejte řádek <code>'ai' =&gt; ['api_key' =&gt; 'sk-ant-…'],</code> – klíč nikam jinam nevkládejte a neposílejte.</li>
+        <li>Klikněte níže na <strong>Vyzkoušet spojení</strong>. Pak AI pomocník funguje na všech webech (správce ho může vypnout) a AI asistent na webech v edici Premium.</li>
+      </ol></details>
+    <p class="hint">Spotřebu platíte Vy z kreditu v Claude Console; společenství mají měsíční limit podle edice (tabulka výše) a mohou si dokoupit AI kredity. Kolik který web tento měsíc využil, vidíte v seznamu společenství.</p>
     <label>Model (nevyplněno = podle config.php) <input type="text" name="ai_model" value="<?= e($v['ai_model']) ?>" placeholder="claude-opus-5-5" pattern="[a-z0-9.\-]*"></label>
-    <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. Počet použití podle edice nastavíte v tabulce limitů výše; 0 u AI znamená, že pomocník je jen pro weby s AI Plus.</p>
+    <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. Počet použití podle edice nastavíte v tabulce limitů výše (0 = bez omezení).</p>
+    <p class="actions"><button class="btn btn-ghost" type="submit" form="ai-test-form"<?= $aiLib && $aiKey ? '' : ' disabled' ?>>Vyzkoušet spojení s Claude</button></p>
     <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
     <h2 id="platby">Platby</h2>
     <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
@@ -92,4 +105,5 @@
     <label>Smlouva o zpracování osobních údajů <textarea name="dpa" rows="12"><?= e($v['dpa']) ?></textarea></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
   </form>
+<form id="ai-test-form" method="post" action="<?= url('/nastaveni/ai-test') ?>" hidden><?= csrf_field() ?></form>
 </div>

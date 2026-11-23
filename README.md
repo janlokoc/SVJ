@@ -673,6 +673,12 @@ Klíč získáte v Claude Console (platform.claude.com) – je to jiný účet
 a jiné placení než předplatné aplikace Claude; použití se platí podle
 spotřeby z předplaceného kreditu.
 
+Na platformě ukazuje stav (knihovna, klíč) a postup konzole v části
+**Nastavení služby → AI pomocník a AI asistent**; tlačítko **Vyzkoušet
+spojení s Claude** pošle krátký zkušební dotaz. Při nasazení přes FTP
+nezapomeňte na složku `vendor/` (není v Gitu) – nasazení ji musí vytvořit
+příkazem `composer install` před nahráním.
+
 Na webu jednoho SVJ určuje `monthly_limit` nejvyšší počet použití za
 měsíc. Na platformě pro více SVJ platí jeden klíč pro všechny weby a počet
 použití určuje edice webu (výchozí 5 / 30 / 300 měsíčně, mění se v tabulce

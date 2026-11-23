@@ -564,6 +564,13 @@ if ($PATH === '/nastaveni') {
     render('platform/settings', ['title' => 'Nastavení služby', 'errors' => $errors, 'v' => $values]);
     exit;
 }
+if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
+    // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.
+    $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 20) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];
+    platform_log('Zkouška spojení s AI', isset($r['error']) ? 'chyba' : 'v pořádku');
+    flash(isset($r['error']) ? 'Spojení s Claude nefunguje: ' . $r['error'] : 'Spojení s Claude funguje (model ' . ai_settings()['model'] . ' odpověděl: „' . mb_substr($r['text'], 0, 40) . '“).', isset($r['error']) ? 'error' : 'ok');
+    redirect('/nastaveni#ai');
+}
 if ($PATH === '/pristup-ai') {
     // Klíč pro MCP server hlášení: ukáže se jen jednou, uloží se jen jeho otisk.
     $newKey = null;

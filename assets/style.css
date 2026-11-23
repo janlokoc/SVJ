@@ -1605,3 +1605,5 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .chat-form textarea { font-size: 1.05rem; }
 .chat-example { font-size: inherit; }
 .assistant > .hint:last-child { margin-top: 1rem; }
+
+.ai-status { list-style: none; padding: 0; margin: .4rem 0 .8rem; display: grid; gap: .3rem; font-weight: 600; }
