@@ -428,8 +428,10 @@ $route('POST', '/admin/hlasovani/(\d+)/vysledky', function (int $id) {
 $route('GET', '/admin/terminy/(\d+)/prezence', function (int $id) {
     require_admin();
     $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
-    render('admin/attendance_print', ['title' => 'Prezenční listina', 'ev' => $ev,
-        'rows' => all('SELECT un.*, r.status, r.proxy_name FROM units un LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ? ORDER BY un.entrance, un.number + 0, un.number', [$id])]);
+    // Před shromážděním: prázdná listina k podpisům, zmocněnci podle přihlášek. Jakmile běží prezence na místě, vyplní se podle ní.
+    $pres = val('SELECT 1 FROM event_presence WHERE event_id = ?', [$id]) ? presence($id) : null;
+    render('admin/attendance_print', ['title' => 'Prezenční listina', 'ev' => $ev, 'pres' => $pres,
+        'rows' => $pres ? $pres['rows'] : all('SELECT un.*, r.status, r.proxy_name FROM units un LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ? ORDER BY un.entrance, un.number + 0, un.number', [$id])]);
 });
 
 // ---------- Hromadné nahrání dokumentů pro jednotky (např. roční vyúčtování) ----------
