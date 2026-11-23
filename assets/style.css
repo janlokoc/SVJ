@@ -179,6 +179,10 @@ code { font: 600 1.05em ui-monospace, "Cascadia Mono", Menlo, monospace; backgro
 .house-door rect { fill: var(--ink); opacity: .82; }
 .house-door text { font: 600 17px var(--display); fill: var(--bg); }
 .house-ground { fill: var(--line); }
+.house.has-mine .house-body rect { fill: var(--primary); }
+.house.has-mine .house-body rect:nth-child(even) { fill: color-mix(in srgb, var(--primary) 82%, var(--bg)); }
+.house.has-mine .house-body rect.is-mine { fill: var(--accent); }
+.house-num text.is-mine { fill: var(--accent); font-weight: 800; }
 .house-num text { font: 600 19px var(--font); fill: var(--muted); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .event-card { display: flex; gap: 1.1rem; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); }
 .event-card p { margin: 0; }

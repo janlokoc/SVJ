@@ -12,11 +12,13 @@
     <div class="hero-side">
       <?php $doors = array_slice(array_values(array_filter(entrances())), 0, 6) ?: ['']; $hw = count($doors) * 100 + 20;
         // Krátké označení vchodu (A, B) je na dveřích; popisná čísla (3019, 3020…) jsou pod domy.
-        $numbered = (bool) array_filter($doors, fn($l) => mb_strlen($l) > 2); ?>
-      <svg class="house" viewBox="0 0 <?= $hw ?> <?= $numbered ? 230 : 210 ?>" role="img" aria-label="<?= e($numbered ? 'Ilustrace domu, vchody č. p. ' . implode(', ', $doors) : 'Ilustrace domu') ?>">
+        $numbered = (bool) array_filter($doors, fn($l) => mb_strlen($l) > 2);
+        // Přihlášenému se zvýrazní vchod jeho jednotky; jinak zůstává ozdobné barevné střídání.
+        $mine = ($me = user()) ? array_values(array_intersect($doors, array_map(fn($x) => mb_strtoupper(trim((string) $x)), array_column(all('SELECT un.entrance FROM units un JOIN user_units uu ON uu.unit_id = un.id WHERE uu.user_id = ?', [$me['id']]), 'entrance')))) : []; ?>
+      <svg class="house<?= $mine ? ' has-mine' : '' ?>" viewBox="0 0 <?= $hw ?> <?= $numbered ? 230 : 210 ?>" role="img" aria-label="<?= e(($numbered ? 'Ilustrace domu, vchody č. p. ' . implode(', ', $doors) : 'Ilustrace domu') . ($mine ? '; Váš vchod: ' . implode(', ', $mine) : '')) ?>">
         <g class="house-body">
           <?php foreach ($doors as $i => $l): $x = 10 + $i * 100; $top = $i % 2 ? 22 : 40; ?>
-            <rect x="<?= $x ?>" y="<?= $top ?>" width="96" height="<?= 190 - $top ?>" rx="4"/>
+            <rect x="<?= $x ?>" y="<?= $top ?>" width="96" height="<?= 190 - $top ?>" rx="4"<?= in_array($l, $mine, true) ? ' class="is-mine"' : '' ?>><?php if (in_array($l, $mine, true)): ?><title>Váš vchod</title><?php endif ?></rect>
           <?php endforeach ?>
         </g>
         <g class="house-win">
@@ -30,7 +32,7 @@
           <?php endforeach ?>
         </g>
         <rect class="house-ground" x="0" y="190" width="<?= $hw ?>" height="4" rx="2"/>
-        <?php if ($numbered): ?><g class="house-num"><?php foreach ($doors as $i => $l): ?><text x="<?= 10 + $i * 100 + 48 ?>" y="219" text-anchor="middle"><?= e($l) ?></text><?php endforeach ?></g><?php endif ?>
+        <?php if ($numbered): ?><g class="house-num"><?php foreach ($doors as $i => $l): ?><text x="<?= 10 + $i * 100 + 48 ?>" y="219" text-anchor="middle"<?= in_array($l, $mine, true) ? ' class="is-mine"' : '' ?>><?= e($l) ?></text><?php endforeach ?></g><?php endif ?>
       </svg>
       <?php if ($event): $t = strtotime($event['event_date']); ?>
       <div class="event-card">
