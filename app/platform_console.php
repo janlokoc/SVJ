@@ -172,7 +172,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -279,13 +279,50 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/spravce|/smazat|/impo
         }
         redirect('/svj/' . $slug);
     }
+    // Ruční náhrada souboru, který starý web nevydal: hlavní správce nahraje soubor místo odkazu.
+    if ($METHOD === 'POST' && $action === '/soubor-nahrat') {
+        $pdo = tenant_pdo($slug);
+        $id = (int) post('doc');
+        $f = $_FILES['file'] ?? null;
+        $ext = strtolower(pathinfo((string) ($f['name'] ?? ''), PATHINFO_EXTENSION));
+        $st = $pdo->prepare('SELECT id, title FROM documents WHERE id = ? AND filename IS NULL');
+        $st->execute([$id]);
+        $doc = $st->fetch();
+        if (!$doc || !$f || ($f['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
+            flash('Vyberte soubor k nahrání.', 'error');
+        } elseif (!in_array($ext, ALLOWED_EXT, true)) {
+            flash('Tento typ souboru web neukládá. Povolené: ' . implode(', ', ALLOWED_EXT) . '.', 'error');
+        } else {
+            $dir = tenant_storage($slug) . '/uploads';
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0775, true);
+            }
+            $name = bin2hex(random_bytes(16)) . '.' . $ext;
+            move_uploaded_file($f['tmp_name'], $dir . '/' . $name);
+            $pdo->prepare('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL WHERE id = ?')->execute([$name, mb_substr((string) $f['name'], 0, 200), (int) $f['size'], $id]);
+            platform_log('Ruční nahrání souboru ze starého webu', $slug . ' · ' . $doc['title']);
+            flash('Soubor k dokumentu „' . $doc['title'] . '“ je nahraný.');
+        }
+        redirect('/svj/' . $slug . '#soubory');
+    }
+    if ($METHOD === 'POST' && $action === '/soubor-smazat') {
+        $pdo = tenant_pdo($slug);
+        $st = $pdo->prepare('SELECT id, title FROM documents WHERE id = ? AND filename IS NULL');
+        $st->execute([(int) post('doc')]);
+        if ($doc = $st->fetch()) {
+            $pdo->prepare('DELETE FROM documents WHERE id = ?')->execute([$doc['id']]);
+            platform_log('Odebrání dokumentu bez souboru', $slug . ' · ' . $doc['title']);
+            flash('Dokument „' . $doc['title'] . '“ je odebraný.', 'info');
+        }
+        redirect('/svj/' . $slug . '#soubory');
+    }
     // Dotažení souborů ze starého webu: dokud nejsou na našem serveru, převod není hotový.
     if ($METHOD === 'POST' && $action === '/soubory') {
         @set_time_limit(150);
-        [$done, $failed, $left] = import_external_files_into(tenant_pdo($slug), tenant_storage($slug) . '/uploads', 500, 100);
+        [$done, $failed, $left] = import_external_files_into(tenant_pdo($slug), tenant_storage($slug) . '/uploads', 500, 100, post('znovu') === '1');
         $still = external_doc_count(tenant_pdo($slug));
         platform_log('Stažení souborů ze starého webu', $slug . ' · staženo ' . $done . ', nepodařilo se ' . $failed . ', zbývá ' . $still);
-        flash('Staženo souborů: ' . $done . ($failed ? ', nepodařilo se: ' . $failed : '') . '. ' . ($still ? 'Zbývá ' . $still . ' – klikněte znovu.' . ($failed ? ' Soubory, které se opakovaně nedaří stáhnout, je potřeba získat od společenství a nahrát ručně.' : '') : 'Všechny dokumenty jsou uložené na našem serveru.'), $still ? 'info' : 'ok');
+        flash('Staženo souborů: ' . $done . '.' . ($left ? ' Zbývá vyzkoušet ' . $left . ' – klikněte znovu.' : '') . (!$left && $still ? ' ' . $still . ' souborů se stáhnout nepodařilo – seznam s důvody je níže; nahrajte je ručně, nebo dokument odeberte.' : '') . (!$still ? ' Všechny dokumenty jsou uložené na našem serveru.' : ''), $still ? 'info' : 'ok');
         redirect('/svj/' . $slug . '#soubory');
     }
     if ($METHOD === 'POST' && $action === '/import') {
@@ -394,7 +431,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/spravce|/smazat|/impo
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
-        'usage' => tenant_usage_report($t), 'externalDocs' => is_dir(tenant_storage($slug)) ? external_doc_count(tenant_pdo($slug)) : 0,
+        'usage' => tenant_usage_report($t), 'externalDocs' => is_dir(tenant_storage($slug)) ? external_doc_list(tenant_pdo($slug)) : [],
         'tenantUsers' => (function () use ($slug) {
             // Přehled účtů webu pro podporu: kdo tam je, s jakou rolí a kdy se naposledy přihlásil. Obsah webu se tu neukazuje.
             $pdo = tenant_pdo($slug);

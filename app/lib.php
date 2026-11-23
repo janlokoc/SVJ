@@ -834,11 +834,15 @@ function delete_document(int $id): void
     }
     q('DELETE FROM documents WHERE id = ?', [$id]);
 }
-function http_download(string $url): ?string
+function http_download(string $url, bool $allowHttp = false): ?string
 {
+    if (!preg_match($allowHttp ? '~^https?://~i' : '~^https://~i', $url)) {
+        return null;
+    }
     if (function_exists('curl_init')) {
+        $proto = $allowHttp ? CURLPROTO_HTTPS | CURLPROTO_HTTP : CURLPROTO_HTTPS;
         $ch = curl_init($url);
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 60, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_MAXREDIRS => 3]);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 60, CURLOPT_PROTOCOLS => $proto, CURLOPT_REDIR_PROTOCOLS => $proto, CURLOPT_MAXREDIRS => 5, CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; prevod-webu-SVJ)']);
         $data = curl_exec($ch);
         $ok = $data !== false && curl_getinfo($ch, CURLINFO_RESPONSE_CODE) === 200;
         curl_close($ch);
@@ -857,31 +861,38 @@ function import_external_files(int $limit): array
  * Převzatý dokument nesmí zůstat jen odkazem na starý web – ten může kdykoli zaniknout.
  * $seconds omezí, jak dlouho se stahuje v jednom požadavku (0 = bez omezení, jen podle $limit).
  */
-function import_external_files_into(PDO $pdo, string $uploadDir, int $limit, int $seconds = 0): array
+function import_external_files_into(PDO $pdo, string $uploadDir, int $limit, int $seconds = 0, bool $retryFailed = false): array
 {
     $done = $failed = 0;
+    if ($retryFailed) {
+        // Výslovně „zkusit znovu“: dříve neúspěšné se vrátí mezi čekající.
+        $pdo->exec("UPDATE documents SET external_url = substr(external_url, 8) WHERE external_url LIKE 'failed:%'");
+        $pdo->exec("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
+    }
     $start = time();
     if (!is_dir($uploadDir)) {
         @mkdir($uploadDir, 0775, true);
     }
-    $rows = $pdo->query("SELECT id, external_url, original_name FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%' ORDER BY id LIMIT " . (int) $limit)->fetchAll(PDO::FETCH_ASSOC);
+    // Neúspěšné pokusy se označí předponou „failed:“ a zkusí se znovu, až nezbude nic nevyzkoušeného.
+    $rows = $pdo->query("SELECT id, external_url, original_name FROM documents WHERE filename IS NULL AND (external_url LIKE 'https://%' OR external_url LIKE 'http://%') ORDER BY id LIMIT " . (int) $limit)->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows as $r) {
         if ($seconds > 0 && time() - $start >= $seconds) {
             break;
         }
-        $ext = strtolower(pathinfo($r['original_name'] ?: (string) parse_url($r['external_url'], PHP_URL_PATH), PATHINFO_EXTENSION));
-        $data = in_array($ext, ALLOWED_EXT, true) ? http_download($r['external_url']) : null;
+        $url = (string) $r['external_url'];
+        $ext = external_doc_ext($r);
+        $data = in_array($ext, ALLOWED_EXT, true) ? http_download($url, true) : null;
         if (($data === null || $data === '') && in_array($ext, ALLOWED_EXT, true)) {
             // Některé soubory má původní web uložené pod názvem bez diakritiky, i když na ně odkazuje s diakritikou.
-            $cut = strrpos($r['external_url'], '/') + 1;
-            $plain = rawurlencode(strip_accents(rawurldecode(substr($r['external_url'], $cut))));
-            if ($plain !== substr($r['external_url'], $cut)) {
-                $data = http_download(substr($r['external_url'], 0, $cut) . $plain);
+            $cut = strrpos($url, '/') + 1;
+            $plain = rawurlencode(strip_accents(rawurldecode(substr($url, $cut))));
+            if ($plain !== substr($url, $cut)) {
+                $data = http_download(substr($url, 0, $cut) . $plain, true);
             }
         }
         if ($data === null || $data === '') {
             $failed++;
-            $pdo->prepare("UPDATE documents SET external_url = replace(external_url, 'https://', 'https-failed://') WHERE id = ?")->execute([$r['id']]);
+            $pdo->prepare("UPDATE documents SET external_url = ? WHERE id = ?")->execute(['failed:' . $url, $r['id']]);
             continue;
         }
         $name = bin2hex(random_bytes(16)) . '.' . $ext;
@@ -889,18 +900,40 @@ function import_external_files_into(PDO $pdo, string $uploadDir, int $limit, int
         $pdo->prepare('UPDATE documents SET filename = ?, size = ?, external_url = NULL WHERE id = ?')->execute([$name, strlen($data), $r['id']]);
         $done++;
     }
-    // Neúspěšné se odloží, dokud se nevyzkouší všechny ostatní – jinak by se pořád dokola zkoušely tytéž nedostupné soubory.
-    // Teprve když nezbývá nic nevyzkoušeného, vrátí se zpět a příští spuštění je zkusí znovu.
-    $untried = (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%'")->fetchColumn();
-    if ($untried === 0) {
-        $pdo->exec("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
-    }
+    $untried = (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND (external_url LIKE 'https://%' OR external_url LIKE 'http://%')")->fetchColumn();
+    // Neúspěšné zůstávají označené („failed:“), aby je konzole vypsala s důvodem; znovu se zkusí jen na výslovné přání.
     return [$done, $failed, $untried];
+}
+/** Přípona souboru dokumentu – z původního názvu, jinak z adresy. */
+function external_doc_ext(array $d): string
+{
+    $ext = strtolower(pathinfo((string) ($d['original_name'] ?? ''), PATHINFO_EXTENSION));
+    if ($ext === '') {
+        $url = preg_replace('~^(failed:|https-failed://)~', 'https://', (string) ($d['external_url'] ?? ''));
+        $ext = strtolower(pathinfo((string) parse_url($url, PHP_URL_PATH), PATHINFO_EXTENSION));
+    }
+    return $ext;
 }
 /** Kolik dokumentů je pořád jen odkazem na cizí web (převod souborů není dokončený). */
 function external_doc_count(PDO $pdo): int
 {
-    return (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND (external_url LIKE 'https://%' OR external_url LIKE 'https-failed://%' OR external_url LIKE 'http://%')")->fetchColumn();
+    return (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL AND external_url <> ''")->fetchColumn();
+}
+/** Dokumenty, které zůstaly jen odkazem, s důvodem, proč je nejde stáhnout automaticky. */
+function external_doc_list(PDO $pdo): array
+{
+    $out = [];
+    foreach ($pdo->query("SELECT id, title, category, original_name, external_url, doc_date FROM documents WHERE filename IS NULL AND external_url IS NOT NULL AND external_url <> '' ORDER BY doc_date DESC, id")->fetchAll(PDO::FETCH_ASSOC) as $d) {
+        $raw = (string) $d['external_url'];
+        $url = preg_replace(['~^failed:~', '~^https-failed://~'], ['', 'https://'], $raw);
+        $ext = external_doc_ext($d);
+        $d['url'] = $url;
+        $d['reason'] = !preg_match('~^https?://~i', $url) ? 'Neplatná adresa souboru – soubor je potřeba nahrát ručně.'
+            : (!in_array($ext, ALLOWED_EXT, true) ? 'Typ souboru „' . ($ext !== '' ? $ext : 'bez přípony') . '“ web neukládá (povolené: ' . implode(', ', ALLOWED_EXT) . '). Převeďte ho např. do PDF a nahrajte ručně.'
+            : (str_starts_with($raw, 'failed:') || str_starts_with($raw, 'https-failed://') ? 'Starý web soubor nevydal (smazaný, přejmenovaný nebo za přihlášením).' : 'Zatím nezkoušeno.'));
+        $out[] = $d;
+    }
+    return $out;
 }
 function strip_accents(string $s): string
 {

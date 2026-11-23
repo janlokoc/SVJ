@@ -104,7 +104,9 @@ $route('GET', '/soubor/(\d+)', function (int $id) {
         not_found();   // dokument jiné jednotky
     }
     if (!$d['filename']) {
-        if ($d['external_url'] && str_starts_with($d['external_url'], 'https://')) {
+        // Dokument převzatý ze starého webu, jehož soubor se zatím nepodařilo stáhnout: odkaz na originál (bez interní značky).
+        $d['external_url'] = preg_replace(['~^failed:~', '~^https-failed://~'], ['', 'https://'], (string) $d['external_url']);
+        if ($d['external_url'] && preg_match('~^https?://~i', $d['external_url'])) {
             if (isset($_GET['nahled'])) {
                 // Soubor uložený jinde: v aplikaci z plochy by přesměrování nemělo cestu zpět, proto se otevírá v novém okně.
                 render('file_view', ['title' => $d['title'], 'd' => $d, 'ext' => '', 'name' => '', 'external' => $d['external_url']]);

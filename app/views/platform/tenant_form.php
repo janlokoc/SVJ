@@ -11,7 +11,7 @@
   <?php endif ?>
   <?php if (!$new): ?>
   <nav class="tenant-jump" aria-label="Části stránky">
-    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu (' . count($externalDocs) . ')</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
   </nav>
   <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
   <details class="card tenant-users" id="uzivatele" open>
@@ -30,12 +30,26 @@
   </details>
   <?php endif ?>
   <?php endif ?>
-  <?php if (!empty($externalDocs)): ?>
+  <?php if (!empty($externalDocs)): $tried = array_filter($externalDocs, fn($d) => $d['reason'] !== 'Zatím nezkoušeno.'); ?>
   <section class="card card-alert" id="soubory">
     <h2>Převod souborů není dokončený</h2>
-    <p><strong><?= $externalDocs ?> dokumentů</strong> je na webu jen jako odkaz na soubor na starém webu. Až společenství starý web zruší (což může udělat kdykoli – myslí si, že je převod hotový), dokumenty přestanou fungovat. Stáhněte je na náš server.</p>
-    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubory') ?>"><?= csrf_field() ?><button class="btn" type="submit">Stáhnout soubory ze starého webu</button></form>
-    <p class="hint">Jedno kliknutí stahuje zhruba minutu a půl; u velkých webů klikněte opakovaně. Soubory, které starý web už nevydá, je potřeba získat od společenství a nahrát ručně – do té doby převod nejde označit jako hotový.</p>
+    <p><strong><?= count($externalDocs) ?> dokumentů</strong> je na webu jen jako odkaz na soubor na starém webu. Až společenství starý web zruší (což může udělat kdykoli – myslí si, že je převod hotový), dokumenty přestanou fungovat.</p>
+    <?php if (count($tried) < count($externalDocs)): ?><form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubory') ?>"><?= csrf_field() ?><button class="btn" type="submit">Stáhnout soubory ze starého webu</button></form>
+    <?php else: ?><p>Automaticky už to nejde. Každý soubor si otevřete odkazem „Originál“, uložte ho a nahrajte zpět u daného dokumentu; když soubor už neexistuje, dokument odeberte.
+      <form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubory') ?>" class="inline-form"><?= csrf_field() ?><input type="hidden" name="znovu" value="1"><button class="btn btn-small btn-ghost" type="submit">Zkusit stáhnout znovu</button></form></p><?php endif ?>
+    <table class="table ext-docs">
+      <thead><tr><th>Dokument</th><th>Proč se nestáhl</th><th>Náhrada</th></tr></thead>
+      <tbody><?php foreach ($externalDocs as $d): ?><tr>
+        <td data-label="Dokument"><strong><?= e($d['title']) ?></strong><br><small class="muted"><?= e(CATEGORIES[$d['category']] ?? $d['category']) ?><?= $d['doc_date'] ? ' · ' . cz_date($d['doc_date']) : '' ?></small><br>
+          <?php if (preg_match('~^https?://~i', $d['url'])): ?><a href="<?= e($d['url']) ?>" target="_blank" rel="noopener noreferrer">Originál<?= $d['original_name'] !== '' ? ': ' . e($d['original_name']) : '' ?></a><?php else: ?><small class="muted"><?= e($d['url']) ?></small><?php endif ?></td>
+        <td data-label="Proč se nestáhl"><?= e($d['reason']) ?></td>
+        <td data-label="Náhrada">
+          <form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubor-nahrat') ?>" enctype="multipart/form-data" class="ext-upload"><?= csrf_field() ?><input type="hidden" name="doc" value="<?= (int) $d['id'] ?>">
+            <input type="file" name="file" accept=".<?= implode(',.', ALLOWED_EXT) ?>" required aria-label="Soubor pro <?= e($d['title']) ?>"><button class="btn btn-small" type="submit">Nahrát</button></form>
+          <form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubor-smazat') ?>" class="inline-form" data-confirm="Odebrat dokument „<?= e($d['title']) ?>“? Soubor už neexistuje a na webu by byl jen nefunkční odkaz."><?= csrf_field() ?><input type="hidden" name="doc" value="<?= (int) $d['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Odebrat dokument</button></form>
+        </td></tr><?php endforeach ?></tbody>
+    </table>
+    <p class="hint">Správce společenství může soubor nahradit i sám v Dokumentech (úprava dokumentu → nahrát soubor).</p>
   </section>
   <?php endif ?>
   <?php if (!empty($usage)): ?>

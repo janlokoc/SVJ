@@ -1426,3 +1426,7 @@ html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { b
 .cleanup-list { display: grid; gap: 1rem; margin-bottom: 2rem; }
 .cleanup-item h2 { margin: 0 0 .3rem; font-size: 1.2rem; }
 .cleanup-form { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; }
+
+.ext-docs td { vertical-align: top; }
+.ext-upload { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+.ext-upload input[type=file] { max-width: 15rem; font-size: .85rem; }

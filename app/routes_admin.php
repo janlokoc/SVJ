@@ -12,7 +12,7 @@ $route('GET', '/admin', function () {
             'tickets' => (int) val("SELECT COUNT(*) FROM tickets WHERE status <> 'done'"),
         ],
         'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units FROM tickets t LEFT JOIN users u ON u.id = t.user_id WHERE t.status <> 'done' ORDER BY t.id DESC LIMIT 5"),
-        'external' => (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL'),
+        'external' => external_doc_count(db()),
         'maintenanceDue' => all('SELECT * FROM maintenance WHERE next_date IS NOT NULL AND next_date <= ? ORDER BY next_date', [date('Y-m-d', time() + 30 * 86400)]),
         'adminsWithout2fa' => (int) val("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1 AND totp_enabled = 0"),
         'failed24' => (int) val("SELECT COUNT(*) FROM audit_log WHERE action IN ('login_failed','login_2fa_failed') AND at >= datetime('now','localtime','-1 day')"),
@@ -23,6 +23,9 @@ $route('POST', '/admin/import', function () {
     require_admin();
     @set_time_limit(120);
     [$done, $failed, $left] = import_external_files(15);
+    if (!$done && !$left) {
+        [$done, $failed, $left] = import_external_files_into(db(), UPLOAD_DIR, 15, 0, true);   // už jen neúspěšné: zkusit je znovu
+    }
     flash("Staženo souborů: $done" . ($failed ? ", nepodařilo se: $failed" : '') . ($left ? ". Zbývá $left – pokračujte dalším kliknutím." : '. Všechny soubory jsou nyní uložené na novém webu.'), $failed && !$done ? 'error' : 'ok');
     redirect('/admin');
 });
