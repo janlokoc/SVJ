@@ -334,7 +334,7 @@ function tenant_usage_report(array $t): array
             $pin = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tin_' . $prevMonth]);
             $pout = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tout_' . $prevMonth]);
             $fmt = fn(int $n) => number_format($n / 1000, 0, ',', "\u{a0}") . ' tis.';
-            $priced = pset_int('ai_price_in', 0, 1000000) + pset_int('ai_price_out', 0, 1000000) > 0;
+            $priced = ai_token_price('ai_price_in') + ai_token_price('ai_price_out') > 0;
             return 'tento měsíc ' . $fmt($tin) . ' tokenů vstup / ' . $fmt($tout) . ' výstup' . ($priced ? ' ≈ ' . ai_czk(ai_cost_czk($tin, $tout)) . ($used['ai'] ? ' (' . str_replace('.', ',', (string) round(ai_cost_czk($tin, $tout) / $used['ai'], 2)) . ' Kč za použití)' : '') : ' (ceny tokenů zadejte v Nastavení služby)')
                 . ' · minulý měsíc ' . ($priced ? '≈ ' . ai_czk(ai_cost_czk($pin, $pout)) : $fmt($pin + $pout) . ' tokenů');
         })(),

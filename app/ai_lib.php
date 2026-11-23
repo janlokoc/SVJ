@@ -87,7 +87,12 @@ function ai_track_tokens($message): void
 /** Odhad nákladu v Kč za dané tokeny podle cen v konzoli (Kč za milion vstupních / výstupních tokenů). */
 function ai_cost_czk(int $in, int $out): float
 {
-    return function_exists('pset') ? ($in * pset_int('ai_price_in', 0, 1000000) + $out * pset_int('ai_price_out', 0, 1000000)) / 1000000 : 0.0;
+    return function_exists('pset') ? ($in * ai_token_price('ai_price_in') + $out * ai_token_price('ai_price_out')) / 1000000 : 0.0;
+}
+/** Cena tokenů z konzole (Kč za milion, může mít desetinná místa). */
+function ai_token_price(string $key): float
+{
+    return max(0.0, (float) str_replace(',', '.', pset($key)));
 }
 /** Částka v Kč pro přehled nákladů: malé částky s haléři. */
 function ai_czk(float $x): string

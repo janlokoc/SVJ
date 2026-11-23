@@ -66,11 +66,11 @@
       </ol></details>
     <p class="hint">Spotřebu platíte Vy z kreditu v Claude Console; společenství mají měsíční limit podle edice (tabulka výše) a mohou si dokoupit AI kredity. Anthropic účtuje <strong>tokeny</strong> (množství textu), web je u každého volání zapisuje.</p>
     <div class="form-row">
-      <label>Cena vstupních tokenů (Kč za 1 milion) <input type="number" name="ai_price_in" value="<?= e($v['ai_price_in']) ?>" min="0" required></label>
-      <label>Cena výstupních tokenů (Kč za 1 milion) <input type="number" name="ai_price_out" value="<?= e($v['ai_price_out']) ?>" min="0" required></label>
+      <label>Cena vstupních tokenů (Kč za 1 milion) <input type="text" inputmode="decimal" name="ai_price_in" value="<?= e(str_replace('.', ',', $v['ai_price_in'])) ?>" pattern="\d{1,6}([,.]\d{1,4})?" required></label>
+      <label>Cena výstupních tokenů (Kč za 1 milion) <input type="text" inputmode="decimal" name="ai_price_out" value="<?= e(str_replace('.', ',', $v['ai_price_out'])) ?>" pattern="\d{1,6}([,.]\d{1,4})?" required></label>
     </div>
-    <p class="hint">Opište z ceníku v Claude Console pro model, který používáte (cena je v USD – přepočtěte na Kč). Vstup = otázka a podklady domu, výstup = odpověď.</p>
-    <?php $ov = function_exists('ai_cost_overview') ? ai_cost_overview() : [0, 0, 0, 0.0, []]; [$ovUses, $ovIn, $ovOut, $ovCzk, $ovRows] = $ov; $creditUnit = pset_int('price_ai_pack', 0, 1000000) / max(1, pset_int('ai_pack', 1, 100000)); $priced = pset_int('ai_price_in', 0, 1000000) + pset_int('ai_price_out', 0, 1000000) > 0; ?>
+    <p class="hint">Opište z ceníku v Claude Console pro model, který používáte, a přepočtěte z USD na Kč (např. 0,10 USD × kurz). Desetinná místa piště s čárkou. Vstup = otázka a podklady domu, výstup = odpověď. Levnější čtení z mezipaměti (cache) se počítá jako běžný vstup, odhad je tedy spíš vyšší.</p>
+    <?php $ov = function_exists('ai_cost_overview') ? ai_cost_overview() : [0, 0, 0, 0.0, []]; [$ovUses, $ovIn, $ovOut, $ovCzk, $ovRows] = $ov; $creditUnit = pset_int('price_ai_pack', 0, 1000000) / max(1, pset_int('ai_pack', 1, 100000)); $priced = ai_token_price('ai_price_in') + ai_token_price('ai_price_out') > 0; ?>
     <div class="ai-costs" id="ai-naklady">
       <p class="h-small">Náklady na AI tento měsíc</p>
       <?php if (!$ovUses && !$ovIn): ?><p class="muted">Zatím žádné použití AI.</p><?php else: ?>

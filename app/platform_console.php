@@ -523,9 +523,15 @@ if ($PATH === '/nastaveni') {
             $in['invoice_note'] = '';
         }
         $in['period'] = 'year';
-        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'vat_rate' => 'Sazba DPH', 'referral_reward' => 'Odměna za doporučení', 'referral_welcome' => 'Sleva pro doporučeného', 'storage_pack_mb' => 'Velikost balíčku úložiště', 'price_storage' => 'Cena balíčku úložiště', 'ai_pack' => 'Velikost balíčku AI kreditů', 'price_ai_pack' => 'Cena balíčku AI kreditů', 'ai_price_in' => 'Cena vstupních tokenů', 'ai_price_out' => 'Cena výstupních tokenů', 'demo_refresh_days' => 'Obnova ukázkového webu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
+        foreach ((['price_domain' => 'Cena vlastní domény', 'grace_days' => 'Lhůta po splatnosti', 'delete_days' => 'Lhůta pro smazání', 'invoice_due_days' => 'Splatnost zálohové faktury', 'price_standard' => 'Cena edice Standard', 'vat_rate' => 'Sazba DPH', 'referral_reward' => 'Odměna za doporučení', 'referral_welcome' => 'Sleva pro doporučeného', 'storage_pack_mb' => 'Velikost balíčku úložiště', 'price_storage' => 'Cena balíčku úložiště', 'ai_pack' => 'Velikost balíčku AI kreditů', 'price_ai_pack' => 'Cena balíčku AI kreditů', 'demo_refresh_days' => 'Obnova ukázkového webu', 'price_migration' => 'Cena převodu obsahu', 'price_premium' => 'Cena edice Premium'] + array_combine(array_map(fn($k) => $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))), array_map(fn($k) => 'Limit ' . $k, array_filter(array_keys(PLATFORM_DEFAULTS), fn($k) => str_starts_with($k, 'lim_'))))) as $k => $label) {
             if (!ctype_digit($in[$k]) || (int) $in[$k] > 1000000) {
                 $errors[] = $label . ': zadejte celé číslo.';
+            }
+        }
+        foreach (['ai_price_in' => 'Cena vstupních tokenů', 'ai_price_out' => 'Cena výstupních tokenů'] as $k => $label) {
+            $in[$k] = str_replace([' ', ','], ['', '.'], (string) ($in[$k] ?? '0'));
+            if (!preg_match('/^\d{1,6}(\.\d{1,4})?$/', $in[$k])) {
+                $errors[] = $label . ': zadejte číslo (Kč za milion tokenů, např. 2,30).';
             }
         }
         foreach (['contact_email' => 'Kontaktní e-mail', 'mail_from' => 'Odesílatel e-mailů'] as $k => $label) {
