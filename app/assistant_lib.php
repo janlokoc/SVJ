@@ -187,3 +187,31 @@ function assistant_html(string $text, array $sources): string
     }
     return $html;
 }
+
+/** Jedna odpověď asistenta jako HTML (text s odkazy na zdroje a seznam zdrojů) – pro stránku i plovoucí okénko. */
+function assistant_entry_html(array $h): string
+{
+    $html = assistant_html($h['a'], array_map(fn($s) => [$s[0], $s[1], $s[2], ''], $h['sources']));
+    if ($h['sources']) {
+        $html .= '<details class="chat-src"><summary>Zdroje (' . count($h['sources']) . ')</summary><ol>'
+            . implode('', array_map(fn($s) => '<li value="' . (int) $s[0] . '"><a href="' . e(url($s[2])) . '">' . e($s[1]) . '</a></li>', $h['sources'])) . '</ol></details>';
+    }
+    return $html;
+}
+/** Ukázkové otázky – jen takové, na které asistent umí odpovědět z podkladů webu. */
+function assistant_examples(): array
+{
+    $q = ['Od kolika hodin platí noční klid?', 'Kam nahlásit závadu ve společných prostorách?', 'Kdy je příští shromáždění a co je na programu?',
+        'Co dělat, když teče voda ze stropu?', 'Kde najdu stanovy a domovní řád?', 'Kdo je ve výboru a jak ho kontaktovat?'];
+    if (is_admin()) {
+        $q[] = 'Jakou většinou se podle stanov schvaluje změna stanov?';
+    }
+    return $q;
+}
+/** Má se plovoucí asistent na této stránce ukázat? */
+function assistant_widget_on(): bool
+{
+    $path = $GLOBALS['PATH'] ?? '/';
+    return user() && function_exists('ai_available') && ai_available() && plan_has('ai-asistent') && feature_on('asistent')
+        && !str_starts_with($path, '/asistent') && ($GLOBALS['LAYOUT'] ?? 'layout') === 'layout';
+}

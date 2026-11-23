@@ -12,17 +12,30 @@ $assistantPage = function () {
     }
     $history = $_SESSION['asistent'] ?? [];
     $error = null;
+    $ajax = post('ajax') === '1';
+    $json = function (array $data): never {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    };
     if ($GLOBALS['METHOD'] === 'POST') {
         if (post('do') === 'nova') {
             unset($_SESSION['asistent']);
-            redirect('/asistent');
+            $ajax ? $json(['ok' => true]) : redirect('/asistent');
         }
         $r = assistant_ask(post('q'), array_map(fn($h) => [$h['q'], $h['a']], $history));
         if (isset($r['error'])) {
             $error = $r['error'];
+            if ($ajax) {
+                $json(['ok' => false, 'error' => $error]);
+            }
         } else {
-            $history[] = ['q' => mb_substr(trim(post('q')), 0, 1000), 'a' => $r['text'], 'sources' => array_map(fn($s) => [$s[0], $s[1], $s[2]], $r['sources']), 'at' => date('H:i')];
+            $entry = ['q' => mb_substr(trim(post('q')), 0, 1000), 'a' => $r['text'], 'sources' => array_map(fn($s) => [$s[0], $s[1], $s[2]], $r['sources']), 'at' => date('H:i')];
+            $history[] = $entry;
             $_SESSION['asistent'] = array_slice($history, -10);
+            if ($ajax) {
+                $json(['ok' => true, 'html' => assistant_entry_html($entry)]);
+            }
             redirect('/asistent#posledni');
         }
     }

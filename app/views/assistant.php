@@ -1,5 +1,5 @@
 <?php /* AI asistent: $history [[q, a, sources, at]], $error, $q */
-$examples = ['Od kolika hodin platí noční klid?', 'Kdo mi pomůže, když teče voda ze stropu?', 'Kdy je příští shromáždění a co je na programu?', 'Můžu si dát kolo do sklepa?']; ?>
+$examples = array_slice(assistant_examples(), 0, 4); ?>
 <div class="wrap page narrow assistant">
   <header class="page-head"><h1>AI asistent</h1>
     <p class="lead">Zeptejte se běžnou řečí na cokoli o domě. Asistent odpoví podle stanov, domovního řádu, dokumentů a oznámení na webu a uvede, odkud odpověď má.</p></header>
@@ -8,8 +8,7 @@ $examples = ['Od kolika hodin platí noční klid?', 'Kdo mi pomůže, když te�
   <ol class="chat-log">
     <?php foreach ($history as $i => $h): ?>
       <li class="chat-q"<?= $i === count($history) - 1 ? ' id="posledni"' : '' ?>><span class="sr-only">Vaše otázka: </span><?= nl2br(e($h['q'])) ?></li>
-      <li class="chat-a"><span class="sr-only">Odpověď asistenta: </span><?= assistant_html($h['a'], array_map(fn($s) => [$s[0], $s[1], $s[2], ''], $h['sources'])) ?>
-        <?php if ($h['sources']): ?><details class="chat-src"><summary>Zdroje (<?= count($h['sources']) ?>)</summary><ol><?php foreach ($h['sources'] as [$n, $title, $href]): ?><li value="<?= (int) $n ?>"><a href="<?= url($href) ?>"><?= e($title) ?></a></li><?php endforeach ?></ol></details><?php endif ?></li>
+      <li class="chat-a"><span class="sr-only">Odpověď asistenta: </span><?= assistant_entry_html($h) ?></li>
     <?php endforeach ?>
   </ol>
   <?php endif ?>

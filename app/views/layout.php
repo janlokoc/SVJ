@@ -177,5 +177,6 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
   </div>
 </footer>
 <?php require __DIR__ . '/reports/_widget.php'; ?>
+<?php if (function_exists('assistant_widget_on') && assistant_widget_on()) { require __DIR__ . '/_assistant_widget.php'; } ?>
 </body>
 </html>
