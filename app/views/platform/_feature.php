@@ -5,6 +5,20 @@
 <div class="feature-detail">
   <section><h2>Jaký problém to řeší</h2><p><?= e($d['problem']) ?></p></section>
   <section><h2>Co přesně to bude dělat</h2><ol><?php foreach ($d['how'] as $step): ?><li><?= e($step) ?></li><?php endforeach ?></ol></section>
+  <?php if (!empty($d['areas'])): ?>
+  <section class="ai-areas"><h2>Kde všude může AI na webu pomoci</h2>
+    <p>Umělá inteligence se hodí všude, kde se na webu píše, třídí, hledá nebo shrnuje. Rozhodnutí vždy zůstává na člověku.</p>
+    <?php foreach ($d['areas'] as $group => $rows): ?>
+    <h3><?= e($group) ?></h3>
+    <dl class="area-list">
+      <?php foreach ($rows as [$where, $what, $why, $state]): ?>
+      <div><dt><?= e($where) ?><?= $state === 'hotovo' ? ' <span class="tag tag-ok">už funguje</span>' : '' ?></dt>
+        <dd><?= e($what) ?> <span class="area-why"><?= e($why) ?></span></dd></div>
+      <?php endforeach ?>
+    </dl>
+    <?php endforeach ?>
+  </section>
+  <?php endif ?>
   <section><h2>Edice a cena</h2><p><strong><?= e($price) ?></strong></p><p><?= e($d['note']) ?></p><p class="hint">Edice i cena jsou předběžné a mohou se do spuštění změnit.</p></section>
 </div>
 <div class="card card-soft feature-notify">

@@ -1435,7 +1435,7 @@ function cert_reminders(): void
  */
 const PLANNED_FEATURES = [
     'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · platí se AI kredity', 'Zápis z nahrávky'],
-    'ai-asistent' => ['AI asistent pro obyvatele', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – kdykoli, i v noci.', 'doplněk k Premium · asi 990 Kč ročně', 'AI asistent'],
+    'ai-asistent' => ['AI asistent pro obyvatele i výbor', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – a výboru ubere rutinu u závad, dokumentů, shromáždění i vyúčtování.', 'doplněk k Premium · asi 990 Kč ročně, náročnější úlohy za AI kredity', 'AI asistent'],
     'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
@@ -1458,7 +1458,33 @@ const PLANNED_DETAILS = [
         'lead' => 'Sousedé se zeptají webu a dostanou odpověď podle Vašich stanov, domovního řádu a oznámení.',
         'problem' => 'Výbor odpovídá pořád na stejné otázky: kdy se smí vrtat, kam s kočárkem, kdy bude vyúčtování, komu hlásit kapající radiátor. Odpovědi přitom v dokumentech na webu jsou, jen je nikdo nehledá.',
         'how' => ['Přihlášený obyvatel položí otázku běžnou řečí, česky i v dalších jazycích webu.', 'Asistent odpoví jen podle dokumentů a oznámení Vašeho domu a uvede, odkud odpověď vzal.', 'Když odpověď v podkladech není, řekne to a nabídne předání dotazu výboru.', 'Výbor vidí, na co se lidé ptají nejčastěji, a ví, co na webu doplnit.'],
-        'note' => 'Doplněk k edici Premium, asi 990 Kč ročně. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu.',
+        'note' => 'Doplněk k edici Premium, asi 990 Kč ročně; náročnější úlohy (dlouhé dokumenty, překlady, přehledy) se budou platit předplacenými AI kredity. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu. Každý výstup je návrh, který před zveřejněním nebo odesláním schvaluje člověk.',
+        // Kde všude může AI na webu pomoci: skupina => [[kde, co udělá, k čemu to je, stav]]. Stav 'hotovo' = už na webu funguje.
+        'areas' => [
+            'Co už dnes funguje' => [
+                ['Aktuality a e-maily', 'Z pár poznámek napíše oznámení, uhladí nebo zkrátí hotový text.', 'Oznámení je venku za pět minut a čte se dobře i na telefonu.', 'hotovo'],
+                ['Závady a požadavky', 'Navrhne odpověď obyvateli na jeho hlášení.', 'Nikdo nečeká týden na „přijali jsme, řešíme“.', 'hotovo'],
+                ['Zápis ze shromáždění', 'Z poznámek nebo nahraného přepisu sestaví průběh jednání podle programu.', 'Zápis je hotový týž večer, ne za měsíc.', 'hotovo'],
+            ],
+            'Pro obyvatele' => [
+                ['Dotazy na dům', 'Odpoví podle stanov, domovního řádu a oznámení a uvede zdroj.', 'Výbor přestane odpovídat na stejné otázky pořád dokola.', ''],
+                ['Vyúčtování a platby', 'Vysvětlí vlastníkovi jeho vyúčtování a předpis záloh běžnou řečí.', 'Méně telefonátů „proč mám nedoplatek“.', ''],
+                ['Hlášení závady', 'Z popisu a fotky pomůže hlášení doplnit (kde, od kdy, co hrozí) a upozorní, že totéž už někdo nahlásil.', 'Výbor dostane hlášení, se kterým jde hned něco dělat.', ''],
+                ['Jazyky', 'Přeloží oznámení a odpovědi do jazyků webu pro nájemníky, kteří česky nečtou.', 'O odstávce vody se dozví všichni v domě.', ''],
+            ],
+            'Pro výbor' => [
+                ['Závady a požadavky', 'Roztřídí nová hlášení podle naléhavosti a druhu a navrhne dodavatele z Vašeho seznamu.', 'Havárie nezapadne mezi stížnostmi na úklid.', ''],
+                ['Dokumenty', 'Po nahrání navrhne název, zařazení a krátké shrnutí pro sousedy; v dokumentech pak hledá otázkou, ne podle názvu souboru.', 'Smlouva nebo zápis z roku 2019 se najde za pár vteřin.', ''],
+                ['Shromáždění', 'Připraví pozvánku s programem a návrhy usnesení a po schůzi vytáhne ze zápisu úkoly s termíny do Úkolů a usnesení.', 'Nic z toho, co se odhlasovalo, se neztratí.', ''],
+                ['Hlasování a ankety', 'Upozorní na nejednoznačnou otázku, navrhne srozumitelnější znění a shrne volné odpovědi z ankety.', 'Méně sporů o to, o čem se vlastně hlasovalo.', ''],
+                ['Revize a smlouvy', 'Z nahrané revizní zprávy nebo smlouvy vyčte termín příští revize, zjištěné závady a výpovědní lhůtu a nabídne je zapsat do Revizí.', 'Termíny se hlídají samy, i když se výbor vymění.', ''],
+                ['Dodavatelé', 'Z popisu závady sepíše poptávku a došlé nabídky srovná do přehledné tabulky.', 'Výběr dodavatele je doložitelný a rychlý.', ''],
+                ['Dlužníci', 'Navrhne slušnou, ale jasnou upomínku podle výše a stáří dluhu.', 'Nepříjemný dopis nemusí nikdo vymýšlet.', ''],
+                ['Diskuze', 'Shrne dlouhé vlákno do pár vět a upozorní správce na vulgární nebo urážlivý příspěvek.', 'Výbor ví, co lidi trápí, aniž čte všechno.', ''],
+                ['Měsíční přehled', 'Jednou za měsíc pošle výboru shrnutí: otevřené závady, blížící se revize, nesplněné úkoly, neuhrazené zálohy.', 'Předseda má dům na jedné stránce.', ''],
+                ['Nový správce webu', 'Poradí s ovládáním webu („jak přidám nájemníka“, „jak vyhlásím hlasování“) a pomůže roztřídit obsah převedený ze starého webu.', 'Web zvládne i ten, kdo ho předtím neviděl.', ''],
+            ],
+        ],
     ],
     'sms' => [
         'lead' => 'Důležité zprávy dojdou i těm, kdo e-mail nečtou.',

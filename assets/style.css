@@ -1100,3 +1100,13 @@ body.lp .editions .edition:hover { transform: translateY(-5px); box-shadow: 0 18
 .support-bar button { font: inherit; font-weight: 700; color: #b3261e; background: #fff; border: 0; border-radius: 999px; padding: .25rem .9rem; cursor: pointer; }
 .support-steps { padding-left: 1.3rem; display: grid; gap: .3rem; margin: .8rem 0 1.4rem; }
 code.break { word-break: break-all; }
+
+/* Detail funkce: kde všude AI pomůže */
+.ai-areas h3 { font-size: 1rem; margin: 1.3rem 0 .5rem; }
+.area-list { display: grid; gap: .5rem; margin: 0; }
+.area-list > div { display: grid; grid-template-columns: minmax(9rem, 13rem) 1fr; gap: .2rem 1rem; padding: .7rem .9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.area-list dt { font-weight: 700; }
+.area-list dd { margin: 0; }
+.area-why { display: block; color: var(--muted); font-size: .92rem; margin-top: .15rem; }
+.tag-ok { background: var(--ok-soft); color: var(--ok); }
+@media (max-width: 600px) { .area-list > div { grid-template-columns: 1fr; } }
