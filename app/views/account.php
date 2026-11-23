@@ -23,6 +23,30 @@
       <button class="btn" type="submit">Změnit heslo</button>
     </form>
   </div>
+  <section class="household" id="upozorneni">
+    <h2>Upozornění do telefonu</h2>
+    <div class="card form push-card">
+      <?php if (!plan_has('push')): ?>
+        <p class="muted">Upozornění do telefonu tento web zatím nemá zapnutá (jsou součástí edice Standard).</p>
+      <?php else: $devices = all('SELECT * FROM push_subs WHERE user_id = ? ORDER BY id', [$u['id']]); ?>
+        <p>Nové aktuality, zprávy od výboru a sousedů, změny u Vašich závad a měsíční spotřeba Vám přijdou na displej jako zpráva z aplikace.</p>
+        <div data-push data-key="<?= e(push_public_key()) ?>" data-sw="<?= e(url('/sw.js')) ?>" data-scope="<?= e(url('/')) ?>" data-sub="<?= e(url('/push/prihlasit')) ?>" data-unsub="<?= e(url('/push/odhlasit')) ?>" data-csrf="<?= e(csrf_token()) ?>">
+          <p class="push-state" aria-live="polite"></p>
+          <div class="actions"><button class="btn" type="button" data-push-on hidden>Zapnout upozornění na tomto zařízení</button><button class="btn btn-ghost" type="button" data-push-off hidden>Vypnout na tomto zařízení</button></div>
+          <p class="hint push-ios" hidden>Na iPhonu a iPadu fungují upozornění jen u webu přidaného na plochu: v Safari klepněte na <strong>Sdílet → Přidat na plochu</strong>, web otevřete z plochy a tady upozornění zapněte.</p>
+        </div>
+        <?php if ($devices): ?>
+          <p class="h-small">Zařízení s upozorněním</p>
+          <ul class="push-devices"><?php foreach ($devices as $d): ?><li><?= e($d['device'] ?: 'zařízení') ?> <small class="muted">od <?= e(cz_date(substr($d['created_at'], 0, 10))) ?><?= $d['last_ok'] !== '' ? ' · naposledy doručeno ' . e(cz_datetime($d['last_ok'])) : '' ?></small></li><?php endforeach ?></ul>
+          <div class="actions">
+            <form method="post" action="<?= url('/push/zkouska') ?>" class="inline-form"><?= csrf_field() ?><button class="btn btn-small" type="submit">Poslat zkušební upozornění</button></form>
+            <form method="post" action="<?= url('/push/odhlasit') ?>" class="inline-form" data-confirm="Vypnout upozornění na všech zařízeních?"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Vypnout všude</button></form>
+          </div>
+        <?php endif ?>
+        <p class="hint"><a href="<?= url('/napoveda/upozorneni-do-telefonu') ?>">Jak si web přidat na plochu a zapnout upozornění</a></p>
+      <?php endif ?>
+    </div>
+  </section>
   <section class="household" id="overeni">
     <h2>Dvoufázové ověření</h2>
     <div class="card form">

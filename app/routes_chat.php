@@ -106,6 +106,9 @@ $route('POST', '/zpravy/(\d+)', function (int $id) {
     // E-mailem dáme vědět jen o první nepřečtené zprávě v rozhovoru, ne o každé další.
     $pending = (bool) val('SELECT 1 FROM messages WHERE from_id = ? AND to_id = ? AND read_at IS NULL LIMIT 1', [$me, $id]);
     q('INSERT INTO messages (from_id, to_id, body, created_at) VALUES (?,?,?,?)', [$me, $id, $body, date('Y-m-d H:i:s')]);
+    if (!$pending) {
+        push_notify([$id], site('name'), 'Nová zpráva od: ' . $u['name'], '/zpravy/' . $me);
+    }
     if (!$pending && !empty($other['email_notify'])) {
         send_mail($other['email'], 'Nová zpráva na webu – ' . site('name'), "Dobrý den,\n\n" . $u['name'] . " Vám na webu " . site('name') . " poslal(a) zprávu.\nPřečtete si ji po přihlášení: "
             . absolute_url('/zpravy/' . $me) . "\n\nText zprávy v e-mailu z důvodu soukromí neposíláme. Upozornění na zprávy vypnete ve svém účtu.");

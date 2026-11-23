@@ -4,7 +4,7 @@ $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
 $edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s platbami na jednotku, rezervacemi a AI zápisem.'];
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jeden pevný vzhled (šablona i barvy)', 'V patičce odkaz na službu'],
-    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', '5 šablon a 5 barev, vlastní logo, bez odkazu v patičce', 'Záloha všech dat ke stažení'],
+    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Dálkové odečty, revize, klíče a čipy', 'Upozornění do telefonu', 'Úkoly a usnesení, dodavatelé', '5 šablon a 5 barev, vlastní logo, bez odkazu v patičce', 'Záloha všech dat ke stažení'],
     'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', '10 šablon a 10 barev místo 5 a 5', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
 ];
 $edCompact = !empty($edCompact);
@@ -12,7 +12,7 @@ if ($edCompact) {
     // Krátký výčet toho, co edice přidává oproti nižší; počty (účty, e-maily…) jsou v limitech výše, tady se neopakují.
     $edExtra = [
         'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jeden pevný vzhled'],
-        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Revize, odečty, klíče, úkoly a dodavatelé', '5 šablon, 5 barev a logo, bez odkazu v patičce, záloha dat'],
+        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Odečty, revize, klíče, úkoly a dodavatelé', 'Upozornění do telefonu', '5 šablon, 5 barev a logo, bez odkazu v patičce, záloha dat'],
         'premium' => ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, 10 šablon a 10 barev', 'AI zápis, přednostní podpora a beta program novinek'],
     ];
 } ?>

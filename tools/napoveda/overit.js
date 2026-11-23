@@ -27,7 +27,8 @@ let current = null;
 const check = (ok, what) => { results[current].checks++; if (!ok) failures.push(`${current}: ${what}`); };
 const step = (text) => results[current].steps.push(text);
 const begin = (slug, note = '') => { current = slug; results[slug] = { date: new Date().toISOString().slice(0, 10), checks: 0, steps: [], note }; };
-const env = { ...process.env, SVJ_STORAGE: STORE };
+const env = { ...process.env, SVJ_STORAGE: STORE, SVJ_PUSH_TEST: '1' };
+const crypto = require('crypto');
 const sql = (q) => execFileSync('php', ['-r', '$f = glob(getenv("SVJ_STORAGE") . "/tenants/dum/*.sqlite")[0]; $p = new PDO("sqlite:$f"); echo $p->query(getenv("Q"))->fetchColumn();'], { env: { ...env, Q: q } }).toString().trim();
 const run = (q) => execFileSync('php', ['-r', '$f = glob(getenv("SVJ_STORAGE") . "/tenants/dum/*.sqlite")[0]; $p = new PDO("sqlite:$f"); $p->exec(getenv("Q"));'], { env: { ...env, Q: q } });
 const post = (url, body, type) => new Promise((resolve, reject) => {
@@ -219,6 +220,68 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     check(fs.existsSync(path.join(LP, 'telefon.jpg')), 'snímky pro úvodní stránku');
 
     // ---------- Import z katastru ----------
+    // ---------- Upozornění do telefonu ----------
+    begin('upozorneni-do-telefonu', 'Přidání webu na plochu na skutečném iPhonu a telefonu s Androidem jsme ověřit nemohli – ověřovací běh nemá skutečný telefon. Ověřeno je zapnutí na webu, šifrování a doručení zprávy přes zkušební push službu a zobrazení upozornění v prohlížeči.');
+    // Zkušební push služba: přijme zprávu, ověří podpis VAPID a rozšifruje ji tak jako skutečný prohlížeč.
+    const ua = crypto.createECDH('prime256v1'); ua.generateKeys(); const authSecret = crypto.randomBytes(16);
+    const got = [];
+    const pushSrv = http.createServer((req, res) => { const chunks = []; req.on('data', (c) => chunks.push(c)); req.on('end', () => {
+      try {
+        const body = Buffer.concat(chunks); const m = /vapid t=([^,]+), k=(.+)/.exec(req.headers.authorization || '');
+        const [h, p, sig] = m[1].split('.'); const pub = Buffer.from(m[2], 'base64url');
+        const vk = crypto.createPublicKey({ key: { kty: 'EC', crv: 'P-256', x: pub.subarray(1, 33).toString('base64url'), y: pub.subarray(33).toString('base64url') }, format: 'jwk' });
+        const okSig = crypto.verify('sha256', Buffer.from(h + '.' + p), { key: vk, dsaEncoding: 'ieee-p1363' }, Buffer.from(sig, 'base64url'));
+        const salt = body.subarray(0, 16), idlen = body[20], asPub = body.subarray(21, 21 + idlen), ct = body.subarray(21 + idlen);
+        const secret = ua.computeSecret(asPub);
+        const ikm = Buffer.from(crypto.hkdfSync('sha256', secret, authSecret, Buffer.concat([Buffer.from('WebPush: info\0'), ua.getPublicKey(), asPub]), 32));
+        const cek = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: aes128gcm\0'), 16));
+        const nonce = Buffer.from(crypto.hkdfSync('sha256', ikm, salt, Buffer.from('Content-Encoding: nonce\0'), 12));
+        const d = crypto.createDecipheriv('aes-128-gcm', cek, nonce); d.setAuthTag(ct.subarray(ct.length - 16));
+        const plain = Buffer.concat([d.update(ct.subarray(0, ct.length - 16)), d.final()]);
+        got.push({ okSig, enc: req.headers['content-encoding'], msg: JSON.parse(plain.subarray(0, plain.length - 1).toString('utf8')) });
+        res.writeHead(201); res.end();
+      } catch (e) { got.push({ error: e.message }); res.writeHead(400); res.end(); }
+    }); });
+    await new Promise((r) => pushSrv.listen(0, '127.0.0.1', r));
+    const endpoint = `http://127.0.0.1:${pushSrv.address().port}/push/${crypto.randomBytes(6).toString('hex')}`;
+    const b2 = await chromium.launch({ channel: 'chromium' }).catch(() => b);   // starý režim bez okna oznámení nepovoluje
+    const mobCtx = await b2.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' }); await mobCtx.grantPermissions(['notifications'], { origin: new URL(T).origin });
+    const mob = await mobCtx.newPage(); mob.setDefaultTimeout(10000);
+    await login(mob, who.owner); await mob.goto(T + '/muj-ucet#upozorneni');
+    await mob.waitForFunction(() => document.querySelector('.push-state').textContent !== '');
+    check(await mob.isVisible('[data-push-on]'), 'tlačítko Zapnout upozornění'); step('V „Můj účet“ je část Upozornění do telefonu s tlačítkem „Zapnout upozornění na tomto zařízení“.');
+    await shot(mob.locator('#upozorneni'), 'push-1-zapnout.jpg');
+    // Headless prohlížeč nemá spojení na push službu Googlu – přihlášení zařízení proto pošleme sami, s klíči zkušební služby.
+    const subRes = await mob.evaluate(async ([url, ep, p256dh, auth]) => { const box = document.querySelector('[data-push]'); const f = new FormData(); f.append('_csrf', box.dataset.csrf); f.append('subscription', JSON.stringify({ endpoint: ep, keys: { p256dh, auth } })); const r = await fetch(url, { method: 'POST', body: f }); return r.json(); },
+      [T + '/push/prihlasit', endpoint, ua.getPublicKey().toString('base64url'), authSecret.toString('base64url')]);
+    check(subRes.ok === true, 'zařízení přihlášeno');
+    const bad = await mob.evaluate(async (url) => { const box = document.querySelector('[data-push]'); const f = new FormData(); f.append('_csrf', box.dataset.csrf); f.append('subscription', JSON.stringify({ endpoint: 'https://example.com/x', keys: { p256dh: 'x', auth: 'y' } })); return (await fetch(url, { method: 'POST', body: f })).status; }, T + '/push/prihlasit');
+    check(bad === 422, 'cizí adresa push služby odmítnuta'); step('Web přijme jen adresy skutečných push služeb (Google, Mozilla, Apple, Microsoft); jinou adresu odmítne.');
+    await mob.reload();
+    await mob.click('button:has-text("Poslat zkušební upozornění")');
+    check((await text(mob, '.flash')).includes('odešlo na 1 zařízení'), 'zkušební upozornění odešlo');
+    const g1 = got.shift() || {};
+    check(g1.okSig === true && g1.enc === 'aes128gcm' && /funguje/.test(g1.msg?.body || ''), 'zpráva podepsaná, zašifrovaná a rozšifrovaná: ' + JSON.stringify(g1));
+    step('Zkušební upozornění: push služba ověřila podpis webu a rozšifrovala zprávu „' + (g1.msg?.body || '') + '“.');
+    await mob.evaluate(() => { const h = [...document.querySelectorAll('#upozorneni .h-small')].pop(); const w = document.createElement('div'); w.id = 'push-zarizeni'; w.style.padding = '12px'; h.before(w); let n = h; const parts = []; while (n) { parts.push(n); n = n.nextElementSibling; } parts.forEach((x) => w.appendChild(x)); });
+    await shot(mob.locator('#push-zarizeni'), 'push-2-zapnuto.jpg');
+    // Nová aktualita od výboru → upozornění obyvateli
+    await admin.goto(T + '/admin/aktuality/nova'); await admin.fill('[name=title]', 'Odstávka vody ve čtvrtek'); await admin.fill('[name=body]', 'Ve čtvrtek od 8 do 12 hodin nepoteče voda.'); await admin.click('main form button[type=submit]');
+    const g2 = got.shift() || {};
+    check(/Nová aktualita: Odstávka vody/.test(g2.msg?.body || '') && /\/aktuality\/\d+$/.test(g2.msg?.url || ''), 'upozornění na novou aktualitu: ' + JSON.stringify(g2));
+    step('Po zveřejnění aktuality přišlo obyvateli upozornění „' + (g2.msg?.body || '') + '“ s odkazem na aktualitu.');
+    // Zobrazení upozornění službou v prohlížeči (service worker): doručíme push přímo přes nástroje prohlížeče.
+    const pcCtx = await b2.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ' }); await pcCtx.grantPermissions(['notifications'], { origin: new URL(T).origin }); const pc = await pcCtx.newPage(); await login(pc, who.owner); await pc.goto(T + '/muj-ucet#upozorneni');
+    await pc.waitForFunction(() => navigator.serviceWorker.controller !== null || document.querySelector('.push-state').textContent !== '');
+    const cdp = await pc.context().newCDPSession(pc); await cdp.send('ServiceWorker.enable');
+    const regId = await new Promise((resolve) => { cdp.on('ServiceWorker.workerRegistrationUpdated', (e) => { const r = e.registrations.find((x) => x.scopeURL.includes('dum.localhost')); if (r) resolve(r.registrationId); }); setTimeout(() => resolve(null), 4000); });
+    if (regId) {
+      await cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(T).origin, registrationId: regId, data: JSON.stringify({ title: 'Zahradní 12', body: 'Zkouška zobrazení', url: T + '/' }) });
+      const shown = await pc.evaluate(async () => { for (let i = 0; i < 20; i++) { const n = await (await navigator.serviceWorker.ready).getNotifications(); if (n.length) return n[0].title + ' | ' + n[0].body; await new Promise((r) => setTimeout(r, 150)); } return ''; });
+      check(shown === 'Zahradní 12 | Zkouška zobrazení', 'service worker zobrazil upozornění: ' + shown); if (shown) step('Service worker webu přijatou zprávu zobrazil jako upozornění („' + shown + '“).');
+    } else { check(false, 'service worker se nezaregistroval'); }
+    pushSrv.close(); if (b2 !== b) await b2.close();
+
     begin('import-z-katastru', 'Kopírování ze stránky Nahlížení do KN nešlo ověřit automaticky – web katastru strojové procházení blokuje. Ověřeno je vložení textu ve stejné podobě, v jaké ho stránka katastru zkopíruje.');
     // Nové společenství zatím jednotky nemá – stejně jako při prvním importu.
     run('DELETE FROM user_units; DELETE FROM units;');

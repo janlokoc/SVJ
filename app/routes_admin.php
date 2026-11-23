@@ -76,6 +76,9 @@ $postForm = function (int $id = 0) {
             } else {
                 q('INSERT INTO posts (title, body, visibility, pinned, published_at, author_id) VALUES (?,?,?,?,?,?)', [...$args, $admin['id']]);
                 $id = (int) db()->lastInsertId();
+                if ($post['published_at'] <= date('Y-m-d')) {
+                    push_notify(array_diff(push_all_user_ids(), [(int) $admin['id']]), site('name'), 'Nová aktualita: ' . $post['title'], '/aktuality/' . $id);
+                }
             }
             foreach ($new as [$filename, $orig, $size]) {
                 q('INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?,?,?,?,?,?,?)',
@@ -394,6 +397,9 @@ $route('POST', '/admin/zavady/(\d+)', function (int $id) {
     $supplier = ctype_digit(post('supplier_id')) && val('SELECT 1 FROM suppliers WHERE id = ?', [post('supplier_id')]) ? (int) post('supplier_id') : null;
     q("UPDATE tickets SET status = ?, admin_note = ?, subject = ?, location = ?, body = ?, supplier_id = ?, updated_at = datetime('now','localtime') WHERE id = ?",
         [$status, post('admin_note'), $subject, isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'], $body, $supplier, $id]);
+    if ($status !== $t['status'] && !empty($t['user_id'])) {
+        push_notify([(int) $t['user_id']], site('name'), 'Vaše hlášení „' . $subject . '“: ' . mb_strtolower(TICKET_STATUS[$status]), '/zavady');
+    }
     flash('Uloženo.');
     redirect('/admin/zavady');
 });
@@ -597,6 +603,7 @@ $mailForm = function () {
                     q('INSERT INTO mailing_recipients (mailing_id, user_id, name, email, token, sent_ok) VALUES (?,?,?,?,?,?)', [$mailingId, $r['id'], $r['name'], $r['email'], $token, $ok ? 1 : 0]);
                 }
                 q('UPDATE mailings SET sent_count = ?, failed_count = ?, failed_list = ? WHERE id = ?', [$sent, count($failed), implode("\n", $failed), $mailingId]);
+                push_notify(array_column(mail_recipients($m['audience']), 'id'), site('name'), 'Zpráva od výboru: ' . $m['subject'], '/');
                 audit('mailing_sent', $m['subject'] . ' · ' . $sent . ' příjemců');
                 $fake = in_array(mail_route(), ['staging-off', 'local'], true);
                 flash(($fake ? "Zpráva se skutečně nikomu nedoručila ($sent příjemců). " . mail_route_note() : "Zpráva byla předána k odeslání $sent příjemcům.") . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed || $fake ? 'info' : 'ok');

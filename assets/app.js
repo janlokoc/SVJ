@@ -375,3 +375,40 @@ document.querySelectorAll('.vote-form').forEach((form) => {
   form.querySelectorAll('input[name=choice]').forEach((r) => r.addEventListener('change', send));
   form.addEventListener('submit', (e) => { e.preventDefault(); send(); });
 });
+
+// Upozornění do telefonu: zapnutí a vypnutí na tomto zařízení
+document.querySelectorAll('[data-push]').forEach(async (box) => {
+  const state = box.querySelector('.push-state'), on = box.querySelector('[data-push-on]'), off = box.querySelector('[data-push-off]');
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const say = (t) => { state.textContent = t; };
+  if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+    say(ios && !standalone ? 'Nejdřív si web přidejte na plochu (návod níže), pak ho otevřete z plochy.' : 'Tento prohlížeč upozornění neumí.');
+    box.querySelector('.push-ios').hidden = !ios; return;
+  }
+  const key = Uint8Array.from(atob(box.dataset.key.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+  const send = (url, fields) => { const f = new FormData(); f.append('_csrf', box.dataset.csrf); f.append('ajax', '1'); Object.entries(fields).forEach(([k, v]) => f.append(k, v)); return fetch(url, { method: 'POST', body: f, credentials: 'same-origin' }); };
+  let reg;
+  try { reg = await navigator.serviceWorker.register(box.dataset.sw, { scope: box.dataset.scope }); } catch (e) { say('Upozornění se nepodařilo připravit: ' + e.message); return; }
+  const refresh = async () => {
+    const sub = await reg.pushManager.getSubscription();
+    on.hidden = !!sub; off.hidden = !sub;
+    say(sub ? 'Na tomto zařízení jsou upozornění zapnutá.' : (Notification.permission === 'denied' ? 'Upozornění jsou v prohlížeči zakázaná – povolte je v nastavení prohlížeče pro tento web.' : 'Na tomto zařízení jsou upozornění vypnutá.'));
+  };
+  on.addEventListener('click', async () => {
+    on.disabled = true;
+    try {
+      if ((await Notification.requestPermission()) !== 'granted') { say('Upozornění jste nepovolili.'); on.disabled = false; return; }
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      const res = await send(box.dataset.sub, { subscription: JSON.stringify(sub) });
+      const data = await res.json();
+      if (!data.ok) { await sub.unsubscribe(); say(data.error || 'Nepodařilo se uložit.'); } else { location.reload(); return; }
+    } catch (e) { say('Upozornění se nepodařilo zapnout: ' + e.message); }
+    on.disabled = false;
+  });
+  off.addEventListener('click', async () => {
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) { await send(box.dataset.unsub, { endpoint: sub.endpoint }); await sub.unsubscribe(); }
+    location.reload();
+  });
+  refresh();
+});

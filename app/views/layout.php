@@ -55,7 +55,9 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <meta name="description" content="<?= e(site('full')) ?> – aktuality, dokumenty a kontakty.">
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
 <link rel="manifest" href="<?= url('/manifest.webmanifest') ?>">
-<link rel="apple-touch-icon" href="<?= asset('icon-192.png') ?>">
+<link rel="apple-touch-icon" href="<?= url('/apple-touch-icon.png') ?>?v=<?= e(substr(md5(site_look_used() . site_logo_used()), 0, 8)) ?>">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="<?= e(mb_substr(site('title'), 0, 14)) ?>">
 <meta name="theme-color" content="<?= e(LOOK_COLORS[site_look_used()]) ?>">
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>

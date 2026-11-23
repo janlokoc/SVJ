@@ -3,7 +3,7 @@
   <header class="page-head"><h1>Zájem o funkce</h1><p class="lead">Kolik lidí si otevřelo detail připravované funkce z ceníku na úvodní stránce nebo z Předplatného. Unikátní návštěvník se počítá jednou za den; roboti se nepočítají.</p></header>
   <p class="chips"><?php foreach ([0 => 'Celkem', 7 => '7 dní', 30 => '30 dní', 90 => '90 dní'] as $d => $label): ?><a href="<?= url('/zajem') . ($d ? '?dni=' . $d : '') ?>"<?= $days === $d ? ' aria-current="true"' : '' ?>><?= $label ?></a> <?php endforeach ?></p>
   <table class="table"><thead><tr><th>Funkce</th><th>Unikátní návštěvníci</th><th>Prokliky celkem</th><th>Společenství</th><th>Chtějí zprávu</th><th>Poslední proklik</th></tr></thead><tbody>
-    <?php foreach ($stats as $key => $c): ?><tr><td data-label="Funkce"><strong><?= e(PLANNED_FEATURES[$key][0]) ?></strong><br><small class="muted"><?= e(PLANNED_FEATURES[$key][2]) ?></small><progress class="bar" value="<?= $c['visitors'] ?>" max="<?= $max ?>" aria-hidden="true"></progress></td>
+    <?php foreach ($stats as $key => $c): ?><tr><td data-label="Funkce"><strong><?= e(PLANNED_FEATURES[$key][0] ?? (PLAN_FEATURES[$key][1] ?? $key)) ?></strong><br><small class="muted"><?= e((PLANNED_FEATURES[$key][2] ?? 'spuštěno')) ?></small><progress class="bar" value="<?= $c['visitors'] ?>" max="<?= $max ?>" aria-hidden="true"></progress></td>
       <td data-label="Unikátní návštěvníci"><span class="stat-num"><?= $c['visitors'] ?></span></td><td data-label="Prokliky celkem"><?= $c['views'] ?></td>
       <td data-label="Společenství"><?= $c['tenants'] ?></td><td data-label="Chtějí zprávu"><?= $c['notify'] ?></td>
       <td data-label="Poslední proklik"><?= $c['last'] !== '' ? cz_datetime($c['last']) : '<span class="muted">–</span>' ?></td></tr><?php endforeach ?>

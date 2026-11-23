@@ -8,7 +8,7 @@ $lim = fn(string $ed, string $k) => function_exists('pset_int') ? pset_int('lim_
 $num = fn(int $n, string $unit) => $n === 0 ? 'bez omezení' : number_format($n, 0, ',', "\u{a0}") . "\u{a0}" . $unit;
 $editions = [
     'free' => ['Pro malý dům, který chce začít.', ['Veřejný web a část pro obyvatele', $num($lim('free', 'users'), 'účtů') . ', ' . $num($lim('free', 'mails'), 'e-mailů měsíčně'), 'Jeden pevný vzhled']],
-    'standard' => ['Pro běžné společenství.', ['Prezence, hlasování a zápis ze shromáždění', 'Odečty, revize, úkoly a dodavatelé', '5 šablon, 5 barev a vlastní logo']],
+    'standard' => ['Pro běžné společenství.', ['Prezence, hlasování a zápis ze shromáždění', 'Dálkové odečty a upozornění do telefonu', 'Revize, úkoly a dodavatelé', '5 šablon, 5 barev a vlastní logo']],
     'premium' => ['Pro velké domy a správu plateb.', ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, AI zápis', '10 šablon a 10 barev, beta program']],
 ];
 $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
@@ -75,7 +75,7 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
     <div class="lpx-row">
       <div class="lpx-row-text"><p class="lpx-eyebrow">Pro obyvatele</p><h2>Všechno o domě na jednom místě</h2>
         <p>Každý vlastník a nájemník vidí to, co se týká jeho: aktuality, dokumenty, termíny, odečty své jednotky a hlášení závad.</p>
-        <ul class="lp-check lpx-check"><li>Veřejná část pro návštěvníky, zbytek jen po přihlášení</li><li>V telefonu bez instalace aplikace</li><li>Přihlášení na shromáždění a plná moc online</li></ul></div>
+        <ul class="lp-check lpx-check"><li>Veřejná část pro návštěvníky, zbytek jen po přihlášení</li><li><strong>Upozornění přímo na displej telefonu</strong> – nová aktualita, zpráva od výboru, vyřízená závada nebo spotřeba za měsíc</li><li>Web na ploše telefonu jako aplikace, bez obchodu s aplikacemi (iPhone i Android)</li><li>Přihlášení na shromáždění a plná moc online</li></ul></div>
       <div class="lpx-row-media lpx-row-phone"><div class="lpx-phone lpx-phone-big"><?= $img('telefon.jpg', 'Web domu v telefonu obyvatele') ?></div></div>
     </div>
     <div class="lpx-row lpx-flip">

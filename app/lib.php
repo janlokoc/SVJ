@@ -165,6 +165,7 @@ function db_mysql(string $tenant): PDO
         schema_v11($pdo, true);
         schema_v12($pdo, true);
         schema_v13($pdo, true);
+        schema_v14($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -206,7 +207,21 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 13) {
         schema_v13($pdo, true);
     }
+    if ($mysqlVersion < 14) {
+        schema_v14($pdo, true);
+    }
     return $pdo;
+}
+/** Čtrnáctá verze databáze: zařízení přihlášená k upozorněním do telefonu (Web Push). */
+function schema_v14(PDO $pdo, bool $mysql): void
+{
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $s = fn(int $n) => $mysql ? "VARCHAR($n) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''";
+    $int = $mysql ? 'INT' : 'INTEGER';
+    $pdo->exec('CREATE TABLE push_subs (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ", user_id $int NOT NULL, endpoint " . ($mysql ? 'VARCHAR(700) NOT NULL' : 'TEXT NOT NULL')
+        . ", p256dh {$s(120)}, auth {$s(40)}, device {$s(120)}, created_at {$s(19)}, last_ok {$s(19)}, fails $int NOT NULL DEFAULT 0)$end");
+    $pdo->exec('CREATE INDEX push_subs_user ON push_subs (user_id)');
+    $mysql ? $pdo->exec("UPDATE settings SET value = '14' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 14');
 }
 /** Třináctá verze databáze: u zastoupení na shromáždění je vidět, že zmocněnec předložil plnou moc (papírově). */
 function schema_v13(PDO $pdo, bool $mysql): void
@@ -351,6 +366,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v11($pdo, false);
         schema_v12($pdo, false);
         schema_v13($pdo, false);
+        schema_v14($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -477,6 +493,9 @@ SQL);
     }
     if ($version < 13) {
         schema_v13($pdo, false);
+    }
+    if ($version < 14) {
+        schema_v14($pdo, false);
     }
     return $pdo;
 }
@@ -1788,6 +1807,7 @@ require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/ai_lib.php';
 require_once __DIR__ . '/meters_lib.php';
+require_once __DIR__ . '/push_lib.php';
 require_once __DIR__ . '/extra_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string

@@ -26,6 +26,18 @@
     ],
     "note": ""
   },
+  "upozorneni-do-telefonu": {
+    "date": "2026-11-23",
+    "checks": 7,
+    "steps": [
+      "V „Můj účet“ je část Upozornění do telefonu s tlačítkem „Zapnout upozornění na tomto zařízení“.",
+      "Web přijme jen adresy skutečných push služeb (Google, Mozilla, Apple, Microsoft); jinou adresu odmítne.",
+      "Zkušební upozornění: push služba ověřila podpis webu a rozšifrovala zprávu „Zkušební upozornění – funguje to.“.",
+      "Po zveřejnění aktuality přišlo obyvateli upozornění „Nová aktualita: Odstávka vody ve čtvrtek“ s odkazem na aktualitu.",
+      "Service worker webu přijatou zprávu zobrazil jako upozornění („Zahradní 12 | Zkouška zobrazení“)."
+    ],
+    "note": "Přidání webu na plochu na skutečném iPhonu a telefonu s Androidem jsme ověřit nemohli – ověřovací běh nemá skutečný telefon. Ověřeno je zapnutí na webu, šifrování a doručení zprávy přes zkušební push službu a zobrazení upozornění v prohlížeči."
+  },
   "import-z-katastru": {
     "date": "2026-11-23",
     "checks": 3,

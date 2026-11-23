@@ -30,6 +30,7 @@ const PLAN_LIMIT_DEFAULTS = [
 const PLAN_FEATURES = [
     'ankety' => ['standard', 'Ankety', 'Rychlé zjištění názoru sousedů – termín brigády, barva fasády, zájem o kolárnu.', '~^/(admin/)?ankety(/|$)~'],
     'platby' => ['premium', 'Platby na jednotku', 'Každý vlastník vidí své zálohy a nedoplatky, výbor posílá upomínky.', '~^/(admin/)?platby(/|$)~'],
+    'push' => ['standard', 'Upozornění do telefonu', 'Nové aktuality, zprávy od výboru a sousedů, změny u závad a měsíční spotřeba přímo na displej telefonu – web přidaný na plochu funguje jako aplikace.', null],
     'odecty' => ['standard', 'Odečty měřidel', 'Dálkové odečty od odečtové firmy (import i automatický příjem), měsíční spotřeba pro obyvatele a ruční samoodečty ostatních měřidel.', '~^/(admin/)?odecty(/|$)~'],
     'rezervace' => ['premium', 'Rezervace', 'Rezervace společenské místnosti, sušárny nebo parkovacího místa.', '~^/(admin/)?(rezervace|prostory)(/|$)~'],
     'revize' => ['standard', 'Revize', 'Hlídání termínů revizí a kontrol s upozorněním předem.', '~^/admin/revize(/|$)~'],

@@ -7,6 +7,8 @@
 <meta name="robots" content="noindex">
 <title><?= e(($title ?? '') . ' · Správa platformy SVJ') ?></title>
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
+<link rel="apple-touch-icon" href="<?= asset('icon-sluzba-180.png') ?>">
+<meta name="apple-mobile-web-app-title" content="<?= e(pset('service_name')) ?>">
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>

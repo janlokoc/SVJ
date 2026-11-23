@@ -1551,7 +1551,6 @@ const PLANNED_FEATURES = [
     'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
-    'push' => ['Upozornění do telefonu', 'Nové oznámení nebo připomenutí hlasování přímo na displej, bez e-mailu.', 'Standard a Premium · v ceně', 'Upozornění do telefonu'],
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
     'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'Premium · v ceně', 'Párování plateb'],
     'napojeni-ai' => ['Napojení na vlastního AI asistenta', 'Web si připojíte ke svému AI nástroji a běžnou řečí se ptáte na závady, dokumenty, platby a termíny – výbor si navíc nechá připravit koncept oznámení.', 'Premium · cena se upřesní', 'Napojení AI'],
@@ -1646,12 +1645,6 @@ const PLANNED_DETAILS = [
         'problem' => 'Na přihlášení pohledávky do insolvenčního řízení má společenství jen dva měsíce od rozhodnutí o úpadku. Když si toho výbor nevšimne, o dlužné zálohy zpravidla přijde a doplatí je ostatní vlastníci.',
         'how' => ['Web denně kontroluje vlastníky jednotek v insolvenčním rejstříku.', 'Při nálezu pošle výboru upozornění s číslem řízení a lhůtou pro přihlášení pohledávky.', 'U jednotky uvidíte stav řízení a dlužnou částku z evidence plateb.', 'Volitelně i hlídání exekucí a zástav zapsaných u jednotky v katastru.'],
         'note' => 'Bude v ceně edice Premium. Insolvenční rejstřík je veřejný, kontrola se týká jen vlastníků Vašich jednotek.',
-    ],
-    'push' => [
-        'lead' => 'Nové oznámení se objeví na displeji telefonu jako zpráva z aplikace.',
-        'problem' => 'E-maily ze společenství zapadnou mezi reklamou a nástěnku u vchodu si přečte málokdo. O odstávce nebo o běžícím hlasování se tak lidé dozvědí, až když je pozdě.',
-        'how' => ['Obyvatel si web přidá na plochu telefonu a povolí upozornění.', 'Při novém oznámení, havárii nebo zahájení hlasování mu přijde zpráva na displej.', 'Každý si sám zvolí, o čem chce vědět (oznámení, hlasování, závady, termíny).', 'Před koncem hlasování přijde připomenutí těm, kdo ještě nehlasovali.'],
-        'note' => 'Bude v ceně edic Standard a Premium, bez příplatku. Na iPhonu funguje po přidání webu na plochu.',
     ],
     'bankid' => [
         'lead' => 'Hlasující se ověří přes svou banku – stejně jako na úřadech.',

@@ -587,6 +587,19 @@ U termínu s přihlašováním (Administrace → Termíny → Účast) je tlač�
   zafixuje. Výsledky i usnášeníschopnost z prezence se samy doplní do
   zápisu ze shromáždění.
 
+## Upozornění do telefonu (push)
+
+Od edice Standard. Obyvatel v **Můj účet → Upozornění do telefonu** zapne
+upozornění na daném zařízení; na iPhonu/iPadu jen u webu přidaného na plochu
+(iOS 16.4+). Upozornění přijdou na: novou aktualitu, hromadnou zprávu výboru,
+zprávu od souseda, změnu stavu vlastního hlášení závady a měsíční spotřebu.
+
+Bez knihoven a bez placené služby: zprávu zašifruje web (RFC 8291) a podepíše
+klíčem VAPID (`storage/vapid.pem`, vznikne sám), doručí ji push služba
+prohlížeče (Google, Mozilla, Apple, Microsoft). Server posílá jen na tyto
+služby přes HTTPS. Ikonu na plochu (`/apple-touch-icon.png`) web kreslí
+v barvě svého vzhledu, od edice Standard s logem společenství.
+
 ## Přílohy u závad
 
 K nahlášené závadě lze přiložit až 4 fotografie nebo dokumenty (JPG, PNG,

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Funkce pro hlasování, dokumenty jednotek, revize, odečty, rezervace, klíče, zálohu a podklady shromáždění.
 
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 const CHOICES = ['yes' => 'Pro', 'no' => 'Proti', 'abstain' => 'Zdržuji se'];
 const READING_KINDS = ['sv' => 'Studená voda', 'tv' => 'Teplá voda', 'teplo' => 'Teplo (měřič tepla)', 'itn' => 'Indikátory topení', 'plyn' => 'Plyn', 'el' => 'Elektřina'];
 
@@ -187,7 +187,7 @@ function daily_tasks(): void
 
 /** Tabulky v pořadí, v jakém je lze obnovit (nejdřív ty, na které se ostatní odkazují). */
 const BACKUP_TABLES = ['users', 'units', 'user_units', 'posts', 'documents', 'post_documents', 'contacts', 'events', 'event_documents', 'forum_posts', 'tickets',
-    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log', 'surveys', 'survey_options', 'survey_answers', 'tasks', 'suppliers', 'unit_accounts', 'messages', 'ticket_files', 'event_presence', 'event_proxy_files', 'meeting_motions', 'meeting_votes'];
+    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log', 'surveys', 'survey_options', 'survey_answers', 'tasks', 'suppliers', 'unit_accounts', 'messages', 'ticket_files', 'event_presence', 'event_proxy_files', 'meeting_motions', 'meeting_votes', 'push_subs'];
 
 function backup_data(): array
 {

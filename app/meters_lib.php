@@ -186,6 +186,7 @@ function meter_notice_send(string $ym): int
             . "Najdete ji po přihlášení v části Odečty měřidel: " . absolute_url('/odecty') . "\n\nTuto zprávu posíláme každý měsíc, protože měřidla se odečítají na dálku (zákon č. 67/2013 Sb., § 8a).\n";
         $sent += send_mail($p['email'], 'Spotřeba za ' . $month . ' – ' . site('name'), $text) ? 1 : 0;
     }
+    push_notify(array_column($people, 'id'), site('name'), 'Spotřeba za ' . $month . ' je na webu.', '/odecty');
     meter_setting('meter_notice_' . $ym, date('Y-m-d H:i') . '|' . $sent);
     audit('meter_notice', 'informace o spotřebě za ' . $month . ' · odesláno ' . $sent . ' z ' . count($people));
     return $sent;

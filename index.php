@@ -201,7 +201,7 @@ if ($needsSetup && $PATH !== '/instalace') {
     redirect('/instalace');
 }
 // Uživatel s dočasným heslem si ho musí nejdřív změnit.
-if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '/odhlaseni'], true)) {
+if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '/odhlaseni', '/sw.js', '/apple-touch-icon.png', '/manifest.webmanifest'], true)) {
     flash('Přihlásili jste se dočasným heslem. Nastavte si prosím vlastní heslo.', 'info');
     redirect('/muj-ucet');
 }
@@ -320,6 +320,7 @@ require __DIR__ . '/app/routes_join.php';
 require __DIR__ . '/app/routes_meters.php';
 require __DIR__ . '/app/routes_presence.php';
 require __DIR__ . '/app/routes_help.php';
+require __DIR__ . '/app/routes_push.php';
 require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';
