@@ -409,6 +409,73 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_style', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
     'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent', 'privacy_text'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
+// ---------- Uvolnění místa: promazání starých příloh závad, zpráv a rozeslaných e-mailů ----------
+
+/** Co jde promazat a kolik toho je: druh => [název, popis, počet, bajtů]. Starší než $months měsíců. */
+function cleanup_candidates(int $months): array
+{
+    $before = date('Y-m-d H:i:s', strtotime('-' . $months . ' months'));
+    $size = function (array $files): int {
+        $sum = 0;
+        foreach ($files as $f) {
+            $sum += is_file(UPLOAD_DIR . '/' . $f) ? (int) filesize(UPLOAD_DIR . '/' . $f) : 0;
+        }
+        return $sum;
+    };
+    $ticketFiles = array_column(all("SELECT f.filename FROM ticket_files f JOIN tickets t ON t.id = f.ticket_id WHERE t.status = 'done' AND t.created_at < ?", [$before]), 'filename');
+    return [
+        'prilohy' => ['Přílohy vyřešených závad', 'Fotografie a soubory u závad a požadavků, které jsou vyřešené. Samotné hlášení i odpověď výboru zůstanou.', count($ticketFiles), $size($ticketFiles)],
+        'zpravy' => ['Zprávy mezi sousedy', 'Soukromé zprávy mezi účty na webu. Smažou se oběma stranám.', (int) val('SELECT COUNT(*) FROM messages WHERE created_at < ?', [$before]), 0],
+        'emaily' => ['Záznamy rozeslaných e-mailů', 'Texty hromadných e-mailů a přehled, kdo je otevřel. Do schránek vlastníků se nezasahuje.', (int) val('SELECT COUNT(*) FROM mailings WHERE sent_at < ?', [$before]), 0],
+    ];
+}
+$route('GET', '/admin/uvolnit-misto', function () {
+    require_admin();
+    $months = (int) ($_GET['mesice'] ?? 24);
+    $months = in_array($months, [6, 12, 24, 36], true) ? $months : 24;
+    $big = all('SELECT id, title, original_name, size, doc_date FROM documents WHERE filename IS NOT NULL ORDER BY size DESC LIMIT 10');
+    render('admin/cleanup', ['title' => 'Uvolnit místo', 'months' => $months, 'items' => cleanup_candidates($months), 'big' => $big,
+        'used' => plan_managed() ? plan_used('storage') : null, 'limit' => plan_managed() ? plan_limit('storage') : 0]);
+});
+$route('POST', '/admin/uvolnit-misto', function () {
+    require_admin();
+    $months = in_array((int) post('mesice'), [6, 12, 24, 36], true) ? (int) post('mesice') : 24;
+    $kind = post('co');
+    $before = date('Y-m-d H:i:s', strtotime('-' . $months . ' months'));
+    if (!isset($_POST['potvrdit'])) {
+        flash('Potvrďte prosím, že chcete vybrané záznamy nenávratně smazat.', 'error');
+        redirect('/admin/uvolnit-misto?mesice=' . $months);
+    }
+    $n = 0;
+    $freed = 0;
+    if ($kind === 'prilohy') {
+        foreach (all("SELECT f.id, f.filename FROM ticket_files f JOIN tickets t ON t.id = f.ticket_id WHERE t.status = 'done' AND t.created_at < ?", [$before]) as $f) {
+            $path = UPLOAD_DIR . '/' . basename((string) $f['filename']);
+            if (is_file($path)) {
+                $freed += (int) filesize($path);
+                @unlink($path);
+            }
+            q('DELETE FROM ticket_files WHERE id = ?', [$f['id']]);
+            $n++;
+        }
+    } elseif ($kind === 'zpravy') {
+        $n = (int) val('SELECT COUNT(*) FROM messages WHERE created_at < ?', [$before]);
+        q('DELETE FROM messages WHERE created_at < ?', [$before]);
+    } elseif ($kind === 'emaily') {
+        $ids = array_map('intval', array_column(all('SELECT id FROM mailings WHERE sent_at < ?', [$before]), 'id'));
+        if ($ids) {
+            q('DELETE FROM mailing_recipients WHERE mailing_id IN (' . implode(',', $ids) . ')');
+            q('DELETE FROM mailings WHERE id IN (' . implode(',', $ids) . ')');
+        }
+        $n = count($ids);
+    } else {
+        redirect('/admin/uvolnit-misto');
+    }
+    audit('cleanup', ['prilohy' => 'přílohy vyřešených závad', 'zpravy' => 'zprávy mezi sousedy', 'emaily' => 'záznamy rozeslaných e-mailů'][$kind] . ' starší než ' . $months . ' měsíců · smazáno ' . $n . ($freed ? ' · uvolněno ' . round($freed / 1048576, 1) . ' MB' : ''));
+    flash('Smazáno: ' . $n . ($freed ? '. Uvolněno ' . str_replace('.', ',', (string) round($freed / 1048576, 1)) . ' MB.' : '.'));
+    redirect('/admin/uvolnit-misto?mesice=' . $months);
+});
+
 $route('GET', '/admin/nastaveni', function () {
     require_admin();
     render('admin/settings', ['title' => 'Nastavení webu']);
@@ -678,7 +745,7 @@ const AUDIT_LABELS = [
     'login' => 'Přihlášení', 'login_failed' => 'Neúspěšné přihlášení', 'login_2fa_failed' => 'Chybný ověřovací kód', 'logout' => 'Odhlášení',
     'setup' => 'Vytvoření prvního správce', 'setup_code_failed' => 'Chybný instalační kód', 'password_changed' => 'Změna hesla', 'gdpr_export' => 'Export osobních údajů', 'gdpr_erasure' => 'Zrušení účtu na vlastní žádost',
     '2fa_enabled' => 'Zapnutí dvoufázového ověření', '2fa_disabled' => 'Vypnutí dvoufázového ověření', '2fa_reset' => 'Správce vypnul dvoufázové ověření',
-    'join_requested' => 'Žádost o přiřazení k jednotce', 'join_approved' => 'Schválení přiřazení k jednotce', 'join_rejected' => 'Zamítnutí přiřazení k jednotce', 'join_link' => 'Odkaz pro přiřazení k jednotce', 'support_login' => 'Vstup podpory provozovatele (jen pro čtení)', 'support_logout' => 'Odchod podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
+    'cleanup' => 'Uvolnění místa (promazání starých záznamů)', 'join_requested' => 'Žádost o přiřazení k jednotce', 'join_approved' => 'Schválení přiřazení k jednotce', 'join_rejected' => 'Zamítnutí přiřazení k jednotce', 'join_link' => 'Odkaz pro přiřazení k jednotce', 'support_login' => 'Vstup podpory provozovatele (jen pro čtení)', 'support_logout' => 'Odchod podpory provozovatele', 'user_created' => 'Založení účtu', 'user_updated' => 'Úprava účtu', 'user_deleted' => 'Smazání účtu', 'password_reset' => 'Nové dočasné heslo', 'password_reset_requested' => 'Žádost o nové heslo e-mailem', 'password_reset_done' => 'Nastavení nového hesla po zapomenutí',
     'settings_saved' => 'Změna nastavení', 'mailing_sent' => 'Rozeslání e-mailu', 'post_deleted' => 'Smazání aktuality', 'document_deleted' => 'Smazání dokumentu',
     'unit_deleted' => 'Smazání jednotky', 'users_imported' => 'Import uživatelů', 'units_imported' => 'Import jednotek z katastru', 'invite_sent' => 'Pozvánka člena domácnosti', 'invite_accepted' => 'Přijetí pozvánky', 'session_expired' => 'Odhlášení po nečinnosti',
 ];

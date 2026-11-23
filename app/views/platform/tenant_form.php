@@ -11,7 +11,7 @@
   <?php endif ?>
   <?php if (!$new): ?>
   <nav class="tenant-jump" aria-label="Části stránky">
-    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
   </nav>
   <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
   <details class="card tenant-users" id="uzivatele" open>
@@ -29,6 +29,14 @@
     <p class="hint">Jen přehled účtů pro podporu. Obsah webu (aktuality, dokumenty, zprávy) se tu nezobrazuje; nahlédnout do něj jde jen přes režim podpory níže, který se zapisuje do záznamů společenství.</p>
   </details>
   <?php endif ?>
+  <?php endif ?>
+  <?php if (!empty($externalDocs)): ?>
+  <section class="card card-alert" id="soubory">
+    <h2>Převod souborů není dokončený</h2>
+    <p><strong><?= $externalDocs ?> dokumentů</strong> je na webu jen jako odkaz na soubor na starém webu. Až společenství starý web zruší (což může udělat kdykoli – myslí si, že je převod hotový), dokumenty přestanou fungovat. Stáhněte je na náš server.</p>
+    <form method="post" action="<?= url('/svj/' . $t['slug'] . '/soubory') ?>"><?= csrf_field() ?><button class="btn" type="submit">Stáhnout soubory ze starého webu</button></form>
+    <p class="hint">Jedno kliknutí stahuje zhruba minutu a půl; u velkých webů klikněte opakovaně. Soubory, které starý web už nevydá, je potřeba získat od společenství a nahrát ručně – do té doby převod nejde označit jako hotový.</p>
+  </section>
   <?php endif ?>
   <?php if (!empty($usage)): ?>
   <section class="card usage-report" id="vyuziti">

@@ -159,6 +159,10 @@ if ($PATH === '/svj/nove') {
         }
         if (!$errors) {
             tenant_create($t);
+            if ($t['seed'] === 'tabor') {
+                @set_time_limit(150);
+                import_external_files_into(tenant_pdo($t['slug']), tenant_storage($t['slug']) . '/uploads', 500, 100);
+            }
             platform_log('Založení společenství', $t['slug'] . ' · ' . $t['name']);
             flash('Web společenství je založen. Předejte jeho výboru adresu a instalační kód, nebo mu rovnou vytvořte účet správce.');
             redirect('/svj/' . $t['slug']);
@@ -168,7 +172,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -235,6 +239,10 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     }
     if ($METHOD === 'POST' && $action === '/prevod') {
         $m = migration_row($slug);
+        if ($m && $m['status'] === 'paid' && post('do') === 'done' && ($still = external_doc_count(tenant_pdo($slug)))) {
+            flash('Převod nejde označit jako hotový: ' . $still . ' dokumentů je pořád jen odkazem na starý web. Nejdřív je stáhněte (tlačítko „Stáhnout soubory“).', 'error');
+            redirect('/svj/' . $slug . '#soubory');
+        }
         if ($m && $m['status'] === 'paid' && post('do') === 'done') {
             pq("UPDATE migrations SET status = 'done', done_at = ?, done_note = ? WHERE id = ?", [date('Y-m-d H:i:s'), mb_substr(trim(post('done_note')), 0, 500), $m['id']]);
             platform_log('Převod obsahu dokončen', $slug . ' · ' . $m['url']);
@@ -271,6 +279,15 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
         }
         redirect('/svj/' . $slug);
     }
+    // Dotažení souborů ze starého webu: dokud nejsou na našem serveru, převod není hotový.
+    if ($METHOD === 'POST' && $action === '/soubory') {
+        @set_time_limit(150);
+        [$done, $failed, $left] = import_external_files_into(tenant_pdo($slug), tenant_storage($slug) . '/uploads', 500, 100);
+        $still = external_doc_count(tenant_pdo($slug));
+        platform_log('Stažení souborů ze starého webu', $slug . ' · staženo ' . $done . ', nepodařilo se ' . $failed . ', zbývá ' . $still);
+        flash('Staženo souborů: ' . $done . ($failed ? ', nepodařilo se: ' . $failed : '') . '. ' . ($still ? 'Zbývá ' . $still . ' – klikněte znovu.' . ($failed ? ' Soubory, které se opakovaně nedaří stáhnout, je potřeba získat od společenství a nahrát ručně.' : '') : 'Všechny dokumenty jsou uložené na našem serveru.'), $still ? 'info' : 'ok');
+        redirect('/svj/' . $slug . '#soubory');
+    }
     if ($METHOD === 'POST' && $action === '/import') {
         $f = $_FILES['file'] ?? null;
         $data = $f && ($f['error'] ?? 1) === UPLOAD_ERR_OK && $f['size'] <= 5 * 1048576 ? json_decode((string) file_get_contents($f['tmp_name']), true) : null;
@@ -282,8 +299,12 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
             $ts = tenant_settings($slug);
             pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ? WHERE slug = ?',
                 [$ts['site_name'] ?? $t['name'], $ts['site_title'] ?? $t['title'], $ts['site_accent'] ?? $t['accent'], $ts['site_tagline'] ?? $t['tagline'], $ts['site_full'] ?? $t['full'], $ts['address'] ?? $t['address'], $slug]);
-            platform_log('Import obsahu', $slug . ' · aktualit ' . $result['posts'] . ', dokumentů ' . $result['documents'] . ', kontaktů ' . $result['contacts']);
-            flash('Naimportováno: ' . $result['posts'] . ' aktualit, ' . $result['documents'] . ' dokumentů a ' . $result['contacts'] . ' kontaktů. Dokumenty zatím odkazují na původní web; správce společenství je stáhne v administraci na stránce Přehled.');
+            // Soubory se stáhnou hned – převzatý dokument nesmí zůstat odkazem na starý web.
+            @set_time_limit(150);
+            [$got, $bad] = import_external_files_into(tenant_pdo($slug), tenant_storage($slug) . '/uploads', 500, 100);
+            $still = external_doc_count(tenant_pdo($slug));
+            platform_log('Import obsahu', $slug . ' · aktualit ' . $result['posts'] . ', dokumentů ' . $result['documents'] . ', kontaktů ' . $result['contacts'] . ' · staženo souborů ' . $got . ($still ? ', zbývá ' . $still : ''));
+            flash('Naimportováno: ' . $result['posts'] . ' aktualit, ' . $result['documents'] . ' dokumentů a ' . $result['contacts'] . ' kontaktů. Staženo souborů: ' . $got . '.' . ($still ? ' Zbývá stáhnout ' . $still . ' souborů – dokončete to tlačítkem „Stáhnout soubory“ níže; do té doby převod není hotový.' : ' Všechny soubory jsou uložené na našem serveru.'), $still ? 'info' : 'ok');
         }
         redirect('/svj/' . $slug);
     }
@@ -373,7 +394,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
-        'usage' => tenant_usage_report($t),
+        'usage' => tenant_usage_report($t), 'externalDocs' => is_dir(tenant_storage($slug)) ? external_doc_count(tenant_pdo($slug)) : 0,
         'tenantUsers' => (function () use ($slug) {
             // Přehled účtů webu pro podporu: kdo tam je, s jakou rolí a kdy se naposledy přihlásil. Obsah webu se tu neukazuje.
             $pdo = tenant_pdo($slug);

@@ -1419,3 +1419,10 @@ html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { b
 .usage-facts dt { font-weight: 600; color: var(--muted); }
 .usage-facts dd { margin: 0; }
 @media (max-width: 600px) { .usage-facts { grid-template-columns: 1fr; } .usage-facts dd { margin-bottom: .4rem; } }
+
+/* Uvolnění místa */
+.cleanup-age { margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: .5rem; align-items: end; }
+.cleanup-age label { display: grid; gap: .3rem; font-weight: 600; }
+.cleanup-list { display: grid; gap: 1rem; margin-bottom: 2rem; }
+.cleanup-item h2 { margin: 0 0 .3rem; font-size: 1.2rem; }
+.cleanup-form { display: flex; flex-wrap: wrap; gap: .6rem 1rem; align-items: center; }

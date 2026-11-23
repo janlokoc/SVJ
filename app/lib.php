@@ -847,13 +847,29 @@ function http_download(string $url): ?string
     $data = @file_get_contents($url);
     return $data === false ? null : $data;
 }
-/** Stáhne soubory, které zatím leží jen na starém webu, do úložiště nového webu. Vrací [staženo, chyb, zbývá]. */
+/** Stáhne soubory, které zatím leží jen na starém webu, do úložiště tohoto webu. Vrací [staženo, chyb, zbývá]. */
 function import_external_files(int $limit): array
 {
+    return import_external_files_into(db(), UPLOAD_DIR, $limit);
+}
+/**
+ * Totéž pro libovolnou databázi a složku (konzole platformy stahuje za společenství).
+ * Převzatý dokument nesmí zůstat jen odkazem na starý web – ten může kdykoli zaniknout.
+ * $seconds omezí, jak dlouho se stahuje v jednom požadavku (0 = bez omezení, jen podle $limit).
+ */
+function import_external_files_into(PDO $pdo, string $uploadDir, int $limit, int $seconds = 0): array
+{
     $done = $failed = 0;
-    $rows = all("SELECT id, external_url, original_name FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%' ORDER BY id LIMIT " . (int) $limit);
+    $start = time();
+    if (!is_dir($uploadDir)) {
+        @mkdir($uploadDir, 0775, true);
+    }
+    $rows = $pdo->query("SELECT id, external_url, original_name FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%' ORDER BY id LIMIT " . (int) $limit)->fetchAll(PDO::FETCH_ASSOC);
     foreach ($rows as $r) {
-        $ext = strtolower(pathinfo($r['original_name'], PATHINFO_EXTENSION));
+        if ($seconds > 0 && time() - $start >= $seconds) {
+            break;
+        }
+        $ext = strtolower(pathinfo($r['original_name'] ?: (string) parse_url($r['external_url'], PHP_URL_PATH), PATHINFO_EXTENSION));
         $data = in_array($ext, ALLOWED_EXT, true) ? http_download($r['external_url']) : null;
         if (($data === null || $data === '') && in_array($ext, ALLOWED_EXT, true)) {
             // Některé soubory má původní web uložené pod názvem bez diakritiky, i když na ně odkazuje s diakritikou.
@@ -865,21 +881,26 @@ function import_external_files(int $limit): array
         }
         if ($data === null || $data === '') {
             $failed++;
-            q("UPDATE documents SET external_url = replace(external_url, 'https://', 'https-failed://') WHERE id = ?", [$r['id']]);
+            $pdo->prepare("UPDATE documents SET external_url = replace(external_url, 'https://', 'https-failed://') WHERE id = ?")->execute([$r['id']]);
             continue;
         }
         $name = bin2hex(random_bytes(16)) . '.' . $ext;
-        file_put_contents(UPLOAD_DIR . '/' . $name, $data);
-        q('UPDATE documents SET filename = ?, size = ?, external_url = NULL WHERE id = ?', [$name, strlen($data), $r['id']]);
+        file_put_contents($uploadDir . '/' . $name, $data);
+        $pdo->prepare('UPDATE documents SET filename = ?, size = ?, external_url = NULL WHERE id = ?')->execute([$name, strlen($data), $r['id']]);
         $done++;
     }
     // Neúspěšné se odloží, dokud se nevyzkouší všechny ostatní – jinak by se pořád dokola zkoušely tytéž nedostupné soubory.
     // Teprve když nezbývá nic nevyzkoušeného, vrátí se zpět a příští spuštění je zkusí znovu.
-    $untried = (int) val("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%'");
+    $untried = (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url LIKE 'https://%'")->fetchColumn();
     if ($untried === 0) {
-        q("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
+        $pdo->exec("UPDATE documents SET external_url = replace(external_url, 'https-failed://', 'https://') WHERE external_url LIKE 'https-failed://%'");
     }
     return [$done, $failed, $untried];
+}
+/** Kolik dokumentů je pořád jen odkazem na cizí web (převod souborů není dokončený). */
+function external_doc_count(PDO $pdo): int
+{
+    return (int) $pdo->query("SELECT COUNT(*) FROM documents WHERE filename IS NULL AND (external_url LIKE 'https://%' OR external_url LIKE 'https-failed://%' OR external_url LIKE 'http://%')")->fetchColumn();
 }
 function strip_accents(string $s): string
 {

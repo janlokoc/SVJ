@@ -306,7 +306,7 @@ function tenant_usage_report(array $t): array
     $active30 = (int) $one('SELECT COUNT(*) FROM users WHERE active = 1 AND last_login_at >= ?', [date('Y-m-d', strtotime('-30 days'))]);
     $lastLogin = (string) $one('SELECT MAX(last_login_at) FROM users');
     // Dokumenty převzaté ze starého webu bývají jen odkazem na soubor tam – na tomto serveru místo nezabírají.
-    $external = (int) $one('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL');
+    $external = external_doc_count($pdo);
     $stored = (int) $one('SELECT COUNT(*) FROM documents WHERE filename IS NOT NULL');
     $facts = [
         'Úložiště podle druhu' => 'dokumenty ' . $mb($bytes['documents']) . ' MB · přílohy závad ' . $mb($bytes['tickets']) . ' MB · ostatní (logo, náhledy) ' . $mb($bytes['other']) . ' MB',
@@ -327,7 +327,7 @@ function tenant_usage_report(array $t): array
         $verdict[] = ['warn', 'Blíží se limitu (80 % a víc): ' . implode(', ', array_map(fn($l) => $l[0] . ' ' . $l[4] . ' %', $near)) . '.'];
     }
     if ($external) {
-        $verdict[] = ['warn', $external . ' dokumentů je jen odkazem na soubory na starém webu, proto se do úložiště nepočítají. Po zrušení starého webu přestanou fungovat – správce je stáhne na přehledu administrace („Převod souborů ze starého webu“).'];
+        $verdict[] = ['bad', 'Převod není dokončený: ' . $external . ' dokumentů je jen odkazem na soubory na starém webu (proto se nepočítají do úložiště). Po zrušení starého webu přestanou fungovat – stáhněte je tlačítkem „Stáhnout soubory ze starého webu“.'];
     }
     if ($lastLogin === '' || $lastLogin < date('Y-m-d', strtotime('-60 days'))) {
         $verdict[] = ['warn', 'Na web se přes 60 dní nikdo nepřihlásil – web možná nepoužívají.'];

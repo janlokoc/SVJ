@@ -692,6 +692,30 @@ administrace hostingu (phpMyAdmin).
 - **Ukázka:** v liště i na rozcestníku jde přepnout edici Zdarma / Standard /
   Premium (jen pro danou návštěvu), takže je vidět, co která edice umí.
 
+## Převod souborů ze starého webu
+
+Převzatý dokument nesmí zůstat jen odkazem na soubor na starém webu – ten
+může společenství kdykoli zrušit v domnění, že je převod hotový. Proto:
+
+- Import obsahu v konzoli (`/svj/<adresa>/import`) i založení společenství
+  s obsahem Táboru soubory **hned stáhnou** na náš server
+  (`import_external_files_into()`, nejvýše ~100 s na jedno kliknutí).
+- Pokud něco zbude, je na stránce společenství v konzoli karta
+  **Převod souborů není dokončený** s tlačítkem *Stáhnout soubory ze starého
+  webu*; report využití to hlásí jako problém.
+- Převod objednaný společenstvím nejde označit jako hotový, dokud je nějaký
+  dokument jen odkazem.
+- Správce společenství vidí v Nastavení webu upozornění „Starý web zatím
+  nerušte“ a soubory může stáhnout i sám na přehledu administrace.
+
+## Uvolnění místa
+
+Správce společenství najde v Nastavení webu u úložiště tlačítko **Uvolnit
+místo** (`/admin/uvolnit-misto`). Může promazat záznamy starší než půl roku,
+1, 2 nebo 3 roky: přílohy vyřešených závad (hlášení samo zůstane), zprávy
+mezi sousedy a záznamy rozeslaných e-mailů. Smazání se potvrzuje a zapíše do
+Záznamů. Dokumenty se samy nemažou; stránka ukáže deset největších.
+
 ## Struktura
 
 ```
