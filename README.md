@@ -139,7 +139,7 @@ běhu na vlastním počítači bez SMTP a ve zkušebním prostředí bez
 
 Od 1. 1. 2027 musí být měřiče tepla, teplé vody a indikátory topných
 nákladů odečitatelné na dálku (zákon 406/2000 Sb., § 7 odst. 11–12) a
-obyvatelé mají každý měsíc dostat informaci o spotřebě (vyhláška
+obyvatelé mají každý měsíc dostat informaci o spotřebě (zákon
 67/2013 Sb., § 8a). Studená voda povinná není.
 
 V Administraci → Odečty měřidel → **Dálkové odečty a import**:

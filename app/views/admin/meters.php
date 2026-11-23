@@ -1,5 +1,5 @@
 <?php /* Dálkové odečty: $remote, $prev, $withData, $units, $bySource, $notices, $apiUrl, $preview */
-$prevName = month_name((int) substr($prev, 5, 2)) . ' ' . substr($prev, 0, 4); ?>
+$prevName = month_label($prev); ?>
 <div class="wrap page narrow">
   <p><a href="<?= url('/admin/odecty') ?>">← Odečty měřidel</a></p>
   <header class="page-head"><h1>Dálkové odečty</h1>
@@ -59,7 +59,7 @@ $prevName = month_name((int) substr($prev, 5, 2)) . ' ' . substr($prev, 0, 4); ?
     <p>Obyvatelé vidí spotřebu po měsících na stránce Odečty měřidel. Zákon (67/2013 Sb., § 8a) žádá, aby o ní každý měsíc prokazatelně věděli – proto jim web pošle e-mail s odkazem.</p>
     <form method="post" action="<?= url('/admin/odecty/dalkove') ?>" class="inline-form"><?= csrf_field() ?><input type="hidden" name="do" value="notice"><input type="hidden" name="mesic" value="<?= e($prev) ?>">
       <button class="btn<?= isset($notices[$prev]) ? ' btn-ghost' : '' ?>" type="submit"><?= isset($notices[$prev]) ? 'Poslat znovu' : 'Poslat upozornění' ?> za <?= e($prevName) ?></button></form>
-    <?php if ($notices): ?><table class="table"><thead><tr><th>Měsíc</th><th>Odesláno</th><th>Kdy</th></tr></thead><tbody><?php foreach ($notices as $ym => [$when, $n]): ?><tr><td data-label="Měsíc"><?= e(month_name((int) substr($ym, 5, 2)) . ' ' . substr($ym, 0, 4)) ?></td><td data-label="Odesláno"><?= (int) $n ?> e-mailů</td><td data-label="Kdy"><?= e(cz_datetime($when)) ?></td></tr><?php endforeach ?></tbody></table><?php endif ?>
+    <?php if ($notices): ?><table class="table"><thead><tr><th>Měsíc</th><th>Odesláno</th><th>Kdy</th></tr></thead><tbody><?php foreach ($notices as $ym => [$when, $n]): ?><tr><td data-label="Měsíc"><?= e(month_label($ym)) ?></td><td data-label="Odesláno"><?= (int) $n ?> e-mailů</td><td data-label="Kdy"><?= e(cz_datetime($when)) ?></td></tr><?php endforeach ?></tbody></table><?php endif ?>
   </section>
   <p class="hint">Údaje o zákonech jsou shrnutí; přesné povinnosti a lhůty si ověřte u odečtové firmy nebo správce domu.</p>
 </div>

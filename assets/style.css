@@ -1505,15 +1505,15 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 [data-site="sluzba"] .lpx-hero h1 { font-size: clamp(2.4rem, 1.4rem + 3.4vw, 3.8rem); line-height: 1.02; letter-spacing: -.015em; margin: 0 0 1.1rem; max-width: 14ch; }
 .lpx-lead { font-size: 1.22rem; color: var(--muted); margin: 0; max-width: 36ch; }
 .lpx-hero .actions { margin: 1.8rem 0 0; }
-.lpx-devices { position: relative; padding: 0 0 4.5rem 2.5rem; }
+.lpx-devices { position: relative; padding: 0 0 7.5rem 2.5rem; }
 .lpx-browser { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(16, 24, 34, .4); }
 .lpx-bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
 .lpx-bar i { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 45%, transparent); }
 .lpx-bar span { margin-left: 10px; font-size: .75rem; color: var(--muted); background: var(--surface); border-radius: 5px; padding: 1px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lpx-browser img, .lpx-tablet img, .lpx-phone img, .lpx-shot img { display: block; width: 100%; height: auto; }
 .lpx-tablet, .lpx-phone { position: absolute; background: #161c24; box-shadow: 0 26px 50px -18px rgba(16, 24, 34, .55); overflow: hidden; }
-.lpx-tablet { left: 0; bottom: 0; width: 34%; padding: 9px; border-radius: 20px; }
-.lpx-tablet img { border-radius: 10px; aspect-ratio: 820 / 1000; object-fit: cover; object-position: top; }
+.lpx-tablet { left: 0; bottom: 0; width: 50%; padding: 10px; border-radius: 18px; }
+.lpx-tablet img { border-radius: 8px; aspect-ratio: 1180 / 820; object-fit: cover; object-position: top; }
 .lpx-phone { right: -1rem; bottom: 1rem; width: 23%; padding: 6px; border-radius: 26px; }
 .lpx-phone img { border-radius: 20px; }
 .lpx-section { padding: clamp(3rem, 2rem + 4vw, 5.5rem) 0; border-top: 1px solid var(--line); }
@@ -1559,3 +1559,14 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
   .lpx-phone { right: 0; }
 }
 @media (max-width: 560px) { .lpx-tablet { display: none; } .lpx-devices { padding: 0 0 2.5rem; } .lpx-phone { width: 30%; } }
+
+/* Úvodní stránka: dálkové odečty */
+.lpx-law { display: inline-block; background: var(--accent-soft); color: var(--accent); padding: .2rem .6rem; border-radius: 4px; }
+.lpx-auto { list-style: none; counter-reset: a; padding: 0; margin: 1.4rem 0 1rem; display: grid; gap: .8rem; }
+.lpx-auto li { counter-increment: a; position: relative; padding-left: 2.6rem; color: var(--muted); }
+.lpx-auto li strong { color: var(--ink); }
+.lpx-auto li::before { content: counter(a); position: absolute; left: 0; top: .05rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-weight: 700; display: grid; place-items: center; font-size: .95rem; }
+.lpx-fineprint { font-size: .9rem; color: var(--muted); }
+.lpx-meter-media { position: relative; padding: 0 2.5rem 3rem 0; }
+.lpx-meter-media .lpx-phone { right: 0; bottom: 0; width: 34%; }
+@media (max-width: 560px) { .lpx-meter-media { padding: 0 0 2.5rem; } .lpx-meter-media .lpx-phone { width: 40%; } }

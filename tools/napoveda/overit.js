@@ -52,7 +52,9 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
 
 (async () => {
   fs.writeFileSync(path.join(STORE, 'config.php'), "<?php\nreturn ['platform' => ['domain' => 'localhost']];\n");
-  const server = spawn('php', ['-d', 'sendmail_path=true', '-S', `127.0.0.1:${PORT}`, 'index.php'], { cwd: ROOT, env, stdio: 'ignore' });
+  // E-maily se neposílají ven – zapíšou se do souboru, ať jde ověřit i jejich obsah.
+  const MAIL = path.join(STORE, 'mail.log'); fs.writeFileSync(path.join(STORE, 'mail.sh'), `#!/bin/sh\ncat >> '${MAIL}'\n`, { mode: 0o755 });
+  const server = spawn('php', ['-d', `sendmail_path=${path.join(STORE, 'mail.sh')}`, '-S', `127.0.0.1:${PORT}`, 'index.php'], { cwd: ROOT, env, stdio: 'ignore' });
   const b = await chromium.launch();
   try {
     for (let i = 0; i < 50; i++) { try { await new Promise((ok, ko) => http.get(`${BASE}/`, (r) => { r.resume(); ok(); }).on('error', ko)); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
@@ -162,6 +164,38 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     fs.writeFileSync(path.join(OUT, 'api-ukazka.json'), JSON.stringify({ unit, jsonRequest: jsonReq, jsonResponse: JSON.stringify(JSON.parse(r1.body), null, 2), csvRequest: csvReq, csvResponse: JSON.stringify(JSON.parse(r2.body), null, 2), badStatus: r3.status, badResponse: r3.body }, null, 2) + '\n');
     await owner.goto(T + '/odecty');
     const ot = await text(owner); check(ot.includes('Spotřeba po měsících') && ot.includes('dálkový odečet'), 'obyvatel vidí dálkový odečet'); step('Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“.');
+    // Data za celé měsíce: stavy ke konci posledních tří měsíců (teplá voda a indikátory topení) → měsíční spotřeba.
+    const endOf = (back) => { const d = new Date(); const x = new Date(d.getFullYear(), d.getMonth() - back + 1, 0); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+    const series = [[3, 38.10, 1210], [2, 40.35, 1302], [1, 42.80, 1388]].flatMap(([m, tv, itn]) => [{ unit, meter_no: 'TV-104233', kind: 'tv', amount: tv, date: endOf(m) }, { unit, meter_no: 'ITN-5521', kind: 'itn', amount: itn, date: endOf(m) }]);
+    const r5 = await post(api, JSON.stringify(series), 'application/json');
+    check(r5.status === 200 && JSON.parse(r5.body).errors.length === 0, 'stavy za tři měsíce přijaty');
+    await owner.goto(T + '/odecty');
+    const mt = await text(owner, '.meter-monthly');
+    check(mt.includes('2,45') && mt.includes('86 dílků'), 'měsíční spotřeba spočítaná ze stavů'); step('Ze stavů na konci měsíců web spočítal měsíční spotřebu (teplá voda 2,45 m³, indikátory 86 dílků).');
+    await admin.goto(T + '/admin/odecty/dalkove');
+    await admin.click('#upozorneni button[type=submit]');
+    const fl = await text(admin, 'main'); check(/Upozornění/.test(fl), 'měsíční upozornění odesláno: ' + fl.slice(0, 120));
+    const ml = fs.existsSync(MAIL) ? fs.readFileSync(MAIL, 'utf8') : ''; check(ml.includes('petr.novak@example.cz') || ml.includes('marie.novakova@example.cz'), 'e-mail s upozorněním vlastníkovi');
+    // Automatické upozornění: zapnout, „zapomenout“ ruční odeslání a nechat proběhnout denní úlohu webu.
+    await admin.check('#nastaveni [name=auto]'); await admin.click('#nastaveni button[type=submit]');
+    const ym = await admin.inputValue('#upozorneni [name=mesic]');
+    run(`DELETE FROM settings WHERE key IN ('meter_notice_${ym}', 'last_daily')`);
+    const before = fs.readFileSync(MAIL, 'utf8').length;
+    await owner.goto(T + '/');
+    const auto = fs.readFileSync(MAIL, 'utf8').slice(before);
+    check(new Date().getDate() < 5 || /To: .*(petr\.novak|marie\.novakova)@example\.cz/.test(auto), 'automatické měsíční upozornění odešlo samo');
+    check(new Date().getDate() < 5 || sql(`SELECT value FROM settings WHERE key = 'meter_notice_${ym}'`) !== '', 'automatické upozornění zaznamenané: ' + sql("SELECT group_concat(key || '=' || value) FROM settings WHERE key LIKE 'meter%' OR key = 'last_daily'"));
+    step('Se zapnutým automatickým upozorněním odešel e-mail obyvatelům sám při denní úloze webu (od 5. dne v měsíci, jednou za měsíc).');
+    {
+      const LPd = path.join(ROOT, 'assets/landing'); fs.mkdirSync(LPd, { recursive: true });
+      const ph = await (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(ph, who.owner); await ph.goto(T + '/odecty');
+      await ph.evaluate(() => { document.querySelectorAll('body *').forEach((el) => { const p = getComputedStyle(el).position; if (p === 'sticky' || p === 'fixed') el.style.position = 'static'; }); const m = document.querySelector('.meter-monthly'); window.scrollTo(0, m.getBoundingClientRect().top + window.scrollY - 70); });
+      await ph.screenshot({ path: path.join(LPd, 'odecty-telefon.jpg'), type: 'jpeg', quality: 74 });
+      const ad = await (await b.newContext({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 1.5, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(ad, who.admin); await ad.goto(T + '/admin/odecty/dalkove');
+      await ad.$eval('#prijem input', (x) => { x.value = x.value.replace(/[a-f0-9]{40}$/, '••••••••••••••••'); });
+      await ad.evaluate(() => document.querySelectorAll('body *').forEach((el) => { const p = getComputedStyle(el).position; if (p === 'sticky' || p === 'fixed') el.style.position = 'static'; }));
+      await shot(ad.locator('main'), 'odecty-sprava.jpg', 700, LPd);
+    }
 
     // ---------- Snímky pro úvodní stránku služby (assets/landing) ----------
     const LP = path.join(ROOT, 'assets/landing'); fs.mkdirSync(LP, { recursive: true });
@@ -171,8 +205,11 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const adm = await desk(who.admin); await adm.goto(T + '/admin'); await lpShot(adm, 'administrace.jpg');
     const phone = await (await b.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(phone, who.owner); await phone.goto(T + '/'); await lpShot(phone, 'telefon.jpg');
     // Tablet: výbor na shromáždění odklikává prezenci na iPadu.
+    // iPad na ležato (1180 × 820): prezence se součtem podílů.
+    const tabL = await (await b.newContext({ viewport: { width: 1180, height: 820 }, deviceScaleFactor: 1.5, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(tabL, who.admin);
+    await tabL.goto(T + `/admin/terminy/${evId}/prezence-na-miste`); await tabL.evaluate(() => { const h = document.querySelector('.page-head h1'); window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 90); }); await tabL.screenshot({ path: path.join(LP, 'tablet.jpg'), type: 'jpeg', quality: 72 });
     const tab = await (await b.newContext({ viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1.5, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(tab, who.admin);
-    await tab.goto(T + `/admin/terminy/${evId}/prezence-na-miste`); await tab.evaluate(() => { const h = document.querySelector('.page-head'); window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 80); }); await tab.screenshot({ path: path.join(LP, 'tablet.jpg'), type: 'jpeg', quality: 72 });
+    await tab.goto(T + `/admin/terminy/${evId}/prezence-na-miste`);
     // Krok 1 na úvodní stránce: součet podílů a první jednotky v čitelné velikosti (výřez z tabletu).
     await tab.evaluate(() => document.querySelectorAll('body *').forEach((el) => { const p = getComputedStyle(el).position; if (p === 'sticky' || p === 'fixed') el.style.position = 'static'; }));
     const bar = await tab.locator('.presence-bar').boundingBox(); await tab.evaluate((y) => window.scrollTo(0, y + window.scrollY - 16), bar.y);

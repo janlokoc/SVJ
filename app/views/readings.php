@@ -9,7 +9,7 @@
     <?php if (!$monthly): ?><p class="empty">Zatím tu nejsou data za celý měsíc. Objeví se, jakmile je pošle odečtová firma.</p><?php else: ?>
     <table class="table"><thead><tr><th>Měsíc</th><th>Měřidlo</th><th>Spotřeba</th><th>Stav na konci měsíce</th></tr></thead><tbody>
       <?php foreach ($monthly as $ym => $items): foreach ($items as $i => [$unitId, $kind, $meter, $use, $state]): ?><tr>
-        <td data-label="Měsíc"><?= $i === 0 ? e(month_name((int) substr($ym, 5, 2)) . ' ' . substr($ym, 0, 4)) : '' ?></td>
+        <td data-label="Měsíc"><?= $i === 0 ? e(month_label($ym)) : '' ?></td>
         <td data-label="Měřidlo"><?= e(READING_KINDS[$kind] ?? $kind) ?><?= count($units) > 1 ? ' · ' . e($units[$unitId] ?? '') : '' ?><?= $meter !== '' ? ' <small class="muted">č. ' . e($meter) . '</small>' : '' ?></td>
         <td data-label="Spotřeba"><strong><?= e(str_replace('.', ',', (string) round($use, 3))) ?></strong> <?= $kind === 'itn' ? 'dílků' : (in_array($kind, ['sv', 'tv', 'plyn'], true) ? 'm³' : ($kind === 'el' ? 'kWh' : '')) ?></td>
         <td data-label="Stav na konci měsíce"><?= e(str_replace('.', ',', (string) $state)) ?></td></tr><?php endforeach; endforeach ?>

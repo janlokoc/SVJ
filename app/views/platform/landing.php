@@ -48,6 +48,28 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
   </div>
 </section>
 
+<section class="lpx-section lpx-meters" id="odecty">
+  <div class="wrap">
+    <div class="lpx-row">
+      <div class="lpx-row-text">
+        <p class="lpx-eyebrow lpx-law">Povinné od 1. 1. 2027</p>
+        <h2>Dálkové odečty a měsíční informace o spotřebě – automaticky</h2>
+        <p>Od 1. ledna 2027 musí jít měřiče tepla, teplé vody a indikátory topných nákladů odečíst na dálku, bez vstupu do bytu (zákon č. 406/2000 Sb., o hospodaření energií, § 7 odst. 11 a 12). Kde se odečítá na dálku, musí obyvatelé <strong>každý měsíc prokazatelně dostat informaci o své spotřebě</strong> (zákon č. 67/2013 Sb., § 8a).</p>
+        <ol class="lpx-auto">
+          <li><strong>Data přijdou sama.</strong> Odečtová firma posílá stavy měřidel na adresu Vašeho webu – nebo nahrajete její soubor.</li>
+          <li><strong>Spotřeba se spočítá sama.</strong> Obyvatel vidí v telefonu spotřebu po měsících u každého měřidla.</li>
+          <li><strong>Upozornění odejde samo.</strong> Každý měsíc dostanou obyvatelé e-mail a web si zaznamená, komu a kdy odešel.</li>
+        </ol>
+        <p class="lpx-fineprint">Shrnutí povinností, ne právní rada. Studená voda povinná není. Data o spotřebě dodává odečtová firma – web je přijme, ukáže a obyvatele upozorní.</p>
+      </div>
+      <div class="lpx-row-media lpx-meter-media">
+        <?= $browser('odecty-sprava.jpg', 'Dálkové odečty v administraci: stav za minulý měsíc a nastavení', '') ?>
+        <div class="lpx-phone"><?= $img('odecty-telefon.jpg', 'Spotřeba po měsících v telefonu obyvatele') ?></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="lpx-section">
   <div class="wrap">
     <div class="lpx-row">

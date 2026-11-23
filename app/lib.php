@@ -651,6 +651,13 @@ function flash(?string $msg = null, string $type = 'ok'): ?array
 }
 
 const MONTHS = ['', 'ledna', 'února', 'března', 'dubna', 'května', 'června', 'července', 'srpna', 'září', 'října', 'listopadu', 'prosince'];
+const MONTHS_NOM = ['', 'leden', 'únor', 'březen', 'duben', 'květen', 'červen', 'červenec', 'srpen', 'září', 'říjen', 'listopad', 'prosinec'];
+/** Měsíc jako období („říjen 2026“, „za říjen 2026“) – na rozdíl od month_name(), která je pro data („3. října“). */
+function month_label(string $ym): string
+{
+    $n = (int) substr($ym, 5, 2);
+    return (current_lang() === 'cs' || !page_translatable() ? (MONTHS_NOM[$n] ?? '') : month_name($n)) . ' ' . substr($ym, 0, 4);
+}
 const MONTHS_SHORT = ['', 'led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
 const WEEKDAYS = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
 
@@ -1780,6 +1787,7 @@ require_once __DIR__ . '/plan_lib.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';
 require_once __DIR__ . '/ai_lib.php';
+require_once __DIR__ . '/meters_lib.php';
 require_once __DIR__ . '/extra_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string
