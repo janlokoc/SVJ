@@ -26,7 +26,8 @@
         <p class="note">Účast potvrzuje vlastník za svou jednotku. K Vašemu účtu zatím není přiřazena žádná jednotka, nebo nejste vedeni jako vlastník – obraťte se prosím na výbor.</p>
       <?php endif ?>
       <?php foreach ($mine as $un): ?>
-        <form method="post" action="<?= url('/terminy/' . $ev['id'] . '/ucast') ?>" class="card rsvp-card">
+        <div class="card rsvp-card" id="j<?= $un['id'] ?>">
+        <form method="post" action="<?= url('/terminy/' . $ev['id'] . '/ucast') ?>">
           <?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $un['id'] ?>">
           <h3>Jednotka <?= e(unit_name($un)) ?></h3>
           <?php if ($un['status']): ?><p class="rsvp-current">Zaznamenáno: <strong><?= RSVP[$un['status']] ?></strong><?= $un['responder'] ? ' <small>(' . e($un['responder']) . ')</small>' : '' ?></p><?php endif ?>
@@ -40,6 +41,25 @@
           <?php endif ?>
           <?php if ($un['status'] === 'proxy'): ?><p><a class="more" href="<?= url('/terminy/' . $ev['id'] . '/plna-moc?jednotka=' . $un['id']) ?>">Vytisknout plnou moc<?= !empty($un['proxy_name']) ? ' pro: ' . e($un['proxy_name']) : '' ?> <?= icon('arrow') ?></a></p><?php endif ?>
         </form>
+        <?php if ($un['status'] === 'proxy' || $un['file_name']): ?>
+          <div class="proxy-upload">
+            <h4>Podepsaná plná moc</h4>
+            <?php if ($un['file_name']): ?>
+              <p>✓ Nahráno: <a href="<?= url('/terminy/' . $ev['id'] . '/plna-moc/soubor?jednotka=' . $un['id']) ?>" target="_blank" rel="noopener"><?= e($un['file_name']) ?></a> <small class="muted"><?= cz_datetime($un['file_at']) ?></small></p>
+            <?php else: ?>
+              <p class="hint">Plnou moc vytiskněte, podepište a nahrajte sem sken nebo fotografii. Výbor ji tak bude mít připravenou u prezence.</p>
+            <?php endif ?>
+            <?php if ($open): ?>
+            <form method="post" action="<?= url('/terminy/' . $ev['id'] . '/plna-moc/nahrat') ?>" enctype="multipart/form-data" class="inline-form">
+              <?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $un['id'] ?>">
+              <label><span class="sr-only">Soubor s plnou mocí</span><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required></label>
+              <button class="btn btn-small" type="submit"><?= $un['file_name'] ? 'Nahrát jinou' : 'Nahrát plnou moc' ?></button>
+            </form>
+            <?php if ($un['file_name']): ?><form method="post" action="<?= url('/terminy/' . $ev['id'] . '/plna-moc/nahrat') ?>" class="inline-form" data-confirm="Odstranit nahranou plnou moc?"><?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $un['id'] ?>"><button class="btn btn-small btn-ghost" name="do" value="delete" type="submit">Odstranit</button></form><?php endif ?>
+            <?php endif ?>
+          </div>
+        <?php endif ?>
+        </div>
       <?php endforeach ?>
       <?php if ($mine && $open): ?><p class="hint">Za jednotku stačí jedna odpověď, kterou může kdykoli změnit kterýkoli z jejích vlastníků. Pro zastoupení je potřeba plná moc – vzor najdete v <a href="<?= url('/dokumenty?kategorie=formulare') ?>">Dokumentech</a>.</p><?php endif ?>
     </section>

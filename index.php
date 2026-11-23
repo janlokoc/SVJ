@@ -318,6 +318,7 @@ require __DIR__ . '/app/routes_gdpr.php';
 require __DIR__ . '/app/routes_onboarding.php';
 require __DIR__ . '/app/routes_join.php';
 require __DIR__ . '/app/routes_meters.php';
+require __DIR__ . '/app/routes_presence.php';
 require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';

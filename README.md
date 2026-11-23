@@ -565,6 +565,27 @@ stránky, prohlížeč a velikost okna. Nepřihlášený návštěvník uvádí 
 - **Web jako aplikace**: na telefonu jde web „přidat na plochu“ a otevírat
   bez adresního řádku. Upozornění do telefonu zatím neposílá.
 
+## Prezence a hlasování na shromáždění
+
+U termínu s přihlašováním (Administrace → Termíny → Účast) je tlačítko
+**Prezence na místě**:
+
+- U každé jednotky správce klikne *Nepřítomen / Osobně / Zmocněnec*.
+  Web hned sečte spoluvlastnické podíly a ukáže, zda je shromáždění
+  usnášeníschopné. Jméno zmocněnce se předvyplní z přihlášky.
+- **Podepsaná plná moc:** vlastník ji nahraje předem na stránce termínu
+  (PDF nebo fotografie), nebo ji na místě nahraje správce. Zastoupení bez
+  nahrané plné moci se počítá, ale web na něj upozorní. Soubor vidí jen
+  správci a vlastníci dané jednotky.
+- **Hlasování o návrzích:** z bodů programu (řádky s pomlčkou) web nabídne
+  návrhy k hlasování; informativní body (zahájení, diskuze, ukončení) a
+  poznámky bez pomlčky předvybrané nejsou. U návrhu se zvolí potřebná
+  většina (nadpoloviční / 2/3 / 3/4 přítomných, nebo většina všech
+  vlastníků). Přítomní se počítají jako „pro“, správce označí, kdo je proti
+  a kdo se zdržel. Procenta jsou z hlasů přítomných. Uzavřením se výsledek
+  zafixuje. Výsledky i usnášeníschopnost z prezence se samy doplní do
+  zápisu ze shromáždění.
+
 ## Přílohy u závad
 
 K nahlášené závadě lze přiložit až 4 fotografie nebo dokumenty (JPG, PNG,

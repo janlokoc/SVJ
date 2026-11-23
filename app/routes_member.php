@@ -319,9 +319,10 @@ $route('GET', '/terminy/(\d+)', function (int $id) {
     $u = require_login();
     $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
     $mine = $ev['rsvp'] && $u['kind'] === 'owner'
-        ? all('SELECT un.*, r.status, r.proxy_name, ru.name responder FROM units un JOIN user_units uu ON uu.unit_id = un.id
+        ? all('SELECT un.*, r.status, r.proxy_name, ru.name responder, f.original_name AS file_name, f.uploaded_at AS file_at FROM units un JOIN user_units uu ON uu.unit_id = un.id
             LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ? LEFT JOIN users ru ON ru.id = r.user_id
-            WHERE uu.user_id = ? ORDER BY un.entrance, un.number', [$id, $u['id']])
+            LEFT JOIN event_proxy_files f ON f.unit_id = un.id AND f.event_id = ?
+            WHERE uu.user_id = ? ORDER BY un.entrance, un.number', [$id, $id, $u['id']])
         : [];
     render('event', ['title' => $ev['title'], 'ev' => $ev, 'mine' => $mine, 'att' => $ev['rsvp'] ? attendance($id) : null,
         'evDocs' => all('SELECT d.* FROM documents d JOIN event_documents ed ON ed.document_id = d.id WHERE ed.event_id = ? AND ' . doc_scope_sql('d') . ' ORDER BY d.title', [$id]),

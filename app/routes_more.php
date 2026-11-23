@@ -112,7 +112,8 @@ $route('GET', '/admin/terminy/(\d+)/zapis', function (int $id) {
     foreach (all('SELECT * FROM polls WHERE event_id = ? ORDER BY id', [$id]) as $p) {
         $polls[] = ['poll' => $p, 'res' => poll_results((int) $p['id']), 'hash' => poll_fingerprint((int) $p['id'])];
     }
-    render('admin/minutes', ['title' => 'Zápis – ' . $ev['title'], 'ev' => $ev, 'att' => attendance($id), 'polls' => $polls,
+    render('admin/minutes', ['title' => 'Zápis – ' . $ev['title'], 'ev' => $ev, 'att' => ($pres = val('SELECT 1 FROM event_presence WHERE event_id = ?', [$id]) ? presence($id) : null) ?? attendance($id), 'polls' => $polls,
+        'motions' => $pres ? meeting_motions($id, $pres) : [],
         'docs' => all('SELECT d.title FROM documents d JOIN event_documents ed ON ed.document_id = d.id WHERE ed.event_id = ? ORDER BY d.title', [$id])]);
 });
 

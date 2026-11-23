@@ -323,3 +323,57 @@ document.querySelectorAll('[data-copy]').forEach((btn) => btn.addEventListener('
 }));
 document.querySelectorAll('[data-select-all]').forEach((f) => f.addEventListener('focus', () => f.select()));
 
+
+// Prezence na shromáždění: přepnutí přítomnosti se hned uloží a přepočítá podíly
+document.querySelectorAll('.presence-form').forEach((form) => {
+  const row = form.closest('tr');
+  const proxy = form.querySelector('.presence-proxy');
+  const state = form.querySelector('.presence-state');
+  const save = async () => {
+    const mode = (form.querySelector('input[name=mode]:checked') || {}).value || '';
+    row.dataset.mode = mode;
+    row.classList.toggle('is-present', mode !== '');
+    proxy.hidden = mode !== 'proxy';
+    const up = row.querySelector('.presence-upload');
+    if (up && mode === 'proxy') up.classList.remove('is-quiet');
+    const data = new FormData(form); data.append('ajax', '1');
+    state.textContent = 'ukládám…';
+    try {
+      const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' });
+      const s = await res.json();
+      const box = document.querySelector('[data-presence-summary]');
+      ['percent', 'verdict', 'self', 'proxy', 'absent', 'missingDocs'].forEach((k) => { const el = box.querySelector('[data-p=' + k + ']'); if (el) el.textContent = s[k]; });
+      box.querySelector('[data-p=missing-wrap]').hidden = !s.missingDocs;
+      box.querySelector('.meter-fill').style.width = s.width + '%';
+      box.classList.toggle('is-ok', s.quorate);
+      document.querySelectorAll('.vote-list li[data-unit="' + form.querySelector('[name=unit_id]').value + '"]').forEach((li) => { li.hidden = mode === ''; });
+      document.querySelectorAll('[data-none-present]').forEach((el) => { el.hidden = (s.self + s.proxy) > 0; });
+      Object.entries(s.motions || {}).forEach(([id, m]) => updateMotion(id, m));
+      state.textContent = 'uloženo';
+    } catch (e) {
+      state.textContent = 'nepodařilo se uložit – zkuste to znovu';
+    }
+  };
+  form.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener('change', save));
+  proxy.querySelector('input').addEventListener('change', save);
+  form.addEventListener('submit', (e) => { e.preventDefault(); save(); });
+});
+
+function updateMotion(id, m) {
+  const card = document.querySelector('[data-motion="' + id + '"]');
+  if (!card) return;
+  ['yes', 'no', 'abstain', 'cyes', 'cno', 'cabstain', 'verdict'].forEach((k) => { const el = card.querySelector('[data-m=' + k + ']'); if (el) el.textContent = m[k]; });
+  ['yes', 'no', 'abstain'].forEach((k) => { const el = card.querySelector('.mb-' + k); if (el) el.style.width = m['w' + k] + '%'; });
+  card.classList.toggle('is-passed', m.passed);
+}
+document.querySelectorAll('.vote-form').forEach((form) => {
+  const send = async () => {
+    const data = new FormData(form); data.append('ajax', '1');
+    try {
+      const res = await fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin' });
+      updateMotion(form.querySelector('[name=motion_id]').value, await res.json());
+    } catch (e) { form.classList.add('is-error'); }
+  };
+  form.querySelectorAll('input[name=choice]').forEach((r) => r.addEventListener('change', send));
+  form.addEventListener('submit', (e) => { e.preventDefault(); send(); });
+});

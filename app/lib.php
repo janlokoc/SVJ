@@ -153,6 +153,7 @@ function db_mysql(string $tenant): PDO
         schema_v9($pdo, true);
         schema_v10($pdo, true);
         schema_v11($pdo, true);
+        schema_v12($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -188,7 +189,23 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 11) {
         schema_v11($pdo, true);
     }
+    if ($mysqlVersion < 12) {
+        schema_v12($pdo, true);
+    }
     return $pdo;
+}
+/** Dvanáctá verze databáze: prezence na shromáždění a nahrané podepsané plné moci. */
+function schema_v12(PDO $pdo, bool $mysql): void
+{
+    $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
+    $s = fn(int $n) => $mysql ? "VARCHAR($n) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''";
+    $int = $mysql ? 'INT' : 'INTEGER';
+    $pdo->exec("CREATE TABLE event_presence (event_id $int NOT NULL, unit_id $int NOT NULL, mode {$s(10)}, proxy_name {$s(190)}, checked_by $int NULL, checked_at {$s(19)}, PRIMARY KEY (event_id, unit_id))$end");
+    $pdo->exec('CREATE TABLE event_proxy_files (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ", event_id $int NOT NULL, unit_id $int NOT NULL, filename {$s(80)}, original_name {$s(255)}, size $int NOT NULL DEFAULT 0, uploaded_by $int NULL, uploaded_at {$s(19)})$end");
+    $pdo->exec('CREATE INDEX event_proxy_files_unit ON event_proxy_files (event_id, unit_id)');
+    $pdo->exec('CREATE TABLE meeting_motions (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ", event_id $int NOT NULL, title {$s(300)}, majority {$s(20)}, sort $int NOT NULL DEFAULT 0, status {$s(10)}, result " . ($mysql ? 'TEXT NULL' : 'TEXT') . ", closed_at {$s(19)})$end");
+    $pdo->exec("CREATE TABLE meeting_votes (motion_id $int NOT NULL, unit_id $int NOT NULL, choice {$s(10)}, PRIMARY KEY (motion_id, unit_id))$end");
+    $mysql ? $pdo->exec("UPDATE settings SET value = '12' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 12');
 }
 /** Jedenáctá verze databáze: u odečtu je vidět, odkud přišel (ruční zadání, import souboru, automatický příjem). */
 function schema_v11(PDO $pdo, bool $mysql): void
@@ -312,6 +329,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v9($pdo, false);
         schema_v10($pdo, false);
         schema_v11($pdo, false);
+        schema_v12($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -432,6 +450,9 @@ SQL);
     }
     if ($version < 11) {
         schema_v11($pdo, false);
+    }
+    if ($version < 12) {
+        schema_v12($pdo, false);
     }
     return $pdo;
 }
@@ -1197,9 +1218,10 @@ function share_value(string $share): float
  */
 function attendance(int $eventId): array
 {
-    $rows = all('SELECT un.*, r.status, r.proxy_name, r.updated_at, u.name responder FROM units un
+    $rows = all('SELECT un.*, r.status, r.proxy_name, r.updated_at, u.name responder, f.id AS file_id FROM units un
         LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ?
-        LEFT JOIN users u ON u.id = r.user_id ORDER BY un.entrance, un.number + 0, un.number', [$eventId]);
+        LEFT JOIN users u ON u.id = r.user_id
+        LEFT JOIN event_proxy_files f ON f.unit_id = un.id AND f.event_id = ? ORDER BY un.entrance, un.number + 0, un.number', [$eventId, $eventId]);
     $byShare = (bool) $rows;
     foreach ($rows as $r) {
         $byShare = $byShare && share_value($r['share']) > 0;

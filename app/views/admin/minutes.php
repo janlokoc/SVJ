@@ -40,7 +40,16 @@
   </form>
   <?php endif ?>
   <div contenteditable="true" class="fill fill-block" id="minutes-body">Sem doplňte průběh jednání, přednesené zprávy a diskuzi.</div>
-  <?php $n = $ev['program'] !== '' ? 4 : 3; foreach ($polls as $p): ?>
+  <?php $n = $ev['program'] !== '' ? 4 : 3; ?>
+  <?php if ($motions): ?>
+    <h2><?= $n++ ?>. Hlasování na shromáždění</h2>
+    <?php foreach ($motions as $i => $m): $r = $m['res']; ?>
+      <p><strong><?= $i + 1 ?>) <?= e($m['title']) ?></strong><br>
+        Pro <?= percent_cz($r['yes']) ?> (<?= (int) $r['count']['yes'] ?> jednotek), proti <?= percent_cz($r['no']) ?> (<?= (int) $r['count']['no'] ?>), zdrželo se <?= percent_cz($r['abstain']) ?> (<?= (int) $r['count']['abstain'] ?>) – z hlasů přítomných.
+        Usnesení <strong><?= $r['passed'] ? 'bylo přijato' : 'nebylo přijato' ?></strong> (potřeba: <?= e($r['label']) ?>)<?= $m['status'] !== 'closed' ? ' <em class="no-print">– hlasování zatím není uzavřené</em>' : '' ?>.</p>
+    <?php endforeach ?>
+  <?php endif ?>
+  <?php foreach ($polls as $p): ?>
     <h2><?= $n++ ?>. Hlasování: <?= e($p['poll']['title']) ?></h2>
     <?php foreach ($p['res']['items'] as $i => $it): ?>
       <p><strong><?= $i + 1 ?>) <?= e($it['question']) ?></strong><br>
@@ -49,7 +58,7 @@
     <?php endforeach ?>
     <p class="minutes-hash">Otisk odevzdaných hlasů (SHA-256): <code><?= e($p['hash']) ?></code></p>
   <?php endforeach ?>
-  <?php if (!$polls): ?><div class="callout no-print">K tomuto termínu není přiřazené žádné hlasování. Výsledky hlasování se do zápisu doplní samy, když u hlasování v administraci vyberete tento termín.</div><?php endif ?>
+  <?php if (!$polls && !$motions): ?><div class="callout no-print">K tomuto termínu není přiřazené žádné hlasování. Výsledky hlasování se do zápisu doplní samy, když u hlasování v administraci vyberete tento termín.</div><?php endif ?>
   <?php if ($docs): ?><h2><?= $n++ ?>. Podklady</h2><ul><?php foreach ($docs as $d): ?><li><?= e($d['title']) ?></li><?php endforeach ?></ul><?php endif ?>
   <h2><?= $n ?>. Závěr</h2>
   <div contenteditable="true" class="fill fill-block">Předsedající ukončil shromáždění v …… hodin.</div>

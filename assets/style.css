@@ -1433,3 +1433,41 @@ html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { b
 
 pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-radius: 8px; overflow-x: auto; font-size: .85rem; }
 .meter-monthly table td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* Prezence na shromáždění */
+.presence-bar { position: sticky; top: .5rem; z-index: 5; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; padding: 0; margin: 0 0 .4rem; }
+.seg label { display: block; margin: 0; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg span { display: block; padding: .45rem .8rem; min-height: 38px; font-size: .92rem; font-weight: 600; border-right: 1px solid var(--line); }
+.seg label:last-child span { border-right: 0; }
+.seg input:checked + span { background: var(--primary); color: var(--on-primary); }
+.seg input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: -3px; }
+.presence-row.is-present td:first-child { box-shadow: inset 4px 0 0 var(--primary); }
+.presence-proxy input { max-width: 16rem; }
+.js .presence-save { display: none; }
+.presence-state { font-size: .85rem; color: var(--muted); margin-left: .4rem; }
+.presence-upload.is-quiet { opacity: .55; }
+.presence-upload.is-quiet:focus-within, .presence-upload.is-quiet:hover { opacity: 1; }
+.presence-upload input[type=file] { max-width: 13rem; font-size: .85rem; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--primary); text-decoration: underline; cursor: pointer; font: inherit; font-size: .85rem; }
+.presence-bar .warn { color: var(--warn); }
+.proxy-upload { border-top: 1px solid var(--line); margin-top: .8rem; padding-top: .8rem; }
+.proxy-upload h4 { margin: 0 0 .3rem; }
+.motions { margin-top: 2rem; }
+.motion { margin-bottom: 1rem; border-left: 5px solid var(--line); }
+.motion.is-passed { border-left-color: var(--ok); }
+.motion-head h3 { margin: 0 0 .2rem; }
+.motion-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface-2); margin: .6rem 0 .4rem; }
+.motion-bar .meter-fill { position: static; display: block; height: 100%; border-radius: 0; }
+.mb-yes { background: var(--ok); }
+.mb-no { background: var(--accent); }
+.mb-abstain { background: var(--muted); }
+.motion-verdict { margin: .3rem 0 .6rem; }
+.motion.is-passed .motion-verdict strong { color: var(--ok); }
+.vote-list { list-style: none; padding: 0; margin: .5rem 0; }
+.vote-list li { border-bottom: 1px solid var(--line); padding: .35rem 0; }
+.vote-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; justify-content: space-between; }
+.vote-unit { min-width: 10rem; }
+.seg-small span { padding: .3rem .65rem; min-height: 34px; font-size: .88rem; }
+.vote-form.is-error { outline: 2px solid var(--accent); }

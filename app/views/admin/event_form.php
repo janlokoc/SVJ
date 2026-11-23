@@ -12,7 +12,7 @@
     <label>Místo <input type="text" name="place" value="<?= e($ev['place']) ?>" placeholder="Např. sušárna vchodu B"></label>
     <label>Poznámka <input type="text" name="note" value="<?= e($ev['note']) ?>"></label>
     <label>Program <textarea name="program" rows="6" placeholder="- Zahájení a volba předsedajícího&#10;- Schválení účetní závěrky&#10;- …"><?= e($ev['program']) ?></textarea></label>
-    <p class="hint">Každý bod na samostatný řádek začínající pomlčkou a mezerou. Zobrazí se přihlášeným obyvatelům na stránce termínu.</p>
+    <p class="hint">Každý bod na samostatný řádek začínající pomlčkou a mezerou; řádek bez pomlčky je jen poznámka k předchozímu bodu (např. „Účast nutná“). Zobrazí se přihlášeným obyvatelům na stránce termínu. Na shromáždění web v Prezenci na místě z bodů, o kterých se rozhoduje, nabídne návrhy k hlasování a jejich výsledky doplní do zápisu; informativní body (zahájení, diskuze, ukončení) nechá bez hlasování.</p>
     <fieldset>
       <legend>Podklady</legend>
       <label>Vyberte z dokumentů <input type="search" data-filter="#event-docs" placeholder="Hledat dokument…"></label>
