@@ -131,7 +131,6 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     check(/Návrh (prošel|neprošel)/.test(mv), 'výsledek návrhu'); step('U návrhu „Zvýšení příspěvku do fondu oprav“: 2 proti, 1 se zdržel – ' + mv.trim());
     await shot(card, 'shrom-6-hlasovani.jpg');
     fs.mkdirSync(path.join(ROOT, 'assets/landing'), { recursive: true });
-    await shot(card, 'hlasovani.jpg', 470, path.join(ROOT, 'assets/landing'));
     await card.locator('button[value=motion-close]').click(); await admin.waitForURL('**#m*');
     check((await admin.locator('.motion').nth(2).textContent()).includes('uzavřeno'), 'návrh uzavřen');
     while (await admin.$('.motion button[value=motion-close]')) { await admin.click('.motion button[value=motion-close]'); await admin.waitForLoadState(); }
@@ -216,7 +215,27 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const bar = await tab.locator('.presence-bar').boundingBox(); await tab.evaluate((y) => window.scrollTo(0, y + window.scrollY - 16), bar.y);
     const bar2 = await tab.locator('.presence-bar').boundingBox();
     await tab.screenshot({ path: path.join(LP, 'prezence-soucet.jpg'), type: 'jpeg', quality: 74, clip: { x: 0, y: Math.max(0, bar2.y - 16), width: 820, height: 560 } });
-    fs.copyFileSync(path.join(OUT, 'shrom-7-zapis.jpg'), path.join(LP, 'zapis.jpg'));
+    // Všechny tři kroky shromáždění ve stejném výřezu 820 × 560 (bez ořezu obsahu).
+    const clipAt = async (page, el, file, w = 820) => { await page.evaluate(() => document.querySelectorAll('body *').forEach((x) => { const p = getComputedStyle(x).position; if (p === 'sticky' || p === 'fixed') x.style.position = 'static'; }));
+      const bx = await page.locator(el).first().boundingBox(); await page.evaluate((y) => window.scrollTo(0, y + window.scrollY - 16), bx.y); const b2 = await page.locator(el).first().boundingBox();
+      await page.screenshot({ path: path.join(LP, file), type: 'jpeg', quality: 74, clip: { x: 0, y: Math.max(0, b2.y - 16), width: w, height: Math.round(w * 560 / 820) } }); };
+    // Krok 2: hlasování o návrhu – karta s výsledkem (pro / proti / zdrželo se) celá.
+    await tab.setViewportSize({ width: 560, height: 1000 });
+    await tab.evaluate(() => { const m = [...document.querySelectorAll('.motion')].find((x) => x.textContent.includes('fondu oprav')); m.id = 'lp-motion'; m.querySelector('.actions')?.remove();
+      for (let el = m; el && el.tagName !== 'MAIN'; el = el.parentElement) { let n = el.nextElementSibling; while (n) { const next = n.nextElementSibling; n.remove(); n = next; } } });
+    await clipAt(tab, '#lp-motion', 'hlasovani.jpg', 560);
+    await tab.setViewportSize({ width: 820, height: 1180 });
+    // Krok 3: zápis – nadpis, účast a výsledky hlasování (vynechá se hlavička, program a průběh jednání).
+    await tab.goto(T + `/admin/terminy/${evId}/zapis`);
+    await tab.evaluate(() => { const root = document.querySelector('.minutes'); root.querySelectorAll('.no-print, .pay-data, .minutes-ai, .fill-block, .callout').forEach((x) => x.remove());
+      const keep = (h) => /Účast|Hlasování na shromáždění/.test(h.textContent); let drop = false;
+      [...root.children].forEach((el) => { if (el.tagName === 'H2') drop = !keep(el); if (drop) el.remove(); });
+      root.querySelector('p')?.remove();
+      // první (jednomyslné) hlasování vynechat, ať je vidět návrh s hlasy proti; kapitoly přečíslovat
+      const first = [...root.querySelectorAll('p')].find((x) => /^1\) /.test(x.textContent.trim())); first?.remove();
+      [...root.querySelectorAll('h2')].forEach((h, i) => { h.textContent = h.textContent.replace(/^\d+\./, (i + 1) + '.'); });
+      let k = 0; [...root.querySelectorAll('p strong')].forEach((st) => { if (/^\d+\) /.test(st.textContent)) st.textContent = st.textContent.replace(/^\d+\)/, (++k) + ')'); }); });
+    await clipAt(tab, '.minutes h1', 'zapis.jpg');
     check(fs.existsSync(path.join(LP, 'telefon.jpg')), 'snímky pro úvodní stránku');
 
     // ---------- Import z katastru ----------

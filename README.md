@@ -701,6 +701,23 @@ Anthropic – nic se neposílá samo a správce je na to u tlačítek upozorněn
 Pokud pomocníka zapnete, uveďte Anthropic mezi dalšími zpracovateli ve
 smlouvě o zpracování osobních údajů.
 
+## AI asistent (Premium) a AI kredity
+
+**AI asistent** (`/asistent`, v menu Pro obyvatele) odpovídá obyvatelům
+i výboru běžnou řečí podle podkladů domu – dokumentů (včetně textu uvnitř
+PDF a Wordu), aktualit, termínů a kontaktů – a ke každé odpovědi uvede
+zdroje s odkazy. Web nejdřív sám vybere nejvhodnější úryvky z toho, co
+tazatel smí vidět (cizí jednotky ani účty se nikdy neposílají), a teprve
+ty pošle službě Claude spolu s otázkou. Rozhovor se drží jen v relaci
+prohlížeče. Správce asistenta může schovat z menu (Nastavení → menu).
+
+**Limit a kredity:** každá otázka asistentovi i každý text od AI
+pomocníka je jedno použití. V edici je měsíční limit (konzole → Edice
+a ceny); když dojde, čerpají se **AI kredity**, které si správce dokoupí
+v Předplatném (balíček a cena v konzoli: `ai_pack`, `price_ai_pack`,
+výchozí 200 dotazů za 190 Kč bez DPH). Kredity nepropadají a připíšou se
+po potvrzení platby v konzoli.
+
 ## Základní dokumenty
 
 V administraci v části Dokumenty → **Základní dokumenty** je přehled

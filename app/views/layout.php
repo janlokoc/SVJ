@@ -2,7 +2,7 @@
 $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
-$more = $u ? ['/zpravy' => 'Zprávy', '/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] : [];
+$more = $u ? ['/zpravy' => 'Zprávy', '/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] + (function_exists('ai_available') && ai_available() ? ['/asistent' => 'AI asistent'] : []) : [];
 // Schované části webu z menu vypadnou.
 $hiddenPaths = [];
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
@@ -11,7 +11,7 @@ foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
     }
 }
 // Funkce, které nejsou v edici a nikdo je nezkoušel, obyvatelé v menu nevidí; správce je v administraci vidí se štítkem edice.
-$planPublic = ['ankety' => '/ankety', 'platby' => '/platby', 'odecty' => '/odecty', 'rezervace' => '/rezervace'];
+$planPublic = ['ankety' => '/ankety', 'platby' => '/platby', 'odecty' => '/odecty', 'rezervace' => '/rezervace', 'ai-asistent' => '/asistent'];
 $planAdmin = ['/admin/ankety' => 'ankety', '/admin/platby' => 'platby', '/admin/odecty' => 'odecty', '/admin/rezervace' => 'rezervace', '/admin/prostory' => 'rezervace', '/admin/revize' => 'revize', '/admin/klice' => 'klice', '/admin/ukoly' => 'ukoly', '/admin/dodavatele' => 'dodavatele', '/admin/zaloha' => 'zaloha'];
 $planHidden = [];
 foreach ($planPublic as $pf => $pp) {

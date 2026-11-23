@@ -70,6 +70,32 @@ function ai_used(): int
 {
     return (int) setting('ai_used_' . date('Y-m'), '0');
 }
+/** Zbývající dokoupené AI kredity webu (jen na platformě). */
+function ai_credits(): int
+{
+    return platform_enabled() && defined('TENANT') && TENANT !== '' ? (int) (tenant_row(TENANT)['ai_credits'] ?? 0) : 0;
+}
+/** Smí web teď použít AI? Nejdřív měsíční limit edice, pak dokoupené kredity. Vrací null, nebo text chyby. */
+function ai_quota_error(): ?string
+{
+    $limit = ai_settings()['limit'];
+    if ($limit === 0 || ai_used() < $limit || ai_credits() > 0) {
+        return null;
+    }
+    return 'Měsíční limit AI (' . $limit . ' použití) je vyčerpán. Obnoví se prvního dne příštího měsíce'
+        . (platform_enabled() ? ', nebo si v části Předplatné dokupte AI kredity.' : '.');
+}
+/** Započte jedno použití AI: v rámci měsíčního limitu, po jeho vyčerpání z kreditů. */
+function ai_count_use(): void
+{
+    $limit = ai_settings()['limit'];
+    if ($limit > 0 && ai_used() >= $limit && ai_credits() > 0) {
+        pq('UPDATE tenants SET ai_credits = ai_credits - 1 WHERE slug = ? AND ai_credits > 0', [TENANT]);
+        return;
+    }
+    q("INSERT INTO settings (`key`, value) VALUES (?, '1') ON CONFLICT(`key`) DO UPDATE SET value = value + 1", ['ai_used_' . date('Y-m')]);
+    setting('__reset');
+}
 /** Zavolá Claude a vrátí ['text' => …] nebo ['error' => …]. Chybu vždy vrací jako srozumitelnou větu pro správce. */
 function ai_run(string $task, string $input, string $context = ''): array
 {
@@ -87,9 +113,8 @@ function ai_run(string $task, string $input, string $context = ''): array
     if (mb_strlen($input) + mb_strlen($context) > ($task === 'minutes' ? 120000 : 20000)) {
         return ['error' => 'Text je na pomocníka příliš dlouhý (nejvýše ' . ($task === 'minutes' ? '120 000' : '20 000') . ' znaků). Zkraťte ho, nebo ho zpracujte po částech.'];
     }
-    if ($cfg['limit'] > 0 && ai_used() >= $cfg['limit']) {
-        return ['error' => 'Měsíční limit AI pomocníka (' . $cfg['limit'] . ' použití) je vyčerpán. Obnoví se prvního dne příštího měsíce.'
-            . (platform_enabled() && !$cfg['plus'] ? ' Vyšší limit nabízí doplněk AI Plus v části Předplatné.' : '')];
+    if ($quota = ai_quota_error()) {
+        return ['error' => $quota];
     }
     $prompt = AI_TASKS[$task][1] . "\n\nSpolečenství: " . site('full') . ($context !== '' ? "\n\n<kontext>\n$context\n</kontext>" : '') . "\n\n<text>\n$input\n</text>";
     try {
@@ -125,7 +150,7 @@ function ai_run(string $task, string $input, string $context = ''): array
     if ($text === '') {
         return ['error' => 'Pomocník nevrátil žádný text. Zkuste to znovu.'];
     }
-    q("INSERT INTO settings (`key`, value) VALUES (?, '1') ON CONFLICT(`key`) DO UPDATE SET value = value + 1", ['ai_used_' . date('Y-m')]);
+    ai_count_use();
     return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens'];
 }
 

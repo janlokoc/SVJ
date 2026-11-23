@@ -42,6 +42,11 @@
       <label>Balíček úložiště navíc (MB) <input type="number" name="storage_pack_mb" value="<?= e($v['storage_pack_mb']) ?>" min="1" required></label>
       <label>Cena balíčku (Kč za rok; 0 = nenabízet) <input type="number" name="price_storage" value="<?= e($v['price_storage']) ?>" min="0" required></label>
     </div>
+    <div class="form-row">
+      <label>Balíček AI kreditů (počet dotazů) <input type="number" name="ai_pack" value="<?= e($v['ai_pack']) ?>" min="1" required></label>
+      <label>Cena balíčku AI kreditů (Kč; 0 = nenabízet) <input type="number" name="price_ai_pack" value="<?= e($v['price_ai_pack']) ?>" min="0" required></label>
+    </div>
+    <p class="hint">AI kredity se čerpají, až web vyčerpá měsíční limit AI své edice, a nepropadají. Cena by měla pokrýt náklady na AI službu (orientačně desítky haléřů až korunu za dotaz asistenta).</p>
     <label>Jednorázový převod obsahu ze starého webu (Kč) <input type="number" name="price_migration" value="<?= e($v['price_migration']) ?>" min="0" required></label>
     <label>Vlastní doména společenství (Kč za rok) <input type="number" name="price_domain" value="<?= e($v['price_domain']) ?>" min="0" required></label>
     <label>Pokyny pro společenství, které doménu už vlastní <textarea name="domain_dns" rows="3" placeholder="Nastavte záznam A pro tabor48.cz a www.tabor48.cz na adresu 203.0.113.10"><?= e($v['domain_dns']) ?></textarea></label>

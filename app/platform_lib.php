@@ -210,6 +210,10 @@ SQL);
         // Zdarma nakonec 20 účtů (malý dům); oprava pro platformy, kde už proběhla předchozí změna na 10.
         $pdo->exec("UPDATE platform_settings SET value = '20' WHERE key = 'lim_free_users' AND value = '10'; PRAGMA user_version = 20;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 21) {
+        // AI kredity: dokoupené dotazy na AI nad rámec měsíčního limitu edice (nepropadají).
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN ai_credits INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 21;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -434,7 +438,7 @@ Poskytovatel se zákazníkem komunikuje elektronicky – e-mailem na adresy spr�
 ## 2. Edice, doplňky a cena
 Služba se poskytuje v edicích uvedených v ceníku na webu poskytovatele. Edice Zdarma je bezplatná a časově neomezená; má limity uvedené v ceníku a web v ní může obsahovat odkaz na službu.
 Funkce vyšších edic si zákazník může jednou na dobu uvedenou v administraci bezplatně vyzkoušet. Zkoušením nevzniká povinnost placenou edici objednat.
-Placená edice se objednává v administraci na jeden rok. K edici lze objednat doplňky na rok (například vlastní doménu, úložiště navíc nebo vyšší limit AI pomocníka) a jednorázové služby (například převod obsahu ze staršího webu). Rozsah a cenu každé z nich uvádí ceník a objednávka.
+Placená edice se objednává v administraci na jeden rok. K edici lze objednat doplňky na rok (například vlastní doménu, úložiště navíc nebo AI kredity) a jednorázové služby (například převod obsahu ze staršího webu). Rozsah a cenu každé z nich uvádí ceník a objednávka.
 Ceny jsou uvedeny bez daně z přidané hodnoty; je-li poskytovatel jejím plátcem, připočte ji v zákonné výši. Platí se předem bankovním převodem na základě zálohové faktury (výzvy k platbě) se splatností na ní uvedenou. Po připsání platby vystaví poskytovatel fakturu – daňový doklad a zpřístupní ji v administraci. Placená edice nebo doplněk se zapne po připsání platby.
 Kredit získaný za doporučení služby se odečte od ceny další roční edice. Nelze ho vyplatit v penězích ani převést na jiného zákazníka.
 
@@ -509,7 +513,7 @@ Porušení zabezpečení osobních údajů oznámí správci bez zbytečného od
 Na žádost poskytne správci informace potřebné k doložení splnění povinností a umožní audit v přiměřeném rozsahu, nejvýše jednou ročně a po předchozí domluvě.
 
 ## 4. Další zpracovatelé
-Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pro provoz služby: poskytovatele serverů a služby pro odesílání e-mailů. Zpracovatel je zaváže ke stejné ochraně údajů. O zamýšlené změně informuje správce nejméně 30 dní předem; správce může vznést námitku a při nesouhlasu službu ukončit.
+Správce souhlasí se zapojením dalších zpracovatelů v rozsahu nezbytném pro provoz služby: poskytovatele serverů a služby pro odesílání e-mailů; u funkcí s umělou inteligencí (AI pomocník, AI asistent, AI zápis) také poskytovatele AI služby Anthropic (Claude), kterému se předává jen text zadaný do těchto funkcí a vybrané úryvky podkladů domu. Upozornění do telefonu doručují push služby prohlížečů (Apple, Google, Mozilla, Microsoft) v zašifrované podobě, kterou nemohou přečíst. Zpracovatel je zaváže ke stejné ochraně údajů. O zamýšlené změně informuje správce nejméně 30 dní předem; správce může vznést námitku a při nesouhlasu službu ukončit.
 Údaje jsou uloženy na serverech v Evropské unii.
 Použije-li uživatel pomocníka s umělou inteligencí, odešle se text, který do něj vloží, poskytovateli této služby, jehož servery mohou být mimo Evropskou unii; předání se řídí standardními smluvními doložkami nebo jiným nástrojem podle kapitoly V GDPR. Správce může tuto funkci v nastavení webu vypnout a odpovídá za to, jaké údaje do ní jeho uživatelé vkládají.
 
@@ -518,7 +522,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'ai_pack' => '200', 'price_ai_pack' => '190', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
     'lim_free_admins' => '1', 'lim_free_users' => '20', 'lim_free_mails' => '30', 'lim_free_storage' => '5', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '500', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -742,6 +746,19 @@ function billing_confirm(array $p, string $by): ?array
                 . cz_date($to) . " o " . (int) $p['item'] . " MB místa více.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
+    }
+    if (($p['kind'] ?? '') === 'aicredits') {
+        $today = date('Y-m-d');
+        $year = date('Y');
+        $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+        pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+            [date('Y-m-d H:i:s'), $today, $today, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+        pq('UPDATE tenants SET ai_credits = ai_credits + ? WHERE slug = ?', [(int) $p['item'], $t['slug']]);
+        if ($t['owner_email'] !== '') {
+            platform_mail($t['owner_email'], 'AI kredity připsány – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za AI kredity. Web " . $t['name'] . " má navíc " . (int) $p['item']
+                . " dotazů na AI; použijí se, až se vyčerpá měsíční limit edice, a nepropadají.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+        }
+        return ['from' => $today, 'to' => $today];
     }
     if (($p['kind'] ?? '') === 'migration') {
         $today = date('Y-m-d');
@@ -990,7 +1007,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
@@ -1378,6 +1395,30 @@ function migration_order(array $t, array $in): array
 
 // ---------- AI Plus: placený doplněk s vyšším měsíčním limitem AI pomocníka ----------
 
+/** Rozpracovaná objednávka AI kreditů (nebo null). */
+function ai_credits_payment(array $t): ?array
+{
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'aicredits' AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug']])->fetch();
+    return $p ?: null;
+}
+/** Objednávka balíčků AI kreditů; 'item' nese počet dotazů. Nahrazuje nezaplacenou objednávku. */
+function ai_credits_order(array $t, int $packs): array
+{
+    $packs = max(1, min(20, $packs));
+    $n = $packs * pset_int('ai_pack', 1, 100000);
+    $amount = $packs * pset_int('price_ai_pack', 0, 1000000);
+    if ($p = ai_credits_payment($t)) {
+        if ($p['status'] === 'claimed') {
+            return $p;
+        }
+        pq('UPDATE payments SET amount = ?, item = ? WHERE id = ?', [$amount, (string) $n, $p['id']]);
+        return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
+    }
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,0,?,'aicredits',?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), (string) $n]);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
+}
 function ai_plus_active(?array $t): bool
 {
     return $t && ($t['ai_until'] ?? '') !== '' && $t['ai_until'] >= date('Y-m-d');
@@ -1547,7 +1588,6 @@ function cert_reminders(): void
  */
 const PLANNED_FEATURES = [
     'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · platí se AI kredity', 'Zápis z nahrávky'],
-    'ai-asistent' => ['AI asistent pro obyvatele i výbor', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – a výboru ubere rutinu u závad, dokumentů, shromáždění i vyúčtování.', 'doplněk k Premium · asi 990 Kč ročně, náročnější úlohy za AI kredity', 'AI asistent'],
     'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
@@ -1565,38 +1605,6 @@ const PLANNED_DETAILS = [
         'problem' => 'Zápis ze shromáždění bývá nejméně oblíbená práce ve výboru. Zapisovatel během schůze nestíhá poslouchat i psát, zápis pak vzniká týdny po schůzi z paměti a vlastníci se dohadují, co kdo vlastně řekl. Dnes už pomocník umí zápis napsat z poznámek nebo z hotového přepisu – přepis si ale musíte obstarat sami.',
         'how' => ['Nahrajete zvukový soubor ze schůze (telefon, diktafon, záznam online schůzky).', 'Služba nahrávku přepíše do textu a rozliší, kdy mluví kdo.', 'AI z přepisu sestaví zápis podle programu: průběh jednání, návrhy, výsledky hlasování, úkoly a termíny.', 'Před spuštěním uvidíte, kolik AI kreditů zpracování spotřebuje, a potvrdíte ho.', 'Zapisovatel návrh projde, opraví a vytiskne nebo uloží do Dokumentů. Nahrávka se po zpracování smaže.'],
         'note' => 'Bude v edici Premium a poběží celé automaticky. Platit se bude předplacenými AI kredity, které si společenství dokoupí v administraci; zpracování nahrávky z nich odečte podle její délky (odhadem 100 Kč za hodinu). Když se zpracování technicky nepovede, kredity se nestrhnou. Výsledek je návrh od umělé inteligence – jeho kvalita závisí na nahrávce a ručně ho nikdo neupravuje, kontrola je na zapisovateli. Účastníci musí o nahrávání vědět.',
-    ],
-    'ai-asistent' => [
-        'lead' => 'Sousedé se zeptají webu a dostanou odpověď podle Vašich stanov, domovního řádu a oznámení.',
-        'problem' => 'Výbor odpovídá pořád na stejné otázky: kdy se smí vrtat, kam s kočárkem, kdy bude vyúčtování, komu hlásit kapající radiátor. Odpovědi přitom v dokumentech na webu jsou, jen je nikdo nehledá.',
-        'how' => ['Přihlášený obyvatel položí otázku běžnou řečí, česky i v dalších jazycích webu.', 'Asistent odpoví jen podle dokumentů a oznámení Vašeho domu a uvede, odkud odpověď vzal.', 'Když odpověď v podkladech není, řekne to a nabídne předání dotazu výboru.', 'Výbor vidí, na co se lidé ptají nejčastěji, a ví, co na webu doplnit.'],
-        'note' => 'Doplněk k edici Premium, asi 990 Kč ročně; náročnější úlohy (dlouhé dokumenty, překlady, přehledy) se budou platit předplacenými AI kredity. Asistent neposkytuje právní rady a neodpovídá na dotazy mimo podklady domu. Každý výstup je návrh, který před zveřejněním nebo odesláním schvaluje člověk.',
-        // Kde všude může AI na webu pomoci: skupina => [[kde, co udělá, k čemu to je, stav]]. Stav 'hotovo' = už na webu funguje.
-        'areas' => [
-            'Co už dnes funguje' => [
-                ['Aktuality a e-maily', 'Z pár poznámek napíše oznámení, uhladí nebo zkrátí hotový text.', 'Oznámení je venku za pět minut a čte se dobře i na telefonu.', 'hotovo'],
-                ['Závady a požadavky', 'Navrhne odpověď obyvateli na jeho hlášení.', 'Nikdo nečeká týden na „přijali jsme, řešíme“.', 'hotovo'],
-                ['Zápis ze shromáždění', 'Z poznámek nebo nahraného přepisu sestaví průběh jednání podle programu.', 'Zápis je hotový týž večer, ne za měsíc.', 'hotovo'],
-            ],
-            'Pro obyvatele' => [
-                ['Dotazy na dům', 'Odpoví podle stanov, domovního řádu a oznámení a uvede zdroj.', 'Výbor přestane odpovídat na stejné otázky pořád dokola.', ''],
-                ['Vyúčtování a platby', 'Vysvětlí vlastníkovi jeho vyúčtování a předpis záloh běžnou řečí.', 'Méně telefonátů „proč mám nedoplatek“.', ''],
-                ['Hlášení závady', 'Z popisu a fotky pomůže hlášení doplnit (kde, od kdy, co hrozí) a upozorní, že totéž už někdo nahlásil.', 'Výbor dostane hlášení, se kterým jde hned něco dělat.', ''],
-                ['Jazyky', 'Přeloží oznámení a odpovědi do jazyků webu pro nájemníky, kteří česky nečtou.', 'O odstávce vody se dozví všichni v domě.', ''],
-            ],
-            'Pro výbor' => [
-                ['Závady a požadavky', 'Roztřídí nová hlášení podle naléhavosti a druhu a navrhne dodavatele z Vašeho seznamu.', 'Havárie nezapadne mezi stížnostmi na úklid.', ''],
-                ['Dokumenty', 'Po nahrání navrhne název, zařazení a krátké shrnutí pro sousedy; v dokumentech pak hledá otázkou, ne podle názvu souboru.', 'Smlouva nebo zápis z roku 2019 se najde za pár vteřin.', ''],
-                ['Shromáždění', 'Připraví pozvánku s programem a návrhy usnesení a po schůzi vytáhne ze zápisu úkoly s termíny do Úkolů a usnesení.', 'Nic z toho, co se odhlasovalo, se neztratí.', ''],
-                ['Hlasování a ankety', 'Upozorní na nejednoznačnou otázku, navrhne srozumitelnější znění a shrne volné odpovědi z ankety.', 'Méně sporů o to, o čem se vlastně hlasovalo.', ''],
-                ['Revize a smlouvy', 'Z nahrané revizní zprávy nebo smlouvy vyčte termín příští revize, zjištěné závady a výpovědní lhůtu a nabídne je zapsat do Revizí.', 'Termíny se hlídají samy, i když se výbor vymění.', ''],
-                ['Dodavatelé', 'Z popisu závady sepíše poptávku a došlé nabídky srovná do přehledné tabulky.', 'Výběr dodavatele je doložitelný a rychlý.', ''],
-                ['Dlužníci', 'Navrhne slušnou, ale jasnou upomínku podle výše a stáří dluhu.', 'Nepříjemný dopis nemusí nikdo vymýšlet.', ''],
-                ['Diskuze', 'Shrne dlouhé vlákno do pár vět a upozorní správce na vulgární nebo urážlivý příspěvek.', 'Výbor ví, co lidi trápí, aniž čte všechno.', ''],
-                ['Měsíční přehled', 'Jednou za měsíc pošle výboru shrnutí: otevřené závady, blížící se revize, nesplněné úkoly, neuhrazené zálohy.', 'Předseda má dům na jedné stránce.', ''],
-                ['Nový správce webu', 'Poradí s ovládáním webu („jak přidám nájemníka“, „jak vyhlásím hlasování“) a pomůže roztřídit obsah převedený ze starého webu.', 'Web zvládne i ten, kdo ho předtím neviděl.', ''],
-            ],
-        ],
     ],
     'napojeni-ai' => [
         'lead' => 'Web společenství si připojíte k AI nástroji, který už používáte, a pracujete s ním na dálku běžnou řečí.',

@@ -45,6 +45,7 @@ $route('GET', '/admin/predplatne', function () {
         'storagePayment' => ($sp = storage_payment($t)), 'storageQr' => $sp && $iban ? qr_svg(spayd($iban, pay_total($sp), $sp['vs'], 'Uloziste ' . $t['slug'], pset('recipient')), 'QR platba za úložiště') : '',
         'migrationQr' => $mp && $iban && in_array($mp['status'], ['pending', 'claimed'], true) ? qr_svg(spayd($iban, pay_total($mp), $mp['vs'], 'Prevod webu ' . $t['slug'], pset('recipient')), 'QR platba za převod obsahu') : '', 'edition' => $state['edition'],
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
+        'creditsPayment' => ($cp = ai_credits_payment($t)), 'creditsQr' => $cp && $iban ? qr_svg(spayd($iban, pay_total($cp), $cp['vs'], 'AI kredity ' . $t['slug'], pset('recipient')), 'QR platba za AI kredity') : '',
         'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($ap), $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($dp), $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
@@ -191,6 +192,32 @@ $route('POST', '/admin/predplatne/uloziste', function () {
         }
     }
     redirect('/admin/predplatne#uloziste');
+});
+$route('POST', '/admin/predplatne/ai-kredity', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t || empty($t['billing'])) {
+        redirect('/admin/predplatne');
+    }
+    $p = ai_credits_payment($t);
+    $action = post('action');
+    if ($action === 'claim' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'claimed', claimed_at = ? WHERE id = ?", [date('Y-m-d H:i:s'), $p['id']]);
+        audit('AI kredity: nahlášena odeslaná platba', $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+        flash('Děkujeme. Jakmile platbu uvidíme na účtu, kredity připíšeme.');
+    } elseif ($action === 'cancel' && $p && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'cancelled', note = 'objednávka zrušena správcem webu' WHERE id = ?", [$p['id']]);
+        flash('Objednávka AI kreditů je zrušena.', 'info');
+    } elseif ($action === 'order') {
+        if ($p && $p['status'] === 'claimed') {
+            flash('Jednu platbu za AI kredity jste už nahlásili. Počkejte prosím na její potvrzení.', 'error');
+        } else {
+            $p = ai_credits_order($t, (int) post('packs'));
+            audit('AI kredity: objednávka', $p['item'] . ' dotazů · ' . $p['amount'] . ' Kč, variabilní symbol ' . $p['vs']);
+            flash('AI kredity jsou objednané. Připíšeme je po připsání platby – údaje jsou níže.');
+        }
+    }
+    redirect('/admin/predplatne#ai-kredity');
 });
 $route('POST', '/admin/predplatne/prevod', function () {
     $u = require_admin();

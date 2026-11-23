@@ -42,6 +42,7 @@ const PLAN_FEATURES = [
     'sablony' => ['standard', 'Šablony, barvy a logo', 'Pět šablon a pět barev webu a vlastní logo. Edice Zdarma má jeden pevný vzhled bez přizpůsobení.', null],
     'vzhledy-plus' => ['premium', 'Deset šablon a deset barev', 'Dalších pět šablon (Cedule, Panelák, Činžák, Čitelná, Vývěska) a pět barevných variant.', null],
     'jazyky' => ['premium', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
+    'ai-asistent' => ['premium', 'AI asistent', 'Obyvatelé i výbor se ptají běžnou řečí a dostanou odpověď podle stanov, domovního řádu, dokumentů a oznámení domu – s odkazy na zdroje.', '~^/asistent(/|$)~'],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],
 ];
 

@@ -73,6 +73,7 @@ const FEATURES = [
     'zpravy' => ['Zprávy mezi sousedy', ['/zpravy'], []],
     'odecty' => ['Odečty měřidel', ['/odecty'], ['/admin/odecty']],
     'rezervace' => ['Rezervace', ['/rezervace'], ['/admin/rezervace', '/admin/prostory']],
+    'asistent' => ['AI asistent', ['/asistent'], []],
 ];
 const ALLOWED_EXT = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'odt', 'ods', 'jpg', 'jpeg', 'png'];
 
@@ -1838,6 +1839,7 @@ require_once __DIR__ . '/ai_lib.php';
 require_once __DIR__ . '/meters_lib.php';
 require_once __DIR__ . '/push_lib.php';
 require_once __DIR__ . '/search_lib.php';
+require_once __DIR__ . '/assistant_lib.php';
 require_once __DIR__ . '/extra_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string

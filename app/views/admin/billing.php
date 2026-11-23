@@ -132,6 +132,29 @@
     <?php endif ?>
   </div>
 
+  <div class="card" id="ai-kredity">
+    <h2>AI pomocník a asistent</h2>
+    <?php $aiLimit = $usage['ai']['limit']; $aiUsed = $usage['ai']['used']; $credits = (int) ($t['ai_credits'] ?? 0); $packN = pset_int('ai_pack', 1, 100000); $packP = pset_int('price_ai_pack', 0, 1000000); ?>
+    <p>Tento měsíc využito <strong><?= $aiUsed ?><?= $aiLimit ? ' z ' . $aiLimit : '' ?></strong> použití AI<?= $aiLimit ? '' : ' (bez omezení)' ?><?= $credits ? ' · dokoupené kredity: <strong>' . $credits . '</strong>' : '' ?>.</p>
+    <?php if ($aiLimit): ?><progress class="bar bar-wide" value="<?= min($aiUsed, $aiLimit) ?>" max="<?= $aiLimit ?>"></progress><?php endif ?>
+    <p class="hint">Do limitu se počítá každá otázka AI asistentovi a každý text od AI pomocníka. Limit se obnoví prvního dne v měsíci; když dojde, čerpají se dokoupené kredity, které nepropadají.</p>
+    <?php if ($creditsPayment): $cp = $creditsPayment; ?>
+      <h3>Platba za <?= (int) $cp['item'] ?> AI kreditů</h3>
+      <?php if ($cp['status'] === 'claimed'): ?><div class="flash flash-info">Platbu jste nahlásili jako odeslanou <?= cz_datetime($cp['claimed_at']) ?>. Čeká na potvrzení provozovatelem.</div><?php endif ?>
+      <div class="pay"><?php if ($creditsQr): ?><div class="pay-qr"><?= $creditsQr ?><small>Načtěte v bankovní aplikaci</small></div><?php endif ?>
+        <dl class="pay-data"><dt>Částka</dt><dd><strong><?= pay_money($cp) ?></strong><?= pay_vat_hint($cp) ?></dd><?php if ($iban): ?><dt>Číslo účtu</dt><dd><?= e(pset('account')) ?></dd><?php endif ?><dt>Variabilní symbol</dt><dd><code><?= e($cp['vs']) ?></code></dd></dl></div>
+      <div class="actions">
+        <?php if ($cp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai-kredity') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="claim"><button class="btn" type="submit">Platbu za AI kredity jsem odeslal(a)</button></form><?php endif ?>
+        <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $cp['id']) ?>">Zálohová faktura k tisku</a>
+        <?php if ($cp['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/ai-kredity') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?>
+      </div>
+    <?php elseif ($aiLimit && $packP): ?>
+      <form method="post" action="<?= url('/admin/predplatne/ai-kredity') ?>" class="storage-order"><?= csrf_field() ?><input type="hidden" name="action" value="order">
+        <label>Dokoupit AI kredity <select name="packs"><?php foreach ([1, 2, 5] as $n): ?><option value="<?= $n ?>"><?= number_format($n * $packN, 0, ',', "\u{a0}") ?> dotazů · <?= money_czk($n * $packP) ?></option><?php endforeach ?></select></label>
+        <button class="btn" type="submit">Objednat AI kredity</button></form>
+    <?php endif ?>
+  </div>
+
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
     <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>

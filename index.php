@@ -328,6 +328,7 @@ require __DIR__ . '/app/routes_presence.php';
 require __DIR__ . '/app/routes_help.php';
 require __DIR__ . '/app/routes_push.php';
 require __DIR__ . '/app/routes_search.php';
+require __DIR__ . '/app/routes_assistant.php';
 require __DIR__ . '/app/routes_reports.php';
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';

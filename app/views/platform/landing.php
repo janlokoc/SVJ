@@ -9,7 +9,7 @@ $num = fn(int $n, string $unit) => $n === 0 ? 'bez omezení' : number_format($n,
 $editions = [
     'free' => ['Pro malý dům, který chce začít.', ['Veřejný web a část pro obyvatele', $num($lim('free', 'users'), 'účtů') . ', ' . $num($lim('free', 'mails'), 'e-mailů měsíčně'), 'Jeden pevný vzhled']],
     'standard' => ['Pro běžné společenství.', ['Prezence, hlasování a zápis ze shromáždění', 'Dálkové odečty a upozornění do telefonu', 'Revize, úkoly a dodavatelé', '5 šablon, 5 barev a vlastní logo']],
-    'premium' => ['Pro velké domy a správu plateb.', ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, AI zápis', '10 šablon a 10 barev, beta program']],
+    'premium' => ['Pro velké domy a správu plateb.', ['AI asistent: odpovědi podle stanov a dokumentů domu', 'Platby na jednotku s upomínkami, AI zápis', 'Rezervace, jazykové verze, 10 šablon a 10 barev']],
 ];
 $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
 ?>

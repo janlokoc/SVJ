@@ -412,3 +412,8 @@ document.querySelectorAll('[data-push]').forEach(async (box) => {
   });
   refresh();
 });
+
+// AI asistent: ukázková otázka se vloží do pole
+document.querySelectorAll('[data-fill]').forEach((b) => b.addEventListener('click', () => { const t = document.querySelector(b.dataset.fill); if (t) { t.value = b.textContent.trim(); t.focus(); } }));
+// Odeslání otázky: tlačítko ukáže, že asistent přemýšlí
+document.querySelectorAll('.chat-form').forEach((f) => f.addEventListener('submit', (e) => { if (e.submitter && e.submitter.value === 'nova') return; const b = f.querySelector('button[type=submit]'); b.disabled = true; b.textContent = 'Asistent přemýšlí…'; }));

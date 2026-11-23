@@ -5,7 +5,7 @@ $edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omeze
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jeden pevný vzhled (šablona i barvy)', 'V patičce odkaz na službu'],
     'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Dálkové odečty, revize, klíče a čipy', 'Upozornění do telefonu', 'Úkoly a usnesení, dodavatelé', '5 šablon a 5 barev, vlastní logo, bez odkazu v patičce', 'Záloha všech dat ke stažení'],
-    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', '10 šablon a 10 barev místo 5 a 5', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
+    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', '10 šablon a 10 barev místo 5 a 5', 'AI asistent pro obyvatele i výbor (odpovědi podle dokumentů domu)', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
 ];
 $edCompact = !empty($edCompact);
 if ($edCompact) {
@@ -13,7 +13,7 @@ if ($edCompact) {
     $edExtra = [
         'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jeden pevný vzhled'],
         'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Odečty, revize, klíče, úkoly a dodavatelé', 'Upozornění do telefonu', '5 šablon, 5 barev a logo, bez odkazu v patičce, záloha dat'],
-        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, 10 šablon a 10 barev', 'AI zápis, přednostní podpora a beta program novinek'],
+        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, 10 šablon a 10 barev', 'AI asistent, AI zápis, přednostní podpora a beta program'],
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
