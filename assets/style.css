@@ -801,7 +801,9 @@ html[data-style="vlidna"] .table { border-width: 2px; }
 .survey-form { margin: .75rem 0; gap: .5rem; }
 .survey-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(80px, 180px) auto; gap: .75rem; align-items: center; padding: .25rem 0; }
 .survey-row strong { white-space: nowrap; }
-.is-debt { color: var(--accent); } .is-ok { color: var(--ok); }
+.is-debt { color: #b42318; } .is-ok { color: var(--ok); }   /* nedoplatek vždy červeně – akcent vzhledu může být zelený */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .is-debt { color: #ff9a8c; } }
+:root[data-theme="dark"] .is-debt { color: #ff9a8c; }
 .pay-unit .pay { margin-top: 1rem; }
 .fill { border-bottom: 1px dotted var(--muted); min-width: 12rem; display: inline-block; }
 .fill-block { display: block; min-height: 5rem; border: 1px dashed var(--line); border-radius: 8px; padding: .6rem .8rem; color: var(--muted); }

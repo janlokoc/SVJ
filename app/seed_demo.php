@@ -211,6 +211,19 @@ function seed_demo_more(PDO $pdo): void
         $pdo->prepare('UPDATE tickets SET supplier_id = ? WHERE id = ?')->execute([$sup[0], $ticket]);
     }
 
+    // Platby na jednotku: předpis měsíčních záloh podle podílu a stav k 1. dni měsíce – většina v pořádku, pár přeplatků
+    // a dva nedoplatky (jeden u obyvatele z ukázky, aby bylo vidět upozornění a QR platbu).
+    $petrUnit = (int) $pdo->query('SELECT unit_id FROM user_units WHERE user_id = ' . $uid[1] . ' ORDER BY unit_id LIMIT 1')->fetchColumn();
+    $balances = [0, 0, 350, 0, -7420, 0, 0, 1200, 0, 0, 0, 0];
+    foreach ($pdo->query('SELECT id, entrance, number, share FROM units ORDER BY entrance, number + 0')->fetchAll() as $i => $un) {
+        [$num, $den] = array_map('intval', explode('/', $un['share'] ?: '800/10000')) + [0, 1];
+        $prescribed = round(32000 * ($den ? $num / $den : 0.08) / 10) * 10;   // dům: zálohy celkem asi 32 000 Kč měsíčně
+        $balance = (int) $un['id'] === $petrUnit ? -1250.0 : (float) ($balances[$i % count($balances)] ?? 0);
+        $note = $balance < -5000 ? 'Neuhrazené zálohy za září a říjen' : ($balance < 0 ? 'Nedoplatek z vyúčtování služeb za loňský rok' : ($balance > 0 ? 'Přeplatek – započte se do příští zálohy' : ''));
+        $ins('unit_accounts', ['unit_id' => (int) $un['id'], 'prescribed' => $prescribed, 'balance' => $balance, 'vs' => ($un['entrance'] === 'A' ? '1' : '2') . sprintf('%02d', (int) $un['number']) . '12',
+            'as_of' => date('Y-m-01'), 'note' => $note]);
+    }
+
     // Kdo je kdo: výbor a kontrolní komise
     foreach ([0 => 'predseda', 4 => 'mistopredseda', 3 => 'clen_vyboru', 6 => 'predseda_kk', 7 => 'clen_kk'] as $i => $position) {
         $pdo->prepare('UPDATE users SET position = ? WHERE id = ?')->execute([$position, $uid[$i]]);
