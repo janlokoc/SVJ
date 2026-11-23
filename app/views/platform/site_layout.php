@@ -28,7 +28,7 @@
         <li><a href="<?= url('/cenik') ?>"<?= str_starts_with($navPath, '/cenik') ? ' aria-current="page"' : '' ?>>Ceník</a></li>
         <?php if ($navDemo): ?><li><a href="<?= e(tenant_url($navDemo, '/vstup')) ?>">Ukázka webu</a></li><?php endif ?>
       </ul>
-      <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Založit web zdarma</a></div>
+      <div class="nav-user"><a class="btn btn-small" href="<?= url('/registrace') ?>">Založit web zdarma</a></div>
     </nav>
   </div>
 </header>
@@ -49,6 +49,7 @@
       <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
       <li><a href="<?= url('/zpracovani-udaju') ?>">Smlouva o zpracování údajů</a></li>
       <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
+      <li><a href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open>Nahlásit problém nebo nápad</a></li>
       <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>
       <li><?= theme_switch() ?></li>
     </ul>
