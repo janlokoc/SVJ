@@ -12,5 +12,10 @@
       <button class="btn btn-big<?= $role === 'resident' ? '' : ' btn-ghost' ?>" type="submit"><?= e($btn) ?></button></form>
     <?php endforeach ?>
   </div>
+  <div class="demo-edition-pick">
+    <h2>V jaké edici?</h2>
+    <p class="muted">Ukázka běží v edici <?= e(EDITIONS[plan_edition()]) ?>. Přepněte si, jak web vypadá a co umí ve které edici – i později v liště nahoře.</p>
+    <div class="actions"><?php $de = plan_edition(); foreach (EDITIONS as $ek => $en): ?><form method="post" action="<?= url('/demo-edice') ?>"><?= csrf_field() ?><input type="hidden" name="edice" value="<?= $ek ?>"><button class="btn<?= $de === $ek ? '' : ' btn-ghost' ?>" type="submit"<?= $de === $ek ? ' aria-pressed="true"' : '' ?>><?= e($en) ?></button></form><?php endforeach ?></div>
+  </div>
   <p class="hint">V ukázce se změny neukládají. Vlastní web si založíte zdarma: <a href="<?= e(platform_url('/registrace')) ?>">Založit web</a>. <a href="<?= e(platform_url('/')) ?>">← Zpět na úvodní stránku <?= e(pset('service_name')) ?></a></p>
 </div>

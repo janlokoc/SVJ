@@ -507,7 +507,8 @@ function tenant_create(array $t): void
 function billing_state(?array $t): array
 {
     if (!$t || empty($t['billing'])) {
-        return ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => 'premium'];
+        // Ukázka: edice podle přepínače v ukázce.
+        return ['mode' => 'free', 'until' => '', 'days' => 0, 'edition' => !empty($t['demo']) ? tenant_edition($t) : 'premium'];
     }
     $today = date('Y-m-d');
     $paid = (string) $t['paid_until'];

@@ -31,7 +31,7 @@ $benefits = [
 </section>
 
 <section class="wrap lp-section" id="vzhledy">
-  <h2>Pět šablon, každá v pěti barvách</h2>
+  <h2>Pět šablon v pěti barvách, v Premium deset a deset</h2>
   <div class="lp-looks look-cards lp-looks-plain">
     <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong></figcaption></figure><?php endforeach ?>
   </div>

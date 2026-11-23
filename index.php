@@ -221,16 +221,27 @@ if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/
     exit;
 }
 if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
+    if ($PATH === '/demo-edice') {
+        $_SESSION['demo_edition'] = isset(EDITIONS[post('edice')]) ? post('edice') : 'premium';
+        $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+        $back = $BASE !== '' && str_starts_with($back, $BASE) ? (string) substr($back, strlen($BASE)) : $back;
+        redirect(preg_match('~^/(?![/\\\\])~', $back) ? $back : '/');
+    }
     if ($PATH === '/demo-prihlaseni') {
         if (post('jako') === 'host') {
             // Návštěvník bez účtu: odhlásit a ukázat veřejnou část webu.
-            $_SESSION = [];
+            $edition = $_SESSION['demo_edition'] ?? null;   // zvolená edice zůstává i po odhlášení
+            $_SESSION = $edition ? ['demo_edition' => $edition] : [];
             session_regenerate_id(true);
             redirect('/');
         }
         $role = post('jako') === 'admin' ? 'admin' : 'resident';
         if ($demoUser = one('SELECT * FROM users WHERE role = ? AND active = 1 ORDER BY id LIMIT 1', [$role])) {
+            $edition = $_SESSION['demo_edition'] ?? null;
             login_user($demoUser);
+            if ($edition) {
+                $_SESSION['demo_edition'] = $edition;
+            }
         }
         redirect($role === 'admin' ? '/admin' : '/');
     }

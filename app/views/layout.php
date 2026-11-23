@@ -47,7 +47,7 @@ $inAdmin = str_starts_with($path, '/admin') && is_admin();
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
 <!doctype html>
-<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>" data-style="<?= e(isset(STYLES[site('style')]) && plan_has('sablony') ? site('style') : 'klasik') ?>"<?= theme_attr() ?>>
+<html lang="<?= e(page_translatable() ? current_lang() : 'cs') ?>" data-look="<?= e(site_look_used()) ?>" data-style="<?= e(site_style_used()) ?>"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -56,7 +56,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
 <link rel="manifest" href="<?= url('/manifest.webmanifest') ?>">
 <link rel="apple-touch-icon" href="<?= asset('icon-192.png') ?>">
-<meta name="theme-color" content="<?= e(LOOK_COLORS[site('look')] ?? LOOK_COLORS['les']) ?>">
+<meta name="theme-color" content="<?= e(LOOK_COLORS[site_look_used()]) ?>">
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>
@@ -105,6 +105,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <form method="post" action="<?= url('/demo-prihlaseni') ?>"><?= csrf_field() ?><input type="hidden" name="jako" value="resident"><button class="btn btn-small<?= $u && $u['role'] !== 'admin' ? '' : ' btn-ghost' ?>" type="submit">obyvatel</button></form>
     <form method="post" action="<?= url('/demo-prihlaseni') ?>"><?= csrf_field() ?><input type="hidden" name="jako" value="admin"><button class="btn btn-small<?= $u && $u['role'] === 'admin' ? '' : ' btn-ghost' ?>" type="submit">správce (výbor)</button></form>
     <a class="btn btn-small btn-accent" href="<?= e(platform_url('/registrace')) ?>">Založit vlastní web</a></span>
+  <span class="demo-actions demo-editions">Edice
+    <?php $de = plan_edition(); foreach (EDITIONS as $ek => $en): ?><form method="post" action="<?= url('/demo-edice') ?>"><?= csrf_field() ?><input type="hidden" name="edice" value="<?= $ek ?>"><button class="btn btn-small<?= $de === $ek ? '' : ' btn-ghost' ?>" type="submit"<?= $de === $ek ? ' aria-pressed="true"' : '' ?>><?= e($en) ?></button></form><?php endforeach ?></span>
 </div></div>
 <?php endif ?>
 <?php if ($inAdmin):

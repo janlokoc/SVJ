@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="cs" data-look="<?= e(isset(LOOKS[site('look')]) ? site('look') : 'les') ?>" data-style="<?= e(isset(STYLES[site('style')]) && plan_has('sablony') ? site('style') : 'klasik') ?>"<?= theme_attr() ?>>
+<html lang="cs" data-look="<?= e(site_look_used()) ?>" data-style="<?= e(site_style_used()) ?>"<?= theme_attr() ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

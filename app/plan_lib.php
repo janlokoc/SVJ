@@ -39,6 +39,7 @@ const PLAN_FEATURES = [
     'zapis' => ['standard', 'Zápis ze shromáždění', 'Zápis sestavený z účasti, programu a výsledků hlasování, připravený k tisku.', '~^/admin/terminy/\d+/zapis$~'],
     'zaloha' => ['standard', 'Záloha dat ke stažení', 'Úplná záloha webu včetně dokumentů ke stažení a obnovení.', '~^/admin/zaloha(/|$)~'],
     'sablony' => ['standard', 'Všechny šablony vzhledu', 'Pět šablon webu místo jedné základní.', null],
+    'vzhledy-plus' => ['premium', 'Deset šablon a deset barev', 'Dalších pět šablon (Cedule, Panelák, Činžák, Čitelná, Vývěska) a pět barevných variant.', null],
     'jazyky' => ['premium', 'Jazykové verze', 'Web i ve slovenštině, angličtině, ukrajinštině a vietnamštině.', null],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],
 ];
@@ -59,7 +60,12 @@ function plan_tenant(): ?array
 /** Edice, kterou má web právě teď. Web bez placení a ukázkový web nemají omezení. */
 function tenant_edition(?array $t): string
 {
-    if (!$t || empty($t['billing']) || !empty($t['demo'])) {
+    if (!empty($t['demo'])) {
+        // Ukázka: návštěvník si může přepnout, jak web vypadá v jednotlivých edicích (jen ve své relaci).
+        $chosen = (string) ($_SESSION['demo_edition'] ?? '');
+        return isset(EDITIONS[$chosen]) ? $chosen : 'premium';
+    }
+    if (!$t || empty($t['billing'])) {
         return 'premium';
     }
     $today = date('Y-m-d');

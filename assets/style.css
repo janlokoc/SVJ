@@ -1267,3 +1267,140 @@ code.break { word-break: break-all; }
 .for-me-ok { margin: 0; padding: .7rem 1rem; border-radius: calc(var(--radius) * .6); background: var(--ok-soft); color: var(--ok); max-width: 34rem; }
 /* Na telefonu je havarijní telefon hned pod úvodem, ne až pod aktualitami – v nouzi se nehledá. */
 @media (max-width: 860px) { .home-grid { display: flex; flex-direction: column; } .home-grid > .home-side { display: contents; } .home-grid .card-alert { order: -1; } .home-grid > * { min-width: 0; } }
+
+/* ===================== Edice Premium: dalších pět barev ===================== */
+[data-look="nebe"] { --bg: #eff5f9; --surface: #fcfdfe; --surface-2: #dfeaf2; --ink: #14222d; --muted: #4f6170; --line: #cfdde8; --primary: #225f8a; --primary-hover: #194868; --accent: #8a5e00; --accent-soft: #f6ead0; --soft: #e0edf6; }
+[data-look="oliva"] { --bg: #f2f3ea; --surface: #fcfcf7; --surface-2: #e3e6d4; --ink: #1d2213; --muted: #585e49; --line: #d6dac4; --primary: #4a5a24; --primary-hover: #38441b; --accent: #6a4a9c; --accent-soft: #ebe3f6; --soft: #e7ebd6; }
+[data-look="petrolej"] { --bg: #eef4f4; --surface: #fbfdfd; --surface-2: #dce8e8; --ink: #11211f; --muted: #4c5f5f; --line: #cddcdc; --primary: #0e5a62; --primary-hover: #0a444a; --accent: #8c4a1c; --accent-soft: #f4e3d7; --soft: #dcecec; }
+[data-look="pulnoc"] { --bg: #f1f2f8; --surface: #fcfcfe; --surface-2: #e1e3ef; --ink: #151a2e; --muted: #525a72; --line: #d3d6e6; --primary: #1e2b5e; --primary-hover: #151f45; --accent: #ad3a34; --accent-soft: #f6dfdd; --soft: #e3e6f3; }
+[data-look="malina"] { --bg: #f8f1f4; --surface: #fefcfd; --surface-2: #efe0e7; --ink: #2a121d; --muted: #6a5260; --line: #e4d2da; --primary: #8b1d4d; --primary-hover: #6c163c; --accent: #126d65; --accent-soft: #d8eeeb; --soft: #f3e3ea; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-look="nebe"], :root:not([data-theme="light"]) [data-look="nebe"] { --bg: #0e151b; --surface: #151f28; --surface-2: #1f2c37; --ink: #e6eef4; --muted: #9fb2c0; --line: #28394a; --primary: #86c3ee; --primary-hover: #a3d2f3; --on-primary: #0a1822; --accent: #f0c25a; --accent-soft: #33290f; --soft: #182634; }
+  :root:not([data-theme="light"])[data-look="oliva"], :root:not([data-theme="light"]) [data-look="oliva"] { --bg: #12140d; --surface: #1a1d13; --surface-2: #24281b; --ink: #eceee2; --muted: #aeb39d; --line: #313625; --primary: #b9cf7a; --primary-hover: #c9db97; --on-primary: #161b08; --accent: #c3a8f0; --accent-soft: #2a2238; --soft: #1e2316; }
+  :root:not([data-theme="light"])[data-look="petrolej"], :root:not([data-theme="light"]) [data-look="petrolej"] { --bg: #0d1516; --surface: #141f20; --surface-2: #1d2b2c; --ink: #e4efef; --muted: #9db4b4; --line: #27393a; --primary: #78cbd2; --primary-hover: #97d8dd; --on-primary: #06191b; --accent: #f0a874; --accent-soft: #3a2616; --soft: #16292a; }
+  :root:not([data-theme="light"])[data-look="pulnoc"], :root:not([data-theme="light"]) [data-look="pulnoc"] { --bg: #0d1020; --surface: #151a2e; --surface-2: #1f253d; --ink: #e7e9f5; --muted: #a6acc6; --line: #2a3150; --primary: #9fb0f2; --primary-hover: #bac7f6; --on-primary: #0c1230; --accent: #f59a8f; --accent-soft: #3d1f1c; --soft: #1a2040; }
+  :root:not([data-theme="light"])[data-look="malina"], :root:not([data-theme="light"]) [data-look="malina"] { --bg: #170d12; --surface: #21141b; --surface-2: #2d1c25; --ink: #f3e7ec; --muted: #c2a8b5; --line: #3c2631; --primary: #f29bc0; --primary-hover: #f6b6d2; --on-primary: #2a0a18; --accent: #6fd2c6; --accent-soft: #123330; --soft: #2a1722; }
+}
+:root[data-theme="dark"][data-look="nebe"], :root[data-theme="dark"] [data-look="nebe"] { --bg: #0e151b; --surface: #151f28; --surface-2: #1f2c37; --ink: #e6eef4; --muted: #9fb2c0; --line: #28394a; --primary: #86c3ee; --primary-hover: #a3d2f3; --on-primary: #0a1822; --accent: #f0c25a; --accent-soft: #33290f; --soft: #182634; }
+:root[data-theme="dark"][data-look="oliva"], :root[data-theme="dark"] [data-look="oliva"] { --bg: #12140d; --surface: #1a1d13; --surface-2: #24281b; --ink: #eceee2; --muted: #aeb39d; --line: #313625; --primary: #b9cf7a; --primary-hover: #c9db97; --on-primary: #161b08; --accent: #c3a8f0; --accent-soft: #2a2238; --soft: #1e2316; }
+:root[data-theme="dark"][data-look="petrolej"], :root[data-theme="dark"] [data-look="petrolej"] { --bg: #0d1516; --surface: #141f20; --surface-2: #1d2b2c; --ink: #e4efef; --muted: #9db4b4; --line: #27393a; --primary: #78cbd2; --primary-hover: #97d8dd; --on-primary: #06191b; --accent: #f0a874; --accent-soft: #3a2616; --soft: #16292a; }
+:root[data-theme="dark"][data-look="pulnoc"], :root[data-theme="dark"] [data-look="pulnoc"] { --bg: #0d1020; --surface: #151a2e; --surface-2: #1f253d; --ink: #e7e9f5; --muted: #a6acc6; --line: #2a3150; --primary: #9fb0f2; --primary-hover: #bac7f6; --on-primary: #0c1230; --accent: #f59a8f; --accent-soft: #3d1f1c; --soft: #1a2040; }
+:root[data-theme="dark"][data-look="malina"], :root[data-theme="dark"] [data-look="malina"] { --bg: #170d12; --surface: #21141b; --surface-2: #2d1c25; --ink: #f3e7ec; --muted: #c2a8b5; --line: #3c2631; --primary: #f29bc0; --primary-hover: #f6b6d2; --on-primary: #2a0a18; --accent: #6fd2c6; --accent-soft: #123330; --soft: #2a1722; }
+.look-nebe .look-swatch i:nth-child(1) { background: #225f8a; } .look-nebe .look-swatch i:nth-child(2) { background: #8a5e00; } .look-nebe .look-swatch i:nth-child(3) { background: #eff5f9; }
+.look-oliva .look-swatch i:nth-child(1) { background: #4a5a24; } .look-oliva .look-swatch i:nth-child(2) { background: #6a4a9c; } .look-oliva .look-swatch i:nth-child(3) { background: #f2f3ea; }
+.look-petrolej .look-swatch i:nth-child(1) { background: #0e5a62; } .look-petrolej .look-swatch i:nth-child(2) { background: #8c4a1c; } .look-petrolej .look-swatch i:nth-child(3) { background: #eef4f4; }
+.look-pulnoc .look-swatch i:nth-child(1) { background: #1e2b5e; } .look-pulnoc .look-swatch i:nth-child(2) { background: #ad3a34; } .look-pulnoc .look-swatch i:nth-child(3) { background: #f1f2f8; }
+.look-malina .look-swatch i:nth-child(1) { background: #8b1d4d; } .look-malina .look-swatch i:nth-child(2) { background: #126d65; } .look-malina .look-swatch i:nth-child(3) { background: #f8f1f4; }
+.look-tag, .look-card .plan-tag { margin-left: auto; }
+
+/* ===================== Edice Premium: dalších pět šablon ===================== */
+/* Náhledy */
+.mini[data-style="cedule"] { --m-r: 4px; --m-btn: 3px; --m-card: 2px; --m-head: "Archivo", var(--font); --m-weight: 800; }
+.mini[data-style="cedule"] .mini-bar { background: var(--primary); color: var(--on-primary); border-bottom: 0; box-shadow: inset 0 0 0 2px var(--primary), inset 0 0 0 3px var(--on-primary); }
+.mini[data-style="cedule"] .mini-bar svg { fill: var(--on-primary); }
+.mini[data-style="cedule"] .mini-bar i { background: color-mix(in srgb, var(--on-primary) 55%, transparent); }
+.mini[data-style="cedule"] .mini-body strong { font-stretch: 80%; }
+.mini[data-style="panelak"] { --m-r: 0; --m-btn: 0; --m-card: 0; --m-head: "Archivo", var(--font); --m-weight: 800; border-width: 2px; border-color: var(--ink); }
+.mini[data-style="panelak"] .mini-body { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 22px 22px; }
+.mini[data-style="panelak"] .mini-body strong { font-stretch: 115%; font-size: 1.25rem; }
+.mini[data-style="panelak"] .mini-cards span { border: 2px solid var(--ink); }
+.mini[data-style="cinzak"] { --m-r: 2px; --m-btn: 2px; --m-card: 2px; --m-weight: 600; }
+.mini[data-style="cinzak"] .mini-bar { justify-content: center; border-bottom: 1px solid var(--accent); box-shadow: 0 3px 0 -2px var(--accent); }
+.mini[data-style="cinzak"] .mini-bar i { display: none; }
+.mini[data-style="cinzak"] .mini-body { justify-items: center; text-align: center; }
+.mini[data-style="cinzak"] .mini-cards span { border: 3px double var(--line); }
+.mini[data-style="citelna"] { --m-r: 8px; --m-btn: 8px; --m-card: 6px; --m-head: "Atkinson Hyperlegible Next", var(--font); --m-weight: 800; border-width: 2px; border-color: var(--ink); }
+.mini[data-style="citelna"] .mini-body strong { font-size: 1.6rem; }
+.mini[data-style="citelna"] .mini-btn { font-size: .78rem; text-decoration: underline; }
+.mini[data-style="vyveska"] { --m-r: 6px; --m-btn: 6px; --m-card: 2px; --m-head: var(--font); --m-weight: 800; }
+.mini[data-style="vyveska"] .mini-body { background: var(--soft); }
+.mini[data-style="vyveska"] .mini-cards span { background: var(--surface); border-color: transparent; box-shadow: 0 2px 4px rgba(0, 0, 0, .12); position: relative; }
+.mini[data-style="vyveska"] .mini-cards span:nth-child(1) { transform: rotate(-2deg); } .mini[data-style="vyveska"] .mini-cards span:nth-child(3) { transform: rotate(2deg); }
+.mini[data-style="vyveska"] .mini-cards span::before { content: ""; position: absolute; top: -3px; left: 50%; width: 7px; height: 7px; margin-left: -3px; border-radius: 50%; background: var(--accent); }
+
+/* --- Cedule: jako smaltovaná cedule s číslem domu. Zúžené nápisy, hlavička v hlavní barvě s bílým lemem. --- */
+html[data-style="cedule"] { --display: "Archivo", var(--font); --radius: 5px; --shadow: none; }
+html[data-style="cedule"] :is(h1, h2, h3, .brand-text strong) { font-stretch: 80%; font-weight: 750; letter-spacing: -.005em; }
+html[data-style="cedule"] .hero h1 { font-size: clamp(2.8rem, 1.6rem + 5vw, 5rem); line-height: .95; }
+html[data-style="cedule"] .h1-sub { font-weight: 500; font-stretch: 90%; }
+html[data-style="cedule"] :is(.btn, .nav-toggle, .chips a, .status, .tag, .count, .doc, .event-date, .report-link, .site-nav li a, .lang-switch a, .doc-ext, .look, .look-card) { border-radius: 4px; }
+html[data-style="cedule"] .site-header { background: var(--primary); backdrop-filter: none; border-bottom: 0; box-shadow: inset 0 -5px 0 -2px var(--on-primary), inset 0 -6px 0 -2px var(--primary); }
+html[data-style="cedule"] .site-header :is(.brand, .brand-text small, .site-nav li a, .user-link, .user-link .user-id small, .nav-more summary, .report-link, .nav-toggle) { color: var(--on-primary); }
+html[data-style="cedule"] .site-header .brand-mark, html[data-style="cedule"] .site-header .brand-mark rect:nth-child(2) { fill: var(--on-primary); }
+html[data-style="cedule"] .site-header .site-nav li a:hover, html[data-style="cedule"] .site-header .nav-more summary:hover { background: color-mix(in srgb, var(--on-primary) 16%, transparent); }
+html[data-style="cedule"] .site-header .site-nav li a[aria-current], html[data-style="cedule"] .site-header .nav-more details.is-active > summary { background: var(--on-primary); color: var(--primary); }
+html[data-style="cedule"] .site-header .btn-ghost, html[data-style="cedule"] .site-header .nav-toggle, html[data-style="cedule"] .site-header .report-link { border-color: color-mix(in srgb, var(--on-primary) 50%, transparent); color: var(--on-primary); background: transparent; }
+html[data-style="cedule"] .site-header .btn:not(.btn-ghost, .btn-accent) { background: var(--on-primary); color: var(--primary); border-color: var(--on-primary); }
+@media (min-width: 1101px) {
+  html[data-style="cedule"] .site-header .site-nav .nav-more ul li a { color: var(--ink); }
+  html[data-style="cedule"] .site-header .site-nav .nav-more ul li a:hover { background: var(--surface-2); }
+  html[data-style="cedule"] .site-header .site-nav .nav-more ul li a[aria-current] { background: var(--primary); color: var(--on-primary); }
+}
+@media (max-width: 1100px) { html[data-style="cedule"] .site-header .site-nav li a[aria-current] { color: var(--primary); } }
+html[data-style="cedule"] .hero { background: var(--bg); }
+html[data-style="cedule"] :is(.card, .post-card, .ticket, .contact, .stat, .event-card) { box-shadow: none; border-width: 1.5px; }
+html[data-style="cedule"] .event-date { box-shadow: inset 0 0 0 3px var(--primary), inset 0 0 0 5px var(--on-primary); }
+
+/* --- Panelák: modulová mřížka, široké nápisy, silné linky jako spáry panelů. Žádné zaoblení. --- */
+html[data-style="panelak"] { --display: "Archivo", var(--font); --radius: 0px; --shadow: none; }
+html[data-style="panelak"] :is(h1, h2, h3, .brand-text strong) { font-stretch: 112%; font-weight: 800; letter-spacing: -.02em; }
+html[data-style="panelak"] .hero h1 { font-size: clamp(2.4rem, 1.4rem + 4.2vw, 4.2rem); line-height: 1; }
+html[data-style="panelak"] .h1-sub { font-weight: 500; font-stretch: 100%; }
+html[data-style="panelak"] :is(.btn, .nav-toggle, .chips a, .status, .tag, .count, .doc, .event-date, .report-link, .site-nav li a, .lang-switch a, .doc-ext, .look, .look-card) { border-radius: 0; }
+html[data-style="panelak"] :is(input:not([type=checkbox], [type=radio], [type=file], [type=hidden]), select, textarea) { border-radius: 0; border-width: 2px; }
+html[data-style="panelak"] .site-header { background: var(--surface); backdrop-filter: none; border-bottom: 3px solid var(--ink); }
+html[data-style="panelak"] .hero { background-color: var(--bg); background-image: linear-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px); background-size: 48px 48px; border-bottom: 3px solid var(--ink); }
+html[data-style="panelak"] :is(.card, .post-card, .ticket, .contact, .stat, .event-card, .doc) { border: 2px solid var(--ink); box-shadow: none; }
+html[data-style="panelak"] .post-card:hover, html[data-style="panelak"] .doc:hover { transform: none; box-shadow: 4px 4px 0 var(--ink); }
+html[data-style="panelak"] .btn { border-width: 2px; }
+html[data-style="panelak"] .site-footer { border-top: 3px solid var(--ink); }
+
+/* --- Činžák: patkové nápisy, název uprostřed, dvojité linky a rámečky jako štuky na fasádě. --- */
+html[data-style="cinzak"] { --radius: 2px; --shadow: none; }
+html[data-style="cinzak"] :is(h1, h2, h3) { font-weight: 600; letter-spacing: -.01em; }
+html[data-style="cinzak"] .hero { background: var(--surface); border-bottom: 1px solid var(--accent); box-shadow: 0 5px 0 -4px var(--accent); }
+html[data-style="cinzak"] .hero-text { text-align: center; }
+html[data-style="cinzak"] .hero-text .actions, html[data-style="cinzak"] .hero-text .for-me-list { justify-content: center; margin-inline: auto; }
+html[data-style="cinzak"] .hero h1 { font-weight: 500; }
+html[data-style="cinzak"] .site-header { background: var(--surface); backdrop-filter: none; border-bottom: 1px solid var(--accent); }
+html[data-style="cinzak"] :is(.btn, .nav-toggle, .chips a, .status, .tag, .count, .doc, .event-date, .report-link, .site-nav li a, .lang-switch a, .doc-ext) { border-radius: 2px; }
+html[data-style="cinzak"] :is(.card, .post-card, .ticket, .contact, .stat, .event-card) { border: 3px double color-mix(in srgb, var(--accent) 45%, var(--line)); box-shadow: none; }
+html[data-style="cinzak"] .section-head h2, html[data-style="cinzak"] .home-side h2 { border-bottom: 1px solid var(--accent); padding-bottom: .3rem; }
+@media (min-width: 1101px) {
+  html[data-style="cinzak"] .header-row { flex-wrap: wrap; justify-content: center; gap: .25rem 1.5rem; padding-block: .8rem .4rem; }
+  html[data-style="cinzak"] .brand { flex-basis: 100%; justify-content: center; }
+}
+
+/* --- Čitelná: pro starší a slabozraké sousedy. Větší písmo navržené pro čitelnost, vysoký kontrast, podtržené odkazy, velká tlačítka. --- */
+html[data-style="citelna"] { --font: "Atkinson Hyperlegible Next", system-ui, sans-serif; --display: "Atkinson Hyperlegible Next", system-ui, sans-serif; --radius: 10px; --shadow: none; --muted: color-mix(in srgb, var(--ink) 78%, var(--bg)); }
+html[data-style="citelna"] body { font-size: 1.25rem; line-height: 1.6; }
+html[data-style="citelna"] :is(h1, h2, h3) { font-weight: 800; letter-spacing: 0; }
+html[data-style="citelna"] .hero h1 { font-size: clamp(2.4rem, 1.6rem + 3.5vw, 4rem); line-height: 1.05; }
+html[data-style="citelna"] .h1-sub { font-weight: 600; }
+html[data-style="citelna"] a:not(.btn) { text-decoration-thickness: .12em; }
+html[data-style="citelna"] :is(.site-nav li a, .more, .quick a, .for-me-list a) { text-decoration: underline; text-underline-offset: .2em; }
+html[data-style="citelna"] .btn { min-height: 52px; font-size: 1.1rem; padding-inline: 1.4rem; border-width: 2px; }
+html[data-style="citelna"] :is(.card, .post-card, .ticket, .contact, .stat, .event-card, .doc) { border: 2px solid color-mix(in srgb, var(--ink) 40%, var(--line)); box-shadow: none; }
+html[data-style="citelna"] :is(input:not([type=checkbox], [type=radio], [type=file], [type=hidden]), select, textarea) { border-width: 2px; font-size: 1.15rem; min-height: 52px; }
+html[data-style="citelna"] :focus-visible { outline: 4px solid var(--accent); outline-offset: 3px; }
+html[data-style="citelna"] .site-header { background: var(--surface); backdrop-filter: none; border-bottom: 2px solid var(--ink); }
+
+/* --- Vývěska: jako nástěnka ve vchodu. Aktuality vypadají jako připíchnuté lístky. --- */
+html[data-style="vyveska"] { --display: var(--font); --radius: 6px; }
+html[data-style="vyveska"] :is(h1, h2, h3) { font-weight: 800; letter-spacing: -.02em; }
+html[data-style="vyveska"] .hero h1 { font-weight: 800; }
+html[data-style="vyveska"] .h1-sub { font-weight: 600; }
+html[data-style="vyveska"] main { background: var(--soft); }
+html[data-style="vyveska"] .hero { background: var(--surface); }
+html[data-style="vyveska"] .post-card { position: relative; border: 0; border-radius: 3px; background: var(--surface); box-shadow: 0 2px 0 rgba(0, 0, 0, .04), 0 8px 18px -10px rgba(0, 0, 0, .35); }
+html[data-style="vyveska"] .post-card::before { content: ""; position: absolute; top: -7px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--accent); box-shadow: inset -2px -2px 0 rgba(0, 0, 0, .2), 0 2px 3px rgba(0, 0, 0, .25); }
+html[data-style="vyveska"] .post-list > :nth-child(odd) .post-card, html[data-style="vyveska"] .post-card:nth-of-type(odd) { transform: rotate(-.4deg); }
+html[data-style="vyveska"] .post-card:nth-of-type(even) { transform: rotate(.4deg); }
+html[data-style="vyveska"] .post-card:hover { transform: none; }
+html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { border: 0; box-shadow: 0 8px 18px -12px rgba(0, 0, 0, .35); }
+@media (prefers-reduced-motion: reduce) { html[data-style="vyveska"] .post-card { transform: none !important; } }
+
+.demo-editions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .35rem; }
+.demo-editions form, .demo-edition-pick form { margin: 0; }
+.demo-edition-pick { margin: 1.5rem 0; }
+.demo-edition-pick h2 { margin-bottom: .3rem; }

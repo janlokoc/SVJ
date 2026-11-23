@@ -22,9 +22,33 @@ if (PHP_SAPI === 'cli') {
 
 const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська', 'vi' => 'Tiếng Việt'];
 const STYLES = ['klasik' => 'Klasická – patkové nadpisy, klidné karty', 'modern' => 'Moderní – bezpatkové písmo, vzdušné plochy', 'vecna' => 'Věcná – rovné hrany, barevná hlavička',
-    'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy'];
-const LOOK_COLORS = ['les' => '#1d5446', 'more' => '#1b4f72', 'cihla' => '#8c3b2a', 'grafit' => '#2f3a45', 'svestka' => '#5b2a6e'];
-const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá'];
+    'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy',
+    // Edice Premium
+    'cedule' => 'Cedule – zúžené nápisy, hlavička jako smaltovaná cedule', 'panelak' => 'Panelák – široké nápisy, mřížka a silné linky',
+    'cinzak' => 'Činžák – patkové nápisy uprostřed, dvojité rámečky', 'citelna' => 'Čitelná – větší písmo a kontrast pro starší sousedy',
+    'vyveska' => 'Vývěska – aktuality jako lístky na nástěnce'];
+/** Šablony a barvy, které patří jen do edice Premium (lze je na 30 dní vyzkoušet). */
+const PREMIUM_STYLES = ['cedule', 'panelak', 'cinzak', 'citelna', 'vyveska'];
+const PREMIUM_LOOKS = ['nebe', 'oliva', 'petrolej', 'pulnoc', 'malina'];
+const LOOK_COLORS = ['les' => '#1d5446', 'more' => '#1b4f72', 'cihla' => '#8c3b2a', 'grafit' => '#2f3a45', 'svestka' => '#5b2a6e',
+    'nebe' => '#225f8a', 'oliva' => '#4a5a24', 'petrolej' => '#0e5a62', 'pulnoc' => '#1e2b5e', 'malina' => '#8b1d4d'];
+const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá',
+    'nebe' => 'Nebe – azurová a slunečná', 'oliva' => 'Oliva – olivová a levandulová', 'petrolej' => 'Petrolej – petrolejová a měděná', 'pulnoc' => 'Půlnoc – noční modrá a korálová', 'malina' => 'Malina – malinová a mořská'];
+/** Šablona, kterou web skutečně použije: Klasická bez edice Standard, prémiové šablony jen v Premium (nebo na zkoušku). */
+function site_style_used(): string
+{
+    $style = site('style');
+    if (!isset(STYLES[$style]) || !plan_has('sablony') || (in_array($style, PREMIUM_STYLES, true) && !plan_has('vzhledy-plus'))) {
+        return 'klasik';
+    }
+    return $style;
+}
+/** Barvy, které web skutečně použije: prémiové barvy jen v Premium (nebo na zkoušku), jinak Les. */
+function site_look_used(): string
+{
+    $look = site('look');
+    return isset(LOOKS[$look]) && (!in_array($look, PREMIUM_LOOKS, true) || plan_has('vzhledy-plus')) ? $look : 'les';
+}
 /** Části webu, které může správce společenství schovat z menu: klíč → [název, adresy pro obyvatele, adresy v administraci]. */
 const FEATURES = [
     'aktuality' => ['Aktuality', ['/aktuality'], ['/admin/aktuality']],

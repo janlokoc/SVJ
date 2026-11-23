@@ -680,6 +680,18 @@ administrace hostingu (phpMyAdmin).
   klidný podnadpis, barva Les má místo krémové chladnější papír a hlubší
   cihlovou. Tlačítka a odkazy jsou bez šipek.
 
+## Šablony a barvy podle edice
+
+- **Zdarma:** šablona Klasická, pět barev.
+- **Standard:** pět šablon (Klasická, Moderní, Věcná, Novinová, Vlídná) a pět barev.
+- **Premium:** navíc pět šablon – Cedule, Panelák, Činžák, Čitelná (větší písmo a
+  kontrast pro starší sousedy), Vývěska – a pět barev (Nebe, Oliva, Petrolej,
+  Půlnoc, Malina). Funkce `vzhledy-plus` jde jako ostatní vyzkoušet na 30 dní.
+  Vybrat je jde i v nižší edici; web je začne používat, až budou dostupné
+  (`site_style_used()`, `site_look_used()`).
+- **Ukázka:** v liště i na rozcestníku jde přepnout edici Zdarma / Standard /
+  Premium (jen pro danou návštěvu), takže je vidět, co která edice umí.
+
 ## Struktura
 
 ```

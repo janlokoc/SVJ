@@ -24,13 +24,13 @@
     <p class="h-small">Šablona</p>
     <p class="hint">Šablona Klasická je v edici Zdarma. Ostatní patří do edice Standard – když si některou vyberete, dostanete ji na <?= PLAN_TRIAL_DAYS ?> dní na zkoušku a potom se web vrátí ke Klasické, dokud nepřejdete na Standard.</p>
     <div class="look-cards" role="radiogroup" aria-label="Šablona webu">
-      <?php foreach (STYLES as $style => $label): $look = $s['look'] ?: 'les'; $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
+      <?php foreach (array_diff_key(STYLES, array_flip(PREMIUM_STYLES)) as $style => $label): $look = $s['look'] ?: 'les'; $miniName = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $s['name'])); ?>
         <label class="look-card"><input type="radio" name="style" value="<?= $style ?>"<?= $s['style'] === $style ? ' checked' : '' ?>><?php require __DIR__ . '/_mini.php'; ?><span><?= e($label) ?></span></label>
       <?php endforeach ?>
     </div>
     <p class="h-small">Barvy</p>
     <div class="look-picker" role="radiogroup" aria-label="Barvy webu">
-      <?php foreach (LOOKS as $k => $label): ?>
+      <?php foreach (array_diff_key(LOOKS, array_flip(PREMIUM_LOOKS)) as $k => $label): ?>
         <label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"<?= ($s['look'] ?: 'les') === $k ? ' checked' : '' ?>><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e($label) ?></span></label>
       <?php endforeach ?>
     </div>
