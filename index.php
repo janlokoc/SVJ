@@ -193,6 +193,11 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
 // Ukázkový web je jen pro čtení: přihlašuje se tlačítkem a žádná změna se neuloží.
 $GLOBALS['DEMO'] = TENANT !== '' && !empty($tenantRow['demo']);
 // Ukázkový web nemá účty s heslem: místo přihlášení nabídne vstup jedním kliknutím jako obyvatel nebo jako správce.
+// Rozcestník /vstup se ukáže vždy (odkaz „Prohlédnout ukázku“ vede sem), přihlašovací stránky jen nepřihlášenému.
+if ($GLOBALS['DEMO'] && $METHOD === 'GET' && $PATH === '/vstup') {
+    render('demo_login', ['title' => 'Vstup do ukázky']);
+    exit;
+}
 if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/zapomenute-heslo'], true) || str_starts_with($PATH, '/obnova-hesla/'))) {
     if (user()) {
         redirect(is_admin() ? '/admin' : '/');
@@ -202,6 +207,12 @@ if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/
 }
 if ($GLOBALS['DEMO'] && $METHOD === 'POST' && $PATH !== '/odhlaseni') {
     if ($PATH === '/demo-prihlaseni') {
+        if (post('jako') === 'host') {
+            // Návštěvník bez účtu: odhlásit a ukázat veřejnou část webu.
+            $_SESSION = [];
+            session_regenerate_id(true);
+            redirect('/');
+        }
         $role = post('jako') === 'admin' ? 'admin' : 'resident';
         if ($demoUser = one('SELECT * FROM users WHERE role = ? AND active = 1 ORDER BY id LIMIT 1', [$role])) {
             login_user($demoUser);

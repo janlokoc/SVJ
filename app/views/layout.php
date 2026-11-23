@@ -100,7 +100,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <?php if (!empty($GLOBALS['DEMO'])): ?>
 <div class="demo-bar" translate="no"><div class="wrap">
   <span><strong>Ukázkový web.</strong> Vše si proklikejte, změny se neukládají.</span>
-  <span class="demo-actions">Vyzkoušet jako
+  <span class="demo-actions">Dívat se jako
+    <form method="post" action="<?= url('/demo-prihlaseni') ?>"><?= csrf_field() ?><input type="hidden" name="jako" value="host"><button class="btn btn-small<?= !$u ? '' : ' btn-ghost' ?>" type="submit">návštěvník</button></form>
     <form method="post" action="<?= url('/demo-prihlaseni') ?>"><?= csrf_field() ?><input type="hidden" name="jako" value="resident"><button class="btn btn-small<?= $u && $u['role'] !== 'admin' ? '' : ' btn-ghost' ?>" type="submit">obyvatel</button></form>
     <form method="post" action="<?= url('/demo-prihlaseni') ?>"><?= csrf_field() ?><input type="hidden" name="jako" value="admin"><button class="btn btn-small<?= $u && $u['role'] === 'admin' ? '' : ' btn-ghost' ?>" type="submit">správce (výbor)</button></form>
     <a class="btn btn-small btn-accent" href="<?= e(platform_url('/registrace')) ?>">Založit vlastní web</a></span>

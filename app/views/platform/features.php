@@ -43,7 +43,7 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
       <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
   </form>
-  <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo)) ?>">Prohlédnout si hotový web v ukázce <?= icon('arrow') ?></a></div><?php endif ?>
+  <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo, '/vstup')) ?>">Prohlédnout si hotový web v ukázce <?= icon('arrow') ?></a></div><?php endif ?>
 </div></section>
 
 <section class="wrap lp-section" id="vse">
