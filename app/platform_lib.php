@@ -305,8 +305,12 @@ function tenant_usage_report(array $t): array
     $opened = $one('SELECT ROUND(100.0 * SUM(opened_at IS NOT NULL) / NULLIF(COUNT(*), 0)) FROM mailing_recipients r JOIN mailings m ON m.id = r.mailing_id WHERE m.sent_at >= ?', [date('Y-m-d', strtotime('-12 months'))]);
     $active30 = (int) $one('SELECT COUNT(*) FROM users WHERE active = 1 AND last_login_at >= ?', [date('Y-m-d', strtotime('-30 days'))]);
     $lastLogin = (string) $one('SELECT MAX(last_login_at) FROM users');
+    // Dokumenty převzaté ze starého webu bývají jen odkazem na soubor tam – na tomto serveru místo nezabírají.
+    $external = (int) $one('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL');
+    $stored = (int) $one('SELECT COUNT(*) FROM documents WHERE filename IS NOT NULL');
     $facts = [
         'Úložiště podle druhu' => 'dokumenty ' . $mb($bytes['documents']) . ' MB · přílohy závad ' . $mb($bytes['tickets']) . ' MB · ostatní (logo, náhledy) ' . $mb($bytes['other']) . ' MB',
+        'Dokumenty' => $stored . ' uloženo na tomto serveru' . ($external ? ' · ' . $external . ' jen odkazem na soubor na jiném webu (nezabírá místo)' : ''),
         'Hromadné e-maily' => 'tento měsíc ' . $used['mails'] . ' · za 12 měsíců ' . $mails12 . ($opened !== null && $opened !== false ? ' · otevřeno ' . (int) $opened . ' %' : ''),
         'AI pomocník' => 'tento měsíc ' . $used['ai'] . '× · minulý měsíc ' . (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_used_' . $prevMonth]) . '×' . (!empty($t['ai_until']) && $t['ai_until'] >= date('Y-m-d') ? ' · AI Plus do ' . cz_date($t['ai_until']) : ''),
         'Aktivita' => 'přihlášeno za 30 dní ' . $active30 . ' z ' . $used['users'] . ' účtů · poslední přihlášení ' . ($lastLogin !== '' ? cz_datetime($lastLogin) : 'nikdy'),
@@ -321,6 +325,9 @@ function tenant_usage_report(array $t): array
     }
     if ($near) {
         $verdict[] = ['warn', 'Blíží se limitu (80 % a víc): ' . implode(', ', array_map(fn($l) => $l[0] . ' ' . $l[4] . ' %', $near)) . '.'];
+    }
+    if ($external) {
+        $verdict[] = ['warn', $external . ' dokumentů je jen odkazem na soubory na starém webu, proto se do úložiště nepočítají. Po zrušení starého webu přestanou fungovat – správce je stáhne na přehledu administrace („Převod souborů ze starého webu“).'];
     }
     if ($lastLogin === '' || $lastLogin < date('Y-m-d', strtotime('-60 days'))) {
         $verdict[] = ['warn', 'Na web se přes 60 dní nikdo nepřihlásil – web možná nepoužívají.'];

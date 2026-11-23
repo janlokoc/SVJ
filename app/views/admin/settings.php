@@ -10,6 +10,7 @@
     <?php elseif ($stLimit && $stPct >= 80): ?><p><strong>Místo dochází.</strong> Zbývá <?= max(0, $stLimit - $stUsed) ?> MB.</p><?php endif ?>
     <?php if ($stLimit && $hasBilling): ?><p class="actions"><a class="btn<?= $stPct >= 80 ? '' : ' btn-small btn-ghost' ?>" href="<?= url('/admin/predplatne') ?>#uloziste">Přikoupit úložiště navíc</a>
       <?php if (plan_edition() !== 'premium'): ?><a class="btn btn-small btn-ghost" href="<?= url('/admin/predplatne') ?>#edice">Vyšší edice s větším úložištěm</a><?php endif ?></p><?php endif ?>
+    <?php if ($stExternal = (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NULL AND external_url IS NOT NULL')): ?><p class="callout"><?= $stExternal ?> dokumentů je zatím jen odkazem na soubory na starém webu, proto se do úložiště nepočítají. Než starý web zrušíte, stáhněte je sem na <a href="<?= url('/admin') ?>">přehledu administrace</a> (Převod souborů ze starého webu) – zaberou pak místo v úložišti.</p><?php endif ?>
     <p class="hint">Místo uvolníte smazáním starých souborů v <a href="<?= url('/admin/dokumenty') ?>">Dokumentech</a>. Fotografie u závad se před nahráním samy zmenšují.</p>
   </section>
   <?php endif ?>
