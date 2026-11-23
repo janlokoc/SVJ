@@ -1471,3 +1471,5 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .vote-unit { min-width: 10rem; }
 .seg-small span { padding: .3rem .65rem; min-height: 34px; font-size: .88rem; }
 .vote-form.is-error { outline: 2px solid var(--accent); }
+.attendance-table td:nth-child(2), .presence-table td:nth-child(2) { min-width: 12rem; }
+@media (min-width: 900px) { .attendance-table td:nth-child(2) { min-width: 16rem; } }

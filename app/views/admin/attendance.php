@@ -7,7 +7,7 @@
     <p class="empty">Nejdřív založte jednotky v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a> – účast se eviduje po jednotkách.</p>
   <?php else: ?>
   <div class="quorum<?= $att['quorate'] ? ' is-ok' : '' ?>">
-    <p class="eyebrow">Přihlášeno (osobně nebo v zastoupení)</p>
+    <p class="eyebrow">Přihlášeno předem (osobně nebo v zastoupení)</p>
     <p class="quorum-num"><?= percent_cz($att['percent']) ?> <small><?= $att['byShare'] ? 'všech hlasů' : 'jednotek' ?></small></p>
     <div class="meter" role="img" aria-label="Přihlášeno <?= percent_cz($att['percent']) ?>, potřeba více než <?= $att['threshold'] ?> %"><span class="meter-fill" data-width="<?= round(min(100, $att['percent']), 1) ?>"></span><span class="meter-mark" data-left="<?= $att['threshold'] ?>"></span></div>
     <p><strong><?= $att['quorate'] ? 'Podle přihlášek je shromáždění usnášeníschopné.' : 'Podle přihlášek zatím není usnášeníschopné' ?></strong><?= $att['quorate'] ? '' : ' – chybí ' . percent_cz(max(0, $att['threshold'] - $att['percent'])) . ' a alespoň jeden další hlas.' ?> Hranice: více než <?= $att['threshold'] ?> % (změníte v Nastavení).</p>
@@ -20,8 +20,8 @@
     <div class="stat"><span class="stat-num"><?= $c['none'] ?></span><span>bez odpovědi</span></div>
   </div>
   <p class="actions"><a class="btn" href="<?= url('/admin/terminy/' . $ev['id'] . '/prezence-na-miste') ?>">Prezence na místě</a> <a class="btn btn-ghost" href="<?= url('/admin/terminy/' . $ev['id'] . '/prezence') ?>">Prezenční listina k tisku</a></p>
-  <p class="hint">Odpověď můžete zapsat i za vlastníka, který se ozval jinak než přes web. Stejně lze seznam použít při prezenci na místě.</p>
-  <table class="table">
+  <p class="hint">Tady jsou <strong>přihlášky předem</strong> – kdo říká, že přijde. Odpověď můžete zapsat i za vlastníka, který se ozval jinak než přes web. Skutečnou účast na shromáždění, plné moci a hlasování o návrzích vedete v <a href="<?= url('/admin/terminy/' . $ev['id'] . '/prezence-na-miste') ?>">Prezenci na místě</a>.</p>
+  <table class="table attendance-table">
     <thead><tr><th>Jednotka</th><th>Vlastník dle evidence</th><th>Podíl</th><th>Účast</th><th>Zapsal(a)</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($att['rows'] as $r): ?>
