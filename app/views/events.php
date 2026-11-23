@@ -12,6 +12,8 @@
         <?php if ($ev['note']): ?><p class="event-note"><?= e($ev['note']) ?></p><?php endif ?>
         <p class="actions cal-actions"><a class="btn btn-small" href="<?= url('/terminy/' . $ev['id'] . '.ics') ?>">Přidat do kalendáře</a>
           <a class="btn btn-small btn-ghost" href="<?= e(google_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer">Google Kalendář</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer" title="Pracovní a školní účty Microsoft 365">Outlook (Microsoft 365)</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_calendar_url($ev, 'outlook.live.com')) ?>" target="_blank" rel="noopener noreferrer" title="Osobní účty Outlook.com a Hotmail">Outlook.com</a>
           <?php if ($ev['rsvp']): ?><a class="more" href="<?= url('/terminy/' . $ev['id']) ?>">Dát vědět, zda přijdu <?= icon('arrow') ?></a><?php endif ?></p>
       </div>
     </article>
@@ -21,8 +23,10 @@
     <h2>Odebírat všechny termíny</h2>
     <p>Přidejte si kalendář domu do telefonu nebo počítače jednou a nové termíny se v něm budou objevovat samy.</p>
     <p class="actions"><a class="btn btn-small" href="<?= e(preg_replace('~^https?://~', 'webcal://', $feed)) ?>">Přidat do kalendáře v zařízení</a>
-      <a class="btn btn-small btn-ghost" href="https://calendar.google.com/calendar/r?cid=<?= e(rawurlencode(preg_replace('~^https?://~', 'webcal://', $feed))) ?>" target="_blank" rel="noopener noreferrer">Přidat do Google Kalendáře</a></p>
-    <p class="hint">Nebo v kalendářové aplikaci zvolte „přidat kalendář z adresy“ a vložte: <code translate="no"><?= e($feed) ?></code><br>Adresu nesdílejte mimo dům – kdo ji zná, vidí termíny bez přihlášení.</p>
+      <a class="btn btn-small btn-ghost" href="https://calendar.google.com/calendar/r?cid=<?= e(rawurlencode(preg_replace('~^https?://~', 'webcal://', $feed))) ?>" target="_blank" rel="noopener noreferrer">Přidat do Google Kalendáře</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_subscribe_url($feed)) ?>" target="_blank" rel="noopener noreferrer">Přidat do Outlooku (Microsoft 365)</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_subscribe_url($feed, 'outlook.live.com')) ?>" target="_blank" rel="noopener noreferrer">Outlook.com</a></p>
+    <p class="hint">Nebo v kalendářové aplikaci zvolte „přidat kalendář z adresy“ (v Outlooku: Přidat kalendář → Přihlásit se k odběru z webu) a vložte: <code translate="no"><?= e($feed) ?></code><br>Adresu nesdílejte mimo dům – kdo ji zná, vidí termíny bez přihlášení.</p>
   </div>
   <?php if ($past): ?>
   <h2>Proběhlé termíny</h2>

@@ -414,6 +414,22 @@ function google_calendar_url(array $ev): string
         'dates' => $allDay ? date('Ymd', $start) . '/' . date('Ymd', $end) : date('Ymd\THis', $start) . '/' . date('Ymd\THis', $end), 'ctz' => 'Europe/Prague',
         'details' => trim($ev['note'] . "\n" . absolute_url('/terminy/' . $ev['id'])), 'location' => $ev['place']]);
 }
+/**
+ * Odkaz, který v Outlooku na webu otevře nový termín s vyplněnými údaji.
+ * $host: outlook.office.com (pracovní a školní účty Microsoft 365) nebo outlook.live.com (Outlook.com, Hotmail).
+ */
+function outlook_calendar_url(array $ev, string $host = 'outlook.office.com'): string
+{
+    [$start, $end, $allDay] = event_times($ev);
+    return 'https://' . $host . '/calendar/0/deeplink/compose?' . http_build_query(['path' => '/calendar/action/compose', 'rru' => 'addevent',
+        'subject' => $ev['title'] . ' – ' . site('name'), 'startdt' => $allDay ? date('Y-m-d', $start) : date('c', $start), 'enddt' => $allDay ? date('Y-m-d', $end) : date('c', $end),
+        'allday' => $allDay ? 'true' : 'false', 'body' => trim($ev['note'] . "\n" . absolute_url('/terminy/' . $ev['id'])), 'location' => $ev['place']], '', '&', PHP_QUERY_RFC3986);
+}
+/** Odkaz, kterým si uživatel v Outlooku na webu přidá odběr kalendáře domu. */
+function outlook_subscribe_url(string $feed, string $host = 'outlook.office.com'): string
+{
+    return 'https://' . $host . '/calendar/0/addfromweb?' . http_build_query(['url' => $feed, 'name' => 'Termíny – ' . site('name')], '', '&', PHP_QUERY_RFC3986);
+}
 /** Tajná část adresy, na které si kalendářové aplikace samy stahují všechny termíny (přihlásit se neumějí). */
 function calendar_token(): string
 {

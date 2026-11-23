@@ -6,6 +6,8 @@
   <p class="lead"><?= e(implode(' · ', array_filter([$ev['place'], $ev['note']]))) ?></p>
   <p class="actions cal-actions"><a class="btn btn-small" href="<?= url('/terminy/' . $ev['id'] . '.ics') ?>"><?= icon('doc') ?> Přidat do kalendáře</a>
     <a class="btn btn-small btn-ghost" href="<?= e(google_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer">Google Kalendář</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_calendar_url($ev)) ?>" target="_blank" rel="noopener noreferrer" title="Pracovní a školní účty Microsoft 365">Outlook (Microsoft 365)</a>
+      <a class="btn btn-small btn-ghost" href="<?= e(outlook_calendar_url($ev, 'outlook.live.com')) ?>" target="_blank" rel="noopener noreferrer" title="Osobní účty Outlook.com a Hotmail">Outlook.com</a>
     <a class="more" href="<?= url('/terminy') ?>">Všechny termíny <?= icon('arrow') ?></a></p>
 
   <?php if ($ev['rsvp']): ?>
