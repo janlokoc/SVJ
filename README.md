@@ -195,6 +195,28 @@ Web spuštěný na vlastním počítači otevřete z telefonu na stejné Wi-Fi:
 
 Vestavěný server PHP je jen na zkoušení; do ostrého provozu nepatří.
 
+### Zkoušení přes internet (Cloudflare Tunnel)
+
+Web běžící na vlastním počítači jde zdarma a bez účtu zpřístupnit přes
+internet s HTTPS – z iPadu, telefonu na mobilních datech nebo pro další
+lidi.
+
+1. Jednou nainstalujte program: `brew install cloudflared`.
+2. V `storage/config.php` přidejte do části `platform` volbu `'tunnel' => true`:
+   `'platform' => ['domain' => 'localhost', 'tunnel' => true]`.
+3. Ve složce webu spusťte `./tools/tunel.sh`. Skript spustí server PHP
+   (pokud neběží), otevře tunel a vypíše adresu
+   `https://<náhodná-slova>.trycloudflare.com`.
+
+Na počítači dál platí `nazev.localhost:8000`. Přes tunel subdomény nejsou,
+proto se weby společenství otevírají jako složky:
+`https://…trycloudflare.com/krouzova/`, konzole na `…/sprava`, ukázka na
+`…/demo/vstup`. Adresa se mění při každém spuštění a platí, jen dokud
+skript běží a počítač nespí; vyhledávače ji neindexují. Web bere skutečnou
+IP adresu návštěvníka a HTTPS z hlaviček Cloudflare, ale jen u požadavků
+z tohoto počítače (od programu cloudflared). Odkazy v e-mailech vedou na
+adresu, přes kterou akce proběhla.
+
 ### Kolik společenství jedna instalace unese
 
 Měřeno na zkušebních 300 společenstvích (SQLite, varianta se složkami,

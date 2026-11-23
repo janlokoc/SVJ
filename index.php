@@ -27,6 +27,21 @@ set_exception_handler(function (Throwable $e) {
 date_default_timezone_set('Europe/Prague');
 mb_internal_encoding('UTF-8');
 
+// Zkoušení přes Cloudflare Tunnel: požadavek přijde od programu cloudflared na tomtéž počítači (127.0.0.1).
+// Skutečnou adresu návštěvníka a to, že přišel přes HTTPS, pošle Cloudflare v hlavičkách; jinému odesílateli se nevěří.
+if (in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true) && !empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    if (filter_var($_SERVER['HTTP_CF_CONNECTING_IP'], FILTER_VALIDATE_IP)) {
+        $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    }
+    if (str_contains((string) ($_SERVER['HTTP_CF_VISITOR'] ?? ''), '"https"') || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') {
+        $_SERVER['HTTPS'] = 'on';
+    }
+}
+// Dočasná adresa tunelu je veřejná: vyhledávače ji nemají indexovat.
+if (str_ends_with(strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? ''))), '.trycloudflare.com')) {
+    header('X-Robots-Tag: noindex, nofollow');
+}
+
 $BASE = PHP_SAPI === 'cli-server' ? '' : rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])), '/');
 $PATH = rawurldecode((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 if ($BASE !== '' && str_starts_with($PATH, $BASE)) {

@@ -18,6 +18,10 @@ return [
     // Zkoušení z telefonu v domácí síti: přidejte IP adresu počítače mezi další adresy. Na počítači pak weby běží
     // na tabor.localhost, z telefonu se tentýž web otevře jako složka: http://192.168.1.20:8080/tabor/
     // 'platform' => ['domain' => 'localhost', 'aliases' => ['192.168.1.20']],
+    //
+    // Zkoušení přes internet (iPad, telefon, další lidé) přes Cloudflare Tunnel – viz README a tools/tunel.sh.
+    // 'tunnel' => true přijme dočasnou adresu https://…trycloudflare.com; weby SVJ se na ní otevírají jako složky.
+    // 'platform' => ['domain' => 'localhost', 'tunnel' => true],
 
     // AI pomocník pro výbor (volitelný): návrhy oznámení, uhlazení textu, odpovědi na hlášení.
     // Vyžaduje knihovnu (ve složce webu spusťte: composer install) a klíč ke službě Claude z console.anthropic.com.

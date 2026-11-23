@@ -15,6 +15,9 @@ function platform_main_domain(): string
 function platform_via_alias(): bool
 {
     $host = strtolower(preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? '')));
+    if ($host !== '' && !empty(app_config()['platform']['tunnel']) && preg_match('/^[a-z0-9-]+\.trycloudflare\.com$/', $host)) {
+        return true;   // dočasná adresa Cloudflare Tunnel (při každém spuštění jiná) – zapíná se v configu volbou 'tunnel' => true
+    }
     return $host !== '' && in_array($host, array_map('strtolower', (array) (app_config()['platform']['aliases'] ?? [])), true);
 }
 /** Doména, přes kterou návštěvník právě přišel: hlavní, nebo další adresa serveru. Na ni míří vytvářené odkazy. */
