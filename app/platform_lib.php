@@ -1593,7 +1593,6 @@ const PLANNED_FEATURES = [
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
     'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'Premium · v ceně', 'Párování plateb'],
-    'napojeni-ai' => ['Napojení na vlastního AI asistenta', 'Web si připojíte ke svému AI nástroji a běžnou řečí se ptáte na závady, dokumenty, platby a termíny – výbor si navíc nechá připravit koncept oznámení.', 'Premium · cena se upřesní', 'Napojení AI'],
 ];
 /**
  * Podrobný popis připravovaných funkcí pro stránku s detailem:
@@ -1605,36 +1604,6 @@ const PLANNED_DETAILS = [
         'problem' => 'Zápis ze shromáždění bývá nejméně oblíbená práce ve výboru. Zapisovatel během schůze nestíhá poslouchat i psát, zápis pak vzniká týdny po schůzi z paměti a vlastníci se dohadují, co kdo vlastně řekl. Dnes už pomocník umí zápis napsat z poznámek nebo z hotového přepisu – přepis si ale musíte obstarat sami.',
         'how' => ['Nahrajete zvukový soubor ze schůze (telefon, diktafon, záznam online schůzky).', 'Služba nahrávku přepíše do textu a rozliší, kdy mluví kdo.', 'AI z přepisu sestaví zápis podle programu: průběh jednání, návrhy, výsledky hlasování, úkoly a termíny.', 'Před spuštěním uvidíte, kolik AI kreditů zpracování spotřebuje, a potvrdíte ho.', 'Zapisovatel návrh projde, opraví a vytiskne nebo uloží do Dokumentů. Nahrávka se po zpracování smaže.'],
         'note' => 'Bude v edici Premium a poběží celé automaticky. Platit se bude předplacenými AI kredity, které si společenství dokoupí v administraci; zpracování nahrávky z nich odečte podle její délky (odhadem 100 Kč za hodinu). Když se zpracování technicky nepovede, kredity se nestrhnou. Výsledek je návrh od umělé inteligence – jeho kvalita závisí na nahrávce a ručně ho nikdo neupravuje, kontrola je na zapisovateli. Účastníci musí o nahrávání vědět.',
-    ],
-    'napojeni-ai' => [
-        'lead' => 'Web společenství si připojíte k AI nástroji, který už používáte, a pracujete s ním na dálku běžnou řečí.',
-        'problem' => 'Kdo ve výboru používá AI asistenta, dnes mezi ním a webem přepisuje ručně: zkopíruje hlášené závady, nechá si napsat odpověď a tu zase vloží zpátky. Přehled o tom, co v domě hoří, si musí proklikat stránku po stránce.',
-        'how' => ['Uživatel si ve svém účtu vytvoří osobní přístup pro AI nástroj; má přesně oprávnění jeho účtu, nic navíc. Vlastník tak vidí jen to, co vidí na webu, správce i administraci.', 'V AI nástroji se pak zeptá třeba „které závady jsou otevřené déle než měsíc“ nebo „co je na programu příštího shromáždění“.', 'Asistent umí připravit koncept aktuality, e-mailu nebo odpovědi na závadu. Zveřejnění a odeslání vždy potvrzuje člověk na webu.', 'Vše, co asistent přečte nebo připraví, je vidět v Záznamech. Přístup lze kdykoli zrušit a výbor může funkci pro celý web vypnout.'],
-        // Příklady zadání: skupina => [zadání, co se stane]
-        'examples' => [
-            'Pro správce a výbor' => [
-                ['Které závady jsou otevřené déle než měsíc a kdo je nahlásil?', 'Vypíše je seřazené podle stáří, s odkazem na každou.'],
-                ['Připrav aktualitu: ve čtvrtek 12. 12. od 8 do 14 hodin nepoteče teplá voda kvůli výměně stoupaček.', 'Vytvoří koncept aktuality; zveřejníte ho na webu jedním kliknutím.'],
-                ['Navrhni odpověď paní z bytu 2/14 na hlášení o kapajícím radiátoru – technik přijde v úterý.', 'Připraví koncept odpovědi k jejímu hlášení.'],
-                ['Co je na programu příštího shromáždění a kolik lidí zatím potvrdilo účast?', 'Shrne program a stav přihlášek podle podílů.'],
-                ['Kterým revizím končí platnost v příštích třech měsících?', 'Vypíše revize s termínem a dodavatelem.'],
-                ['Které úkoly ze shromáždění nejsou splněné a komu jsou přidělené?', 'Vypíše úkoly s termínem a odpovědnou osobou.'],
-                ['Kdo z vlastníků ještě nemá na webu účet?', 'Vypíše jednotky bez aktivního účtu, aby jim výbor mohl poslat pozvánku.'],
-                ['Najdi v dokumentech smlouvu s úklidovou firmou a řekni mi výpovědní lhůtu.', 'Najde dokument a vypíše, co v něm o lhůtě stojí, s odkazem.'],
-                ['Shrň, o čem se poslední dva týdny diskutovalo na fóru.', 'Napíše pár vět o hlavních tématech.'],
-                ['Připrav e-mail všem vlastníkům s pozvánkou na shromáždění 20. 1. v 18 hodin ve sklepní místnosti.', 'Vytvoří koncept hromadného e-mailu; odeslání potvrdíte na webu.'],
-            ],
-            'Pro vlastníky a nájemníky' => [
-                ['Kdy je příští shromáždění a co se na něm bude hlasovat?', 'Odpoví podle pozvánky a programu na webu.'],
-                ['Jakou mám měsíční zálohu a mám nějaký nedoplatek?', 'Ukáže předpis a stav účtu jeho jednotky.'],
-                ['Kdo je předseda výboru a jak ho zastihnu?', 'Odpoví podle kontaktů a funkcí na webu.'],
-                ['Co říká domovní řád o vrtání o víkendu?', 'Najde příslušné místo v domovním řádu a uvede zdroj.'],
-                ['V jakém stavu je moje hlášení o nefunkčním zvonku?', 'Ukáže stav jeho hlášení a odpověď výboru.'],
-                ['Je sušárna v sobotu odpoledne volná? Pokud ano, zarezervuj mi ji.', 'Ukáže volné termíny; rezervaci potvrdí uživatel na webu.'],
-                ['Kdy je odečet vodoměrů a jak mám stav nahlásit?', 'Odpoví podle termínů a návodu na webu.'],
-            ],
-        ],
-        'note' => 'Bude v edici Premium; cenu upřesníme. Používá standard MCP, který podporuje řada AI nástrojů. Data, která si asistent přečte, zpracovává AI nástroj, který si uživatel sám zvolil – za jeho výběr odpovídá společenství.',
     ],
     'sms' => [
         'lead' => 'Důležité zprávy dojdou i těm, kdo e-mail nečtou.',
