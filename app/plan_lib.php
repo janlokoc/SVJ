@@ -14,7 +14,7 @@ const PLAN_LIMITS = [
     'polls' => ['Hlasování ročně', ''],
     'users' => ['Účty obyvatel', ''],
     'mails' => ['Hromadné e-maily měsíčně', ''],
-    'ai' => ['AI pomocník měsíčně', ''],
+    'ai' => ['Použití AI měsíčně', ''],
     'storage' => ['Úložiště dokumentů', 'MB'],   // poslední: v ceníku i přehledech se ukazuje na konci
 ];
 const PLAN_LIMIT_DEFAULTS = [
