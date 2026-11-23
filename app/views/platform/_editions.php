@@ -4,8 +4,8 @@ $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
 $edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s platbami na jednotku, rezervacemi a AI zápisem.'];
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jedna šablona vzhledu, 5 barev', 'V patičce odkaz na službu'],
-    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Záloha všech dat ke stažení', 'Možnost vlastní domény za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně'],
-    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Možnost vlastní domény za příplatek ' . money_czk(pset_int('price_domain', 0, 1000000)) . ' ročně', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora'],
+    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Odečty, revize, klíče a čipy', 'Úkoly a usnesení, dodavatelé', 'Všech 5 šablon, bez odkazu v patičce', 'Záloha všech dat ke stažení'],
+    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
 ];
 $edCompact = !empty($edCompact);
 if ($edCompact) {
@@ -13,7 +13,7 @@ if ($edCompact) {
     $edExtra = [
         'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jedna šablona, 5 barev'],
         'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Revize, odečty, klíče, úkoly a dodavatelé', 'Všech 5 šablon, bez odkazu v patičce, záloha dat'],
-        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace prostor a jazykové verze webu', 'AI zápis ze shromáždění, přednostní podpora'],
+        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace prostor a jazykové verze webu', 'AI zápis, přednostní podpora a beta program novinek'],
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>"<?= $edView === 'landing' ? ' data-reveal-group="up"' : '' ?>>
