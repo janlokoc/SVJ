@@ -1434,7 +1434,7 @@ function cert_reminders(): void
  * Edice a ceny jsou předběžné – slouží k tomu, aby zájem odpovídal skutečné nabídce.
  */
 const PLANNED_FEATURES = [
-    'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · asi 49 Kč za hodinu nahrávky', 'Zápis z nahrávky'],
+    'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · asi 290 Kč za nahrávku', 'Zápis z nahrávky'],
     'ai-asistent' => ['AI asistent pro obyvatele', 'Odpovídá sousedům na dotazy podle stanov, domovního řádu a oznámení výboru – kdykoli, i v noci.', 'doplněk k Premium · asi 990 Kč ročně', 'AI asistent'],
     'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
@@ -1452,7 +1452,7 @@ const PLANNED_DETAILS = [
         'lead' => 'Schůzi nahrajete na telefon, nahrávku vložíte na web a dostanete návrh zápisu.',
         'problem' => 'Zápis ze shromáždění bývá nejméně oblíbená práce ve výboru. Zapisovatel během schůze nestíhá poslouchat i psát, zápis pak vzniká týdny po schůzi z paměti a vlastníci se dohadují, co kdo vlastně řekl. Dnes už pomocník umí zápis napsat z poznámek nebo z hotového přepisu – přepis si ale musíte obstarat sami.',
         'how' => ['Nahrajete zvukový soubor ze schůze (telefon, diktafon, záznam online schůzky).', 'Služba nahrávku přepíše do textu a rozliší, kdy mluví kdo.', 'AI z přepisu sestaví zápis podle programu: průběh jednání, návrhy, výsledky hlasování, úkoly a termíny.', 'Zapisovatel návrh projde, opraví a vytiskne nebo uloží do Dokumentů. Nahrávka se po zpracování smaže.'],
-        'note' => 'Bude v edici Premium, platit se bude navíc podle délky nahrávky (asi 49 Kč za hodinu) – přepis zvuku je výpočetně drahý. Účastníci musí o nahrávání vědět.',
+        'note' => 'Bude v edici Premium, platit se bude navíc za každou nahrávku: asi 290 Kč za schůzi do 3 hodin, delší asi 99 Kč za každou další započatou hodinu. Přepis zvuku a sestavení zápisu jsou výpočetně drahé. Účastníci musí o nahrávání vědět.',
     ],
     'ai-asistent' => [
         'lead' => 'Sousedé se zeptají webu a dostanou odpověď podle Vašich stanov, domovního řádu a oznámení.',
