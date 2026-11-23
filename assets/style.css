@@ -1474,4 +1474,7 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .attendance-table td:nth-child(2) { min-width: 12rem; }
 .seg span { white-space: nowrap; }
 @media (min-width: 900px) { .presence-table td:nth-child(4) { min-width: 20rem; } .presence-table td:nth-child(2) { max-width: 18rem; } }
-@media (min-width: 900px) { .attendance-table td:nth-child(2) { min-width: 16rem; } }
+.attendance-table .t-actions form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; justify-content: flex-end; }
+.attendance-table .t-actions select { max-width: 11rem; }
+.attendance-table .t-actions input[type=text] { max-width: 10rem; }
+.attendance-table td:nth-child(5) { font-size: .88rem; }
