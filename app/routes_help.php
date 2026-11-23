@@ -38,7 +38,7 @@ function help_fig(string $file, string $caption): string
         return '';
     }
     [$w, $h] = getimagesize($path) ?: [0, 0];
-    return '<figure class="help-fig"><img src="' . e(url('/assets/help/' . $file)) . '?v=' . substr(md5_file($path), 0, 8) . '" alt="' . e($caption) . '" width="' . (int) ($w / 2) . '" height="' . (int) ($h / 2) . '" loading="lazy"><figcaption>' . e($caption) . '</figcaption></figure>';
+    return '<figure class="help-fig"><img src="' . e(asset('help/' . $file)) . '" alt="' . e($caption) . '" width="' . (int) ($w / 2) . '" height="' . (int) ($h / 2) . '" loading="lazy"><figcaption>' . e($caption) . '</figcaption></figure>';
 }
 
 $helpRender = function (string $slug, bool $public) {
