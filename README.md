@@ -81,6 +81,11 @@ a otevřít <http://localhost:8000>.
 
 ## Nasazení na hosting
 
+> **Plán:** nahrávání na hosting bude dělat GitHub Actions (FTPS/SFTP) po
+> každé změně na větvi `main`, stagingová větev do zvláštní složky.
+> Přístupové údaje budou jen v GitHub Secrets; `storage/` se nikdy nepřepíše.
+> Workflow se doplní, až bude hosting (typ přístupu a cílová složka).
+
 1. Nahrajte obsah repozitáře do kořenové složky webu (FTP).
    U poskytovatele založte databázi MySQL, soubor `config.example.php`
    zkopírujte jako `storage/config.php` a doplňte do něj její údaje.
