@@ -189,6 +189,10 @@ SQL);
         $pdo->exec("UPDATE payments SET status = 'cancelled' WHERE kind = 'service' AND months = 1 AND status IN ('pending','claimed');
             UPDATE tenants SET period = 'year'; PRAGMA user_version = 16;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 17) {
+        // Standard: 500 hromadných e-mailů měsíčně místo 1 000 – jen pokud provozovatel výchozí hodnotu neměnil.
+        $pdo->exec("UPDATE platform_settings SET value = '500' WHERE key = 'lim_standard_mails' AND value = '1000'; PRAGMA user_version = 17;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -415,7 +419,7 @@ const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
     'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '1490', 'price_premium' => '2990',
     'lim_free_admins' => '1', 'lim_free_users' => '30', 'lim_free_mails' => '50', 'lim_free_storage' => '50', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
-    'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '1000', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
+    'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '500', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
     'account' => '', 'recipient' => '', 'contact_email' => '', 'mail_from' => '',
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
