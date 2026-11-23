@@ -1,6 +1,45 @@
 <?php
 declare(strict_types=1);
 
+/**
+ * Osobní přehled pro přihlášeného obyvatele na úvodní stránce: jen to, co se ho týká a na co má reagovat.
+ * Každá položka: [text, podrobnost, odkaz, naléhavé]. Prázdné položky se nevrací.
+ */
+function home_for_me(): array
+{
+    $u = user();
+    if (!$u) {
+        return [];
+    }
+    $out = [];
+    $units = my_unit_ids();
+    $in = $units ? implode(',', array_map('intval', $units)) : '0';
+    $now = date('Y-m-d H:i:s');
+    if (feature_on('hlasovani') && $units) {
+        foreach (all("SELECT p.id, p.title, p.closes_at FROM polls p WHERE p.published = 1 AND p.online = 1 AND p.opens_at <= ? AND p.closes_at >= ?
+            AND NOT EXISTS (SELECT 1 FROM poll_items i JOIN poll_votes v ON v.item_id = i.id WHERE i.poll_id = p.id AND v.unit_id IN ($in)) ORDER BY p.closes_at LIMIT 3", [$now, $now]) as $p) {
+            $out[] = ['Hlasování čeká na Váš hlas', $p['title'] . ' · do ' . cz_date($p['closes_at']), '/hlasovani/' . $p['id'], true];
+        }
+    }
+    if ($units && ($ev = one("SELECT * FROM events WHERE rsvp = 1 AND event_date >= date('now','localtime') ORDER BY event_date LIMIT 1"))
+        && !val("SELECT 1 FROM event_rsvp WHERE event_id = ? AND unit_id IN ($in)", [$ev['id']])) {
+        $out[] = ['Dejte vědět, zda přijdete', $ev['title'] . ' · ' . cz_date($ev['event_date']), '/terminy/' . $ev['id'], true];
+    }
+    if (feature_on('platby') && plan_has('platby') && $units) {
+        $debt = (float) val("SELECT COALESCE(SUM(CASE WHEN balance < 0 THEN -balance ELSE 0 END), 0) FROM unit_accounts WHERE unit_id IN ($in)");
+        if ($debt > 0) {
+            $out[] = ['Nedoplatek na zálohách', number_format($debt, 0, ',', "\u{a0}") . "\u{a0}Kč – uhradíte načtením QR kódu", '/platby', true];
+        }
+    }
+    if (feature_on('zpravy') && ($n = (int) val('SELECT COUNT(*) FROM messages WHERE to_id = ? AND read_at IS NULL', [$u['id']]))) {
+        $out[] = ['Nové zprávy od sousedů', $n . ($n === 1 ? ' nepřečtená zpráva' : ($n < 5 ? ' nepřečtené zprávy' : ' nepřečtených zpráv')), '/zpravy', false];
+    }
+    if (feature_on('zavady') && ($t = one("SELECT COUNT(*) n, MAX(status = 'in_progress') busy FROM tickets WHERE user_id = ? AND status <> 'done'", [$u['id']])) && (int) $t['n'] > 0) {
+        $out[] = ['Vaše hlášení', (int) $t['n'] . ((int) $t['n'] === 1 ? ' otevřené' : ' otevřená') . ((int) $t['busy'] ? ' – výbor na něm pracuje' : ' – čeká na výbor'), '/zavady', false];
+    }
+    return $out;
+}
+
 $route('GET', '/', function () {
     $v = vis_sql();
     render('home', [
@@ -9,6 +48,7 @@ $route('GET', '/', function () {
         'event' => one("SELECT * FROM events WHERE event_date >= date('now','localtime') ORDER BY event_date LIMIT 1"),
         'emergency' => all("SELECT * FROM contacts WHERE grp = 'havarie' ORDER BY sort, id"),
         'counts' => array_column(all('SELECT category, COUNT(*) c FROM documents WHERE ' . doc_scope_sql() . ' GROUP BY category'), 'c', 'category'),
+        'mine' => home_for_me(),
     ]);
 });
 

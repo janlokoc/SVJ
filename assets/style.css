@@ -1254,3 +1254,14 @@ code.break { word-break: break-all; }
 @media (max-width: 600px) { [data-site="sluzba"] .lp-looks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; } }
 [data-site="sluzba"] :is(.edition-limits strong, .price-table strong, .edition-price strong) { font-family: var(--display); font-stretch: 90%; font-variant-numeric: tabular-nums; }
 [data-site="sluzba"] .editions + .hint, [data-site="sluzba"] .editions + .vat-note { margin-top: 1.4rem; }
+
+/* Úvodní stránka webu SVJ pro přihlášeného: co na něj čeká */
+.for-me { margin-top: .4rem; }
+.for-me-hi { font-size: 1.2rem; margin: 0 0 .8rem; color: var(--muted); }
+.for-me-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; max-width: 34rem; }
+.for-me-list a { display: grid; gap: .1rem; padding: .7rem 1rem; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: calc(var(--radius) * .6); background: var(--surface); color: var(--ink); text-decoration: none; }
+.for-me-list a:hover { border-color: var(--primary); }
+.for-me-list .is-urgent a { border-left-color: var(--accent); }
+.for-me-list strong { font-weight: 700; }
+.for-me-list span { color: var(--muted); font-size: .95rem; }
+.for-me-ok { margin: 0; padding: .7rem 1rem; border-radius: calc(var(--radius) * .6); background: var(--ok-soft); color: var(--ok); max-width: 34rem; }

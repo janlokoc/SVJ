@@ -3,11 +3,22 @@
     <div class="hero-text">
       <p class="eyebrow"><?= e(site('tagline')) ?></p>
       <h1><?= e(site('title')) ?><?php if (site('accent') !== ''): ?> <span class="h1-sub"><?= e(site('accent')) ?></span><?php endif ?></h1>
+      <?php if (!user()): ?>
       <p class="lead"><?= e(setting('intro')) ?></p>
       <div class="actions">
         <a class="btn btn-big" href="<?= url('/aktuality') ?>">Aktuální oznámení</a>
         <a class="btn btn-big btn-ghost" href="<?= url('/dokumenty') ?>">Dokumenty</a>
       </div>
+      <?php else: ?>
+      <div class="for-me">
+        <p class="for-me-hi">Dobrý den, <?= e(explode(' ', trim(user()['name']))[0]) ?>.</p>
+        <?php if ($mine): ?>
+        <ul class="for-me-list">
+          <?php foreach ($mine as [$what, $detail, $href, $urgent]): ?><li<?= $urgent ? ' class="is-urgent"' : '' ?>><a href="<?= url($href) ?>"><strong><?= e($what) ?></strong><span><?= e($detail) ?></span></a></li><?php endforeach ?>
+        </ul>
+        <?php else: ?><p class="for-me-ok">Nic na Vás nečeká – žádné hlasování, nezodpovězená pozvánka ani nedoplatek.</p><?php endif ?>
+      </div>
+      <?php endif ?>
     </div>
     <div class="hero-side">
       <?php $doors = array_slice(array_values(array_filter(entrances())), 0, 6) ?: ['']; $hw = count($doors) * 100 + 20;
@@ -72,8 +83,9 @@
     <div class="card">
       <h2>Rychlé odkazy</h2>
       <ul class="quick">
+        <?php if (!array_filter($counts)): ?><li class="muted">Výbor sem zatím nic nenahrál.</li><?php endif ?>
         <?php foreach (['formulare' => 'Formuláře a plné moci', 'zapisy' => 'Zápisy ze shromáždění', 'uzaverky' => 'Účetní závěrky', 'zakladni' => 'Stanovy a smlouvy'] as $k => $label): ?>
-          <li><a href="<?= url('/dokumenty?kategorie=' . $k) ?>"><?= icon('doc') ?><span><?= $label ?></span><em><?= (int) ($counts[$k] ?? 0) ?></em></a></li>
+          <?php if (empty($counts[$k])) { continue; } ?><li><a href="<?= url('/dokumenty?kategorie=' . $k) ?>"><?= icon('doc') ?><span><?= $label ?></span><em><?= (int) $counts[$k] ?></em></a></li>
         <?php endforeach ?>
       </ul>
     </div>
