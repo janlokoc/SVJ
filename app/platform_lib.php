@@ -328,6 +328,16 @@ function tenant_usage_report(array $t): array
         'Dokumenty' => $stored . ' uloženo na tomto serveru' . ($external ? ' · ' . $external . ' jen odkazem na soubor na jiném webu (nezabírá místo)' : ''),
         'Hromadné e-maily' => 'tento měsíc ' . $used['mails'] . ' · za 12 měsíců ' . $mails12 . ($opened !== null && $opened !== false ? ' · otevřeno ' . (int) $opened . ' %' : ''),
         'AI pomocník' => 'tento měsíc ' . $used['ai'] . '× · minulý měsíc ' . (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_used_' . $prevMonth]) . '×' . (!empty($t['ai_until']) && $t['ai_until'] >= date('Y-m-d') ? ' · AI Plus do ' . cz_date($t['ai_until']) : ''),
+        'Náklady na AI' => (function () use ($one, $prevMonth, $used) {
+            $tin = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tin_' . date('Y-m')]);
+            $tout = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tout_' . date('Y-m')]);
+            $pin = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tin_' . $prevMonth]);
+            $pout = (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tout_' . $prevMonth]);
+            $fmt = fn(int $n) => number_format($n / 1000, 0, ',', "\u{a0}") . ' tis.';
+            $priced = pset_int('ai_price_in', 0, 1000000) + pset_int('ai_price_out', 0, 1000000) > 0;
+            return 'tento měsíc ' . $fmt($tin) . ' tokenů vstup / ' . $fmt($tout) . ' výstup' . ($priced ? ' ≈ ' . ai_czk(ai_cost_czk($tin, $tout)) . ($used['ai'] ? ' (' . str_replace('.', ',', (string) round(ai_cost_czk($tin, $tout) / $used['ai'], 2)) . ' Kč za použití)' : '') : ' (ceny tokenů zadejte v Nastavení služby)')
+                . ' · minulý měsíc ' . ($priced ? '≈ ' . ai_czk(ai_cost_czk($pin, $pout)) : $fmt($pin + $pout) . ' tokenů');
+        })(),
         'Aktivita' => 'přihlášeno za 30 dní ' . $active30 . ' z ' . $used['users'] . ' účtů · poslední přihlášení ' . ($lastLogin !== '' ? cz_datetime($lastLogin) : 'nikdy'),
         'Obsah' => (int) $one('SELECT COUNT(*) FROM units') . ' jednotek · ' . (int) $one('SELECT COUNT(*) FROM documents') . ' dokumentů · ' . (int) $one('SELECT COUNT(*) FROM posts') . ' aktualit · ' . (int) $one("SELECT COUNT(*) FROM tickets WHERE status <> 'done'") . ' otevřených závad',
     ];
@@ -337,6 +347,11 @@ function tenant_usage_report(array $t): array
     $near = array_filter($limits, fn($l) => $l[5] === 'near');
     if ($full) {
         $verdict[] = ['bad', 'Vyčerpaný limit: ' . implode(', ', array_map(fn($l) => $l[0], $full)) . '.' . ($edition !== 'premium' ? ' Vhodné nabídnout vyšší edici' . (isset($full['storage']) ? ' nebo úložiště navíc' : '') . '.' : '')];
+    }
+    $aiCost = ai_cost_czk((int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tin_' . date('Y-m')]), (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_tout_' . date('Y-m')]));
+    $creditPrice = pset_int('price_ai_pack', 0, 1000000) / max(1, pset_int('ai_pack', 1, 100000));
+    if ($used['ai'] > 0 && $aiCost > 0 && $creditPrice > 0 && $aiCost / $used['ai'] > $creditPrice) {
+        $verdict[] = ['bad', 'AI je u tohoto webu dražší, než za kolik prodáváte kredity: průměrně ' . str_replace('.', ',', (string) round($aiCost / $used['ai'], 2)) . ' Kč za použití proti ' . str_replace('.', ',', (string) round($creditPrice, 2)) . ' Kč v kreditech. Zvažte menší model nebo vyšší cenu kreditů.'];
     }
     if ($near) {
         $verdict[] = ['warn', 'Blíží se limitu (80 % a víc): ' . implode(', ', array_map(fn($l) => $l[0] . ' ' . $l[4] . ' %', $near)) . '.'];
@@ -522,7 +537,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'ai_pack' => '200', 'price_ai_pack' => '190', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'ai_pack' => '200', 'price_ai_pack' => '190', 'ai_price_in' => '0', 'ai_price_out' => '0', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
     'lim_free_admins' => '1', 'lim_free_users' => '20', 'lim_free_mails' => '30', 'lim_free_storage' => '5', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '500', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
@@ -1395,6 +1410,34 @@ function migration_order(array $t, array $in): array
 
 // ---------- AI Plus: placený doplněk s vyšším měsíčním limitem AI pomocníka ----------
 
+/**
+ * Spotřeba AI všech webů za měsíc: [použití, vstupní tokeny, výstupní tokeny, odhad Kč, [slug => [název, použití, in, out, Kč]]].
+ */
+function ai_cost_overview(?string $ym = null): array
+{
+    $ym ??= date('Y-m');
+    $rows = [];
+    $tot = [0, 0, 0, 0.0];
+    foreach (pq('SELECT slug, name FROM tenants ORDER BY name')->fetchAll() as $t) {
+        try {
+            $pdo = tenant_pdo($t['slug']);
+        } catch (Throwable $e) {
+            continue;
+        }
+        $get = function (string $k) use ($pdo): int { $st = $pdo->prepare('SELECT value FROM settings WHERE `key` = ?'); $st->execute([$k]); return (int) $st->fetchColumn(); };
+        $uses = $get('ai_used_' . $ym);
+        $in = $get('ai_tin_' . $ym);
+        $out = $get('ai_tout_' . $ym);
+        if ($uses + $in + $out === 0) {
+            continue;
+        }
+        $czk = ai_cost_czk($in, $out);
+        $rows[$t['slug']] = [$t['name'], $uses, $in, $out, $czk];
+        $tot = [$tot[0] + $uses, $tot[1] + $in, $tot[2] + $out, $tot[3] + $czk];
+    }
+    uasort($rows, fn($a, $b) => $b[4] <=> $a[4] ?: $b[2] <=> $a[2]);
+    return [...$tot, $rows];
+}
 /** Rozpracovaná objednávka AI kreditů (nebo null). */
 function ai_credits_payment(array $t): ?array
 {

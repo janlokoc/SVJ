@@ -64,7 +64,25 @@
         <li>Do <code>storage/config.php</code> přidejte řádek <code>'ai' =&gt; ['api_key' =&gt; 'sk-ant-…'],</code> – klíč nikam jinam nevkládejte a neposílejte.</li>
         <li>Klikněte níže na <strong>Vyzkoušet spojení</strong>. Pak AI pomocník funguje na všech webech (správce ho může vypnout) a AI asistent na webech v edici Premium.</li>
       </ol></details>
-    <p class="hint">Spotřebu platíte Vy z kreditu v Claude Console; společenství mají měsíční limit podle edice (tabulka výše) a mohou si dokoupit AI kredity. Kolik který web tento měsíc využil, vidíte v seznamu společenství.</p>
+    <p class="hint">Spotřebu platíte Vy z kreditu v Claude Console; společenství mají měsíční limit podle edice (tabulka výše) a mohou si dokoupit AI kredity. Anthropic účtuje <strong>tokeny</strong> (množství textu), web je u každého volání zapisuje.</p>
+    <div class="form-row">
+      <label>Cena vstupních tokenů (Kč za 1 milion) <input type="number" name="ai_price_in" value="<?= e($v['ai_price_in']) ?>" min="0" required></label>
+      <label>Cena výstupních tokenů (Kč za 1 milion) <input type="number" name="ai_price_out" value="<?= e($v['ai_price_out']) ?>" min="0" required></label>
+    </div>
+    <p class="hint">Opište z ceníku v Claude Console pro model, který používáte (cena je v USD – přepočtěte na Kč). Vstup = otázka a podklady domu, výstup = odpověď.</p>
+    <?php $ov = function_exists('ai_cost_overview') ? ai_cost_overview() : [0, 0, 0, 0.0, []]; [$ovUses, $ovIn, $ovOut, $ovCzk, $ovRows] = $ov; $creditUnit = pset_int('price_ai_pack', 0, 1000000) / max(1, pset_int('ai_pack', 1, 100000)); $priced = pset_int('ai_price_in', 0, 1000000) + pset_int('ai_price_out', 0, 1000000) > 0; ?>
+    <div class="ai-costs" id="ai-naklady">
+      <p class="h-small">Náklady na AI tento měsíc</p>
+      <?php if (!$ovUses && !$ovIn): ?><p class="muted">Zatím žádné použití AI.</p><?php else: ?>
+        <p>Všechny weby: <strong><?= $ovUses ?></strong> použití · <?= number_format($ovIn, 0, ',', "\u{a0}") ?> vstupních a <?= number_format($ovOut, 0, ',', "\u{a0}") ?> výstupních tokenů<?= $priced ? ' · <strong>≈ ' . ai_czk($ovCzk) . '</strong>' . ($ovUses ? ' (průměr ' . str_replace('.', ',', (string) round($ovCzk / $ovUses, 2)) . ' Kč za použití)' : '') : '' ?>.</p>
+        <?php if ($priced && $ovUses && $creditUnit > 0): $avg = $ovCzk / $ovUses; ?>
+          <p class="<?= $avg > $creditUnit ? 'is-debt' : 'is-ok' ?>"><strong><?= $avg > $creditUnit ? 'Pozor: jedno použití AI Vás stojí víc, než za kolik prodáváte kredity' : 'Kredity pokrývají náklady' ?></strong> – průměr <?= str_replace('.', ',', (string) round($avg, 2)) ?> Kč proti <?= str_replace('.', ',', (string) round($creditUnit, 2)) ?> Kč za použití v kreditech.</p>
+        <?php elseif (!$priced): ?><p class="hint">Zadejte ceny tokenů výše a uvidíte náklady v korunách.</p><?php endif ?>
+        <table class="table"><thead><tr><th>Společenství</th><th>Použití</th><th>Tokeny (vstup / výstup)</th><th>Náklad</th></tr></thead><tbody>
+          <?php foreach (array_slice($ovRows, 0, 20, true) as [$name, $uses, $in, $out, $czk]): ?><tr><td data-label="Společenství"><?= e($name) ?></td><td data-label="Použití"><?= $uses ?></td><td data-label="Tokeny"><?= number_format($in, 0, ',', "\u{a0}") ?> / <?= number_format($out, 0, ',', "\u{a0}") ?></td><td data-label="Náklad"><?= $priced ? '≈ ' . ai_czk($czk) : '–' ?></td></tr><?php endforeach ?>
+        </tbody></table>
+      <?php endif ?>
+    </div>
     <label>Model (nevyplněno = podle config.php) <input type="text" name="ai_model" value="<?= e($v['ai_model']) ?>" placeholder="claude-opus-5-5" pattern="[a-z0-9.\-]*"></label>
     <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. Počet použití podle edice nastavíte v tabulce limitů výše (0 = bez omezení).</p>
     <p class="actions"><button class="btn btn-ghost" type="submit" form="ai-test-form"<?= $aiLib && $aiKey ? '' : ' disabled' ?>>Vyzkoušet spojení s Claude</button></p>

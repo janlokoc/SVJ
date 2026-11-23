@@ -70,6 +70,30 @@ function ai_used(): int
 {
     return (int) setting('ai_used_' . date('Y-m'), '0');
 }
+/** Zapíše skutečně spotřebované tokeny (účtuje je Anthropic) k webu a měsíci – kvůli hlídání nákladů. */
+function ai_track_tokens($message): void
+{
+    try {
+        $u = $message->usage;
+        $in = (int) $u->inputTokens + (int) ($u->cacheCreationInputTokens ?? 0) + (int) ($u->cacheReadInputTokens ?? 0);
+        $out = (int) $u->outputTokens;
+        foreach (['ai_tin_' => $in, 'ai_tout_' => $out] as $k => $n) {
+            q("INSERT INTO settings (`key`, value) VALUES (?, ?) ON CONFLICT(`key`) DO UPDATE SET value = value + ?", [$k . date('Y-m'), (string) $n, $n]);
+        }
+    } catch (Throwable $e) {
+        error_log('SVJ web, AI tokeny: ' . $e->getMessage());
+    }
+}
+/** Odhad nákladu v Kč za dané tokeny podle cen v konzoli (Kč za milion vstupních / výstupních tokenů). */
+function ai_cost_czk(int $in, int $out): float
+{
+    return function_exists('pset') ? ($in * pset_int('ai_price_in', 0, 1000000) + $out * pset_int('ai_price_out', 0, 1000000)) / 1000000 : 0.0;
+}
+/** Částka v Kč pro přehled nákladů: malé částky s haléři. */
+function ai_czk(float $x): string
+{
+    return number_format($x, $x < 100 ? 2 : 0, ',', "\u{a0}") . "\u{a0}Kč";
+}
 /** Zbývající dokoupené AI kredity webu (jen na platformě). */
 function ai_credits(): int
 {
@@ -151,6 +175,7 @@ function ai_run(string $task, string $input, string $context = ''): array
         return ['error' => 'Pomocník nevrátil žádný text. Zkuste to znovu.'];
     }
     ai_count_use();
+    ai_track_tokens($message);
     return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens'];
 }
 

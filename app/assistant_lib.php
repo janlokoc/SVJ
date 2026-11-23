@@ -163,6 +163,9 @@ function ai_call(string $system, array $messages, int $maxTokens): array
             $text .= $block->text;
         }
     }
+    if (defined('TENANT') && (TENANT !== '' || !platform_enabled())) {
+        ai_track_tokens($message);   // zkouška spojení z konzole se nepočítá k žádnému webu
+    }
     return trim($text) === '' ? ['error' => 'Asistent nevrátil odpověď. Zkuste to znovu.'] : ['text' => trim($text)];
 }
 /** Odpověď jako HTML: odstavce, výčty a odkazy [n] na zdroje. */

@@ -717,6 +717,13 @@ tazatel smí vidět (cizí jednotky ani účty se nikdy neposílají), a teprve
 ty pošle službě Claude spolu s otázkou. Rozhovor se drží jen v relaci
 prohlížeče. Správce asistenta může schovat z menu (Nastavení → menu).
 
+**Náklady:** Anthropic účtuje tokeny, ne odpovědi. Web u každého volání
+AI zapisuje skutečné vstupní a výstupní tokeny k webu a měsíci. V konzoli
+(Nastavení služby → AI) zadáte cenu za milion tokenů v Kč a uvidíte náklady
+po společenstvích, průměr na jedno použití a upozornění, když je vyšší než
+cena jednoho použití v AI kreditech. Totéž je v přehledu každého
+společenství (Náklady na AI).
+
 **Limit a kredity:** každá otázka asistentovi i každý text od AI
 pomocníka je jedno použití. V edici je měsíční limit (konzole → Edice
 a ceny); když dojde, čerpají se **AI kredity**, které si správce dokoupí
