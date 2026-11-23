@@ -422,9 +422,15 @@ document.querySelectorAll('.chat-form').forEach((f) => f.addEventListener('submi
 document.querySelectorAll('[data-asst]').forEach((box) => {
   const panel = box.querySelector('.asst-panel'), fab = box.querySelector('.asst-fab'), log = box.querySelector('.asst-log'), form = box.querySelector('[data-asst-form]'), ta = form.querySelector('textarea'), ex = box.querySelector('.asst-examples');
   const store = (v) => { try { sessionStorage.setItem('asst-open', v ? '1' : ''); } catch (e) {} };
-  const open = (v) => { panel.hidden = !v; fab.setAttribute('aria-expanded', v ? 'true' : 'false'); box.classList.toggle('is-open', v); store(v); if (v) { log.scrollTop = log.scrollHeight; ta.focus(); } };
-  box.querySelectorAll('[data-asst-toggle]').forEach((b) => b.addEventListener('click', () => open(panel.hidden)));
-  try { if (sessionStorage.getItem('asst-open') === '1') open(true); } catch (e) {}
+  // V telefonu panel zabere celou obrazovku – stránka pod ním se nesmí posouvat.
+  const mobile = window.matchMedia('(max-width: 560px)');
+  const lock = () => document.documentElement.classList.toggle('asst-lock', !panel.hidden && mobile.matches);
+  mobile.addEventListener('change', lock);
+  const open = (v, focus) => { panel.hidden = !v; fab.setAttribute('aria-expanded', v ? 'true' : 'false'); box.classList.toggle('is-open', v); store(v); lock(); if (v) { log.scrollTop = log.scrollHeight; if (focus) ta.focus(); } };
+  box.querySelectorAll('[data-asst-toggle]').forEach((b) => b.addEventListener('click', () => open(panel.hidden, !mobile.matches)));
+  // tah prstem mimo seznam zpráv (záhlaví, formulář) neposouvá stránku za oknem
+  panel.addEventListener('touchmove', (e) => { if (!e.target.closest('.asst-log, .asst-examples, textarea')) e.preventDefault(); }, { passive: false });
+  try { if (sessionStorage.getItem('asst-open') === '1') open(true, false); } catch (e) {}
   const add = (cls, html) => { const li = document.createElement('li'); li.className = cls; li.innerHTML = html; log.appendChild(li); log.scrollTop = log.scrollHeight; return li; };
   const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ask = async (q) => {
