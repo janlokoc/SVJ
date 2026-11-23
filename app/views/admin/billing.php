@@ -63,7 +63,7 @@
   <div class="card" id="edice">
     <h2>Edice</h2>
     <?php $edView = 'admin'; require __DIR__ . '/../platform/_editions.php'; ?>
-    <?php if (vat_payer()): ?><p class="hint"><?= e(vat_note()) ?></p><?php endif ?>
+    <?php if (vat_payer()): ?><p class="vat-note"><?= e(vat_note()) ?></p><?php endif ?>
   </div>
 
   <div class="card" id="funkce">

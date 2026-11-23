@@ -835,7 +835,7 @@ function pay_vat_hint(array $p): string
 /** Věta k ceníkům: ceny jsou bez DPH. */
 function vat_note(): string
 {
-    return vat_payer() ? 'Ceny jsou uvedeny bez DPH; k platbě se připočte DPH ' . pset_int('vat_rate', 0, 100) . "\u{a0}%. Po zaplacení dostanete daňový doklad." : '';
+    return vat_payer() ? 'Všechny ceny jsou uvedeny bez DPH. K platbě se připočte DPH ' . pset_int('vat_rate', 0, 100) . "\u{a0}%; po zaplacení dostanete daňový doklad." : '';
 }
 function money_czk2(float $amount): string
 {
