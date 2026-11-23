@@ -255,6 +255,83 @@ function tenant_set(string $slug, string $key, string $value): void
     $pdo->prepare('DELETE FROM settings WHERE `key` = ?')->execute([$key]);
     $pdo->prepare('INSERT INTO settings (`key`, value) VALUES (?,?)')->execute([$key, $value]);
 }
+/**
+ * Report využití pro konzoli: limity edice a jejich naplnění, k tomu provoz webu (e-maily, AI, úložiště, aktivita).
+ * Vrací ['limits' => [klíč => [název, použito, limit (0 = bez omezení), jednotka, procenta, stav]], 'facts' => [...], 'verdict' => [...]].
+ */
+function tenant_usage_report(array $t): array
+{
+    $slug = $t['slug'];
+    if (!is_dir(tenant_storage($slug))) {
+        return [];
+    }
+    try {
+        $pdo = tenant_pdo($slug);
+    } catch (Throwable $e) {
+        return [];
+    }
+    $one = function (string $sql, array $p = []) use ($pdo) { $st = $pdo->prepare($sql); $st->execute($p); return $st->fetchColumn(); };
+    $bytes = ['documents' => 0, 'tickets' => 0, 'other' => 0];
+    $docFiles = array_flip(array_filter(array_map('strval', $pdo->query('SELECT filename FROM documents WHERE filename IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN))));
+    $ticketFiles = array_flip(array_map('strval', $pdo->query('SELECT filename FROM ticket_files')->fetchAll(PDO::FETCH_COLUMN)));
+    $dir = tenant_storage($slug) . '/uploads';
+    if (is_dir($dir)) {
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, FilesystemIterator::SKIP_DOTS)) as $f) {
+            if ($f->isFile()) {
+                $bytes[isset($docFiles[$f->getFilename()]) ? 'documents' : (isset($ticketFiles[$f->getFilename()]) ? 'tickets' : 'other')] += $f->getSize();
+            }
+        }
+    }
+    $mb = fn(int $b) => $b > 0 && $b < 104858 ? 'méně než 0,1' : str_replace('.', ',', (string) round($b / 1048576, 1));
+    $edition = tenant_edition($t);
+    $month = date('Y-m-01 00:00:00');
+    $used = [
+        'admins' => (int) $one("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1"),
+        'polls' => (int) $one('SELECT COUNT(*) FROM polls WHERE opens_at >= ?', [date('Y-01-01')]),
+        'users' => (int) $one('SELECT COUNT(*) FROM users WHERE active = 1'),
+        'mails' => (int) $one('SELECT COALESCE(SUM(sent_count), 0) FROM mailings WHERE sent_at >= ?', [$month]),
+        'ai' => (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_used_' . date('Y-m')]),
+        'storage' => (int) ceil(array_sum($bytes) / 1048576),
+    ];
+    $limits = [];
+    foreach (PLAN_LIMITS as $k => [$label, $unit]) {
+        $limit = pset_int('lim_' . $edition . '_' . $k, 0, 10000000) + ($k === 'storage' ? storage_extra_mb($t) : 0);
+        $pct = $limit > 0 ? (int) round($used[$k] * 100 / $limit) : 0;
+        $state = $limit === 0 ? 'free' : ($pct >= 100 ? 'full' : ($pct >= 80 ? 'near' : 'ok'));
+        $limits[$k] = [$label, $used[$k], $limit, $unit, $pct, $state];
+    }
+    $prevMonth = date('Y-m', strtotime('first day of last month'));
+    $mails12 = (int) $one('SELECT COALESCE(SUM(sent_count), 0) FROM mailings WHERE sent_at >= ?', [date('Y-m-d', strtotime('-12 months'))]);
+    $opened = $one('SELECT ROUND(100.0 * SUM(opened_at IS NOT NULL) / NULLIF(COUNT(*), 0)) FROM mailing_recipients r JOIN mailings m ON m.id = r.mailing_id WHERE m.sent_at >= ?', [date('Y-m-d', strtotime('-12 months'))]);
+    $active30 = (int) $one('SELECT COUNT(*) FROM users WHERE active = 1 AND last_login_at >= ?', [date('Y-m-d', strtotime('-30 days'))]);
+    $lastLogin = (string) $one('SELECT MAX(last_login_at) FROM users');
+    $facts = [
+        'Úložiště podle druhu' => 'dokumenty ' . $mb($bytes['documents']) . ' MB · přílohy závad ' . $mb($bytes['tickets']) . ' MB · ostatní (logo, náhledy) ' . $mb($bytes['other']) . ' MB',
+        'Hromadné e-maily' => 'tento měsíc ' . $used['mails'] . ' · za 12 měsíců ' . $mails12 . ($opened !== null && $opened !== false ? ' · otevřeno ' . (int) $opened . ' %' : ''),
+        'AI pomocník' => 'tento měsíc ' . $used['ai'] . '× · minulý měsíc ' . (int) $one('SELECT value FROM settings WHERE `key` = ?', ['ai_used_' . $prevMonth]) . '×' . (!empty($t['ai_until']) && $t['ai_until'] >= date('Y-m-d') ? ' · AI Plus do ' . cz_date($t['ai_until']) : ''),
+        'Aktivita' => 'přihlášeno za 30 dní ' . $active30 . ' z ' . $used['users'] . ' účtů · poslední přihlášení ' . ($lastLogin !== '' ? cz_datetime($lastLogin) : 'nikdy'),
+        'Obsah' => (int) $one('SELECT COUNT(*) FROM units') . ' jednotek · ' . (int) $one('SELECT COUNT(*) FROM documents') . ' dokumentů · ' . (int) $one('SELECT COUNT(*) FROM posts') . ' aktualit · ' . (int) $one("SELECT COUNT(*) FROM tickets WHERE status <> 'done'") . ' otevřených závad',
+    ];
+    // Vyhodnocení: co z čísel plyne pro provozovatele.
+    $verdict = [];
+    $full = array_filter($limits, fn($l) => $l[5] === 'full');
+    $near = array_filter($limits, fn($l) => $l[5] === 'near');
+    if ($full) {
+        $verdict[] = ['bad', 'Vyčerpaný limit: ' . implode(', ', array_map(fn($l) => $l[0], $full)) . '.' . ($edition !== 'premium' ? ' Vhodné nabídnout vyšší edici' . (isset($full['storage']) ? ' nebo úložiště navíc' : '') . '.' : '')];
+    }
+    if ($near) {
+        $verdict[] = ['warn', 'Blíží se limitu (80 % a víc): ' . implode(', ', array_map(fn($l) => $l[0] . ' ' . $l[4] . ' %', $near)) . '.'];
+    }
+    if ($lastLogin === '' || $lastLogin < date('Y-m-d', strtotime('-60 days'))) {
+        $verdict[] = ['warn', 'Na web se přes 60 dní nikdo nepřihlásil – web možná nepoužívají.'];
+    } elseif ($used['users'] > 1 && $active30 * 100 < $used['users'] * 20) {
+        $verdict[] = ['warn', 'Za posledních 30 dní se přihlásilo méně než 20 % obyvatel.'];
+    }
+    if (!$verdict) {
+        $verdict[] = ['ok', 'Vše v limitech edice ' . EDITIONS[$edition] . '.'];
+    }
+    return ['edition' => $edition, 'limits' => $limits, 'facts' => $facts, 'verdict' => $verdict];
+}
 function tenant_stats(string $slug): array
 {
     if (!is_dir(tenant_storage($slug))) {

@@ -11,7 +11,7 @@
   <?php endif ?>
   <?php if (!$new): ?>
   <nav class="tenant-jump" aria-label="Části stránky">
-    <a href="#uzivatele">Uživatelé</a><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
   </nav>
   <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
   <details class="card tenant-users" id="uzivatele" open>
@@ -29,6 +29,23 @@
     <p class="hint">Jen přehled účtů pro podporu. Obsah webu (aktuality, dokumenty, zprávy) se tu nezobrazuje; nahlédnout do něj jde jen přes režim podpory níže, který se zapisuje do záznamů společenství.</p>
   </details>
   <?php endif ?>
+  <?php endif ?>
+  <?php if (!empty($usage)): ?>
+  <section class="card usage-report" id="vyuziti">
+    <h2>Využití a limity <span class="muted">· edice <?= e(EDITIONS[$usage['edition']]) ?></span></h2>
+    <ul class="usage-verdict"><?php foreach ($usage['verdict'] as [$tone, $text]): ?><li class="is-<?= $tone ?>"><?= e($text) ?></li><?php endforeach ?></ul>
+    <table class="table usage-table">
+      <thead><tr><th>Limit</th><th>Využito</th><th class="usage-bar-col">Naplnění</th><th>Stav</th></tr></thead>
+      <tbody><?php foreach ($usage['limits'] as [$label, $used, $limit, $unit, $pct, $state]): $u = $unit !== '' ? ' ' . $unit : ''; ?><tr class="u-<?= $state ?>">
+        <td data-label="Limit"><?= e($label) ?></td>
+        <td data-label="Využito"><strong><?= number_format($used, 0, ',', "\u{a0}") . e($u) ?></strong> <span class="muted">z <?= $limit ? number_format($limit, 0, ',', "\u{a0}") . e($u) : 'neomezeně' ?></span></td>
+        <td data-label="Naplnění" class="usage-bar-col"><?php if ($limit): ?><progress class="bar" max="100" value="<?= min(100, $pct) ?>"><?= $pct ?> %</progress><?php else: ?><span class="muted">—</span><?php endif ?></td>
+        <td data-label="Stav"><?= ['ok' => '<span class="status status-done">v pořádku</span>', 'near' => '<span class="status status-in_progress">blíží se · ' . $pct . ' %</span>', 'full' => '<span class="status status-new">vyčerpáno · ' . $pct . ' %</span>', 'free' => '<span class="muted">bez omezení</span>'][$state] ?></td>
+      </tr><?php endforeach ?></tbody>
+    </table>
+    <dl class="usage-facts"><?php foreach ($usage['facts'] as $k => $v): ?><dt><?= e($k) ?></dt><dd><?= e($v) ?></dd><?php endforeach ?></dl>
+    <p class="hint">E-maily a AI se počítají za kalendářní měsíc, hlasování za kalendářní rok. Úložiště zahrnuje dokumenty, přílohy závad i logo; k limitu se přičítá zaplacené úložiště navíc.</p>
+  </section>
   <?php endif ?>
   <form method="post" class="card form" id="udaje">
     <?= csrf_field() ?>

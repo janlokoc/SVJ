@@ -373,6 +373,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
+        'usage' => tenant_usage_report($t),
         'tenantUsers' => (function () use ($slug) {
             // Přehled účtů webu pro podporu: kdo tam je, s jakou rolí a kdy se naposledy přihlásil. Obsah webu se tu neukazuje.
             $pdo = tenant_pdo($slug);

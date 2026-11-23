@@ -1404,3 +1404,18 @@ html[data-style="vyveska"] :is(.card, .ticket, .contact, .stat, .event-card) { b
 .demo-editions form, .demo-edition-pick form { margin: 0; }
 .demo-edition-pick { margin: 1.5rem 0; }
 .demo-edition-pick h2 { margin-bottom: .3rem; }
+
+/* Konzole: využití a limity společenství */
+.usage-report h2 .muted { font-size: .9rem; font-weight: 500; }
+.usage-verdict { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .4rem; }
+.usage-verdict li { padding: .55rem .8rem; border-radius: 8px; border-left: 4px solid; }
+.usage-verdict .is-ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+.usage-verdict .is-warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.usage-verdict .is-bad { background: var(--accent-soft); border-color: var(--accent); color: color-mix(in srgb, var(--accent) 82%, var(--ink)); }
+.usage-table .bar { width: 100%; min-width: 8rem; }
+.usage-table tr.u-near .bar::-webkit-progress-value { background: var(--warn); } .usage-table tr.u-near .bar::-moz-progress-bar { background: var(--warn); }
+.usage-table tr.u-full .bar::-webkit-progress-value { background: var(--accent); } .usage-table tr.u-full .bar::-moz-progress-bar { background: var(--accent); }
+.usage-facts { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 1rem 0 0; }
+.usage-facts dt { font-weight: 600; color: var(--muted); }
+.usage-facts dd { margin: 0; }
+@media (max-width: 600px) { .usage-facts { grid-template-columns: 1fr; } .usage-facts dd { margin-bottom: .4rem; } }
