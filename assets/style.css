@@ -1183,13 +1183,13 @@ code.break { word-break: break-all; }
   --ink: #16202b;
   --muted: #4c5763;
   --line: #c8cfca;
-  --primary: #1d3f91;       /* smaltovaná cedule */
-  --primary-hover: #152f6e;
+  --primary: #0f5a5f;       /* petrolejová (dříve modrá – připomínala Českou poštu) */
+  --primary-hover: #0a4347;
   --on-primary: #ffffff;
-  --accent: #8a5d00;        /* mosaz – pro text */
-  --accent-soft: #f6e9c4;
-  --bell: #f2b705;          /* mosaz – plochy */
-  --soft: #dfe6f3;
+  --accent: #9a4a24;        /* měď – pro text */
+  --accent-soft: #f6e3d8;
+  --bell: #d9774a;          /* měď – plochy */
+  --soft: #dcecec;
   --shadow: none;
   --radius: 8px;
   --font: "Atkinson Hyperlegible Next", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -1198,11 +1198,11 @@ code.break { word-break: break-all; }
 }
 @media (prefers-color-scheme: dark) {
   :root[data-site="sluzba"]:not([data-theme="light"]) { --bg: #10151c; --surface: #171e28; --surface-2: #212a36; --ink: #e9edf2; --muted: #a6b1bd; --line: #2d3746;
-    --primary: #9db6ff; --primary-hover: #bccdff; --on-primary: #0d1630; --accent: #f2c14e; --accent-soft: #33291a; --bell: #f2c14e; --soft: #1b2539;
+    --primary: #7fd0cc; --primary-hover: #a6e1de; --on-primary: #06292b; --accent: #f0a27c; --accent-soft: #3a261c; --bell: #e58a5f; --soft: #16302f;
     --kov-a: #59616b; --kov-b: #8a929b; --tag: #e9ebe6; --tag-ink: #1f2a33; }
 }
 :root[data-site="sluzba"][data-theme="dark"] { --bg: #10151c; --surface: #171e28; --surface-2: #212a36; --ink: #e9edf2; --muted: #a6b1bd; --line: #2d3746;
-  --primary: #9db6ff; --primary-hover: #bccdff; --on-primary: #0d1630; --accent: #f2c14e; --accent-soft: #33291a; --bell: #f2c14e; --soft: #1b2539;
+  --primary: #7fd0cc; --primary-hover: #a6e1de; --on-primary: #06292b; --accent: #f0a27c; --accent-soft: #3a261c; --bell: #e58a5f; --soft: #16302f;
   --kov-a: #59616b; --kov-b: #8a929b; --tag: #e9ebe6; --tag-ink: #1f2a33; }
 
 [data-site="sluzba"] body { font-size: 1.125rem; line-height: 1.55; }
@@ -1224,7 +1224,7 @@ code.break { word-break: break-all; }
 .tablo-kov-a { stop-color: var(--kov-a); } .tablo-kov-b { stop-color: var(--kov-b); }
 .tablo-plate { stroke: color-mix(in srgb, var(--kov-a) 70%, #000); stroke-width: 1; }
 .tablo-screw { fill: color-mix(in srgb, var(--kov-a) 60%, #000); }
-.tablo-sign > rect:first-child { fill: #1d3f91; }
+.tablo-sign > rect:first-child { fill: #0f5a5f; }
 .tablo-sign-edge { fill: none; stroke: #fff; stroke-width: 2.5; }
 .tablo-street { font: 600 15px var(--display); font-stretch: 90%; fill: #fff; letter-spacing: .02em; }
 .tablo-no { font: 800 30px var(--display); font-stretch: 85%; fill: #fff; }
@@ -1497,3 +1497,65 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .help-fig figcaption { font-size: .88rem; color: var(--muted); margin-top: .4rem; }
 .help-body kbd { font: inherit; font-size: .85em; padding: .05rem .35rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); }
 .help-body .table code { white-space: nowrap; }
+
+/* ---------- Úvodní stránka služby (varianta A „Produkt“) ---------- */
+.lpx-eyebrow { font-weight: 700; font-size: .85rem; letter-spacing: .07em; text-transform: uppercase; color: var(--primary); margin: 0 0 .8rem; }
+.lpx-hero { padding: clamp(2.5rem, 2rem + 3vw, 4.5rem) 0 clamp(3rem, 2rem + 4vw, 5.5rem); }
+.lpx-hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(2rem, 4vw, 4rem); align-items: center; }
+[data-site="sluzba"] .lpx-hero h1 { font-size: clamp(2.4rem, 1.4rem + 3.4vw, 3.8rem); line-height: 1.02; letter-spacing: -.015em; margin: 0 0 1.1rem; max-width: 14ch; }
+.lpx-lead { font-size: 1.22rem; color: var(--muted); margin: 0; max-width: 36ch; }
+.lpx-hero .actions { margin: 1.8rem 0 0; }
+.lpx-devices { position: relative; padding: 0 0 4.5rem 2.5rem; }
+.lpx-browser { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: 0 30px 60px -30px rgba(16, 24, 34, .4); }
+.lpx-bar { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.lpx-bar i { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 45%, transparent); }
+.lpx-bar span { margin-left: 10px; font-size: .75rem; color: var(--muted); background: var(--surface); border-radius: 5px; padding: 1px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lpx-browser img, .lpx-tablet img, .lpx-phone img, .lpx-shot img { display: block; width: 100%; height: auto; }
+.lpx-tablet, .lpx-phone { position: absolute; background: #161c24; box-shadow: 0 26px 50px -18px rgba(16, 24, 34, .55); overflow: hidden; }
+.lpx-tablet { left: 0; bottom: 0; width: 34%; padding: 9px; border-radius: 20px; }
+.lpx-tablet img { border-radius: 10px; aspect-ratio: 820 / 1000; object-fit: cover; object-position: top; }
+.lpx-phone { right: -1rem; bottom: 1rem; width: 23%; padding: 6px; border-radius: 26px; }
+.lpx-phone img { border-radius: 20px; }
+.lpx-section { padding: clamp(3rem, 2rem + 4vw, 5.5rem) 0; border-top: 1px solid var(--line); }
+[data-site="sluzba"] .lpx-section h2 { font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem); line-height: 1.08; margin: 0 0 .8rem; max-width: 24ch; }
+.lpx-intro { color: var(--muted); font-size: 1.15rem; max-width: 62ch; margin: 0; }
+.lpx-meeting { background: var(--surface); }
+.lpx-steps { list-style: none; padding: 0; margin: 2.5rem 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; counter-reset: krok; }
+.lpx-steps li { counter-increment: krok; display: flex; flex-direction: column; gap: .5rem; }
+.lpx-shot { height: 230px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); margin-bottom: .6rem; box-shadow: 0 18px 36px -24px rgba(16, 24, 34, .35); }
+.lpx-shot { display: flex; align-items: flex-start; background: var(--surface); }
+.lpx-shot img { width: 100%; height: auto; }
+[data-site="sluzba"] .lpx-steps h3 { font-size: 1.3rem; margin: 0; }
+.lpx-steps h3::before { content: counter(krok) ". "; color: var(--accent); }
+.lpx-steps p { margin: 0; color: var(--muted); }
+.lpx-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
+.lpx-row + .lpx-row { margin-top: clamp(3rem, 6vw, 5rem); }
+.lpx-flip .lpx-row-text { order: 2; }
+.lpx-row-text p { color: var(--muted); }
+.lpx-check { margin-top: 1.2rem; }
+.lpx-row-phone { display: flex; justify-content: center; }
+.lpx-phone-big { position: relative; right: auto; bottom: auto; width: min(260px, 70%); }
+.lpx-prices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; margin-top: 2rem; }
+.lpx-price { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1.5rem; display: flex; flex-direction: column; gap: .7rem; }
+.lpx-price.is-main { border: 2px solid var(--primary); }
+[data-site="sluzba"] .lpx-price h3 { font-size: 1.3rem; margin: 0; }
+.lpx-amount { margin: 0; font-family: var(--display); font-stretch: 85%; font-size: 2.2rem; font-weight: 760; line-height: 1.1; }
+.lpx-amount small { font-family: var(--font); font-size: 1rem; font-weight: 400; color: var(--muted); }
+.lpx-price p.muted { margin: 0; }
+.lpx-price .lp-check { margin: .2rem 0 .6rem; flex: 1; }
+.lpx-price .btn { margin-top: auto; }
+.lpx-faq { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: clamp(2rem, 5vw, 4rem); }
+.lpx-faq .lp-faq:first-child { border-top: 1px solid var(--line); }
+.lpx-cta { background: var(--primary); color: var(--on-primary); padding: clamp(2.5rem, 2rem + 3vw, 4rem) 0; }
+.lpx-cta .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.5rem 2rem; }
+[data-site="sluzba"] .lpx-cta h2 { color: inherit; margin: 0; font-size: clamp(1.7rem, 1.2rem + 1.6vw, 2.3rem); }
+.lpx-cta .lpx-cta-btn { background: var(--surface); border-color: var(--surface); color: var(--primary); }
+.site-nav a[aria-current="page"] { color: var(--primary); }
+@media (max-width: 900px) {
+  .lpx-hero-grid, .lpx-row, .lpx-faq { grid-template-columns: minmax(0, 1fr); }
+  .lpx-flip .lpx-row-text { order: 0; }
+  .lpx-steps, .lpx-prices { grid-template-columns: minmax(0, 1fr); }
+  .lpx-devices { padding: 0 0 3rem 1.5rem; }
+  .lpx-phone { right: 0; }
+}
+@media (max-width: 560px) { .lpx-tablet { display: none; } .lpx-devices { padding: 0 0 2.5rem; } .lpx-phone { width: 30%; } }

@@ -170,6 +170,15 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const res = await desk(who.owner); await res.goto(T + '/'); await lpShot(res, 'web-obyvatel.jpg');
     const adm = await desk(who.admin); await adm.goto(T + '/admin'); await lpShot(adm, 'administrace.jpg');
     const phone = await (await b.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(phone, who.owner); await phone.goto(T + '/'); await lpShot(phone, 'telefon.jpg');
+    // Tablet: výbor na shromáždění odklikává prezenci na iPadu.
+    const tab = await (await b.newContext({ viewport: { width: 820, height: 1180 }, deviceScaleFactor: 1.5, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(tab, who.admin);
+    await tab.goto(T + `/admin/terminy/${evId}/prezence-na-miste`); await tab.evaluate(() => { const h = document.querySelector('.page-head'); window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 80); }); await tab.screenshot({ path: path.join(LP, 'tablet.jpg'), type: 'jpeg', quality: 72 });
+    // Krok 1 na úvodní stránce: součet podílů a první jednotky v čitelné velikosti (výřez z tabletu).
+    await tab.evaluate(() => document.querySelectorAll('body *').forEach((el) => { const p = getComputedStyle(el).position; if (p === 'sticky' || p === 'fixed') el.style.position = 'static'; }));
+    const bar = await tab.locator('.presence-bar').boundingBox(); await tab.evaluate((y) => window.scrollTo(0, y + window.scrollY - 16), bar.y);
+    const bar2 = await tab.locator('.presence-bar').boundingBox();
+    await tab.screenshot({ path: path.join(LP, 'prezence-soucet.jpg'), type: 'jpeg', quality: 74, clip: { x: 0, y: Math.max(0, bar2.y - 16), width: 820, height: 560 } });
+    fs.copyFileSync(path.join(OUT, 'shrom-7-zapis.jpg'), path.join(LP, 'zapis.jpg'));
     check(fs.existsSync(path.join(LP, 'telefon.jpg')), 'snímky pro úvodní stránku');
 
     // ---------- Import z katastru ----------

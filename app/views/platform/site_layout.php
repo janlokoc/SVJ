@@ -21,10 +21,10 @@
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hlavni-menu"><?= icon('menu') ?><span>Menu</span></button>
     <nav class="site-nav" id="hlavni-menu" aria-label="Hlavní menu">
       <ul>
-        <li><a href="<?= url('/funkce') ?>">Funkce</a></li>
-        <li><a href="<?= url('/funkce') ?>#vzhledy">Šablony</a></li>
-        <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
-        <li><a href="<?= url('/') ?>#otazky">Časté otázky</a></li>
+        <?php $navPath = $GLOBALS['PATH'] ?? '/'; $navDemo = function_exists('demo_tenant') ? demo_tenant() : null; ?>
+        <li><a href="<?= url('/funkce') ?>"<?= str_starts_with($navPath, '/funkce') ? ' aria-current="page"' : '' ?>>Funkce</a></li>
+        <li><a href="<?= url('/cenik') ?>"<?= str_starts_with($navPath, '/cenik') ? ' aria-current="page"' : '' ?>>Ceník</a></li>
+        <?php if ($navDemo): ?><li><a href="<?= e(tenant_url($navDemo, '/vstup')) ?>">Ukázka webu</a></li><?php endif ?>
       </ul>
       <div class="nav-user"><a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Nahlásit</span></a><a class="btn btn-small" href="<?= url('/registrace') ?>">Založit web zdarma</a></div>
     </nav>
