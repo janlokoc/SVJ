@@ -334,8 +334,6 @@ document.querySelectorAll('.presence-form').forEach((form) => {
     row.dataset.mode = mode;
     row.classList.toggle('is-present', mode !== '');
     proxy.hidden = mode !== 'proxy';
-    const up = row.querySelector('.presence-upload');
-    if (up && mode === 'proxy') up.classList.remove('is-quiet');
     const data = new FormData(form); data.append('ajax', '1');
     state.textContent = 'ukládám…';
     try {
@@ -355,7 +353,7 @@ document.querySelectorAll('.presence-form').forEach((form) => {
     }
   };
   form.querySelectorAll('input[name=mode]').forEach((r) => r.addEventListener('change', save));
-  proxy.querySelector('input').addEventListener('change', save);
+  proxy.querySelectorAll('input').forEach((i) => i.addEventListener('change', save));
   form.addEventListener('submit', (e) => { e.preventDefault(); save(); });
 });
 

@@ -573,10 +573,11 @@ U termínu s přihlašováním (Administrace → Termíny → Účast) je tlač�
 - U každé jednotky správce klikne *Nepřítomen / Osobně / Zmocněnec*.
   Web hned sečte spoluvlastnické podíly a ukáže, zda je shromáždění
   usnášeníschopné. Jméno zmocněnce se předvyplní z přihlášky.
-- **Podepsaná plná moc:** vlastník ji nahraje předem na stránce termínu
-  (PDF nebo fotografie), nebo ji na místě nahraje správce. Zastoupení bez
-  nahrané plné moci se počítá, ale web na něj upozorní. Soubor vidí jen
-  správci a vlastníci dané jednotky.
+- **Podepsaná plná moc:** k pozvánce ji vlastník může nahrát předem na
+  stránce termínu (PDF nebo fotografie) – soubor vidí jen správci a
+  vlastníci dané jednotky. Na místě zmocněnec předkládá papírovou plnou moc
+  a správce zaškrtne „plná moc předložena“. Zastoupení bez plné moci se do
+  součtu počítá, ale web na něj upozorní.
 - **Hlasování o návrzích:** z bodů programu (řádky s pomlčkou) web nabídne
   návrhy k hlasování; informativní body (zahájení, diskuze, ukončení) a
   poznámky bez pomlčky předvybrané nejsou. U návrhu se zvolí potřebná

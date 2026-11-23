@@ -154,6 +154,7 @@ function db_mysql(string $tenant): PDO
         schema_v10($pdo, true);
         schema_v11($pdo, true);
         schema_v12($pdo, true);
+        schema_v13($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -192,7 +193,16 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 12) {
         schema_v12($pdo, true);
     }
+    if ($mysqlVersion < 13) {
+        schema_v13($pdo, true);
+    }
     return $pdo;
+}
+/** Třináctá verze databáze: u zastoupení na shromáždění je vidět, že zmocněnec předložil plnou moc (papírově). */
+function schema_v13(PDO $pdo, bool $mysql): void
+{
+    $pdo->exec('ALTER TABLE event_presence ADD COLUMN proxy_ok ' . ($mysql ? 'TINYINT' : 'INTEGER') . ' NOT NULL DEFAULT 0');
+    $mysql ? $pdo->exec("UPDATE settings SET value = '13' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 13');
 }
 /** Dvanáctá verze databáze: prezence na shromáždění a nahrané podepsané plné moci. */
 function schema_v12(PDO $pdo, bool $mysql): void
@@ -330,6 +340,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v10($pdo, false);
         schema_v11($pdo, false);
         schema_v12($pdo, false);
+        schema_v13($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -453,6 +464,9 @@ SQL);
     }
     if ($version < 12) {
         schema_v12($pdo, false);
+    }
+    if ($version < 13) {
+        schema_v13($pdo, false);
     }
     return $pdo;
 }

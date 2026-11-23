@@ -2,7 +2,7 @@
 /*
  * Prezence na shromáždění: správce na místě odklikává, kdo je přítomen (osobně nebo přes zmocněnce),
  * web průběžně sčítá spoluvlastnické podíly a hlídá usnášeníschopnost. K zastoupení lze nahrát
- * podepsanou plnou moc – vlastník předem na stránce termínu, nebo správce na místě.
+ * podepsanou plnou moc předem na stránce termínu; na místě zmocněnec předkládá papírovou a správce to jen zaškrtne.
  */
 
 const PRESENCE = ['self' => 'Osobně', 'proxy' => 'Zmocněnec'];
@@ -10,7 +10,7 @@ const PRESENCE = ['self' => 'Osobně', 'proxy' => 'Zmocněnec'];
 /** Prezence na místě: stejné klíče jako attendance(), aby ji uměl použít i zápis ze shromáždění. */
 function presence(int $eventId): array
 {
-    $rows = all('SELECT un.*, p.mode, p.proxy_name AS p_proxy, p.checked_at, r.status AS rsvp, r.proxy_name AS rsvp_proxy, f.id AS file_id, f.original_name AS file_name, f.uploaded_at AS file_at
+    $rows = all('SELECT un.*, p.mode, p.proxy_name AS p_proxy, p.proxy_ok, p.checked_at, r.status AS rsvp, r.proxy_name AS rsvp_proxy, f.id AS file_id, f.original_name AS file_name, f.uploaded_at AS file_at
         FROM units un
         LEFT JOIN event_presence p ON p.unit_id = un.id AND p.event_id = ?
         LEFT JOIN event_rsvp r ON r.unit_id = un.id AND r.event_id = ?
@@ -29,7 +29,7 @@ function presence(int $eventId): array
         if ($r['mode'] === 'self' || $r['mode'] === 'proxy') {
             $present += $r['weight'];
             $counts[$r['mode'] === 'self' ? 'yes' : 'proxy']++;
-            $missingDocs += $r['mode'] === 'proxy' && !$r['file_id'] ? 1 : 0;
+            $missingDocs += $r['mode'] === 'proxy' && !$r['proxy_ok'] && !$r['file_id'] ? 1 : 0;
         } else {
             $counts['no']++;
         }
@@ -256,24 +256,15 @@ $route('POST', '/admin/terminy/(\d+)/prezence-na-miste', function (int $id) {
     if (!val('SELECT 1 FROM units WHERE id = ?', [$unitId])) {
         not_found();
     }
-    if ($do === 'upload') {
-        $err = proxy_file_save($id, $unitId, (int) $admin['id']);
-        $err ? $_SESSION['presence_error'] = $err : audit('presence', 'Plná moc nahrána · ' . unit_name(one('SELECT * FROM units WHERE id = ?', [$unitId])));
-        redirect('/admin/terminy/' . $id . '/prezence-na-miste#j' . $unitId);
-    }
-    if ($do === 'delete-file') {
-        proxy_file_delete($id, $unitId);
-        redirect('/admin/terminy/' . $id . '/prezence-na-miste#j' . $unitId);
-    }
     $mode = post('mode');
     if (isset(PRESENCE[$mode])) {
         $proxy = $mode === 'proxy' ? mb_substr(post('proxy_name'), 0, 190) : '';
         if ($mode === 'proxy' && $proxy === '') {
             $proxy = (string) val("SELECT proxy_name FROM event_rsvp WHERE event_id = ? AND unit_id = ? AND status = 'proxy'", [$id, $unitId]);
         }
-        q("INSERT INTO event_presence (event_id, unit_id, mode, proxy_name, checked_by, checked_at) VALUES (?,?,?,?,?,?)
-            ON CONFLICT(event_id, unit_id) DO UPDATE SET mode = excluded.mode, proxy_name = excluded.proxy_name, checked_by = excluded.checked_by, checked_at = excluded.checked_at",
-            [$id, $unitId, $mode, $proxy, $admin['id'], date('Y-m-d H:i:s')]);
+        q("INSERT INTO event_presence (event_id, unit_id, mode, proxy_name, proxy_ok, checked_by, checked_at) VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT(event_id, unit_id) DO UPDATE SET mode = excluded.mode, proxy_name = excluded.proxy_name, proxy_ok = excluded.proxy_ok, checked_by = excluded.checked_by, checked_at = excluded.checked_at",
+            [$id, $unitId, $mode, $proxy, $mode === 'proxy' && post('proxy_ok') === '1' ? 1 : 0, $admin['id'], date('Y-m-d H:i:s')]);
     } else {
         q('DELETE FROM event_presence WHERE event_id = ? AND unit_id = ?', [$id, $unitId]);
     }

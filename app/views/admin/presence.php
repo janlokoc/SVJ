@@ -13,12 +13,12 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
     <p class="quorum-num"><span data-p="percent"><?= $s['percent'] ?></span> <small><?= $p['byShare'] ? 'všech hlasů podle podílů' : 'jednotek' ?></small></p>
     <div class="meter" role="img" aria-label="Přítomno, potřeba více než <?= $p['threshold'] ?> %"><span class="meter-fill" data-width="<?= $s['width'] ?>"></span><span class="meter-mark" data-left="<?= $p['threshold'] ?>"></span></div>
     <p><strong data-p="verdict"><?= e($s['verdict']) ?></strong> Hranice: více než <?= $p['threshold'] ?> %.</p>
-    <p class="quorum-counts">Osobně <strong data-p="self"><?= $s['self'] ?></strong> · zmocněnci <strong data-p="proxy"><?= $s['proxy'] ?></strong> · nepřítomno <strong data-p="absent"><?= $s['absent'] ?></strong> z <?= $p['units'] ?> jednotek<span data-p="missing-wrap"<?= $s['missingDocs'] ? '' : ' hidden' ?>> · <span class="warn">bez nahrané plné moci: <strong data-p="missingDocs"><?= $s['missingDocs'] ?></strong></span></span></p>
+    <p class="quorum-counts">Osobně <strong data-p="self"><?= $s['self'] ?></strong> · zmocněnci <strong data-p="proxy"><?= $s['proxy'] ?></strong> · nepřítomno <strong data-p="absent"><?= $s['absent'] ?></strong> z <?= $p['units'] ?> jednotek<span data-p="missing-wrap"<?= $s['missingDocs'] ? '' : ' hidden' ?>> · <span class="warn">zmocněnci bez předložené plné moci: <strong data-p="missingDocs"><?= $s['missingDocs'] ?></strong></span></span></p>
   </div>
   <?php if (!$p['byShare']): ?><div class="flash flash-info">Některé jednotky nemají vyplněný spoluvlastnický podíl, proto se počítá každá jednotka jako jeden hlas. Podíly doplníte v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a>.</div><?php endif ?>
 
   <table class="table presence-table">
-    <thead><tr><th>Jednotka</th><th>Vlastník</th><th>Podíl</th><th>Přítomnost</th><th>Plná moc</th></tr></thead>
+    <thead><tr><th>Jednotka</th><th>Vlastník</th><th>Podíl</th><th>Přítomnost</th><th>Plná moc předem</th></tr></thead>
     <tbody>
     <?php foreach ($p['rows'] as $r): $mode = $r['mode'] ?? ''; $proxy = $r['p_proxy'] ?: ($r['rsvp'] === 'proxy' ? $r['rsvp_proxy'] : ''); ?>
       <tr id="j<?= $r['id'] ?>" class="presence-row<?= $mode ? ' is-present' : '' ?>" data-mode="<?= e($mode) ?>">
@@ -32,19 +32,18 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
               <label><input type="radio" name="mode" value=""<?= $mode === '' ? ' checked' : '' ?>><span>Nepřítomen</span></label>
               <?php foreach (PRESENCE as $k => $label): ?><label><input type="radio" name="mode" value="<?= $k ?>"<?= $mode === $k ? ' checked' : '' ?>><span><?= $label ?></span></label><?php endforeach ?>
             </fieldset>
-            <label class="presence-proxy"<?= $mode === 'proxy' ? '' : ' hidden' ?>><span class="sr-only">Jméno zmocněnce</span><input type="text" name="proxy_name" value="<?= e($proxy) ?>" placeholder="jméno zmocněnce" maxlength="190"></label>
+            <div class="presence-proxy"<?= $mode === 'proxy' ? '' : ' hidden' ?>>
+              <label><span class="sr-only">Jméno zmocněnce</span><input type="text" name="proxy_name" value="<?= e($proxy) ?>" placeholder="jméno zmocněnce" maxlength="190"></label>
+              <?php if (!$r['file_id']): ?><label class="check"><input type="checkbox" name="proxy_ok" value="1"<?= $r['proxy_ok'] ? ' checked' : '' ?>> plná moc předložena</label><?php endif ?>
+            </div>
             <button class="btn btn-small btn-ghost presence-save" type="submit">Uložit</button>
             <span class="presence-state" aria-live="polite"></span>
           </form>
         </td>
-        <td data-label="Plná moc">
+        <td data-label="Plná moc předem">
           <?php if ($r['file_id']): ?>
-            <a href="<?= url('/terminy/' . $ev['id'] . '/plna-moc/soubor?jednotka=' . $r['id']) ?>" target="_blank" rel="noopener">✓ <?= e(mb_strimwidth($r['file_name'], 0, 32, '…')) ?></a>
-            <form method="post" action="<?= url($base) ?>" class="inline-form" data-confirm="Odstranit nahranou plnou moc?"><?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $r['id'] ?>"><button class="link-btn" name="do" value="delete-file" type="submit">odstranit</button></form>
-          <?php else: ?>
-            <form method="post" action="<?= url($base) ?>" enctype="multipart/form-data" class="presence-upload<?= $mode === 'proxy' || $r['rsvp'] === 'proxy' ? '' : ' is-quiet' ?>"><?= csrf_field() ?><input type="hidden" name="unit_id" value="<?= $r['id'] ?>"><input type="hidden" name="do" value="upload">
-              <label><span class="sr-only">Podepsaná plná moc pro <?= e(unit_name($r)) ?></span><input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png" required></label>
-              <button class="btn btn-small btn-ghost" type="submit">Nahrát</button></form>
+            <a href="<?= url('/terminy/' . $ev['id'] . '/plna-moc/soubor?jednotka=' . $r['id']) ?>" target="_blank" rel="noopener">✓ nahrána předem</a>
+          <?php elseif ($mode === 'proxy' && $r['proxy_ok']): ?>✓ předložena<?php else: ?><span class="muted">–</span>
           <?php endif ?>
         </td>
       </tr>
@@ -116,6 +115,6 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
     <a class="btn btn-ghost" href="<?= url('/admin/terminy/' . $ev['id'] . '/zapis') ?>">Zápis ze shromáždění</a>
   </p>
   <form method="post" action="<?= url($base) ?>" class="inline-form" data-confirm="Opravdu vynulovat celou prezenci? Nahrané plné moci zůstanou."><?= csrf_field() ?><button class="btn btn-small btn-ghost" name="do" value="reset" type="submit">Vynulovat prezenci</button></form>
-  <p class="hint">Zápis ze shromáždění počítá usnášeníschopnost z této prezence, jakmile je v ní zapsaná alespoň jedna jednotka. Zastoupení bez nahrané plné moci se počítá také – jen na něj web upozorní.</p>
+  <p class="hint">Zápis ze shromáždění počítá usnášeníschopnost z této prezence, jakmile je v ní zapsaná alespoň jedna jednotka. Zmocněnec přinese podepsanou plnou moc vytištěnou – zaškrtněte „plná moc předložena“. Plné moci, které vlastníci nahráli předem k pozvánce, jsou u jednotky vidět. Zastoupení bez plné moci se do součtu počítá, web na něj jen upozorní.</p>
   <?php endif ?>
 </div>
