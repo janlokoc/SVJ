@@ -38,16 +38,16 @@ const post = (url, body, type) => new Promise((resolve, reject) => {
   req.on('error', reject); req.end(body);
 });
 // Snímek prvku; vysoké prvky (tabulky, celé stránky) se oříznou na horní část – víc v návodu není potřeba.
-const shot = async (locator, file, maxHeight = 900) => {
+const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
   // Plovoucí záhlaví webu by na snímku překrylo horní okraj – pro snímek se ukotví na místě.
   await locator.page().evaluate(() => document.querySelectorAll('body *').forEach((el) => { const p = getComputedStyle(el).position; if ((p === 'sticky' || p === 'fixed') && !el.closest('.presence-bar')) el.style.position = 'static'; }));
   await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
   const page = locator.page();
-  if (box.height <= maxHeight) { await locator.screenshot({ path: path.join(OUT, file), type: 'jpeg', quality: 72 }); return; }
+  if (box.height <= maxHeight) { await locator.screenshot({ path: path.join(dir, file), type: 'jpeg', quality: 72 }); return; }
   const y = await page.evaluate((top) => { window.scrollTo(0, top + window.scrollY - 10); return window.scrollY; }, box.y);
   const b2 = await locator.boundingBox();
-  await page.screenshot({ path: path.join(OUT, file), type: 'jpeg', quality: 72, clip: { x: b2.x, y: b2.y, width: b2.width, height: maxHeight } });
+  await page.screenshot({ path: path.join(dir, file), type: 'jpeg', quality: 72, clip: { x: b2.x, y: b2.y, width: b2.width, height: maxHeight } });
 };
 
 (async () => {
@@ -127,6 +127,8 @@ const shot = async (locator, file, maxHeight = 900) => {
     const mv = await card.locator('[data-m=verdict]').textContent();
     check(/Návrh (prošel|neprošel)/.test(mv), 'výsledek návrhu'); step('U návrhu „Zvýšení příspěvku do fondu oprav“: 2 proti, 1 se zdržel – ' + mv.trim());
     await shot(card, 'shrom-6-hlasovani.jpg');
+    fs.mkdirSync(path.join(ROOT, 'assets/landing'), { recursive: true });
+    await shot(card, 'hlasovani.jpg', 470, path.join(ROOT, 'assets/landing'));
     await card.locator('button[value=motion-close]').click(); await admin.waitForURL('**#m*');
     check((await admin.locator('.motion').nth(2).textContent()).includes('uzavřeno'), 'návrh uzavřen');
     while (await admin.$('.motion button[value=motion-close]')) { await admin.click('.motion button[value=motion-close]'); await admin.waitForLoadState(); }
@@ -160,6 +162,15 @@ const shot = async (locator, file, maxHeight = 900) => {
     fs.writeFileSync(path.join(OUT, 'api-ukazka.json'), JSON.stringify({ unit, jsonRequest: jsonReq, jsonResponse: JSON.stringify(JSON.parse(r1.body), null, 2), csvRequest: csvReq, csvResponse: JSON.stringify(JSON.parse(r2.body), null, 2), badStatus: r3.status, badResponse: r3.body }, null, 2) + '\n');
     await owner.goto(T + '/odecty');
     const ot = await text(owner); check(ot.includes('Spotřeba po měsících') && ot.includes('dálkový odečet'), 'obyvatel vidí dálkový odečet'); step('Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“.');
+
+    // ---------- Snímky pro úvodní stránku služby (assets/landing) ----------
+    const LP = path.join(ROOT, 'assets/landing'); fs.mkdirSync(LP, { recursive: true });
+    const lpShot = async (page, file) => { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: path.join(LP, file), type: 'jpeg', quality: 74 }); };
+    const desk = async (email) => { const p = await (await b.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(p, email); return p; };
+    const res = await desk(who.owner); await res.goto(T + '/'); await lpShot(res, 'web-obyvatel.jpg');
+    const adm = await desk(who.admin); await adm.goto(T + '/admin'); await lpShot(adm, 'administrace.jpg');
+    const phone = await (await b.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(phone, who.owner); await phone.goto(T + '/'); await lpShot(phone, 'telefon.jpg');
+    check(fs.existsSync(path.join(LP, 'telefon.jpg')), 'snímky pro úvodní stránku');
 
     // ---------- Import z katastru ----------
     begin('import-z-katastru', 'Kopírování ze stránky Nahlížení do KN nešlo ověřit automaticky – web katastru strojové procházení blokuje. Ověřeno je vložení textu ve stejné podobě, v jaké ho stránka katastru zkopíruje.');
