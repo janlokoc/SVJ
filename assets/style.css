@@ -179,6 +179,7 @@ code { font: 600 1.05em ui-monospace, "Cascadia Mono", Menlo, monospace; backgro
 .house-door rect { fill: var(--ink); opacity: .82; }
 .house-door text { font: 600 17px var(--display); fill: var(--bg); }
 .house-ground { fill: var(--line); }
+.house-num text { font: 600 19px var(--font); fill: var(--muted); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .event-card { display: flex; gap: 1.1rem; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.1rem 1.25rem; box-shadow: var(--shadow); }
 .event-card p { margin: 0; }
 .event-date { flex: none; display: grid; place-items: center; width: 84px; padding: .6rem .25rem; background: var(--primary); color: var(--on-primary); border-radius: 12px; text-align: center; }
