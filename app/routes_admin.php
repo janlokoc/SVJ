@@ -564,13 +564,14 @@ $mailForm = function () {
         if (!$errors && post('action') !== 'test' && ($limitError = plan_limit_error('mails', count(mail_recipients($m['audience']))))) {
             $errors[] = $limitError;
         }
+        $testTo = filter_var(post('test_to'), FILTER_VALIDATE_EMAIL) ? post('test_to') : $admin['email'];
         if (!$errors && post('action') === 'test') {
             $route = mail_route();
             if (in_array($route, ['staging-off', 'local'], true)) {
-                send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html);
+                send_mail($testTo, '[Zkouška] ' . $m['subject'], $text, $html);
                 $errors[] = 'Zkušební zpráva se skutečně neodeslala. ' . mail_route_note();
-            } elseif (send_mail($admin['email'], '[Zkouška] ' . $m['subject'], $text, $html)) {
-                $notice = ($route === 'smtp' ? 'SMTP server převzal zkušební zprávu pro ' : 'Zkušební zpráva byla předána k odeslání na ') . $admin['email'] . '. Zkontrolujte, že dorazila a nespadla do spamu.' . (mail_route_note() !== '' ? ' ' . mail_route_note() : '');
+            } elseif (send_mail($testTo, '[Zkouška] ' . $m['subject'], $text, $html)) {
+                $notice = ($route === 'smtp' ? 'SMTP server převzal zkušební zprávu pro ' : 'Zkušební zpráva byla předána k odeslání na ') . $testTo . '. Zkontrolujte, že dorazila a nespadla do spamu.' . (mail_route_note() !== '' ? ' ' . mail_route_note() : '');
             } else {
                 $errors[] = 'Zkušební zprávu se nepodařilo odeslat. ' . ($GLOBALS['MAIL_ERROR'] ?? 'Server nejspíš nemá povolené odesílání e-mailů – ověřte to u poskytovatele hostingu.');
             }

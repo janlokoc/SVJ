@@ -20,8 +20,9 @@
     <p class="hint">E-mail se posílá bez příloh – na dokumenty odkažte adresou na webu. Pod text se automaticky doplní, kdo zprávu posílá a jak si zasílání vypnout.<?= setting_on('mail_tracking') ? ' Odkazy na tento web se u každého příjemce evidují, takže uvidíte, kdo se proklikl.' : '' ?></p>
     <div class="actions">
       <button class="btn btn-big" type="submit" name="action" value="send" data-confirm-audience>Odeslat zprávu</button>
-      <button class="btn btn-ghost" type="submit" name="action" value="test">Poslat zkoušku jen mně</button>
+      <button class="btn btn-ghost" type="submit" name="action" value="test">Poslat zkoušku</button>
     </div>
+    <label class="test-to">Zkoušku poslat na <input type="email" name="test_to" value="<?= e(post('test_to') ?: (user()['email'] ?? '')) ?>" autocomplete="email"></label>
     <p class="hint">Odeslanou zprávu už nelze vzít zpět. Nejdřív si pošlete zkoušku.</p>
   </form>
 </div>
