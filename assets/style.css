@@ -1078,7 +1078,21 @@ body.lp .editions .edition:hover { transform: translateY(-5px); box-shadow: 0 18
 .onb-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .5rem; }
 .onb-card-head h2 { margin: 0; }
 .onb-count { font-weight: 700; color: var(--muted); }
-.onb-next { list-style: none; padding: 0; margin: .8rem 0; display: grid; gap: .35rem; }
+.onb-card { margin-bottom: 1.5rem; }
+.onb-card .bar { display: block; margin-top: .7rem; }
+.onb-next { list-style: none; padding: 0; margin: 1.1rem 0; display: grid; gap: .7rem; }
+.onb-next li { display: grid; grid-template-columns: auto 1fr; column-gap: .6rem; align-items: baseline; line-height: 1.35; }
+.onb-next li small { grid-column: 2; white-space: nowrap; }
+.onb-card > p:last-child { display: flex; flex-wrap: wrap; gap: .5rem .8rem; align-items: center; margin: 0; }
+.onb-progress { margin-bottom: 1.5rem; }
+@media (max-width: 600px) {
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .stat-grid .stat { padding: 1rem; }
+  .onb-step { flex-direction: row; padding: .9rem; }
+  .onb-body h3 { display: flex; flex-wrap: wrap; gap: .1rem .5rem; align-items: baseline; }
+  .onb-state { margin-left: 0; }
+  .onb-actions .btn { flex: 1 1 auto; text-align: center; }
+}
 
 /* Režim podpory provozovatele */
 .support-bar { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: center; padding: .55rem 1rem; background: #b3261e; color: #fff; font-size: .92rem; text-align: center; }
