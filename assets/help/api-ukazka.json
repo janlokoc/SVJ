@@ -1,0 +1,9 @@
+{
+  "unit": "A/2",
+  "jsonRequest": "[\n  {\n    \"unit\": \"A/2\",\n    \"meter_no\": \"TV-104233\",\n    \"kind\": \"tv\",\n    \"amount\": 41.27,\n    \"date\": \"2026-11-23\"\n  },\n  {\n    \"unit\": \"Z/99\",\n    \"kind\": \"tv\",\n    \"amount\": 3,\n    \"date\": \"2026-11-23\"\n  }\n]",
+  "jsonResponse": "{\n  \"ok\": true,\n  \"saved\": 1,\n  \"updated\": 0,\n  \"errors\": [\n    {\n      \"row\": 2,\n      \"error\": \"Neznámá jednotka\"\n    }\n  ]\n}",
+  "csvRequest": "jednotka;číslo měřidla;druh;stav;datum odečtu\nA/2;TV-104233;teplá voda;42,05;2026-11-23",
+  "csvResponse": "{\n  \"ok\": true,\n  \"saved\": 0,\n  \"updated\": 1,\n  \"errors\": []\n}",
+  "badStatus": 403,
+  "badResponse": "{\"ok\":false,\"error\":\"Neplatná adresa pro příjem dat.\"}"
+}

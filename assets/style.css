@@ -1482,3 +1482,18 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .attendance-table .t-actions input[type=text] { max-width: 10rem; }
 .attendance-table td:nth-child(5) { font-size: .88rem; }
 .look-picker:has(.look-tag) { row-gap: 1rem; }
+
+/* Nápověda */
+.help-link { display: inline-flex; align-items: center; gap: .3rem; font-size: .92rem; font-weight: 600; white-space: nowrap; }
+.help-link svg { width: 1em; height: 1em; }
+.help-list { list-style: none; padding: 0; display: grid; gap: .8rem; }
+.help-list li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.2rem; }
+.help-list p { margin: .3rem 0; }
+.help-verified { font-size: .9rem; color: var(--muted); }
+.help-verified.is-ok { color: var(--ok); }
+.help-body h2 { margin-top: 2rem; }
+.help-fig { margin: 1rem 0 1.5rem; }
+.help-fig img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.help-fig figcaption { font-size: .88rem; color: var(--muted); margin-top: .4rem; }
+.help-body kbd { font: inherit; font-size: .85em; padding: .05rem .35rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: var(--surface); }
+.help-body .table code { white-space: nowrap; }

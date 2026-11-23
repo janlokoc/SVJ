@@ -3,7 +3,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
 <div class="wrap page">
   <p class="crumbs"><a href="<?= url('/admin/terminy/' . $ev['id'] . '/ucast') ?>">← Přihlášky na termín</a></p>
   <header class="page-head"><h1>Prezence na místě</h1>
-    <p class="lead"><?= e($ev['title']) ?> · <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?>. U každé jednotky klikněte, zda je vlastník přítomen osobně, nebo ho zastupuje zmocněnec – podíly se sčítají hned.</p></header>
+    <p class="lead"><?= e($ev['title']) ?> · <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?>. U každé jednotky klikněte, zda je vlastník přítomen osobně, nebo ho zastupuje zmocněnec – podíly se sčítají hned. <?= help_link('shromazdeni', 'Celý postup shromáždění') ?></p></header>
   <?php foreach ($errors as $err): ?><div class="flash flash-error"><?= e($err) ?></div><?php endforeach ?>
   <?php if (!$p['units']): ?>
     <p class="empty">Nejdřív založte jednotky v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a>.</p>

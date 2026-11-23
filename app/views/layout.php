@@ -27,7 +27,7 @@ $adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/
     '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
     '/admin/vyveska' => 'Vývěska', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
     '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Prostory a rezervace', '/admin/klice' => 'Klíče a čipy',
-    '/admin/pruvodce' => 'Průvodce nastavením', '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
+    '/admin/pruvodce' => 'Průvodce nastavením', '/admin/napoveda' => 'Nápověda', '/admin/nastaveni' => 'Nastavení', '/admin/zaznamy' => 'Záznamy', '/admin/zaloha' => 'Záloha'];
 if (!reports_central()) {
     $adminNav['/admin/hlaseni'] = 'Hlášení';
 }
@@ -115,7 +115,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/ankety', '/admin/zavady'],
         'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/klice'],
         'Provoz domu' => ['/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace'],
-        'Správa webu' => ['/admin/pruvodce', '/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/hlaseni']];
+        'Správa webu' => ['/admin/pruvodce', '/admin/napoveda', '/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/hlaseni']];
     $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory')));
     $adminCurrent = 'Přehled';
     foreach ($adminNav as $href => $label) {

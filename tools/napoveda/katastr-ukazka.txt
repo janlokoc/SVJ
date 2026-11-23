@@ -1,0 +1,20 @@
+Informace o stavbě
+Součástí je stavba:	č. p. 1200
+Vymezené jednotky
+1200/1, 1200/2, 1200/3, 1200/4, 1200/5, 1200/6
+Vlastníci, jiní oprávnění
+Vlastnické právo	Podíl
+Dvořák Karel, Zahradní 1200/12, Veveří, 60200 Brno
+Jednotka: 1200/1	1100/10000
+SJ Malý Tomáš a Malá Jana, Zahradní 1200/12, Veveří, 60200 Brno
+Jednotka: 1200/2	1650/10000
+Horáková Eva, Lipová 15, Žabovřesky, 61600 Brno
+Jednotka: 1200/3	1650/10000
+Kučera Martin, Zahradní 1200/12, Veveří, 60200 Brno
+Jednotka: 1200/4	1650/10000
+Svobodová Alena, Zahradní 1200/12, Veveří, 60200 Brno
+Jednotka: 1200/5	1650/10000
+SJ Novák Petr a Nováková Marie, Zahradní 1200/12, Veveří, 60200 Brno
+Jednotka: 1200/6	2300/10000
+Způsob ochrany nemovitosti
+Nejsou evidovány žádné způsoby ochrany.

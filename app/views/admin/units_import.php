@@ -1,7 +1,7 @@
 <div class="wrap page">
   <p class="crumbs"><a href="<?= url('/admin/jednotky') ?>">← Jednotky</a></p>
   <header class="page-head"><h1>Import z katastru</h1>
-    <p class="lead">Založí jednotky a doplní k nim vlastníky a spoluvlastnické podíly podle katastru nemovitostí.</p></header>
+    <p class="lead">Založí jednotky a doplní k nim vlastníky a spoluvlastnické podíly podle katastru nemovitostí. <?= help_link('import-z-katastru', 'Návod se snímky') ?></p></header>
   <?php if ($parsed && !$parsed['units']): ?><div class="flash flash-error">Ve vloženém textu se nepodařilo najít žádné vlastníky s jednotkami. Zkopírujte celou stránku stavby včetně části „Vlastníci, jiní oprávnění“.</div><?php endif ?>
   <form method="post" action="<?= url('/admin/jednotky/import') ?>" class="card form">
     <?= csrf_field() ?>

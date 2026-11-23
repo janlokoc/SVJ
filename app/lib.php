@@ -5,7 +5,9 @@ date_default_timezone_set('Europe/Prague');
 putenv('TZ=Europe/Prague');   // stejný čas používá i SQLite pro výchozí hodnoty sloupců, ať je server v jakémkoli pásmu
 
 // Kořen úložiště. Při provozu pro více SVJ má každé společenství vlastní podsložku (data, databázi i soubory zcela oddělené).
-const ROOT_STORAGE = __DIR__ . '/../storage';
+// Proměnná prostředí SVJ_STORAGE dovolí spustit web nad jinou složkou – používá ji ověřování návodů (tools/napoveda),
+// aby nikdy nesáhlo na skutečná data.
+define('ROOT_STORAGE', (($env = getenv('SVJ_STORAGE')) && is_dir($env)) ? rtrim($env, '/') : __DIR__ . '/../storage');
 
 /** Určí, pro které společenství tento požadavek běží ('' = jediný web bez platformy), a nastaví cesty k jeho datům. */
 function boot_tenant(string $slug): void

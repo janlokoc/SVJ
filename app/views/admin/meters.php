@@ -40,6 +40,7 @@ $prevName = month_name((int) substr($prev, 5, 2)) . ' ' . substr($prev, 0, 4); ?
   <section class="card" id="prijem">
     <h2>Automatický příjem dat</h2>
     <p>Odečtová firma nebo sběrnice v domě může data posílat na web sama – třeba každý den. Stačí jí předat tuto adresu; přijímá stejné CSV jako výše, nebo JSON.</p>
+    <p><?= help_link('odecty-api', 'Návod a technický popis') ?> · odkaz pro odečtovou firmu (bez přihlášení): <code><?= e(absolute_url('/napoveda/odecty-api')) ?></code></p>
     <?php if ($apiUrl): ?>
       <p><input type="text" class="join-url" value="<?= e($apiUrl) ?>" readonly data-select-all aria-label="Adresa pro příjem dat"></p>
       <details><summary>Technický popis pro odečtovou firmu</summary>

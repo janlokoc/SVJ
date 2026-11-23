@@ -1,0 +1,36 @@
+{
+  "shromazdeni": {
+    "date": "2026-11-23",
+    "checks": 11,
+    "steps": [
+      "Termín s programem a přihlašováním se uložil.",
+      "Odkaz „Pozvat e-mailem“ předvyplnil pozvánku s odkazem na přihlášení.",
+      "Vlastník zvolil zastoupení a nahrál podepsanou plnou moc.",
+      "Správce v přihláškách vidí zastoupení i nahranou plnou moc.",
+      "Prezence: přítomno 74,0 % hlasů, shromáždění je usnášeníschopné.",
+      "Z programu web předvybral 3 body k hlasování; zahájení, diskuzi a ukončení ne.",
+      "U návrhu „Zvýšení příspěvku do fondu oprav“: 2 proti, 1 se zdržel – Návrh prošel – pro hlasovalo 67,5 % přítomných, potřeba je nadpoloviční většina přítomných.",
+      "Výsledky hlasování a účast se propsaly do zápisu."
+    ],
+    "note": ""
+  },
+  "odecty-api": {
+    "date": "2026-11-23",
+    "checks": 6,
+    "steps": [
+      "Správce zapnul automatický příjem a získal adresu.",
+      "Poslán JSON (1 řádek uložen, 1 s chybou), CSV (stav přepsán), JSON jen s číslem měřidla (uložen) a požadavek se špatným klíčem (odmítnut 403).",
+      "Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“."
+    ],
+    "note": ""
+  },
+  "import-z-katastru": {
+    "date": "2026-11-23",
+    "checks": 3,
+    "steps": [
+      "Náhled našel 6 jednotek a součet podílů 100 %.",
+      "Po uložení vzniklo 6 jednotek s vlastníky a podíly."
+    ],
+    "note": "Kopírování ze stránky Nahlížení do KN nešlo ověřit automaticky – web katastru strojové procházení blokuje. Ověřeno je vložení textu ve stejné podobě, v jaké ho stránka katastru zkopíruje."
+  }
+}

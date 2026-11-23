@@ -2,7 +2,7 @@
 <div class="wrap page">
   <p class="crumbs"><a href="<?= url('/admin/terminy') ?>">← Termíny</a></p>
   <header class="page-head"><h1><?= e($ev['title']) ?></h1>
-    <p class="lead">Účast přihlášená na <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?>.</p></header>
+    <p class="lead">Účast přihlášená na <?= cz_date($ev['event_date'], true) ?><?= $ev['event_time'] ? ' v ' . e($ev['event_time']) : '' ?>. <?= help_link('shromazdeni', 'Celý postup shromáždění') ?></p></header>
   <?php if (!$att['units']): ?>
     <p class="empty">Nejdřív založte jednotky v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a> – účast se eviduje po jednotkách.</p>
   <?php else: ?>
