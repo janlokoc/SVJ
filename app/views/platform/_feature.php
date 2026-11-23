@@ -19,6 +19,17 @@
     <?php endforeach ?>
   </section>
   <?php endif ?>
+  <?php if (!empty($d['examples'])): ?>
+  <section class="ai-examples"><h2>Příklady, na co se můžete zeptat</h2>
+    <p>Píšete běžnou řečí, jako byste psali kolegovi. Asistent vidí jen to, co Váš účet na webu.</p>
+    <?php foreach ($d['examples'] as $group => $rows): ?>
+    <h3><?= e($group) ?></h3>
+    <ul class="prompt-list">
+      <?php foreach ($rows as [$prompt, $result]): ?><li><q><?= e($prompt) ?></q><span><?= e($result) ?></span></li><?php endforeach ?>
+    </ul>
+    <?php endforeach ?>
+  </section>
+  <?php endif ?>
   <section><h2>Edice a cena</h2><p><strong><?= e($price) ?></strong></p><p><?= e($d['note']) ?></p><p class="hint">Edice i cena jsou předběžné a mohou se do spuštění změnit.</p></section>
 </div>
 <div class="card card-soft feature-notify">
