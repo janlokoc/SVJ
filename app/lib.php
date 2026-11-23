@@ -1139,6 +1139,9 @@ function mail_route_note(): string
     return match (mail_route()) {
         'staging-off' => 'Web běží jako zkušební prostředí bez adresy pro zachytávání e-mailů, takže se nic neodeslalo (jen se zapsalo do storage/mail-staging.log). Doplňte v storage/config.php staging_mail.',
         'staging-catch' => 'Zkušební prostředí: e-mail šel na adresu ' . app_config()['staging_mail'] . ', ne skutečným příjemcům.',
+        'smtp' => (($u = strtolower((string) (app_config()['smtp']['user'] ?? ''))) !== '' && str_contains($u, '@') && $u !== strtolower((string) setting('mail_from')))
+            ? 'Pozor: přihlašujete se k SMTP jako ' . $u . ', ale odesílatel v Nastavení je ' . setting('mail_from') . '. Gmail, Seznam a další služby odesílatele obvykle přepíšou na přihlašovací účet; odpovědi lidí ale půjdou na ' . setting('mail_from') . '. Pro správného odesílatele použijte SMTP poštovní schránky této adresy.'
+            : '',
         'local' => 'Web běží na Vašem počítači bez nastaveného SMTP serveru. Počítač zprávu převzal, ale skutečně doručit ji nejspíš neumí. Pro opravdové odesílání doplňte v storage/config.php údaje SMTP (viz config.example.php).',
         default => '',
     };
