@@ -373,6 +373,19 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/spravce|/smazat|/import|/domen
     $invite = $_SESSION['tenant_invite'] ?? null;
     unset($_SESSION['tenant_invite']);
     render('platform/tenant_form', ['title' => $t['name'], 't' => $t, 'errors' => $errors, 'new' => false, 'stats' => $stats,
+        'tenantUsers' => (function () use ($slug) {
+            // Přehled účtů webu pro podporu: kdo tam je, s jakou rolí a kdy se naposledy přihlásil. Obsah webu se tu neukazuje.
+            $pdo = tenant_pdo($slug);
+            $units = [];
+            foreach ($pdo->query('SELECT uu.user_id, un.entrance, un.number FROM user_units uu JOIN units un ON un.id = uu.unit_id ORDER BY un.entrance, un.number')->fetchAll() as $r) {
+                $units[(int) $r['user_id']][] = ($r['entrance'] !== '' ? $r['entrance'] . '/' : '') . $r['number'];
+            }
+            $rows = $pdo->query("SELECT id, name, email, role, kind, position, active, last_login_at, totp_enabled, password_hash = '!' AS pending, invite_expires FROM users ORDER BY active DESC, role = 'admin' DESC, last_login_at IS NULL, last_login_at DESC, name")->fetchAll();
+            foreach ($rows as &$r) {
+                $r['units'] = implode(', ', $units[(int) $r['id']] ?? []);
+            }
+            return $rows;
+        })(),
         'supportUsers' => tenant_pdo($slug)->query("SELECT id, name, email, role, kind, last_login_at, totp_enabled FROM users WHERE active = 1 ORDER BY role = 'admin' DESC, name")->fetchAll(), 'supportPick' => (function () { $r = (int) ($_SESSION['support_pick'] ?? 0); unset($_SESSION['support_pick']); return $r; })(), 'tenantEnter' => (function () { $r = $_SESSION['tenant_enter'] ?? null; unset($_SESSION['tenant_enter']); return $r; })(), 'tenantReset' => (function () { $r = $_SESSION['tenant_reset'] ?? null; unset($_SESSION['tenant_reset']); return $r; })(),
         'setupCode' => $stats['ready'] && !$stats['admins'] ? setup_code(tenant_storage($slug)) : null, 'invite' => $invite,
         'payments' => pq('SELECT * FROM payments WHERE tenant = ? ORDER BY id DESC', [$slug])->fetchAll(),

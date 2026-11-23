@@ -1148,3 +1148,11 @@ code.break { word-break: break-all; }
 /* Ceny bez DPH: výrazně u částky i pod ceníkem */
 .vat-tag { display: inline-block; margin-left: .25rem; padding: .05rem .45rem; border-radius: 999px; background: var(--accent-soft); color: color-mix(in srgb, var(--accent) 82%, var(--ink)); font-size: .78rem; font-weight: 700; letter-spacing: .02em; vertical-align: .1em; white-space: nowrap; }
 .vat-note { margin: 1.6rem 0 0; padding: .55rem .9rem; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 8px; font-weight: 600; color: var(--ink); }
+
+/* Konzole: přehled uživatelů webu společenství */
+.tenant-users > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem 1rem; cursor: pointer; list-style: none; }
+.tenant-users > summary::-webkit-details-marker { display: none; }
+.tenant-users > summary h2 { margin: 0; }
+.tenant-users > summary h2::before { content: "▸ "; color: var(--muted); }
+.tenant-users[open] > summary h2::before { content: "▾ "; }
+.tenant-users[open] > summary { margin-bottom: 1rem; }
