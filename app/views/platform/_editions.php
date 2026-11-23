@@ -20,7 +20,7 @@ if ($edCompact) {
   <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
-    <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok' . (vat_payer() ? ' <b class="vat-tag">bez DPH</b>' : '') . '</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
+    <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok' . ' <b class="vat-tag">bez DPH</b>' . '</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
     <?php if ($edCompact): ?><div class="edition-more" id="edice-<?= $ek ?>"><div><ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
       <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>

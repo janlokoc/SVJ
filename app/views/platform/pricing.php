@@ -6,7 +6,7 @@
   <?php if (vat_payer()): ?><p class="vat-note"><?= e(vat_note()) ?></p><?php endif ?>
   <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
 
-  <h3 class="lp-sub">Doplňky a služby<?= vat_payer() ? ' <small class="vat-tag">ceny bez DPH</small>' : '' ?></h3>
+  <h3 class="lp-sub">Doplňky a služby <small class="vat-tag">ceny bez DPH</small></h3>
   <table class="table price-table"><tbody>
     <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši. Doplněk k edici Standard nebo Premium.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
     <?php if (pset_int('price_storage', 0, 1000000)): ?><tr><td><strong>Úložiště navíc</strong><br><small class="muted">Když dokumentům přestane stačit místo edice. V kterékoli edici, objednává se v administraci.</small></td><td class="t-actions"><strong><?= pset_int('storage_pack_mb', 1, 100000) ?> MB za <?= money_czk(pset_int('price_storage', 0, 1000000)) ?> / rok</strong></td></tr><?php endif ?>

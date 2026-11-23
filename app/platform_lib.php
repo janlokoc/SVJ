@@ -853,6 +853,9 @@ function launch_checklist(): array
     if (pset('op_register') === '') {
         $todo[] = ['Zápis v rejstříku', 'Uvádí se na fakturách (např. „Fyzická osoba zapsaná v živnostenském rejstříku“).', 'provozovatel'];
     }
+    if (!vat_payer()) {
+        $todo[] = ['Plátce DPH', 'Ceník ukazuje ceny „bez DPH“. Jste-li plátce, zaškrtněte to a vyplňte DIČ – k platbám se pak DPH připočte a faktury budou daňové doklady.', 'faktury'];
+    }
     if (vat_payer() && pset('op_dic') === '') {
         $todo[] = ['DIČ', 'Plátce DPH ho musí mít na každém daňovém dokladu.', 'provozovatel'];
     }
