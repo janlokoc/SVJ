@@ -24,14 +24,14 @@ if (PHP_SAPI === 'cli') {
 
 const LANGS = ['cs' => 'Čeština', 'sk' => 'Slovenčina', 'en' => 'English', 'uk' => 'Українська', 'vi' => 'Tiếng Việt'];
 const STYLES = ['klasik' => 'Klasická – patkové nadpisy, klidné karty', 'modern' => 'Moderní – bezpatkové písmo, vzdušné plochy', 'vecna' => 'Věcná – rovné hrany, barevná hlavička',
-    'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy',
     // Edice Premium
+    'noviny' => 'Novinová – linky místo karet, název uprostřed', 'vlidna' => 'Vlídná – velké oblé tvary, měkké plochy',
     'cedule' => 'Cedule – zúžené nápisy, hlavička jako smaltovaná cedule', 'panelak' => 'Panelák – široké nápisy, mřížka a silné linky',
     'cinzak' => 'Činžák – patkové nápisy uprostřed, dvojité rámečky', 'citelna' => 'Čitelná – větší písmo a kontrast pro starší sousedy',
     'vyveska' => 'Vývěska – aktuality jako lístky na nástěnce'];
 /** Šablony a barvy, které patří jen do edice Premium (lze je na 30 dní vyzkoušet). */
-const PREMIUM_STYLES = ['cedule', 'panelak', 'cinzak', 'citelna', 'vyveska'];
-const PREMIUM_LOOKS = ['nebe', 'oliva', 'petrolej', 'pulnoc', 'malina'];
+const PREMIUM_STYLES = ['noviny', 'vlidna', 'cedule', 'panelak', 'cinzak', 'citelna', 'vyveska'];
+const PREMIUM_LOOKS = ['grafit', 'svestka', 'nebe', 'oliva', 'petrolej', 'pulnoc', 'malina'];
 const LOOK_COLORS = ['les' => '#1d5446', 'more' => '#1b4f72', 'cihla' => '#8c3b2a', 'grafit' => '#2f3a45', 'svestka' => '#5b2a6e',
     'nebe' => '#225f8a', 'oliva' => '#4a5a24', 'petrolej' => '#0e5a62', 'pulnoc' => '#1e2b5e', 'malina' => '#8b1d4d'];
 const LOOKS = ['les' => 'Les – zelená a cihlová', 'more' => 'Moře – modrá a tyrkysová', 'cihla' => 'Cihla – červenohnědá a písková', 'grafit' => 'Grafit – šedá a jantarová', 'svestka' => 'Švestka – fialová a zlatá',

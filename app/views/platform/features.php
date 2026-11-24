@@ -3,7 +3,7 @@ $cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" h
 $ai = ai_configured();
 // Čím se web liší: věci, které výbor jinde skládá z několika nástrojů.
 $unique = [
-    ['Skutečný web domu, ne jen přihlašovací portál', 'Veřejná část s aktualitami, dokumenty a kontakty, kterou najde i vyhledávač. Pět šablon, pět barevných variant, vlastní logo a na přání vlastní doména.'],
+    ['Skutečný web domu, ne jen přihlašovací portál', 'Veřejná část s aktualitami, dokumenty a kontakty, kterou najde i vyhledávač. Až deset šablon a deset barevných variant, vlastní logo a na přání vlastní doména.'],
     ['Shromáždění bez počítání na papíře', 'Vlastníci potvrdí účast na webu a Vy předem vidíte, zda bude shromáždění usnášeníschopné. Plná moc a prezenční listina k tisku, po schůzi se zápis sestaví sám z účasti a hlasování.'],
     ['E-maily, u kterých víte, kdo je četl', 'Pozvánku rozešlete jedním kliknutím a u každého vlastníka vidíte, zda ji otevřel a zda se proklikl na web.'],
     ['Platby s QR kódem', 'Výbor nahraje z účetnictví zálohy a stav účtu. Každý vlastník vidí jen svou jednotku a nedoplatek uhradí načtením QR kódu; dlužníkům pošlete upomínku jedním tlačítkem.'],
@@ -17,7 +17,8 @@ $groups = [
     'Práce výboru' => ['Úkoly a usnesení – kdo co zařídí a do kdy', 'Kalendář revizí s upozorněním předem', 'Evidence dodavatelů', 'Zápis ze shromáždění jedním kliknutím', 'Veřejná vývěska s QR kódem ke vchodu', 'Převod obsahu ze stávajícího webu'],
     'Bezpečnost' => ['Oddělená databáze a soubory každého společenství', 'Dvoufázové přihlášení', 'Záznamy o práci správců, které nejdou smazat', 'Úplná záloha ke stažení kdykoli', 'Web jde na telefonu přidat na plochu', 'Tlačítko Nahlásit na každé stránce'],
 ];
-$templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'noviny' => 'cihla', 'vlidna' => 'svestka'];
+$templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'cihla'];
+$premiumTemplates = ['noviny' => 'grafit', 'vlidna' => 'svestka', 'cedule' => 'pulnoc', 'panelak' => 'petrolej', 'cinzak' => 'oliva', 'citelna' => 'nebe', 'vyveska' => 'malina'];
 ?>
 <section class="wrap lp-section lp-page-head">
   <h1>Co web umí</h1>
@@ -31,23 +32,23 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 </section>
 
 <section class="lp-band" id="vzhledy"><div class="wrap lp-section">
-  <h2>Pět šablon a pět barev, v Premium dvakrát tolik</h2>
-  <p class="lead">Edice Standard má pět šablon a pět barev, edice Premium k nim přidá dalších pět šablon a pět barev. Zkuste si přepnout barvy; ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga. Edice Zdarma má jeden pevný vzhled.</p>
+  <h2>Tři šablony a tři barvy, v Premium deset a deset</h2>
+  <p class="lead">Edice Standard má tři šablony a tři barvy, edice Premium nabízí všech deset šablon a deset barev. Zkuste si přepnout barvy; ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga. Edice Zdarma má jeden pevný vzhled.</p>
   <form class="lp-style-form">
     <?php $lookGroup = function (bool $premium) { ?>
       <div class="look-picker" role="radiogroup" aria-label="<?= $premium ? 'Barvy navíc v edici Premium' : 'Barvy v edici Standard' ?>">
         <?php foreach (LOOKS as $k => $label): if (in_array($k, PREMIUM_LOOKS, true) !== $premium) { continue; } ?><label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e(explode(' – ', $label)[0]) ?></span></label><?php endforeach ?>
       </div>
     <?php }; ?>
-    <h3 class="lp-sub">Edice Standard: 5 barev a 5 šablon</h3>
+    <h3 class="lp-sub">Edice Standard: 3 barvy a 3 šablony</h3>
     <?php $lookGroup(false); ?>
     <div class="lp-looks look-cards">
       <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
-    <h3 class="lp-sub lp-sub-premium">Navíc v edici Premium: dalších 5 barev a 5 šablon</h3>
+    <h3 class="lp-sub lp-sub-premium">Navíc v edici Premium: dalších 7 barev a 7 šablon</h3>
     <?php $lookGroup(true); ?>
     <div class="lp-looks look-cards">
-      <?php foreach (['cedule' => 'pulnoc', 'panelak' => 'grafit', 'cinzak' => 'oliva', 'citelna' => 'nebe', 'vyveska' => 'malina'] as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
+      <?php foreach ($premiumTemplates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
   </form>
   <?php if ($demo): ?><div class="actions"><a class="btn btn-ghost" href="<?= e(tenant_url($demo, '/vstup')) ?>">Prohlédnout si hotový web v ukázce</a></div><?php endif ?>
