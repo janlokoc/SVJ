@@ -31,16 +31,21 @@ $templates = ['klasik' => 'les', 'modern' => 'more', 'vecna' => 'grafit', 'novin
 </section>
 
 <section class="lp-band" id="vzhledy"><div class="wrap lp-section">
-  <h2>Pět šablon v pěti barvách, v Premium deset a deset</h2>
-  <p class="lead">Klasická, moderní, věcná, novinová nebo vlídná – v edici Premium navíc Cedule, Panelák, Činžák, Čitelná a Vývěska a dalších pět barev. Zkuste si přepnout barvy; ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga.</p>
+  <h2>Pět šablon a pět barev, v Premium dvakrát tolik</h2>
+  <p class="lead">Edice Standard má pět šablon a pět barev, edice Premium k nim přidá dalších pět šablon a pět barev. Zkuste si přepnout barvy; ve vlastním webu je změníte kdykoli jedním kliknutím, včetně loga. Edice Zdarma má jeden pevný vzhled.</p>
   <form class="lp-style-form">
-    <div class="look-picker" role="radiogroup" aria-label="Barvy náhledů">
-      <?php foreach (LOOKS as $k => $label): ?><label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e(explode(' – ', $label)[0]) ?></span><?= in_array($k, PREMIUM_LOOKS, true) ? '<span class="plan-tag look-tag">Premium</span>' : '' ?></label><?php endforeach ?>
-    </div>
+    <?php $lookGroup = function (bool $premium) { ?>
+      <div class="look-picker" role="radiogroup" aria-label="<?= $premium ? 'Barvy navíc v edici Premium' : 'Barvy v edici Standard' ?>">
+        <?php foreach (LOOKS as $k => $label): if (in_array($k, PREMIUM_LOOKS, true) !== $premium) { continue; } ?><label class="look look-<?= $k ?>"><input type="radio" name="look" value="<?= $k ?>"><span class="look-swatch" aria-hidden="true"><i></i><i></i><i></i></span><span><?= e(explode(' – ', $label)[0]) ?></span></label><?php endforeach ?>
+      </div>
+    <?php }; ?>
+    <h3 class="lp-sub">Edice Standard: 5 barev a 5 šablon</h3>
+    <?php $lookGroup(false); ?>
     <div class="lp-looks look-cards">
       <?php foreach ($templates as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
-    <h3 class="lp-sub">Navíc v edici Premium</h3>
+    <h3 class="lp-sub lp-sub-premium">Navíc v edici Premium: dalších 5 barev a 5 šablon</h3>
+    <?php $lookGroup(true); ?>
     <div class="lp-looks look-cards">
       <?php foreach (['cedule' => 'pulnoc', 'panelak' => 'grafit', 'cinzak' => 'oliva', 'citelna' => 'nebe', 'vyveska' => 'malina'] as $style => $look): $miniName = null; ?><figure><?php require __DIR__ . '/_mini.php'; ?><figcaption><strong><?= e(explode(' – ', STYLES[$style])[0]) ?></strong><span><?= e(explode(' – ', STYLES[$style])[1] ?? '') ?></span></figcaption></figure><?php endforeach ?>
     </div>
