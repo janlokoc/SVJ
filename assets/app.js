@@ -4,10 +4,27 @@ document.documentElement.classList.add('js');
 const toggle = document.querySelector('.nav-toggle');
 const nav = document.querySelector('.site-nav');
 if (toggle && nav) {
+  // Otevřené menu v telefonu se posouvá samo a stránka pod ním stojí (jinak by tah prstem nejdřív posouval pozadí).
+  const narrow = window.matchMedia('(max-width: 1100px)');
+  const lock = () => {
+    const on = nav.classList.contains('is-open') && narrow.matches;
+    document.documentElement.classList.toggle('nav-lock', on);
+    const hdr = nav.closest('.site-header') || nav.parentElement;
+    nav.style.maxHeight = on ? Math.max(200, window.innerHeight - (nav.getBoundingClientRect().top - hdr.getBoundingClientRect().top)) + 'px' : '';
+  };
+  window.addEventListener('resize', lock);
+  narrow.addEventListener('change', lock);
   toggle.addEventListener('click', () => {
     const open = nav.classList.toggle('is-open');
     toggle.setAttribute('aria-expanded', String(open));
+    lock();
   });
+  // Rozbalená podnabídka (Pro obyvatele) se v menu hned ukáže celá.
+  nav.querySelectorAll('.nav-more details').forEach((d) => d.addEventListener('toggle', () => {
+    if (!d.open || !narrow.matches) return;
+    // posunout jen samotné menu, ne stránku: rozbalená část dole, nadpis podnabídky ale nesmí zmizet nahoře
+    requestAnimationFrame(() => { const n = nav.getBoundingClientRect(), r = d.getBoundingClientRect(); const by = Math.min(r.bottom - n.bottom, r.top - n.top); if (by > 0) nav.scrollBy({ top: by, behavior: 'smooth' }); });
+  }));
 }
 
 // Potvrzení před nevratnými akcemi (mazání, reset hesla)

@@ -151,7 +151,9 @@ html[data-style="noviny"] .eyebrow { font-size: .8rem; letter-spacing: .09em; te
   .header-row { flex-wrap: wrap; gap: .5rem 1rem; padding-block: .5rem; }
   .site-nav { flex-basis: 100%; flex-direction: column; align-items: stretch; padding-bottom: .75rem; }
   .js .site-nav { display: none; }
-  .js .site-nav.is-open { display: flex; }
+  .js .site-nav.is-open { display: flex; max-height: calc(100dvh - 5.5rem); overflow-y: auto; overscroll-behavior: contain; }
+  html.nav-lock { overflow: hidden; overscroll-behavior: none; }
+  html.nav-lock .site-header { position: sticky; }
   .site-nav ul { flex-direction: column; }
   .site-nav li a { padding: .7rem .9rem; border-radius: 10px; }
   .nav-user { flex-wrap: wrap; padding-top: .75rem; border-top: 1px solid var(--line); }
@@ -1618,7 +1620,7 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .asst-panel { width: min(400px, calc(100vw - 2rem)); height: min(600px, calc(100dvh - 7rem)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 30px 70px -25px rgba(0, 0, 0, .5); overflow: hidden; }
 .asst-panel[hidden] { display: none; }
 .asst-log, .asst-examples { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
-html.asst-lock, html.asst-lock body { overflow: hidden; overscroll-behavior: none; }
+html.asst-lock { overflow: hidden; overscroll-behavior: none; }
 .asst-head { display: grid; grid-template-columns: 1fr auto; align-items: center; padding: .8rem 1rem; background: var(--primary); color: var(--on-primary); }
 .asst-head small { grid-column: 1; opacity: .85; font-size: .8rem; }
 .asst-x { grid-row: 1 / span 2; grid-column: 2; background: none; border: 0; color: inherit; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: .2rem .4rem; }
