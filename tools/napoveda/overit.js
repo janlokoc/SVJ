@@ -13,13 +13,19 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const http = require('http');
+const https = require('https');
 
 const ROOT = path.resolve(__dirname, '../..');
 const OUT = path.join(ROOT, 'assets/help');
 const PORT = 8790 + Math.floor(Math.random() * 100);
 const STORE = fs.mkdtempSync(path.join(os.tmpdir(), 'svj-napoveda-'));
-const BASE = `http://localhost:${PORT}`;
-const T = `http://dum.localhost:${PORT}`;
+// Snímky mají ukazovat skutečné adresy služby: prohlížeč chodí na https://spolecnyweb.cz a https://dum.spolecnyweb.cz,
+// které se přes pravidlo pro DNS a malý HTTPS prostředník (samopodepsaný certifikát) dostanou na místní PHP server.
+const DOMAIN = 'spolecnyweb.cz';
+const TLS_PORT = PORT + 100;
+const BASE = `https://${DOMAIN}`;
+const T = `https://dum.${DOMAIN}`;
+const LAUNCH = { args: [`--host-resolver-rules=MAP ${DOMAIN} 127.0.0.1:${TLS_PORT}, MAP *.${DOMAIN} 127.0.0.1:${TLS_PORT}`, '--ignore-certificate-errors', '--proxy-server=direct://'] };
 const results = {};
 const failures = [];
 let current = null;
@@ -33,7 +39,7 @@ const sql = (q) => execFileSync('php', ['-r', '$f = glob(getenv("SVJ_STORAGE") .
 const run = (q) => execFileSync('php', ['-r', '$f = glob(getenv("SVJ_STORAGE") . "/tenants/dum/*.sqlite")[0]; $p = new PDO("sqlite:$f"); $p->exec(getenv("Q"));'], { env: { ...env, Q: q } });
 const post = (url, body, type) => new Promise((resolve, reject) => {
   const u = new URL(url);
-  const req = http.request({ host: '127.0.0.1', port: PORT, path: u.pathname, method: 'POST', headers: { Host: u.host, 'Content-Type': type, 'Content-Length': Buffer.byteLength(body) } }, (res) => {
+  const req = http.request({ host: '127.0.0.1', port: PORT, path: u.pathname, method: 'POST', headers: { Host: u.host, 'X-Forwarded-Proto': 'https', 'Content-Type': type, 'Content-Length': Buffer.byteLength(body) } }, (res) => {
     let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => resolve({ status: res.statusCode, body: d }));
   });
   req.on('error', reject); req.end(body);
@@ -52,13 +58,19 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
 };
 
 (async () => {
-  fs.writeFileSync(path.join(STORE, 'config.php'), "<?php\nreturn ['platform' => ['domain' => 'localhost']];\n");
+  fs.writeFileSync(path.join(STORE, 'config.php'), `<?php\nreturn ['platform' => ['domain' => '${DOMAIN}']];\n`);
   // E-maily se neposílají ven – zapíšou se do souboru, ať jde ověřit i jejich obsah.
   const MAIL = path.join(STORE, 'mail.log'); fs.writeFileSync(path.join(STORE, 'mail.sh'), `#!/bin/sh\ncat >> '${MAIL}'\n`, { mode: 0o755 });
   const server = spawn('php', ['-d', `sendmail_path=${path.join(STORE, 'mail.sh')}`, '-S', `127.0.0.1:${PORT}`, 'index.php'], { cwd: ROOT, env, stdio: 'ignore' });
-  const b = await chromium.launch();
+  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', `/CN=${DOMAIN}`, '-addext', `subjectAltName=DNS:${DOMAIN},DNS:*.${DOMAIN}`,
+    '-keyout', path.join(STORE, 'tls.key'), '-out', path.join(STORE, 'tls.crt')], { stdio: 'ignore' });
+  const tls = https.createServer({ key: fs.readFileSync(path.join(STORE, 'tls.key')), cert: fs.readFileSync(path.join(STORE, 'tls.crt')) }, (req, res) => {
+    const up = http.request({ host: '127.0.0.1', port: PORT, path: req.url, method: req.method, headers: { ...req.headers, 'x-forwarded-proto': 'https' } }, (r) => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
+    up.on('error', () => { res.writeHead(502); res.end(); }); req.pipe(up);
+  }).listen(TLS_PORT, '127.0.0.1');
+  const b = await chromium.launch(LAUNCH);
   try {
-    for (let i = 0; i < 50; i++) { try { await new Promise((ok, ko) => http.get(`${BASE}/`, (r) => { r.resume(); ok(); }).on('error', ko)); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
+    for (let i = 0; i < 50; i++) { try { await new Promise((ok, ko) => http.get(`http://127.0.0.1:${PORT}/`, (r) => { r.resume(); ok(); }).on('error', ko)); break; } catch (e) { await new Promise((r) => setTimeout(r, 100)); } }
     // Platforma a ukázkové společenství
     const s = await b.newPage(); await s.goto(BASE + '/sprava');
     const code = fs.readFileSync(path.join(STORE, fs.readdirSync(STORE).find((f) => f.startsWith('instalacni-kod-platformy-'))), 'utf8').trim();
@@ -263,7 +275,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     }); });
     await new Promise((r) => pushSrv.listen(0, '127.0.0.1', r));
     const endpoint = `http://127.0.0.1:${pushSrv.address().port}/push/${crypto.randomBytes(6).toString('hex')}`;
-    const b2 = await chromium.launch({ channel: 'chromium' }).catch(() => b);   // starý režim bez okna oznámení nepovoluje
+    const b2 = await chromium.launch({ channel: 'chromium', ...LAUNCH }).catch(() => b);   // starý režim bez okna oznámení nepovoluje
     const mobCtx = await b2.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' }); await mobCtx.grantPermissions(['notifications'], { origin: new URL(T).origin });
     const mob = await mobCtx.newPage(); mob.setDefaultTimeout(10000);
     await login(mob, who.owner); await mob.goto(T + '/muj-ucet#upozorneni');
@@ -312,7 +324,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const pcCtx = await b2.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ' }); await pcCtx.grantPermissions(['notifications'], { origin: new URL(T).origin }); const pc = await pcCtx.newPage(); await login(pc, who.owner); await pc.goto(T + '/muj-ucet#upozorneni');
     await pc.waitForFunction(() => navigator.serviceWorker.controller !== null || document.querySelector('.push-state').textContent !== '');
     const cdp = await pc.context().newCDPSession(pc); await cdp.send('ServiceWorker.enable');
-    const regId = await new Promise((resolve) => { cdp.on('ServiceWorker.workerRegistrationUpdated', (e) => { const r = e.registrations.find((x) => x.scopeURL.includes('dum.localhost')); if (r) resolve(r.registrationId); }); setTimeout(() => resolve(null), 4000); });
+    const regId = await new Promise((resolve) => { cdp.on('ServiceWorker.workerRegistrationUpdated', (e) => { const r = e.registrations.find((x) => x.scopeURL.includes(`dum.${DOMAIN}`)); if (r) resolve(r.registrationId); }); setTimeout(() => resolve(null), 4000); });
     if (regId) {
       await cdp.send('ServiceWorker.deliverPushMessage', { origin: new URL(T).origin, registrationId: regId, data: JSON.stringify({ title: 'Zahradní 12', body: 'Zkouška zobrazení', url: T + '/' }) });
       const shown = await pc.evaluate(async () => { for (let i = 0; i < 20; i++) { const n = await (await navigator.serviceWorker.ready).getNotifications(); if (n.length) return n[0].title + ' | ' + n[0].body; await new Promise((r) => setTimeout(r, 150)); } return ''; });
@@ -339,7 +351,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
   } catch (e) {
     failures.push('přerušeno: ' + e.message.split('\n')[0]);
   } finally {
-    await b.close(); server.kill(); fs.rmSync(STORE, { recursive: true, force: true });
+    await b.close(); server.kill(); tls.close(); fs.rmSync(STORE, { recursive: true, force: true });
   }
   for (const [slug, r] of Object.entries(results)) console.log(`${slug}: ${r.checks} kontrol\n  - ${r.steps.join('\n  - ')}`);
   if (failures.length) { console.log('\nSELHALO – návody neplatí:\n' + failures.join('\n')); process.exit(1); }
