@@ -125,6 +125,9 @@ function mailq_send(array $msg): bool
  */
 function mailq_run(int $max = 25, bool $force = false): array
 {
+    if (is_file(ROOT_STORAGE . '/mailq.sqlite')) {
+        mailq_file();   // dřívější soubor s pevným názvem přejmenovat hned, ne až při prvním e-mailu
+    }
     if (!is_file(mailq_marker())) {
         return [0, 0, 0];
     }
