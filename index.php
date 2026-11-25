@@ -148,11 +148,12 @@ if (platform_enabled() && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET') {
     platform_daily();   // připomenutí plateb, jednou denně
 }
 // Světlý / tmavý vzhled / podle zařízení – volba návštěvníka, platí pro celou službu.
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^/vzhled/(svetly|tmavy|system)$~', $PATH, $tm)) {
-    theme_set(['svetly' => 'light', 'tmavy' => 'dark', 'system' => ''][$tm[1]]);
+// Platí i v konzoli platformy (/sprava/vzhled/…), kde se předpona /sprava odstraňuje až později.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^(/sprava)?/vzhled/(svetly|tmavy|system)$~', $PATH, $tm)) {
+    theme_set(['svetly' => 'light', 'tmavy' => 'dark', 'system' => ''][$tm[2]]);
     $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
     $back = $BASE !== '' && str_starts_with($back, $BASE) ? substr($back, strlen($BASE)) : $back;
-    header('Location: ' . url(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_starts_with($back, '/vzhled') ? $back : '/'), true, 303);
+    header('Location: ' . url(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_contains($back, '/vzhled/') ? $back : ($tm[1] !== '' ? '/sprava' : '/')), true, 303);
     exit;
 }
 if ($IS_PLATFORM && preg_match('~^/sprava(/mcp(?:/[A-Za-z0-9_\-]{20,})?)$~', $PATH, $mcpPath)) {
