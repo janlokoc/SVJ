@@ -3,6 +3,8 @@
 # Po každé změně ve větvi main (produkce) připraví hotovou verzi webu včetně knihoven (vendor/)
 # a nahraje ji jako nový commit do větve "produkce" v Git archivu hostingu. Hosting pak podle této
 # větve sám aktualizuje obsah domény. Data webu (storage/) se nikdy nenahrávají ani nepřepisují.
+# Zkušební větev (claude/svj-web-redesign-admin-1m52yt) jde stejně do větve "staging" – tu hosting
+# nahrává na subdoménu staging.spolecnyweb.cz (vlastní data, e-maily nechodí skutečným lidem).
 #
 # Potřebné GitHub Secrets (Settings → Secrets and variables → Actions):
 #   HOSTING_GIT_URL      adresa Git archivu, např. ssh://…@gonzales.thinline.cz/~/spolecnyweb.cz
@@ -12,11 +14,11 @@ name: Nasazení na hosting
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/svj-web-redesign-admin-1m52yt]
   workflow_dispatch:
 
 concurrency:
-  group: nasazeni
+  group: nasazeni-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -27,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      BRANCH: produkce
+      BRANCH: ${{ github.ref_name == 'main' && 'produkce' || 'staging' }}
     steps:
       - name: Stažení zdrojového kódu
         uses: actions/checkout@v4
@@ -86,6 +88,6 @@ jobs:
           set -o pipefail
           git add -A
           if git diff --cached --quiet; then echo "Beze změn."; exit 0; fi
-          git commit --quiet -m "Nasazení ${GITHUB_SHA::7} z větve main"
+          git commit --quiet -m "Nasazení ${GITHUB_SHA::7} z větve ${GITHUB_REF_NAME}"
           git push origin "$BRANCH" 2>&1 | tee ../push.log
           echo "Hosting po nahrání vypisuje, jak aktualizoval obsah domény – viz výpis výše."

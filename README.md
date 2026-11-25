@@ -109,6 +109,31 @@ Jednorázové nastavení:
 6. Cron není nutný: denní úlohy (upozornění na revize, odečty, indexace
    dokumentů) spustí u každého společenství jeho první návštěva dne.
 
+### Zkušební web na hostingu (staging.spolecnyweb.cz)
+
+Zkušební větev `claude/svj-web-redesign-admin-1m52yt` se po každé změně nahraje
+do větve `staging` v Git archivu hostingu. Jednorázové nastavení:
+
+1. Klientská sekce → **Webserver**: založit subdoménu `staging` (vznikne její
+   adresář) a zapnout pro ni podporu **.htaccess**. HTTPS pokrývá certifikát
+   `*.spolecnyweb.cz`.
+2. **Git → Automatická aktualizace**: u `staging.spolecnyweb.cz` zapnout větev
+   `staging` (adresář subdomény musí být prázdný).
+3. Přes FTP vytvořit `storage/config.php` v adresáři subdomény:
+   ```php
+   <?php
+   return [
+       'env' => 'staging',
+       'staging_mail' => 'podpora@spolecnyweb.cz',
+       'platform' => ['domain' => 'staging.spolecnyweb.cz', 'aliases' => ['staging.spolecnyweb.cz']],
+   ];
+   ```
+   Weby společenství pak běží jako složky (`staging.spolecnyweb.cz/nazev`),
+   protože certifikát nepokrývá druhou úroveň subdomén. Všechny e-maily jdou
+   na `staging_mail`, vyhledávačům je web zakázaný.
+4. Otevřít `https://staging.spolecnyweb.cz/sprava` a založit účet provozovatele
+   instalačním kódem ze `storage/`.
+
 ### Ruční nasazení (obecně)
 
 1. Nahrajte obsah repozitáře do kořenové složky webu (FTP).
