@@ -46,11 +46,14 @@ jobs:
         run: |
           test -n "$SSH_KEY" && test -n "$GIT_URL" || { echo "Chybí secrets HOSTING_SSH_KEY nebo HOSTING_GIT_URL."; exit 1; }
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/hosting && chmod 600 ~/.ssh/hosting
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/hosting && chmod 600 ~/.ssh/hosting
+          # otisk klíče (není tajný) – musí sedět s klíčem vloženým v klientské sekci hostingu
+          ssh-keygen -y -f ~/.ssh/hosting > /dev/null || { echo "HOSTING_SSH_KEY není platný soukromý klíč (vložte celý obsah souboru bez .pub)."; exit 1; }
+          echo "Otisk klíče pro nasazení:"; ssh-keygen -lf ~/.ssh/hosting
           HOST=$(printf '%s' "$GIT_URL" | sed -E 's#^ssh://[^@]+@([^/:]+).*#\1#')
           if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519,rsa "$HOST" > ~/.ssh/known_hosts; fi
           ssh-keygen -lf ~/.ssh/known_hosts
-          printf 'Host %s\n  IdentityFile ~/.ssh/hosting\n  IdentitiesOnly yes\n' "$HOST" > ~/.ssh/config
+          printf 'Host %s\n  IdentityFile ~/.ssh/hosting\n  IdentitiesOnly yes\n  BatchMode yes\n  PasswordAuthentication no\n' "$HOST" > ~/.ssh/config
 
       - name: Příprava verze pro hosting
         env:
@@ -59,7 +62,10 @@ jobs:
           git config --global user.name "Nasazení z GitHubu"
           git config --global user.email "nasazeni@spolecnyweb.cz"
           # navazuje na dosavadní historii větve na hostingu (žádný force push)
-          if git ls-remote --exit-code --heads "$GIT_URL" "$BRANCH" > /dev/null; then
+          # 0 = větev existuje, 2 = archiv je dostupný, ale větev zatím ne; cokoli jiného (přístup) = chyba
+          set +e; git ls-remote --exit-code --heads "$GIT_URL" "$BRANCH" > /dev/null; rc=$?; set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ]; then echo "Hosting odmítl přístup do Git archivu (SSH klíč nebo adresa)."; exit 1; fi
+          if [ "$rc" -eq 0 ]; then
             git clone --quiet --branch "$BRANCH" --single-branch "$GIT_URL" ../nasazeni
           else
             git init --quiet -b "$BRANCH" ../nasazeni && git -C ../nasazeni remote add origin "$GIT_URL"
@@ -75,7 +81,9 @@ jobs:
 
       - name: Nahrání na hosting
         working-directory: ../nasazeni
+        shell: bash
         run: |
+          set -o pipefail
           git add -A
           if git diff --cached --quiet; then echo "Beze změn."; exit 0; fi
           git commit --quiet -m "Nasazení ${GITHUB_SHA::7} z větve main"
