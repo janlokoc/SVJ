@@ -97,7 +97,7 @@ if (!$pu) {
     if ($PATH !== '/' && $PATH !== '/prihlaseni') {
         redirect('/');
     }
-    render('partner/login', ['title' => 'Partnerský portál', 'mode' => 'login', 'error' => $error]);
+    render('partner/login', ['title' => 'Přihlášení', 'mode' => 'login', 'error' => $error]);
     exit;
 }
 
