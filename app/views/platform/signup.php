@@ -45,7 +45,12 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <p>Poslední krok: účet správce webu <strong><?= e(tenant_address($s['slug'])) ?></strong>. Další správce i obyvatele pak přidáte v administraci.</p>
-    <label>Jméno a příjmení <input type="text" name="person" value="<?= e($s['person']) ?>" required minlength="3" maxlength="120" autocomplete="name" autofocus></label>
+    <?php if (!empty($officers)): ?>
+      <div class="ares-officers"><p class="h-small">Jste ve výboru? Podle veřejného rejstříku:</p>
+        <?php foreach ($officers as $o): ?><button type="button" class="asst-chip" data-fill-target="#signup-person" data-fill-value="<?= e($o['name']) ?>"><?= e($o['name']) ?> <small>· <?= e($o['function'] ?: $o['body']) ?></small></button><?php endforeach ?>
+        <p class="hint">Klepnutím doplníte své jméno a na webu dostanete i funkci. Ostatní členy výboru pozvete po založení v Uživatelé → Výbor z rejstříku.</p></div>
+    <?php endif ?>
+    <label>Jméno a příjmení <input type="text" name="person" id="signup-person" value="<?= e($s['person']) ?>" required minlength="3" maxlength="120" autocomplete="name" autofocus></label>
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
     <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>

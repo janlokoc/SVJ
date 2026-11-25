@@ -136,3 +136,80 @@ function ares_lookup_json(string $q): void
     $res = preg_match('/^\d{6,8}$/', $digits) ? ares_by_ico($digits) : ares_search($q);
     echo json_encode($res, JSON_UNESCAPED_UNICODE);
 }
+
+/** Funkce z rejstříku → funkce na webu (POSITIONS). Neznámé (jednatel, pověřený vlastník…) zůstanou bez funkce. */
+function ares_position(string $function): string
+{
+    $f = mb_strtolower($function);
+    return match (true) {
+        str_contains($f, 'kontrol') && str_contains($f, 'předsed') => 'predseda_kk',
+        str_contains($f, 'kontrol') => 'clen_kk',
+        str_contains($f, 'místopředsed') => 'mistopredseda',
+        str_contains($f, 'předsed') && str_contains($f, 'společenství') => 'predseda_svj',
+        str_contains($f, 'předsed') => 'predseda',
+        str_contains($f, 'člen') => 'clen_vyboru',
+        default => '',
+    };
+}
+/** Jméno z rejstříku (VELKÝMI PÍSMENY) do běžného tvaru, s tituly. */
+function ares_person_name(array $p): string
+{
+    $case = fn(string $s) => mb_convert_case(mb_strtolower(trim($s)), MB_CASE_TITLE);
+    return trim(implode(' ', array_filter([trim((string) ($p['titulPredJmenem'] ?? '')), $case((string) ($p['jmeno'] ?? '')), $case((string) ($p['prijmeni'] ?? ''))]))
+        . (trim((string) ($p['titulZaJmenem'] ?? '')) !== '' ? ', ' . trim((string) $p['titulZaJmenem']) : ''));
+}
+/**
+ * Současní členové statutárního a dalších orgánů (výbor, předseda, kontrolní komise) z veřejného rejstříku přes ARES.
+ * Bere se jen jméno a funkce – datum narození ani adresu bydliště, které rejstřík také uvádí, web nepřebírá.
+ */
+function ares_officers(string $raw): array
+{
+    $ico = ares_ico($raw);
+    if ($ico === null) {
+        return ['ok' => false, 'error' => 'V nastavení webu není platné IČO společenství. Doplňte ho v Nastavení → Údaje o společenství.'];
+    }
+    $data = ares_request('/ekonomicke-subjekty-vr/' . $ico);
+    if ($data === null) {
+        return ['ok' => false, 'error' => 'Veřejný rejstřík (ARES) teď neodpovídá. Zkuste to prosím později.'];
+    }
+    $rec = null;
+    foreach ($data['zaznamy'] ?? [] as $z) {
+        if ($rec === null || !empty($z['primarniZaznam'])) {
+            $rec = $z;
+        }
+    }
+    if (!$rec) {
+        return ['ok' => false, 'error' => 'Společenství s IČO ' . $ico . ' ve veřejném rejstříku nenalezeno.'];
+    }
+    $today = date('Y-m-d');
+    $current = fn(array $x) => empty($x['datumVymazu']) || $x['datumVymazu'] > $today;
+    $members = $how = [];
+    foreach ($rec as $key => $bodies) {
+        if (!is_array($bodies) || !preg_match('/Organy$/', (string) $key)) {
+            continue;
+        }
+        foreach ($bodies as $body) {
+            if (!is_array($body) || !$current($body)) {
+                continue;
+            }
+            foreach ($body['zpusobJednani'] ?? [] as $zj) {
+                if ($current($zj) && ($zj['hodnota'] ?? '') !== '') {
+                    $how[] = (string) $zj['hodnota'];
+                }
+            }
+            foreach ($body['clenoveOrganu'] ?? [] as $c) {
+                $end = (string) ($c['clenstvi']['funkce']['zanikFunkce'] ?? ($c['clenstvi']['clenstvi']['zanikClenstvi'] ?? ''));
+                if (!$current($c) || ($end !== '' && $end < $today) || empty($c['fyzickaOsoba'])) {
+                    continue;
+                }
+                $function = trim((string) ($c['clenstvi']['funkce']['nazev'] ?? '')) ?: trim((string) ($c['nazevAngazma'] ?? ''));
+                $members[] = ['name' => ares_person_name($c['fyzickaOsoba']), 'function' => $function, 'position' => ares_position($function . ' ' . ($body['nazevOrganu'] ?? '')),
+                    'body' => (string) ($body['nazevOrganu'] ?? ''), 'since' => (string) ($c['clenstvi']['funkce']['vznikFunkce'] ?? ($c['datumZapisu'] ?? ''))];
+            }
+        }
+    }
+    if (!$members) {
+        return ['ok' => false, 'error' => 'Ve veřejném rejstříku u tohoto společenství nejsou zapsaní žádní současní členové orgánů.'];
+    }
+    return ['ok' => true, 'ico' => $ico, 'name' => (string) ($rec['obchodniJmeno'][0]['hodnota'] ?? ($rec['obchodniJmeno'] ?? '')), 'members' => $members, 'how' => array_values(array_unique($how))];
+}

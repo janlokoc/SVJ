@@ -503,3 +503,9 @@ document.querySelectorAll('[data-ares]').forEach((box) => {
   go.addEventListener('click', run);
   q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
 });
+
+// Tlačítko, které vyplní pole (např. jméno ze seznamu členů výboru)
+document.querySelectorAll('[data-fill-target]').forEach((b) => b.addEventListener('click', () => {
+  const f = document.querySelector(b.dataset.fillTarget); if (!f) return;
+  f.value = b.dataset.fillValue; f.dispatchEvent(new Event('input', { bubbles: true })); f.focus();
+}));

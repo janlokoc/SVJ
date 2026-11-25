@@ -1659,3 +1659,10 @@ body:has(.asst) .site-footer { padding-bottom: 5.5rem; }
 .ares-pick small { color: var(--muted); overflow-wrap: anywhere; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ares .hint.is-error { color: #ff9a8c; } }
 :root[data-theme="dark"] .ares .hint.is-error { color: #ff9a8c; }
+/* Výbor podle rejstříku */
+.committee-row { border: 1px solid var(--line); border-radius: var(--radius); padding: .8rem 1rem 1rem; display: grid; gap: .5rem; }
+.committee-row legend { padding: 0 .3rem; }
+.committee-fn, .committee-has { margin: 0; }
+.committee-has { align-self: end; }
+.committee-how p { margin: .4rem 0 0; }
+.ares-officers { display: flex; flex-wrap: wrap; gap: .4rem; } .ares-officers .h-small, .ares-officers .hint { width: 100%; margin: 0; }

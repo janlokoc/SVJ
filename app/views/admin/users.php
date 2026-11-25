@@ -1,6 +1,6 @@
 <?php $np = $_SESSION['new_password'] ?? null; unset($_SESSION['new_password']); ?>
 <div class="wrap page">
-  <header class="page-head row"><h1>Uživatelé</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/uzivatele/zadosti') ?>">Odkaz pro obyvatele<?= ($jp = join_pending_count()) ? ' · ' . $jp . ' čeká' : '' ?></a><a class="btn btn-ghost" href="<?= url('/admin/uzivatele/import') ?>">Import ze seznamu</a><a class="btn" href="<?= url('/admin/uzivatele/novy') ?>">+ Nový uživatel</a></span></header>
+  <header class="page-head row"><h1>Uživatelé</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/uzivatele/zadosti') ?>">Odkaz pro obyvatele<?= ($jp = join_pending_count()) ? ' · ' . $jp . ' čeká' : '' ?></a><a class="btn btn-ghost" href="<?= url('/admin/uzivatele/vybor') ?>">Výbor z rejstříku</a><a class="btn btn-ghost" href="<?= url('/admin/uzivatele/import') ?>">Import ze seznamu</a><a class="btn" href="<?= url('/admin/uzivatele/novy') ?>">+ Nový uživatel</a></span></header>
   <?php $il = $_SESSION['admin_invite_link'] ?? null; unset($_SESSION['admin_invite_link']); if ($il): ?>
   <div class="card card-soft credentials">
     <h2>Pozvánka pro: <?= e($il['name']) ?></h2>

@@ -888,6 +888,65 @@ $userImport = function () {
     render('admin/users_import', ['title' => 'Import uživatelů', 'text' => $text, 'rows' => $rows,
         'mailReady' => (bool) filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)]);
 };
+// Výbor podle veřejného rejstříku (ARES): správce u každého člena doplní e-mail a pošle pozvánku, nebo jen nastaví funkci existujícímu účtu.
+$committee = function () {
+    require_admin();
+    $key = fn(string $n) => search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $n));
+    $users = all('SELECT id, name, email, position, active, password_hash FROM users ORDER BY name');
+    $byName = [];
+    foreach ($users as $u) {
+        $byName[preg_replace('/\s+/', ' ', trim($key($u['name'])))] = $u;
+    }
+    $res = ares_officers(setting('ico'));
+    $errors = [];
+    if ($res['ok'] && $GLOBALS['METHOD'] === 'POST') {
+        $done = [];
+        foreach ($res['members'] as $i => $m) {
+            if (!isset($_POST['use'][$i])) {
+                continue;
+            }
+            $pos = isset(POSITIONS[$_POST['position'][$i] ?? '']) ? (string) $_POST['position'][$i] : '';
+            $existing = $byName[preg_replace('/\s+/', ' ', trim($key($m['name'])))] ?? null;
+            if ($existing) {
+                q('UPDATE users SET position = ? WHERE id = ?', [$pos, $existing['id']]);
+                $done[] = $existing['name'] . ' – funkce nastavena';
+                continue;
+            }
+            $email = trim((string) ($_POST['email'][$i] ?? ''));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'U člena ' . $m['name'] . ' chybí platný e-mail – bez něj účet založit nejde.';
+                continue;
+            }
+            if (val('SELECT 1 FROM users WHERE email = ?', [$email])) {
+                $errors[] = 'E-mail ' . $email . ' už má jiný účet. U člena ' . $m['name'] . ' ho opravte, nebo funkci nastavte v jeho účtu.';
+                continue;
+            }
+            if ($limitError = plan_limit_error('users')) {
+                $errors[] = $limitError;
+                break;
+            }
+            q("INSERT INTO users (name, email, role, kind, position, password_hash, invited_by) VALUES (?,?,'resident','owner',?,?,?)", [$m['name'], $email, $pos, NO_PASSWORD, user()['id']]);
+            $new = one('SELECT * FROM users WHERE id = ?', [(int) db()->lastInsertId()]);
+            audit('user_created', $email . ' · výbor z rejstříku');
+            [$sent] = isset($_POST['invite'][$i]) ? send_account_invite($new) : [false];
+            $done[] = $m['name'] . ($sent ? ' – pozvánka odeslána na ' . $email : ' – účet založen' . (isset($_POST['invite'][$i]) ? ', pozvánku se ale nepodařilo odeslat (pošlete ji ze seznamu uživatelů)' : ', pozvánku pošlete ze seznamu uživatelů'));
+        }
+        if ($done) {
+            flash('Výbor podle rejstříku: ' . implode('; ', $done) . '.');
+        }
+        if (!$errors) {
+            redirect('/admin/uzivatele');
+        }
+        http_response_code(422);
+    }
+    $rows = [];
+    foreach ($res['members'] ?? [] as $i => $m) {
+        $rows[$i] = $m + ['user' => $byName[preg_replace('/\s+/', ' ', trim($key($m['name'])))] ?? null];
+    }
+    render('admin/committee', ['title' => 'Výbor podle rejstříku', 'res' => $res, 'rows' => $rows, 'errors' => $errors]);
+};
+$route('GET', '/admin/uzivatele/vybor', $committee);
+$route('POST', '/admin/uzivatele/vybor', $committee);
 $route('GET', '/admin/uzivatele/import', $userImport);
 $route('POST', '/admin/uzivatele/import', $userImport);
 

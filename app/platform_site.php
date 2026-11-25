@@ -185,7 +185,15 @@ if (isset($steps[$PATH])) {
                 pq('INSERT INTO feature_trials (tenant, feature, started, ends) VALUES (?,?,?,?)', [$slug, 'sablony', date('Y-m-d'), date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day'))]);
             }
             $pdo = tenant_pdo($slug);
-            $pdo->prepare("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)")->execute([$person, $email, password_hash($pass, PASSWORD_DEFAULT)]);
+            // Zakládající, který je zapsaný ve výboru, dostane i funkci (porovnává se jméno bez titulů).
+            $norm = fn(string $n) => trim(preg_replace('/\s+/', ' ', search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $n))));
+            $position = '';
+            foreach ($_SESSION['signup']['officers'] ?? [] as $o) {
+                if ($norm($o['name']) === $norm($person)) {
+                    $position = $o['position'];
+                }
+            }
+            $pdo->prepare("INSERT INTO users (name, email, role, kind, position, password_hash) VALUES (?,?,'admin','owner',?,?)")->execute([$person, $email, $position, password_hash($pass, PASSWORD_DEFAULT)]);
             tenant_set($slug, 'webmaster_email', $email);
             tenant_set($slug, 'ico', $signup['ico'] ?? '');
             if (pset('mail_from') !== '') {
@@ -209,7 +217,16 @@ if (isset($steps[$PATH])) {
     if ($errors) {
         http_response_code(422);
     }
-    render('platform/signup', ['title' => 'Založení webu', 'errors' => $errors, 'step' => $step, 'steps' => $steps, 's' => $signup + ['name' => '', 'slug' => '', 'address' => '', 'look' => '', 'style' => 'klasik', 'person' => '', 'email' => '']]);
+    // Poslední krok: členové výboru z veřejného rejstříku (jen jméno a funkce), načtené jednou za registraci.
+    $officers = [];
+    if ($step === 3 && !empty($_SESSION['signup']['ico'])) {
+        if (!isset($_SESSION['signup']['officers'])) {
+            $r = ares_officers($_SESSION['signup']['ico']);
+            $_SESSION['signup']['officers'] = $r['ok'] ? array_map(fn($m) => array_intersect_key($m, array_flip(['name', 'function', 'position', 'body'])), $r['members']) : [];
+        }
+        $officers = $_SESSION['signup']['officers'];
+    }
+    render('platform/signup', ['title' => 'Založení webu', 'officers' => $officers, 'errors' => $errors, 'step' => $step, 'steps' => $steps, 's' => $signup + ['name' => '', 'slug' => '', 'address' => '', 'look' => '', 'style' => 'klasik', 'person' => '', 'email' => '']]);
     exit;
 }
 http_response_code(404);
