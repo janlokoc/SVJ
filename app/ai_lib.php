@@ -39,7 +39,10 @@ function ai_settings(): array
         if ($plus) {
             $limit = max($limit, pset_int('lim_premium_ai', 0, 100000));   // dříve zaplacený doplněk AI Plus platí do konce období
         }
-        $model = pset('ai_model') !== '' ? pset('ai_model') : $model;
+    }
+    // Model zvolený v konzoli platí pro všechny weby i pro zkoušku spojení v konzoli.
+    if (platform_enabled() && pset('ai_model') !== '') {
+        $model = pset('ai_model');
     }
     // Klíč bez mezer a zalomení řádků kolem (častá chyba při vkládání do config.php).
     // workspace_id je potřeba jen u osobního klíče (sk-ant-usr…), který není vázaný na jeden workspace.
