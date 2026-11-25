@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 const AI_TASKS = [
     'draft' => ['Napsat z poznámek', 'Z poznámek níže napiš oznámení výboru pro obyvatele domu.'],
-    'polish' => ['Uhladit text', 'Uprav text níže: oprav pravopis a překlepy, zjednoduš kostrbaté věty a sjednoť tón. Význam, fakta, čísla ani data neměň a nic nepřidávej.'],
+    'polish' => ['Uhladit text', 'Uprav text níže: oprav pravopis a překlepy, zjednoduš kostrbaté věty a sjednoť tón. Význam, fakta, čísla ani data neměň a nic nepřidávej – ani úvodní řádek, datum, čas či místo; zachovej členění textu (odstavce, odrážky).'],
     'shorten' => ['Zkrátit', 'Zkrať text níže zhruba na polovinu. Zachovej všechna data, časy, místa, částky a to, co mají lidé udělat.'],
     'minutes' => ['Napsat zápis z poznámek', 'Z poznámek (nebo přepisu) ze shromáždění vlastníků níže napiš část zápisu „Průběh jednání“. Je to úřední záznam, ne oznámení: piš ve třetí osobě, minulým časem, věcně a úplně. '
         . 'Postupuj podle bodů programu z kontextu; u každého bodu shrň, co zaznělo, kdo co přednesl nebo navrhl (jména jen tak, jak jsou v poznámkách) a k čemu se dospělo. '
@@ -173,6 +173,10 @@ function ai_run(string $task, string $input, string $context = ''): array
     }
     if ($quota = ai_quota_error()) {
         return ['error' => $quota];
+    }
+    // Uhlazení a zkrácení pracují jen s textem v poli – údaje z formuláře (datum, místo…) by do něj model jinak doplnil.
+    if (in_array($task, ['polish', 'shorten'], true)) {
+        $context = '';
     }
     $prompt = AI_TASKS[$task][1] . "\n\nSpolečenství: " . site('full') . ($context !== '' ? "\n\n<kontext>\n$context\n</kontext>" : '') . "\n\n<text>\n$input\n</text>";
     try {
