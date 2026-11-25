@@ -1,5 +1,5 @@
 <?php /* Formulář hlášení: $back = kam se vrátit, $inDialog = vložen do vyskakovacího okna */ $anon = empty($GLOBALS['IS_PLATFORM']) ? !user() : true; $rid = !empty($inDialog) ? 'd' : 'p'; ?>
-<form method="post" action="<?= url('/hlaseni') ?>" enctype="multipart/form-data" class="form report-form">
+<form method="post" action="<?= url('/hlaseni') ?>" enctype="multipart/form-data" class="form report-form"<?= empty($GLOBALS['IS_PLATFORM']) && function_exists('user') && user() ? ' data-mine="' . e(url('/hlaseni')) . '"' : '' ?>>
   <?= csrf_field() ?>
   <input type="hidden" name="z" value="<?= e($back ?? '/') ?>">
   <input type="hidden" name="url" value="<?= e(post('url') !== '' ? post('url') : report_page_url($back ?? '/')) ?>" data-report-url>

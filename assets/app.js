@@ -107,7 +107,62 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
     const capture = form.querySelector('[data-report-capture]');
     const clear = () => { file.value = ''; preview.hidden = true; const c = preview.querySelector('canvas'); if (c) c.remove(); };
     form.querySelector('[data-report-clear]').addEventListener('click', clear);
-    file.addEventListener('change', () => { const c = preview.querySelector('canvas'); if (c) c.remove(); preview.hidden = !file.files.length; });
+    // Přiložený obrázek (typicky snímek obrazovky z telefonu, 2–5 MB) se před odesláním zmenší na JPEG do 1600 px –
+    // odeslání přes mobilní data pak trvá sekundy, ne desítky sekund.
+    let shrinking = false;
+    file.addEventListener('change', async () => {
+      const c = preview.querySelector('canvas'); if (c) c.remove(); preview.hidden = !file.files.length;
+      const f = file.files[0];
+      if (shrinking || !f || !/^image\/(png|jpeg)$/.test(f.type) || typeof DataTransfer !== 'function') return;
+      try {
+        // createImageBitmap nepodléhá pravidlům CSP pro obrázky (blob: adresy jsou zakázané); jinak data: adresa.
+        const img = window.createImageBitmap ? await createImageBitmap(f)
+          : await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = rd.result; }; rd.onerror = ko; rd.readAsDataURL(f); });
+        const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+        const scale = Math.min(1, 1600 / Math.max(w, h));
+        if (scale === 1 && f.size < 400 * 1024) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+        const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.82));
+        if (!blob || blob.size >= f.size) return;
+        const dt = new DataTransfer(); dt.items.add(new File([blob], (f.name.replace(/\.\w+$/, '') || 'snimek') + '.jpg', { type: 'image/jpeg' }));
+        shrinking = true; file.files = dt.files; shrinking = false;
+      } catch (e) { /* původní soubor zůstane */ }
+    });
+    // Okno hlášení odesílá na pozadí: stránka s rozdělanou prací zůstane, jak byla. Bez skriptu klasické odeslání.
+    const btn = form.querySelector('button[type=submit]');
+    const status = document.createElement('div'); status.className = 'report-status'; status.setAttribute('role', 'status'); status.hidden = true;
+    form.prepend(status);
+    const say = (html, bad) => { status.hidden = false; status.className = 'report-status flash ' + (bad ? 'flash-error' : 'flash-ok'); status.innerHTML = html; };
+    const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    form.addEventListener('submit', async (e) => {
+      if (!dlg || !dlg.contains(form) || !window.fetch || !window.FormData) {
+        if (btn) setTimeout(() => { btn.disabled = true; btn.textContent = 'Odesílám…'; }, 0);
+        return;
+      }
+      e.preventDefault(); fill();
+      const label = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = 'Odesílám…'; }
+      status.hidden = true;
+      try {
+        const fd = new FormData(form); fd.append('ajax', '1');
+        const r = await fetch(form.action, { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const d = await r.json();
+        if (d.ok) {
+          form.reset(); clear();
+          say(esc(d.message) + (form.dataset.mine ? ' <a href="' + esc(form.dataset.mine) + '">Moje hlášení</a>' : ''));
+          if (btn) { btn.textContent = 'Odeslat další'; }
+        } else {
+          say((d.errors || ['Hlášení se nepodařilo odeslat.']).map(esc).join('<br>'), true);
+          if (btn) btn.textContent = label;
+        }
+      } catch (err) {
+        say('Hlášení se nepodařilo odeslat – zkontrolujte připojení a zkuste to znovu. Text zůstal ve formuláři.', true);
+        if (btn) btn.textContent = label;
+      }
+      if (btn) btn.disabled = false;
+      status.scrollIntoView({ block: 'nearest' });
+    });
     const close = form.querySelector('[data-report-close]');
     if (close) close.addEventListener('click', () => dlg.close());
     form.addEventListener('submit', fill);

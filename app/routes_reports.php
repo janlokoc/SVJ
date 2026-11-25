@@ -13,12 +13,15 @@ $reportForm = function (array $errors = []) {
 $route('GET', '/hlaseni', fn() => $reportForm());
 $route('POST', '/hlaseni', function () use ($reportForm) {
     $errors = report_submit(report_who());
+    $thanks = 'Děkujeme, hlášení jsme přijali.' . (user() ? ' Jak ho řešíme, uvidíte v části Moje hlášení.' : ' Odpovíme Vám e-mailem.');
+    report_ajax_reply($errors, $thanks);
     if ($errors) {
         $reportForm($errors);
         return;
     }
-    flash('Děkujeme, hlášení jsme přijali.' . (user() ? ' Jak ho řešíme, uvidíte v části Moje hlášení.' : ' Odpovíme Vám e-mailem.'));
-    redirect(user() ? '/hlaseni' : report_back(post('z', '/')));
+    flash($thanks);
+    // Zpět na stránku, odkud hlášení přišlo – ne na seznam hlášení (uživatel tam mohl mít rozdělanou práci).
+    redirect(report_back(post('z', '/')));
 });
 $route('GET', '/hlaseni/(\d+)/snimek', function (int $id) {
     $u = require_login();

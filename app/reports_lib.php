@@ -217,3 +217,18 @@ function report_page_url(string $path): string
     $https = ($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
     return ($https ? 'https' : 'http') . '://' . preg_replace('/[^A-Za-z0-9.:\-\[\]]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost')) . url($path);
 }
+
+/** Odeslání z okna hlášení na pozadí (ajax=1): odpověď jako JSON, stránka s rozdělanou prací zůstane, jak byla. */
+function report_ajax_reply(array $errors, string $message): void
+{
+    if (post('ajax') !== '1') {
+        return;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    if ($errors) {
+        http_response_code(422);
+    }
+    echo json_encode($errors ? ['ok' => false, 'errors' => array_values($errors)] : ['ok' => true, 'message' => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+}

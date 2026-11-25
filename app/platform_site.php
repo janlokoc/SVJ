@@ -74,6 +74,9 @@ if ($METHOD === 'GET' && ($PATH === '/podminky' || $PATH === '/zpracovani-udaju'
 }
 if ($PATH === '/hlaseni') {
     $errors = $METHOD === 'POST' ? report_submit(report_who()) : [];
+    if ($METHOD === 'POST') {
+        report_ajax_reply($errors, 'Děkujeme, hlášení jsme přijali. Odpovíme Vám e-mailem.');
+    }
     if ($METHOD === 'POST' && !$errors) {
         flash('Děkujeme, hlášení jsme přijali. Odpovíme Vám e-mailem.');
         redirect(report_back(post('z', '/')));

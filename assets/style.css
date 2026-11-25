@@ -1678,3 +1678,4 @@ dialog.zoom img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 5rem)
 details.storno { margin-top: .35rem; text-align: left; }
 details.storno summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
 details.storno form { margin-top: .5rem; min-width: 16rem; }
+.report-status { margin: 0 0 .8rem; }
