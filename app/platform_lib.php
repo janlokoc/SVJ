@@ -768,7 +768,7 @@ function billing_confirm(array $p, string $by): ?array
         pq('UPDATE tenants SET storage_extra = ?, storage_until = ? WHERE slug = ?', [(int) $p['item'], $to, $t['slug']]);
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'Úložiště navíc je zapnuté – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za úložiště navíc. Web " . $t['name'] . " má do "
-                . cz_date($to) . " o " . (int) $p['item'] . " MB místa více.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . cz_date($to) . " o " . (int) $p['item'] . " MB místa více.\nFakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
     }
@@ -781,7 +781,7 @@ function billing_confirm(array $p, string $by): ?array
         pq('UPDATE tenants SET ai_credits = ai_credits + ? WHERE slug = ?', [(int) $p['item'], $t['slug']]);
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'AI kredity připsány – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za AI kredity. Web " . $t['name'] . " má navíc " . (int) $p['item']
-                . " dotazů na AI; použijí se, až se vyčerpá měsíční limit edice, a nepropadají.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . " dotazů na AI; použijí se, až se vyčerpá měsíční limit edice, a nepropadají.\nFakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
         }
         return ['from' => $today, 'to' => $today];
     }
@@ -797,7 +797,7 @@ function billing_confirm(array $p, string $by): ?array
         if ($to !== '') {
             platform_mail($to, 'Platba za převod obsahu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za převod obsahu z webu " . $p['item'] . ".\n"
                 . "Na převodu začínáme pracovat; obvykle je hotový do 5 pracovních dnů. Kdybychom potřebovali přístup nebo podklady, ozveme se na tento e-mail.\n"
-                . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . "Fakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
         }
         return ['from' => $today, 'to' => $today];
     }
@@ -813,7 +813,7 @@ function billing_confirm(array $p, string $by): ?array
         pq('UPDATE tenants SET ai_until = ? WHERE slug = ?', [$to, $t['slug']]);
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'AI Plus je zapnutý – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za doplněk AI Plus. Do " . cz_date($to) . " má web "
-                . $t['name'] . " k dispozici " . pset_int('lim_premium_ai', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . $t['name'] . " k dispozici " . pset_int('lim_premium_ai', 0, 100000) . " použití AI pomocníka měsíčně.\nFakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
     }
@@ -831,7 +831,7 @@ function billing_confirm(array $p, string $by): ?array
         pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$to, $t['slug']]);
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'Platba za doménu přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " za vlastní doménu " . $p['item'] . " (do " . cz_date($to) . ").\n"
-                . ($t['domain_status'] === 'active' ? '' : "Doménu teď zprovozníme a dáme Vám vědět.\n") . "Fakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+                . ($t['domain_status'] === 'active' ? '' : "Doménu teď zprovozníme a dáme Vám vědět.\n") . "Fakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
         }
         return ['from' => $from, 'to' => $to];
     }
@@ -839,7 +839,7 @@ function billing_confirm(array $p, string $by): ?array
     referral_reward($t, $p);
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
-            . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme.");
+            . " má edici " . EDITIONS[$edition] . " do " . cz_date($to) . ".\nFakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
     }
     return ['from' => $from, 'to' => $to];
 }
@@ -1863,7 +1863,7 @@ function billing_storno(array $p, string $by, string $reason): ?array
         }
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'Opravný doklad k faktuře ' . $p['invoice_no'] . ' – ' . $t['name'], "Dobrý den,\n\nfakturu č. " . $p['invoice_no'] . " (" . pay_money($p) . ") jsme stornovali opravným dokladem č. $no."
-                . (trim($reason) !== '' ? "\nDůvod: " . trim($reason) : '') . "\n\nOpravný doklad najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme za pochopení.");
+                . (trim($reason) !== '' ? "\nDůvod: " . trim($reason) : '') . "\n\nOpravný doklad si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/opravny-doklad/' . $p['id']) . "\n\nDěkujeme za pochopení.");
         }
     }
     return [$no, $notes];

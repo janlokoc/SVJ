@@ -278,7 +278,16 @@ $route('POST', '/admin/predplatne/prevod', function () {
     if (pset('contact_email') !== '') {
         platform_mail(pset('contact_email'), 'Objednávka převodu obsahu: ' . $t['name'], 'Web ' . $t['name'] . ' (' . TENANT . ') objednal převod obsahu z ' . $in['url'] . ".\nRozsah: " . implode(', ', $scope)
             . "\nPřístup: " . MIGRATION_ACCESS[$in['access']] . "\nKontakt: " . $in['contact_name'] . ', ' . $in['contact_email'] . ($in['contact_phone'] !== '' ? ', ' . $in['contact_phone'] : '')
-            . ($in['note'] !== '' ? "\nPoznámka: " . $in['note'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
+            . ($in['note'] !== '' ? "\nPoznámka: " . $in['note'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . ', částka ' . pay_money($p)
+            . "\nZálohová faktura: " . platform_url('/sprava/platby/' . $p['id'] . '/doklad') . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
+    }
+    // Potvrzení objednateli: co zaplatit a kde je zálohová faktura (s QR platbou).
+    $iban = (string) cz_iban(pset('account'));
+    foreach (array_unique(array_filter([$in['contact_email'], $t['owner_email']], fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL))) as $to) {
+        platform_mail($to, 'Objednávka převodu obsahu – ' . $t['name'], "Dobrý den,\n\nděkujeme za objednávku převodu obsahu z webu " . $in['url'] . ".\n\n"
+            . 'K úhradě: ' . pay_money($p) . ($iban !== '' ? "\nÚčet: " . pset('account') : '') . "\nVariabilní symbol: " . $p['vs']
+            . "\n\nZálohovou fakturu s QR kódem pro platbu najdete po přihlášení do administrace webu:\n" . tenant_url($t, '/admin/predplatne/doklad/' . $p['id'])
+            . "\n\nNa převodu začneme pracovat po připsání platby; obvykle je hotový do 5 pracovních dnů.\n\nDěkujeme.");
     }
     flash('Převod je objednán. Pustíme se do něj po připsání platby – údaje jsou níže.');
     redirect('/admin/predplatne#prevod');
