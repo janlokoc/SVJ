@@ -81,10 +81,35 @@ a otevřít <http://localhost:8000>.
 
 ## Nasazení na hosting
 
-> **Plán:** nahrávání na hosting bude dělat GitHub Actions (FTPS/SFTP) po
-> každé změně na větvi `main`, stagingová větev do zvláštní složky.
-> Přístupové údaje budou jen v GitHub Secrets; `storage/` se nikdy nepřepíše.
-> Workflow se doplní, až bude hosting (typ přístupu a cílová složka).
+### Automatické nasazení (Český hosting, Git)
+
+Workflow `.github/workflows/nasazeni.yml` po každé změně ve větvi `main`
+připraví web včetně knihoven (`vendor/`) a nahraje ho jako commit do větve
+`produkce` v Git archivu domény na hostingu; hosting podle ní sám aktualizuje
+obsah domény. `storage/` (databáze, nahrané soubory, nastavení) se nenahrává
+ani nepřepisuje. Hesla a klíče jsou jen v GitHub Secrets.
+
+Jednorázové nastavení:
+
+1. Na svém počítači vytvořte klíč pro nasazení (bez hesla):
+   `ssh-keygen -t ed25519 -N "" -C "nasazeni-github" -f spolecnyweb-nasazeni`
+2. Klientská sekce → doména → **Git → SSH klíče → Přidat SSH klíč**: vložte
+   obsah souboru `spolecnyweb-nasazeni.pub` (veřejná část).
+3. GitHub → repozitář → Settings → Secrets and variables → Actions →
+   **New repository secret**:
+   `HOSTING_SSH_KEY` = celý obsah souboru `spolecnyweb-nasazeni` (soukromá část),
+   `HOSTING_GIT_URL` = řetězec pro připojení z klientské sekce (Git → Připojení).
+   Pak oba soubory klíče z počítače smažte (nebo uložte do správce hesel).
+4. Po prvním běhu workflow (změna v `main`, nebo ručně v Actions → Run workflow):
+   vyprázdněte adresář domény na hostingu (FTP) a v klientské sekci
+   **Git → Automatická aktualizace → Zapnout** s větví `produkce`.
+5. Přes FTP vytvořte `storage/config.php` (viz `config.example.php`):
+   doména služby, SMTP hostingu, případně klíč k AI. Databáze: SQLite
+   (výchozí) – každé společenství má vlastní soubor v `storage/tenants/`.
+6. Cron není nutný: denní úlohy (upozornění na revize, odečty, indexace
+   dokumentů) spustí u každého společenství jeho první návštěva dne.
+
+### Ruční nasazení (obecně)
 
 1. Nahrajte obsah repozitáře do kořenové složky webu (FTP).
    U poskytovatele založte databázi MySQL, soubor `config.example.php`
@@ -116,7 +141,7 @@ a otevřít <http://localhost:8000>.
    na hostingu nasměrované všechny subdomény (wildcard) do kořene webu a
    HTTPS certifikát i pro `*.spolecnyweb.cz` (u Let's Encrypt jen přes
    ověření v DNS). Pokud to hosting neumí, musela by se každá subdoména
-   zakládat ručně. Dále: PHP 8.1+, cron spouštějící denní úlohu webu.
+   zakládat ručně. Dále: PHP 8.1+ (cron není nutný).
 
 ### Rozesílání e-mailů
 

@@ -1,0 +1,83 @@
+# Nasazení na hosting (Český hosting – Git archiv domény spolecnyweb.cz).
+#
+# Po každé změně ve větvi main (produkce) připraví hotovou verzi webu včetně knihoven (vendor/)
+# a nahraje ji jako nový commit do větve "produkce" v Git archivu hostingu. Hosting pak podle této
+# větve sám aktualizuje obsah domény. Data webu (storage/) se nikdy nenahrávají ani nepřepisují.
+#
+# Potřebné GitHub Secrets (Settings → Secrets and variables → Actions):
+#   HOSTING_GIT_URL      adresa Git archivu, např. ssh://…@gonzales.thinline.cz/~/spolecnyweb.cz
+#   HOSTING_SSH_KEY      soukromá část SSH klíče, jehož veřejná část je vložená v klientské sekci (Git → SSH klíče)
+#   HOSTING_KNOWN_HOSTS  (nepovinné) výstup `ssh-keyscan gonzales.thinline.cz`; bez něj se klíč serveru načte při běhu
+name: Nasazení na hosting
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: nasazeni
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      BRANCH: produkce
+    steps:
+      - name: Stažení zdrojového kódu
+        uses: actions/checkout@v4
+
+      - name: Kontrola syntaxe PHP
+        run: find app index.php tools -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Knihovny (vendor/)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+      - name: Přístup k hostingu přes SSH
+        env:
+          SSH_KEY: ${{ secrets.HOSTING_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HOSTING_KNOWN_HOSTS }}
+          GIT_URL: ${{ secrets.HOSTING_GIT_URL }}
+        run: |
+          test -n "$SSH_KEY" && test -n "$GIT_URL" || { echo "Chybí secrets HOSTING_SSH_KEY nebo HOSTING_GIT_URL."; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/hosting && chmod 600 ~/.ssh/hosting
+          HOST=$(printf '%s' "$GIT_URL" | sed -E 's#^ssh://[^@]+@([^/:]+).*#\1#')
+          if [ -n "$KNOWN_HOSTS" ]; then printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -t ed25519,rsa "$HOST" > ~/.ssh/known_hosts; fi
+          ssh-keygen -lf ~/.ssh/known_hosts
+          printf 'Host %s\n  IdentityFile ~/.ssh/hosting\n  IdentitiesOnly yes\n' "$HOST" > ~/.ssh/config
+
+      - name: Příprava verze pro hosting
+        env:
+          GIT_URL: ${{ secrets.HOSTING_GIT_URL }}
+        run: |
+          git config --global user.name "Nasazení z GitHubu"
+          git config --global user.email "nasazeni@spolecnyweb.cz"
+          # navazuje na dosavadní historii větve na hostingu (žádný force push)
+          if git ls-remote --exit-code --heads "$GIT_URL" "$BRANCH" > /dev/null; then
+            git clone --quiet --branch "$BRANCH" --single-branch "$GIT_URL" ../nasazeni
+          else
+            git init --quiet -b "$BRANCH" ../nasazeni && git -C ../nasazeni remote add origin "$GIT_URL"
+          fi
+          find ../nasazeni -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          tar --exclude=./.git --exclude=./.github --exclude='./storage/*' -cf - . | tar -xf - -C ../nasazeni
+          # do domény patří jen chráněné soubory ze storage/, nikdy data
+          mkdir -p ../nasazeni/storage
+          for f in .htaccess .gitkeep index.html; do [ -f "storage/$f" ] && cp "storage/$f" ../nasazeni/storage/; done
+          # na hostingu se vendor/ nahrává s webem; data a nastavení zůstávají ignorovaná
+          sed -i -e '/^\/vendor$/d' -e '/^\/composer\.lock$/d' ../nasazeni/.gitignore
+          test -f ../nasazeni/storage/.htaccess || { echo "Chybí storage/.htaccess – nasazení zastaveno."; exit 1; }
+
+      - name: Nahrání na hosting
+        working-directory: ../nasazeni
+        run: |
+          git add -A
+          if git diff --cached --quiet; then echo "Beze změn."; exit 0; fi
+          git commit --quiet -m "Nasazení ${GITHUB_SHA::7} z větve main"
+          git push origin "$BRANCH" 2>&1 | tee ../push.log
+          echo "Hosting po nahrání vypisuje, jak aktualizoval obsah domény – viz výpis výše."
