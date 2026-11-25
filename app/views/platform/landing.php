@@ -9,7 +9,7 @@ $num = fn(int $n, string $unit) => $n === 0 ? 'bez omezení' : number_format($n,
 $editions = [
     'free' => ['Pro malý dům, který chce začít.', ['Veřejný web a část pro obyvatele', $num($lim('free', 'users'), 'účtů') . ', ' . $num($lim('free', 'mails'), 'e-mailů měsíčně'), 'Jeden pevný vzhled']],
     'standard' => ['Pro běžné společenství.', ['Prezence, hlasování a zápis ze shromáždění', 'Dálkové odečty a upozornění do telefonu', 'Revize, úkoly a dodavatelé', '3 šablony, 3 barvy a vlastní logo']],
-    'premium' => ['Pro velké domy a správu plateb.', ['AI asistent: odpovědi podle stanov a dokumentů domu', 'Platby na jednotku s upomínkami, AI zápis', 'Rezervace, jazykové verze, všech 10 šablon a 10 barev']],
+    'premium' => ['Pro velké domy a správu plateb.', ['AI asistent odpovídá obyvatelům podle stanov a dokumentů domu', 'AI zápis ze shromáždění z poznámek i přepisu, ' . $num($lim('premium', 'ai'), 'použití AI') . ' měsíčně', 'Platby na jednotku s upomínkami, rezervace', 'Jazykové verze, všech 10 šablon a 10 barev']],
 ];
 $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
 ?>
@@ -47,6 +47,31 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
     </ol>
   </div>
 </section>
+
+<?php if (function_exists('ai_configured') && ai_configured()): ?>
+<section class="lpx-section lpx-ai" id="ai">
+  <div class="wrap">
+    <p class="lpx-eyebrow">Umělá inteligence v ceně</p>
+    <h2>AI, která píše za výbor a odpovídá sousedům</h2>
+    <p class="lpx-intro">Pomocník je přímo tam, kde se píše a hledá – u oznámení, pozvánek, hlasování i zápisu. Navrhne text, vy ho zkontrolujete a uložíte. Nic neodejde samo.</p>
+    <ul class="lpx-ai-grid">
+      <li><span class="lpx-ai-tag">Premium</span><h3>AI asistent pro obyvatele</h3>
+        <p>„Od kolika je noční klid?“ „Kam nahlásit závadu?“ Obyvatelé se ptají běžnou řečí v okně v rohu webu a dostanou odpověď podle stanov, domovního řádu, dokumentů a oznámení domu – vždy s odkazem, odkud odpověď je.</p></li>
+      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Oznámení a e-maily</h3>
+        <p>Z pár poznámek napíše oznámení nebo e-mail vlastníkům. Uhladí pravopis a tón, dlouhý text zkrátí na podstatné.</p></li>
+      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Program a pozvánka</h3>
+        <p>Uspořádá program shromáždění do bodů, u každého hlasování napíše, co se schvaluje, a z termínu připraví pozvánku s programem a odkazem na podklady.</p></li>
+      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Hlasování per rollam</h3>
+        <p>Z poznámek zformuluje jednoznačné návrhy usnesení a napíše vlastníkům odůvodnění – co návrh obnáší a dokdy hlasovat.</p></li>
+      <li><span class="lpx-ai-tag">Premium</span><h3>Zápis ze shromáždění</h3>
+        <p>Z poznámek nebo nahraného přepisu napíše průběh jednání po bodech programu. Účast a výsledky hlasování doplní web sám.</p></li>
+      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Odpovědi na závady</h3>
+        <p>K hlášení obyvatele navrhne věcnou a zdvořilou odpověď výboru – stačí doplnit, co se zařídí.</p></li>
+    </ul>
+    <p class="lpx-fineprint">V ceně je <?= $num($lim('free', 'ai'), 'použití') ?> AI pomocníka měsíčně v edici Zdarma, <?= $num($lim('standard', 'ai'), 'použití') ?> ve Standard a <?= $num($lim('premium', 'ai'), 'použití') ?> v Premium. Text se zpracuje službou Claude od společnosti Anthropic; pomocníka lze v nastavení webu vypnout.</p>
+  </div>
+</section>
+<?php endif ?>
 
 <section class="lpx-section lpx-meters" id="odecty">
   <div class="wrap">

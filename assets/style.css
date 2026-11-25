@@ -1560,6 +1560,14 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 [data-site="sluzba"] .lpx-section h2 { font-size: clamp(1.9rem, 1.3rem + 2vw, 2.6rem); line-height: 1.08; margin: 0 0 .8rem; max-width: 24ch; }
 .lpx-intro { color: var(--muted); font-size: 1.15rem; max-width: 62ch; margin: 0; }
 .lpx-meeting { background: var(--surface); }
+.lpx-ai-grid { list-style: none; padding: 0; margin: 2.5rem 0 1.5rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; }
+.lpx-ai-grid li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: .45rem; }
+[data-site="sluzba"] .lpx-ai-grid h3 { font-size: 1.2rem; margin: 0; }
+.lpx-ai-grid p { margin: 0; color: var(--muted); }
+.lpx-ai-tag { align-self: flex-start; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.lpx-ai-tag.is-all { background: var(--ok-soft); color: var(--ok); }
+@media (max-width: 900px) { .lpx-ai-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .lpx-ai-grid { grid-template-columns: minmax(0, 1fr); } }
 .lpx-steps { list-style: none; padding: 0; margin: 2.5rem 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.6rem; counter-reset: krok; }
 .lpx-steps li { counter-increment: krok; display: flex; flex-direction: column; gap: .5rem; }
 .lpx-shot { aspect-ratio: 820 / 560; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); margin-bottom: .6rem; box-shadow: 0 18px 36px -24px rgba(16, 24, 34, .35); }

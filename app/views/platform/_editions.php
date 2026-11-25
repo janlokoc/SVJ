@@ -1,11 +1,11 @@
 <?php /** Tři edice vedle sebe. $edView = 'admin' (objednávka) nebo 'landing' (registrace). V administraci je $edition aktuální edice. */
 $edNow = $edView === 'admin' ? ($edition ?? 'free') : '';
 $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
-$edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s platbami na jednotku, rezervacemi a AI zápisem.'];
+$edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s AI asistentem pro obyvatele, AI zápisem, platbami na jednotku a rezervacemi.'];
 $edExtra = [
     'free' => ['Veřejný web: aktuality, dokumenty, kontakty, termíny', 'Přihlášení obyvatel, hlášení závad, vývěska', 'Jeden pevný vzhled (šablona i barvy)', 'V patičce odkaz na službu'],
-    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Dálkové odečty, revize, klíče a čipy', 'Upozornění do telefonu', 'Úkoly a usnesení, dodavatelé', '3 šablony a 3 barvy, vlastní logo, bez odkazu v patičce', 'Záloha všech dat ke stažení'],
-    'premium' => ['Vše z edice Standard', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Všech 10 šablon a 10 barev místo 3 a 3', 'AI asistent pro obyvatele i výbor (odpovědi podle dokumentů domu)', 'AI zápis ze shromáždění z poznámek i přepisu', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
+    'standard' => ['Vše z edice Zdarma', 'Více hlasování ročně, ankety, zápis ze shromáždění', 'Dálkové odečty, revize, klíče a čipy', 'Upozornění do telefonu', 'Úkoly a usnesení, dodavatelé', '3 šablony a 3 barvy, vlastní logo, bez odkazu v patičce', 'Záloha všech dat ke stažení', 'AI pomocník pro texty výboru: oznámení, pozvánky, program, návrhy usnesení'],
+    'premium' => ['Vše z edice Standard', 'AI asistent pro obyvatele i výbor: odpoví běžnou řečí podle stanov, domovního řádu, dokumentů a oznámení domu, vždy s odkazem na zdroj', 'AI zápis ze shromáždění: průběh jednání z poznámek nebo nahraného přepisu, po bodech programu', number_format($lim('premium', 'ai'), 0, ',', "\u{a0}") . ' použití AI pomocníka měsíčně místo ' . number_format($lim('standard', 'ai'), 0, ',', "\u{a0}") . ' (oznámení, pozvánky, program, usnesení)', 'Platby na jednotku s upomínkami, rezervace prostor', 'Jazykové verze webu', 'Všech 10 šablon a 10 barev místo 3 a 3', 'Přednostní podpora', 'Přístup k novým funkcím ještě před spuštěním (beta program)'],
 ];
 $edCompact = !empty($edCompact);
 if ($edCompact) {
@@ -13,7 +13,7 @@ if ($edCompact) {
     $edExtra = [
         'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jeden pevný vzhled'],
         'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Odečty, revize, klíče, úkoly a dodavatelé', 'Upozornění do telefonu', '3 šablony, 3 barvy a logo, bez odkazu v patičce, záloha dat'],
-        'premium' => ['Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, všech 10 šablon a 10 barev', 'AI asistent, AI zápis, přednostní podpora a beta program'],
+        'premium' => ['AI asistent pro obyvatele a AI zápis ze shromáždění', 'Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, všech 10 šablon a 10 barev', 'Přednostní podpora a beta program'],
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
