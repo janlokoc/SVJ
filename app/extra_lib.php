@@ -169,6 +169,13 @@ function daily_tasks(): void
     if (function_exists('search_index_pending')) {
         search_index_pending(200, 8.0);   // text z nových dokumentů pro hledání
     }
+    if (function_exists('bank_daily')) {
+        try {
+            bank_daily();   // platby z banky (Fio API), je-li zadán token
+        } catch (Throwable $e) {
+            error_log('SVJ web, banka: ' . $e->getMessage());
+        }
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }

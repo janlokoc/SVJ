@@ -147,7 +147,10 @@ function account_qr(float $amount, string $vs, string $message): string
 $route('GET', '/platby', function () {
     $u = require_login();
     $rows = my_unit_ids() ? all('SELECT un.*, a.prescribed, a.balance, a.vs, a.as_of, a.note AS account_note FROM units un JOIN unit_accounts a ON a.unit_id = un.id WHERE un.id IN (' . implode(',', array_map('intval', my_unit_ids())) . ') ORDER BY un.entrance, un.number') : [];
+    $bank = $rows ? bank_paid_since() : [];
     foreach ($rows as &$r) {
+        $r['bank'] = $bank[(int) $r['id']] ?? 0.0;
+        $r['balance'] = (float) $r['balance'] + $r['bank'];   // platby z banky po dni stavu z účetnictví
         $debt = -(float) $r['balance'];
         $r['qr_debt'] = $debt > 0 ? account_qr($debt, (string) $r['vs'], 'Doplatek ' . unit_name($r)) : '';
         $r['qr_month'] = (float) $r['prescribed'] > 0 ? account_qr((float) $r['prescribed'], (string) $r['vs'], 'Zaloha ' . unit_name($r)) : '';
@@ -189,6 +192,51 @@ $adminAccounts = function () {
             flash("Nahráno jednotek: $ok." . ($unknown ? ' Nerozpoznané jednotky: ' . implode(', ', array_slice($unknown, 0, 10)) . '.' : ''), $ok ? 'ok' : 'error');
             redirect('/admin/platby');
         }
+        if ($action === 'bank_upload') {
+            $f = $_FILES['statement'] ?? null;
+            $data = $f && ($f['error'] ?? 1) === UPLOAD_ERR_OK && $f['size'] < 5_000_000 ? (string) file_get_contents($f['tmp_name']) : '';
+            $txs = $data !== '' ? bank_parse($data) : [];
+            if (!$txs) {
+                flash('Ve výpisu jsme nenašli žádnou příchozí platbu. Nahrajte výpis ve formátu GPC/ABO nebo CSV (se sloupci Datum, Částka/Objem a VS).', 'error');
+            } else {
+                [$new, $matched, $unmatched] = bank_store($txs, 'soubor');
+                audit('Platby na jednotku: výpis z banky', "plateb $new, spárováno $matched");
+                flash("Výpis načten: nových plateb $new, spárováno s jednotkou $matched" . ($unmatched ? ", nespárováno $unmatched – přiřaďte je níže" : '') . '. Už dříve načtené platby se přeskočily.');
+            }
+            redirect('/admin/platby#banka');
+        }
+        if ($action === 'bank_token') {
+            $token = preg_replace('/\s+/', '', post('token'));
+            if ($token !== '' && !preg_match('/^[A-Za-z0-9]{20,100}$/', $token)) {
+                flash('Token nemá správný tvar – zkopírujte ho celý z internetového bankovnictví Fio.', 'error');
+            } else {
+                q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', ['fio_token', $token]);
+                audit('Platby na jednotku: Fio API', $token === '' ? 'vypnuto' : 'token uložen');
+                if ($token !== '') {
+                    $r = bank_fio_fetch($token);
+                    if (is_string($r)) {
+                        flash('Token je uložený, ale stažení se nepovedlo: ' . $r, 'error');
+                    } else {
+                        [$new, $matched] = bank_store($r, 'fio');
+                        q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', ['bank_last', date('Y-m-d H:i') . "|ok|nových $new, spárováno $matched"]);
+                        flash("Propojení s Fio funguje: nových plateb $new, spárováno $matched. Dál se platby stahují samy jednou denně.");
+                    }
+                } else {
+                    flash('Automatické stahování z Fio je vypnuté.', 'info');
+                }
+            }
+            redirect('/admin/platby#banka');
+        }
+        if ($action === 'bank_assign') {
+            bank_ready();
+            $unit = (int) post('unit_id');
+            if ($unit === 0 || one('SELECT 1 AS x FROM units WHERE id = ?', [$unit])) {
+                q('UPDATE bank_tx SET unit_id = ? WHERE id = ?', [$unit, (int) post('tx')]);
+                audit('Platby na jednotku: ruční přiřazení platby', 'platba ' . (int) post('tx') . ' → jednotka ' . $unit);
+                flash($unit ? 'Platba je přiřazená k jednotce.' : 'Přiřazení platby je zrušené.');
+            }
+            redirect('/admin/platby#banka');
+        }
         if ($action === 'clear') {
             q('DELETE FROM unit_accounts');
             audit('Platby na jednotku: smazání přehledu');
@@ -198,7 +246,12 @@ $adminAccounts = function () {
         if ($action === 'remind') {
             $sent = $failed = 0;
             $GLOBALS['MAIL_BULK'] = true;   // upomínky jsou hromadné: nad limit hostingu čekají ve frontě
+            $bank = bank_paid_since();
             foreach (all('SELECT un.*, a.balance, a.vs, a.as_of FROM unit_accounts a JOIN units un ON un.id = a.unit_id WHERE a.balance < 0') as $r) {
+                $r['balance'] = (float) $r['balance'] + ($bank[(int) $r['id']] ?? 0);
+                if ($r['balance'] >= 0) {
+                    continue;   // mezitím doplaceno (platba z banky)
+                }
                 $text = "Dobrý den,\n\nu jednotky " . unit_name($r) . " evidujeme k " . cz_date($r['as_of']) . " nedoplatek " . account_money(-(float) $r['balance']) . ".\n"
                     . 'Prosíme o úhradu na účet společenství ' . setting('account') . ($r['vs'] !== '' ? ', variabilní symbol ' . $r['vs'] : '') . ".\nPlatební údaje včetně QR kódu najdete po přihlášení: " . absolute_url('/platby')
                     . "\n\nPokud jste platbu mezitím odeslali, považujte tuto zprávu za bezpředmětnou.\n\n" . site('name');
@@ -213,7 +266,9 @@ $adminAccounts = function () {
             redirect('/admin/platby');
         }
     }
-    render('admin/accounts', ['title' => 'Platby na jednotku', 'errors' => $errors,
+    bank_ready();
+    render('admin/accounts', ['title' => 'Platby na jednotku', 'errors' => $errors, 'bank' => bank_paid_since(),
+        'bankTx' => all('SELECT * FROM bank_tx ORDER BY tx_date DESC, id DESC LIMIT 60'), 'fioToken' => setting('fio_token') !== '', 'bankLast' => explode('|', setting('bank_last'), 3),
         'rows' => all('SELECT un.*, a.prescribed, a.balance, a.vs, a.as_of, a.reminded_at, (SELECT COUNT(*) FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE uu.unit_id = un.id AND u.active = 1) AS accounts
             FROM units un LEFT JOIN unit_accounts a ON a.unit_id = un.id ORDER BY un.entrance, un.number + 0, un.number'), 'iban' => cz_iban(setting('account'))]);
 };

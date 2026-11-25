@@ -625,6 +625,8 @@ div.stat:hover { border-color: var(--line); }
 .report-msg .prose > :last-child { margin-bottom: 0; }
 .report-followup { margin-top: .75rem; }
 .li-note { color: var(--muted); font-size: .95em; }
+.bank-tx tr.is-unmatched td { background: var(--accent-soft); }
+.bank-tx select { max-width: 11rem; }
 .text-preview { border: 1px dashed var(--line); border-radius: var(--radius); padding: .8rem 1rem; background: var(--surface); }
 .text-preview .h-small { margin: 0 0 .4rem; }
 .text-preview .prose > :last-child { margin-bottom: 0; }

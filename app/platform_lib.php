@@ -1678,7 +1678,6 @@ const PLANNED_FEATURES = [
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
-    'banka' => ['Párování plateb s bankou', 'Stav záloh a nedoplatků se aktualizuje sám podle výpisu z účtu společenství.', 'Premium · v ceně', 'Párování plateb'],
 ];
 /**
  * Podrobný popis připravovaných funkcí pro stránku s detailem:
@@ -1714,12 +1713,6 @@ const PLANNED_DETAILS = [
         'problem' => 'U hlasování mimo shromáždění (per rollam) se dá namítnout, že hlasoval někdo jiný než vlastník. U běžných věcí to nevadí, u půjčky, velké rekonstrukce nebo změny stanov ale může spor o platnost stát roky.',
         'how' => ['U vybraného hlasování zapnete ověření bankovní identitou.', 'Vlastník před odesláním hlasu potvrdí totožnost ve svém bankovnictví.', 'K hlasu se uloží záznam o ověření, který obstojí jako důkaz.', 'Ostatní hlasování běží dál bez ověřování, jako dnes.'],
         'note' => 'Doplněk k edici Premium. Platí se podle počtu ověření, asi 15 Kč za jedno (banky účtují jednotky korun za ověření).',
-    ],
-    'banka' => [
-        'lead' => 'Stav záloh a nedoplatků se aktualizuje sám podle účtu společenství.',
-        'problem' => 'Dnes musí výbor nebo správce stav plateb do webu nahrávat ručně z tabulky. Údaje proto zastarávají, vlastníci se ptají, zda jejich platba došla, a upomínky chodí i těm, kdo už zaplatili.',
-        'how' => ['Web si z banky stahuje výpis z účtu společenství (jen pro čtení, platit z něj nemůže).', 'Platby spáruje s jednotkami podle variabilního symbolu.', 'Vlastník vidí, které zálohy má uhrazené, výbor vidí aktuální nedoplatky.', 'Upomínky odejdou jen těm, kdo opravdu dluží.'],
-        'note' => 'Bude v ceně edice Premium. Nejdřív pro banky s veřejným rozhraním (Fio, ČSOB, Česká spořitelna, KB, Raiffeisenbank).',
     ],
 ];
 /** Otisk návštěvníka pro počítání unikátních prokliků; mění se každý den a nedá se z něj zjistit adresa. */
