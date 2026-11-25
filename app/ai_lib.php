@@ -19,6 +19,16 @@ const AI_TASKS = [
         . 'U bodu, o kterém se hlasuje, stručně a jednoznačně napiš, co se schvaluje. Oprav pravopis a zjednoduš kostrbaté formulace. '
         . 'Tučně (**…**) zvýrazni jen několik opravdu důležitých míst – např. co si mají vlastníci přinést, termín, „Účast nutná“. '
         . 'Nepřidávej body, čísla, částky ani jména, které v textu nejsou; když je vstup jen pár poznámek, udělej z nich body programu.'],
+    'resolution' => ['Formulovat návrhy usnesení', 'Z poznámek níže formuluj návrhy usnesení, o kterých budou vlastníci hlasovat (pro / proti / zdržuji se). '
+        . 'Každý návrh napiš na jeden samostatný řádek – bez odrážek, číslování a bez jakéhokoli formátování (žádné hvězdičky). '
+        . 'Každý začni podle povahy věci „Shromáždění vlastníků schvaluje …“, „… volí …“ nebo „… bere na vědomí …“ a formuluj ho jednoznačně a úplně, aby se dal přijmout nebo odmítnout jako celek: co přesně, s kým, za kolik a do kdy – ale jen to, co je v poznámkách. '
+        . 'Různé věci dej do samostatných návrhů. Chybějící podstatný údaj (částka, dodavatel, termín) označ [doplnit: …]. Nic nevymýšlej.'],
+    'rationale' => ['Napsat odůvodnění', 'Napiš pro vlastníky úvodní text a odůvodnění k hlasování, jehož název a návrhy usnesení jsou v kontextu: proč se o věci rozhoduje, co návrh obnáší (náklady, termíny, dopady) '
+        . 'a co se stane při přijetí a při nepřijetí. Vycházej jen z poznámek níže a z kontextu, nic nedomýšlej. Když jsou v kontextu data hlasování, na konci jednou větou napiš, do kdy hlasovat.'],
+    'invite' => ['Napsat pozvánku', 'Napiš e-mailovou pozvánku vlastníkům na akci, jejíž údaje jsou v kontextu (název, datum, čas, místo, program, podklady, odkaz). '
+        . 'Datum, čas a místo dej hned na začátek tučně. Je-li v kontextu program, uveď všechny jeho body jako výčet ve stejném pořadí a znění (můžeš jen opravit pravopis). '
+        . 'U shromáždění vlastníků připomeň, že kdo nemůže přijít, může se nechat zastoupit na základě plné moci, a že pro usnášeníschopnost je potřeba přítomnost vlastníků s potřebným podílem hlasů. '
+        . 'Na podklady a potvrzení účasti odkaž přesně adresou z kontextu – jiné adresy nevymýšlej. Text níže jsou poznámky nebo koncept výboru; co v nich je navíc, zapracuj.'],
     'reply' => ['Navrhnout odpověď', 'Napiš krátkou odpověď výboru obyvateli na jeho hlášení uvedené v kontextu. Poznámky níže říkají, co mu má výbor sdělit; když jsou prázdné, potvrď přijetí a napiš, že se výbor ozve.'],
 ];
 
@@ -153,7 +163,7 @@ function ai_run(string $task, string $input, string $context = ''): array
         return ['error' => 'AI pomocník není na tomto webu zapnutý.'];
     }
     $input = trim($input);
-    if ($input === '' && $task !== 'reply') {
+    if ($input === '' && !in_array($task, ['reply', 'invite', 'rationale'], true)) {
         return ['error' => 'Nejdřív napište text nebo aspoň pár poznámek.'];
     }
     if (mb_strlen($input) + mb_strlen($context) > ($task === 'minutes' ? 120000 : 20000)) {

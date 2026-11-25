@@ -6,8 +6,10 @@
     <?= csrf_field() ?>
     <label>Název <input type="text" name="title" value="<?= e($poll['title']) ?>" maxlength="200" required placeholder="Např. Hlasování o výměně stoupaček"></label>
     <label>Úvodní text a odůvodnění <textarea name="body" rows="5"><?= e((string) $poll['body']) ?></textarea></label>
+    <?php $aiTarget = 'textarea[name=body]'; $aiTasks = ['rationale', 'polish']; $aiContext = ''; $aiFields = ['title' => 'Název hlasování', 'items' => 'Návrhy usnesení', 'opens_at' => 'Hlasuje se od', 'closes_at' => 'Hlasuje se do (včetně)']; require __DIR__ . '/_ai.php'; unset($aiFields); ?>
     <label>Body, o kterých se hlasuje (každý na samostatný řádek)
       <textarea name="items" rows="5"<?= $hasVotes ? ' disabled' : ' required' ?> placeholder="Shromáždění schvaluje výměnu stoupaček dle nabídky…"><?= e($itemsText) ?></textarea></label>
+    <?php if (!$hasVotes): $aiTarget = 'textarea[name=items]'; $aiTasks = ['resolution']; $aiContext = ''; $aiFields = ['title' => 'Název hlasování', 'body' => 'Odůvodnění']; require __DIR__ . '/_ai.php'; unset($aiFields); endif ?>
     <p class="hint"><?= $hasVotes ? 'Body už nejde měnit, protože byly odevzdány hlasy.' : 'Formulujte je jako návrh usnesení; vlastníci u každého zvolí pro, proti nebo zdržuji se.' ?></p>
     <div class="form-row">
       <label>Hlasuje se od <input type="date" name="opens_at" value="<?= e($poll['opens_at']) ?>" required></label>

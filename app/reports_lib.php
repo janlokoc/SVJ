@@ -252,7 +252,10 @@ function report_update(array $r, string $status, string $reply, string $note, st
         rq('UPDATE reports SET reply = ?, replied_at = ?, replied_by = ? WHERE id = ?', [$reply, $now, $by, $r['id']]);
     }
     rq('UPDATE reports SET status = ?, note = ?, updated_at = ? WHERE id = ?', [$status, mb_substr($note, 0, 5000), $now, $r['id']]);
-    if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && ($reply !== '' || $status !== $r['status']) && $r['type'] !== 'auto') {
+    // Autor dostane e-mail s odpovědí, nebo když se hlášení uzavře či naplánuje; samotné „Řeší se“ / „Nové“ bez odpovědi
+    // ho neruší (agent tak označuje rozpracované opravy).
+    $notify = $reply !== '' || ($status !== $r['status'] && in_array($status, ['done', 'rejected', 'planned'], true));
+    if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && $notify && $r['type'] !== 'auto') {
         $link = report_reply_url($r);
         $text = "Dobrý den,\n\nk Vašemu hlášení ze dne " . cz_date($r['created_at']) . " („" . mb_strimwidth($r['body'], 0, 120, '…') . "“):\n\nStav: " . REPORT_STATUS[$status] . ($reply !== '' ? "\n\n" . $reply : '')
             . ($link !== '' ? "\n\nOdpovědět nebo něco doplnit můžete u hlášení na webu (po přihlášení):\n" . $link . "\nOdpověď na tento e-mail se k hlášení nepřipojí."

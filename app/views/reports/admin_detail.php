@@ -20,7 +20,7 @@
     <label>Stav <select name="status"><?php foreach (REPORT_STATUS as $k => $label): ?><option value="<?= $k ?>"<?= $r['status'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
     <?php if ($r['type'] !== 'auto'): ?>
     <label><?= $msgs ? 'Nová odpověď autorovi' : 'Odpověď autorovi hlášení' ?> (nepovinné) <textarea name="reply" rows="5" maxlength="5000"></textarea></label>
-    <p class="hint">Odpověď přibude do vlákna. Stav a odpovědi uvidí autor v části Moje hlášení<?= filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) ? ' a při změně mu přijdou e-mailem na ' . e($r['user_email']) : '' ?>.<?= (int) $r['user_id'] > 0 ? ' Autor může odpovědět přímo u hlášení; jeho odpověď vrátí hlášení mezi nová.' : ' Autor není přihlášený uživatel – odpovědět může jen e-mailem.' ?></p>
+    <p class="hint">Odpověď přibude do vlákna. Stav a odpovědi uvidí autor v části Moje hlášení<?= filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) ? ' a odpověď (i vyřešení, zamítnutí nebo naplánování) mu přijde e-mailem na ' . e($r['user_email']) : '' ?>.<?= (int) $r['user_id'] > 0 ? ' Autor může odpovědět přímo u hlášení; jeho odpověď vrátí hlášení mezi nová.' : ' Autor není přihlášený uživatel – odpovědět může jen e-mailem.' ?></p>
     <?php endif ?>
     <label>Interní poznámka (autor ji nevidí) <textarea name="note" rows="3" maxlength="5000"><?= e((string) $r['note']) ?></textarea></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>

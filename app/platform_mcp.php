@@ -72,7 +72,7 @@ $tools = [
             'status' => ['type' => 'string', 'enum' => array_keys(REPORT_STATUS)]], 'required' => ['id', 'message']],
         'annotations' => ['readOnlyHint' => false, 'destructiveHint' => false, 'openWorldHint' => true]],
     ['name' => 'set_report_status', 'title' => 'Změnit stav hlášení',
-        'description' => 'Změní stav (new, in_progress, planned, done, rejected) a volitelně doplní interní poznámku pro provozovatele (autor ji nevidí). Změnu stavu autor dostane e-mailem.',
+        'description' => 'Změní stav (new, in_progress, planned, done, rejected) a volitelně doplní interní poznámku pro provozovatele (autor ji nevidí). Autor dostane e-mail jen při změně na done, rejected nebo planned.',
         'inputSchema' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'status' => ['type' => 'string', 'enum' => array_keys(REPORT_STATUS)],
             'note' => ['type' => 'string', 'maxLength' => 5000, 'description' => 'Interní poznámka; připojí se k dosavadní.']], 'required' => ['id', 'status']],
         'annotations' => ['readOnlyHint' => false, 'destructiveHint' => false, 'openWorldHint' => true]],
@@ -155,7 +155,7 @@ $call = function (string $name, array $a) use ($text, $find): array {
             $newNote = $note === '' ? (string) $r['note'] : trim((string) $r['note'] . "\n" . '[' . date('Y-m-d H:i') . ', AI agent] ' . $note);
             report_update($r, $status, '', $newNote, 'AI agent (MCP)');
             platform_log('Hlášení: stav (AI agent)', 'č. ' . $r['id'] . ' · ' . REPORT_STATUS[$status]);
-            return $text('Stav hlášení #' . $r['id'] . ' je teď ' . $status . '.' . ($status !== $r['status'] && $r['type'] !== 'auto' && $r['user_email'] !== '' ? ' Autor dostal e-mail.' : ''));
+            return $text('Stav hlášení #' . $r['id'] . ' je teď ' . $status . '.' . ($status !== $r['status'] && in_array($status, ['done', 'rejected', 'planned'], true) && $r['type'] !== 'auto' && $r['user_email'] !== '' ? ' Autor dostal e-mail.' : ''));
     }
     return $text('Neznámý nástroj.', true);
 };

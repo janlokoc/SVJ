@@ -349,7 +349,8 @@ $pollForm = function (int $id = 0) {
         $poll = array_merge($poll, ['title' => post('title'), 'body' => post('body'), 'opens_at' => post('opens_at'), 'closes_at' => post('closes_at'),
             'threshold' => max(1, min(99, (int) post('threshold'))), 'online' => isset($_POST['online']) ? 1 : 0, 'published' => isset($_POST['published']) ? 1 : 0,
             'event_id' => (int) post('event_id') ?: null]);
-        $questions = array_values(array_filter(array_map('trim', preg_split('/\R/u', post('items'))), fn($x) => $x !== ''));
+        // Odrážky, číslování a hvězdičky (např. z textu od AI nebo z Wordu) do znění usnesení nepatří.
+        $questions = array_values(array_filter(array_map(fn($x) => trim(str_replace('**', '', preg_replace('/^\s*(?:[-–•*]|\d+[.)])\s+/u', '', $x))), preg_split('/\R/u', post('items'))), fn($x) => $x !== ''));
         if (!$hasVotes) {
             $itemsText = post('items');
         }

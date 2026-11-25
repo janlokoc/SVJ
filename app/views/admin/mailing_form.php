@@ -16,7 +16,7 @@
     <p class="hint">Zpráva jde jen lidem s aktivním účtem na webu.<?= $optedOut ? ' Vypnuté zasílání má ' . $optedOut . ' z nich – ti zprávu nedostanou.' : '' ?> Každý dostane vlastní e-mail, adresy ostatních nevidí.</p>
     <label>Předmět <input type="text" name="subject" value="<?= e($m['subject']) ?>" maxlength="150" required></label>
     <label>Text zprávy <textarea name="body" rows="12" required><?= e($m['body']) ?></textarea></label>
-    <?php $aiTarget = 'textarea[name=body]'; $aiTasks = ['draft', 'polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai.php'; ?>
+    <?php $aiTarget = 'textarea[name=body]'; $aiTasks = !empty($aiInvite) ? ['invite', 'polish', 'shorten'] : ['draft', 'polish', 'shorten']; $aiContext = $aiInvite ?? ''; require __DIR__ . '/_ai.php'; ?>
     <p class="hint">E-mail se posílá bez příloh – na dokumenty odkažte adresou na webu. Pod text se automaticky doplní, kdo zprávu posílá a jak si zasílání vypnout.<?= setting_on('mail_tracking') ? ' Odkazy na tento web se u každého příjemce evidují, takže uvidíte, kdo se proklikl.' : '' ?></p>
     <div class="actions">
       <button class="btn btn-big" type="submit" name="action" value="send" data-confirm-audience>Odeslat zprávu</button>

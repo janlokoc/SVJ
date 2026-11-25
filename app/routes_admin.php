@@ -629,6 +629,12 @@ $mailForm = function () {
         $m['body'] = 'Výbor SVJ Vás zve: ' . $evp['title'] . ' se koná **' . cz_date($evp['event_date'], true) . ($evp['event_time'] ? ' v ' . $evp['event_time'] : '') . '**'
             . ($evp['place'] ? ', ' . $evp['place'] : '') . '.' . ($evp['note'] ? ' ' . $evp['note'] : '')
             . ($evp['rsvp'] ? "\n\nDejte nám prosím vědět, zda přijdete – stačí jedno kliknutí po přihlášení:\n" . absolute_url('/terminy/' . $eid) . "\n\nPotřebujeme vědět předem, zda bude shromáždění usnášeníschopné." : "\n\nPodrobnosti: " . absolute_url('/terminy/' . $eid));
+        // Podklady pro AI pomocníka („Napsat pozvánku“): údaje termínu, program a podklady.
+        $evDocTitles = array_column(all('SELECT d.title FROM documents d JOIN event_documents ed ON ed.document_id = d.id WHERE ed.event_id = ?', [$eid]), 'title');
+        $aiInvite = implode("\n", array_filter(['Název: ' . $evp['title'], 'Datum: ' . cz_date($evp['event_date'], true), $evp['event_time'] ? 'Čas: ' . $evp['event_time'] : '',
+            $evp['place'] ? 'Místo: ' . $evp['place'] : '', $evp['note'] ? 'Poznámka: ' . $evp['note'] : '', $evp['program'] !== '' ? "Program:\n" . str_replace('**', '', $evp['program']) : '',
+            $evDocTitles ? 'Podklady (na stránce termínu): ' . implode('; ', $evDocTitles) : '',
+            'Stránka termínu' . ($evp['rsvp'] ? ' (podrobnosti, podklady a potvrzení účasti po přihlášení)' : ' (podrobnosti)') . ': ' . absolute_url('/terminy/' . $eid)]));
     } elseif (($pid = (int) ($_GET['aktualita'] ?? 0)) && ($p = one('SELECT * FROM posts WHERE id = ?', [$pid]))) {
         $docs = post_documents($pid);
         $m['subject'] = $p['title'];
@@ -636,7 +642,7 @@ $mailForm = function () {
             . ($p['visibility'] === 'residents' || array_filter($docs, fn($d) => $d['visibility'] === 'residents') ? "\n(Pro zobrazení se přihlaste.)" : '');
     }
     render('admin/mailing_form', [
-        'title' => 'Nová zpráva e-mailem', 'm' => $m, 'errors' => $errors, 'notice' => $notice,
+        'title' => 'Nová zpráva e-mailem', 'm' => $m, 'errors' => $errors, 'notice' => $notice, 'aiInvite' => $aiInvite ?? '',
         'nonce' => $_SESSION['mail_nonce'] = bin2hex(random_bytes(16)),
         'counts' => ['owners' => count(mail_recipients('owners')), 'all' => count(mail_recipients('all'))],
         'optedOut' => (int) val('SELECT COUNT(*) FROM users WHERE active = 1 AND email_notify = 0'),
