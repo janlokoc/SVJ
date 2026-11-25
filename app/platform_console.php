@@ -641,8 +641,10 @@ if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
     // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.
     $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 20) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];
     platform_log('Zkouška spojení s AI', isset($r['error']) ? 'chyba' : 'v pořádku');
-    flash(isset($r['error']) ? 'Spojení s Claude nefunguje: ' . $r['error'] : 'Spojení s Claude funguje (model ' . ai_settings()['model'] . ' odpověděl: „' . mb_substr($r['text'], 0, 40) . '“).', isset($r['error']) ? 'error' : 'ok');
-    redirect('/nastaveni#ai');
+    // Výsledek se ukáže přímo u tlačítka (hlášení nahoře by po skoku na část AI nebylo vidět).
+    $_SESSION['ai_test'] = isset($r['error']) ? ['ok' => false, 'text' => 'Spojení s Claude nefunguje: ' . (($r['detail'] ?? '') !== '' ? $r['detail'] : $r['error'])]
+        : ['ok' => true, 'text' => 'Spojení s Claude funguje (model ' . ai_settings()['model'] . ' odpověděl: „' . mb_substr($r['text'], 0, 40) . '“).'];
+    redirect('/nastaveni#ai-test');
 }
 if ($PATH === '/pristup-ai') {
     // Klíč pro MCP server hlášení: ukáže se jen jednou, uloží se jen jeho otisk.

@@ -509,3 +509,13 @@ document.querySelectorAll('[data-fill-target]').forEach((b) => b.addEventListene
   const f = document.querySelector(b.dataset.fillTarget); if (!f) return;
   f.value = b.dataset.fillValue; f.dispatchEvent(new Event('input', { bubbles: true })); f.focus();
 }));
+
+// Výsledek akce uprostřed dlouhé stránky (např. zkouška spojení s AI): po načtení ho dorovnat do okna,
+// protože obsah nad ním se může ještě dopočítat a skok na kotvu by ho odsunul pod okraj.
+(() => {
+  const el = document.querySelector('[data-scroll-into-view]');
+  if (!el) return;
+  const show = () => el.scrollIntoView({ block: 'center', behavior: 'instant' });
+  if (document.readyState === 'complete') show(); else window.addEventListener('load', show, { once: true });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(show);
+})();

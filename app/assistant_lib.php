@@ -141,6 +141,27 @@ function assistant_ask(string $question, array $history = []): array
     return ['text' => $r['text'], 'sources' => $sources];
 }
 /** Obecné volání Claude pro asistenta: vrací ['text' => …] nebo ['error' => srozumitelná věta]. */
+/**
+ * Důvod chyby pro provozovatele (zkouška spojení v konzoli): druh chyby a hlášení služby, bez klíče.
+ * Obyvatelům se neukazuje – ti vidí jen obecnou větu.
+ */
+function ai_error_detail(Throwable $e): string
+{
+    $cfg = ai_settings();
+    $msg = str_replace($cfg['key'] !== '' ? $cfg['key'] : "\0", '[klíč]', $e->getMessage());
+    $msg = preg_replace('/sk-ant-[A-Za-z0-9_\-]+/', '[klíč]', $msg);
+    $kind = match (true) {
+        $e instanceof \Anthropic\Core\Exceptions\AuthenticationException => 'klíč API nebyl přijat (zkontrolujte api_key)',
+        $e instanceof \Anthropic\Core\Exceptions\PermissionDeniedException => 'klíč nemá oprávnění k modelu nebo službě',
+        $e instanceof \Anthropic\Core\Exceptions\NotFoundException => 'model nenalezen (zkontrolujte název modelu: ' . $cfg['model'] . ')',
+        $e instanceof \Anthropic\Core\Exceptions\BadRequestException => 'služba odmítla požadavek (často nedostatek kreditu v Claude Console nebo neplatný model)',
+        $e instanceof \Anthropic\Core\Exceptions\PaymentRequiredException => 'chybí kredit nebo platba v Claude Console',
+        $e instanceof \Anthropic\Core\Exceptions\RateLimitException => 'překročen limit požadavků',
+        $e instanceof \Anthropic\Core\Exceptions\APIConnectionException => 'nepodařilo se spojit se serverem služby (síť nebo certifikát)',
+        default => (new \ReflectionClass($e))->getShortName(),
+    };
+    return $kind . ' – ' . mb_substr(trim(preg_replace('/\s+/', ' ', $msg)), 0, 300);
+}
 function ai_call(string $system, array $messages, int $maxTokens): array
 {
     $cfg = ai_settings();
@@ -149,10 +170,10 @@ function ai_call(string $system, array $messages, int $maxTokens): array
         $message = $client->beta->messages->create(maxTokens: $maxTokens, messages: $messages, model: $cfg['model'], system: $system,
             fallbacks: 'default', betas: ['server-side-fallback-2026-07-01']);
     } catch (\Anthropic\Core\Exceptions\RateLimitException | \Anthropic\Core\Exceptions\OverloadedException $e) {
-        return ['error' => 'Asistent je teď přetížený. Zkuste to prosím za chvíli znovu.'];
+        return ['error' => 'Asistent je teď přetížený. Zkuste to prosím za chvíli znovu.', 'detail' => ai_error_detail($e)];
     } catch (Throwable $e) {
         error_log('SVJ web, asistent: ' . $e->getMessage());
-        return ['error' => 'Asistent teď neodpovídá. Zkuste to prosím později.'];
+        return ['error' => 'Asistent teď neodpovídá. Zkuste to prosím později.', 'detail' => ai_error_detail($e)];
     }
     if ($message->stopReason === 'refusal') {
         return ['error' => 'Na tuto otázku asistent neodpoví. Obraťte se prosím na výbor.'];

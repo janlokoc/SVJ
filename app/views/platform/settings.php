@@ -85,7 +85,12 @@
     </div>
     <label>Model (nevyplněno = podle config.php) <input type="text" name="ai_model" value="<?= e($v['ai_model']) ?>" placeholder="claude-opus-5-5" pattern="[a-z0-9.\-]*"></label>
     <p class="hint">Menší model (například claude-haiku-5-5) je řádově levnější a na krátké texty obvykle stačí; nejsilnější píše nejlépe. Počet použití podle edice nastavíte v tabulce limitů výše (0 = bez omezení).</p>
-    <p class="actions"><button class="btn btn-ghost" type="submit" form="ai-test-form"<?= $aiLib && $aiKey ? '' : ' disabled' ?>>Vyzkoušet spojení s Claude</button></p>
+    <?php $aiTest = $_SESSION['ai_test'] ?? null; unset($_SESSION['ai_test']); ?>
+    <div id="ai-test" class="ai-test">
+      <?php if ($aiTest): ?><p class="flash <?= $aiTest['ok'] ? 'flash-ok' : 'flash-error' ?>" role="status" data-scroll-into-view><?= e($aiTest['text']) ?></p><?php endif ?>
+      <p class="actions"><button class="btn btn-ghost" type="submit" form="ai-test-form"<?= $aiLib && $aiKey ? '' : ' disabled aria-describedby="ai-test-why"' ?>>Vyzkoušet spojení s Claude</button></p>
+      <?php if (!$aiLib || !$aiKey): ?><p class="hint" id="ai-test-why">Zkoušku spojení jde spustit, až budou oba body výše splněné (✓): <?= !$aiLib ? 'chybí knihovna' : '' ?><?= !$aiLib && !$aiKey ? ' a ' : '' ?><?= !$aiKey ? 'chybí klíč v storage/config.php' : '' ?>.</p><?php endif ?>
+    </div>
     <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
     <h2 id="platby">Platby</h2>
     <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
