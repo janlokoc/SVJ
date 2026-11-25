@@ -12,7 +12,7 @@ if ($edCompact) {
     // Krátký výčet toho, co edice přidává oproti nižší; počty (účty, e-maily…) jsou v limitech výše, tady se neopakují.
     $edExtra = [
         'free' => ['Veřejný web a část pro obyvatele', 'Hlášení závad, vývěska, termíny do kalendáře', 'Jeden pevný vzhled'],
-        'standard' => ['Hlasování, ankety a zápis ze shromáždění', 'Odečty, revize, klíče, úkoly a dodavatelé', 'Upozornění do telefonu', '3 šablony, 3 barvy a logo, bez odkazu v patičce, záloha dat'],
+        'standard' => ['AI pomocník pro texty výboru', 'Hlasování, ankety a zápis ze shromáždění', 'Odečty, revize, klíče, úkoly a dodavatelé', 'Upozornění do telefonu', '3 šablony, 3 barvy a logo, bez odkazu v patičce, záloha dat'],
         'premium' => ['AI asistent pro obyvatele a AI zápis ze shromáždění', 'Platby na jednotku s upomínkami', 'Rezervace, jazykové verze, všech 10 šablon a 10 barev', 'Přednostní podpora a beta program'],
     ];
 } ?>
@@ -23,14 +23,14 @@ if ($edCompact) {
     <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok' . ' <b class="vat-tag">bez DPH</b>' . '</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
     <?php if ($edCompact): ?><div class="edition-more" id="edice-<?= $ek ?>"><div><ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
-      <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
+      <li><span><?= e($ln) ?></span><strong><?= $lk === 'ai' && EDITION_RANK[$ek] < EDITION_RANK[PLAN_FEATURES['ai-pomocnik'][0]] ? '–' : ($v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení') ?></strong></li>
       <?php endforeach ?>
     </ul></div></div>
     <button class="edition-toggle" type="button" aria-expanded="false" aria-controls="edice-<?= $ek ?>" data-collapse-toggle><span data-more>Zobrazit limity</span><span data-less hidden>Skrýt limity</span> <?= icon('chevron') ?></button><?php endif ?>
     <?php if (!$edCompact): ?><p class="muted"><?= e($edNotes[$ek]) ?></p>
     <ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
-      <li><span><?= e($ln) ?></span><strong><?= $v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení' ?></strong></li>
+      <li><span><?= e($ln) ?></span><strong><?= $lk === 'ai' && EDITION_RANK[$ek] < EDITION_RANK[PLAN_FEATURES['ai-pomocnik'][0]] ? '–' : ($v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení') ?></strong></li>
       <?php endforeach ?>
     </ul><?php endif ?>
     <ul class="lp-check"><?php foreach ($edExtra[$ek] as $line): ?><li><?= e($line) ?></li><?php endforeach ?></ul>

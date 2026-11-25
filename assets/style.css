@@ -1565,6 +1565,8 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 [data-site="sluzba"] .lpx-ai-grid h3 { font-size: 1.2rem; margin: 0; }
 .lpx-ai-grid p { margin: 0; color: var(--muted); }
 .lpx-ai-tag { align-self: flex-start; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: .15rem .55rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.ai-upsell { display: block; font-size: .92rem; }
+.ai-upsell .ai-label { margin-right: .4rem; }
 .lpx-ai-tag.is-all { background: var(--ok-soft); color: var(--ok); }
 @media (max-width: 900px) { .lpx-ai-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .lpx-ai-grid { grid-template-columns: minmax(0, 1fr); } }

@@ -164,6 +164,10 @@ function ai_run(string $task, string $input, string $context = ''): array
     if (!ai_available()) {
         return ['error' => 'AI pomocník není na tomto webu zapnutý.'];
     }
+    // Používání AI stojí provozovatele peníze, proto pomocník pro texty není v edici Zdarma.
+    if (function_exists('plan_has') && !plan_has('ai-pomocnik')) {
+        return ['error' => 'AI pomocník je součástí edice Standard. Vyzkoušet ho můžete v části Předplatné.'];
+    }
     $input = trim($input);
     if ($input === '' && !in_array($task, ['reply', 'invite', 'rationale'], true)) {
         return ['error' => 'Nejdřív napište text nebo aspoň pár poznámek.'];

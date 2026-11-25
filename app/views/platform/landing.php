@@ -57,18 +57,18 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
     <ul class="lpx-ai-grid">
       <li><span class="lpx-ai-tag">Premium</span><h3>AI asistent pro obyvatele</h3>
         <p>„Od kolika je noční klid?“ „Kam nahlásit závadu?“ Obyvatelé se ptají běžnou řečí v okně v rohu webu a dostanou odpověď podle stanov, domovního řádu, dokumentů a oznámení domu – vždy s odkazem, odkud odpověď je.</p></li>
-      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Oznámení a e-maily</h3>
+      <li><span class="lpx-ai-tag is-all">Standard i Premium</span><h3>Oznámení a e-maily</h3>
         <p>Z pár poznámek napíše oznámení nebo e-mail vlastníkům. Uhladí pravopis a tón, dlouhý text zkrátí na podstatné.</p></li>
-      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Program a pozvánka</h3>
+      <li><span class="lpx-ai-tag is-all">Standard i Premium</span><h3>Program a pozvánka</h3>
         <p>Uspořádá program shromáždění do bodů, u každého hlasování napíše, co se schvaluje, a z termínu připraví pozvánku s programem a odkazem na podklady.</p></li>
-      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Hlasování per rollam</h3>
+      <li><span class="lpx-ai-tag is-all">Standard i Premium</span><h3>Hlasování per rollam</h3>
         <p>Z poznámek zformuluje jednoznačné návrhy usnesení a napíše vlastníkům odůvodnění – co návrh obnáší a dokdy hlasovat.</p></li>
       <li><span class="lpx-ai-tag">Premium</span><h3>Zápis ze shromáždění</h3>
         <p>Z poznámek nebo nahraného přepisu napíše průběh jednání po bodech programu. Účast a výsledky hlasování doplní web sám.</p></li>
-      <li><span class="lpx-ai-tag is-all">Všechny edice</span><h3>Odpovědi na závady</h3>
+      <li><span class="lpx-ai-tag is-all">Standard i Premium</span><h3>Odpovědi na závady</h3>
         <p>K hlášení obyvatele navrhne věcnou a zdvořilou odpověď výboru – stačí doplnit, co se zařídí.</p></li>
     </ul>
-    <p class="lpx-fineprint">V ceně je <?= $num($lim('free', 'ai'), 'použití') ?> AI pomocníka měsíčně v edici Zdarma, <?= $num($lim('standard', 'ai'), 'použití') ?> ve Standard a <?= $num($lim('premium', 'ai'), 'použití') ?> v Premium. Text se zpracuje službou Claude od společnosti Anthropic; pomocníka lze v nastavení webu vypnout.</p>
+    <p class="lpx-fineprint">V ceně je <?= $num($lim('standard', 'ai'), 'použití') ?> AI pomocníka měsíčně v edici Standard a <?= $num($lim('premium', 'ai'), 'použití') ?> v Premium; edice Zdarma AI nemá, ale Standard můžete <?= PLAN_TRIAL_DAYS ?> dní vyzkoušet zdarma. Text se zpracuje službou Claude od společnosti Anthropic; pomocníka lze v nastavení webu vypnout.</p>
   </div>
 </section>
 <?php endif ?>
