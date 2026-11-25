@@ -113,6 +113,30 @@ Jednorázové nastavení:
    `https://spolecnyweb.cz/cron/<klíč>` každých 15–30 minut a stejný klíč
    zapište do `storage/config.php` jako `'cron_key' => '…'`.
 
+### Záloha
+
+Workflow `.github/workflows/zaloha.yml` každý den stáhne z webu úplnou zálohu
+(`/zaloha/<klíč>`: databáze, nahrané soubory, hlášení, `config.php`; bez
+přihlášení a fronty e-mailů), ověří ji, **zašifruje veřejným klíčem age**
+a uloží jako artefakt běhu na 30 dní. Soukromý klíč má jen provozovatel.
+
+Nastavení:
+
+1. Na svém počítači: `brew install age`, pak `age-keygen -o spolecnyweb-zaloha.key`.
+   Vypíše veřejný klíč `age1…`. Soubor `spolecnyweb-zaloha.key` je soukromý
+   klíč – uložte ho do správce hesel a mimo počítač; bez něj zálohy nejdou
+   rozšifrovat.
+2. Klíč pro stažení zálohy: `openssl rand -hex 32`, do `storage/config.php`
+   jako `'backup_key' => '…'` (jiný než pro cron).
+3. GitHub → Settings → Secrets and variables → Actions: secret `BACKUP_URL`
+   = `https://spolecnyweb.cz/zaloha/<klíč>`, variable `BACKUP_AGE_RECIPIENT`
+   = veřejný klíč `age1…`.
+4. Actions → Záloha dat → Run workflow (první zkouška).
+
+Obnovení: v Actions stáhnout artefakt, `age -d -i spolecnyweb-zaloha.key
+zaloha-RRRR-MM-DD.zip.age > zaloha.zip`, rozbalit a obsah složky `storage/`
+nahrát přes FTP do `storage/` na serveru.
+
 ### Zkušební web na hostingu (staging.spolecnyweb.cz)
 
 Zkušební větev `claude/svj-web-redesign-admin-1m52yt` se po každé změně nahraje

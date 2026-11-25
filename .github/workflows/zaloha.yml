@@ -1,0 +1,61 @@
+# Pravidelná záloha dat ze serveru mimo hosting.
+#
+# Každý den stáhne z webu úplnou zálohu (adresa /zaloha/<klíč>), ověří, že je celá, ZAŠIFRUJE ji veřejným
+# klíčem age a uloží jako artefakt běhu (drží se 30 dní). Rozšifrovat ji jde jen soukromým klíčem provozovatele,
+# který na GitHubu není – GitHub ani nikdo s přístupem k repozitáři data nepřečte.
+#
+# GitHub Secrets / Variables (Settings → Secrets and variables → Actions):
+#   BACKUP_URL            (secret)   celá adresa zálohy, např. https://spolecnyweb.cz/zaloha/<klíč>
+#   BACKUP_AGE_RECIPIENT  (variable) veřejný klíč age (age1…), z `age-keygen`
+#
+# Obnovení: stáhnout artefakt, `age -d -i soukromy-klic.txt zaloha-….zip.age > zaloha.zip`, viz README – Záloha.
+name: Záloha dat
+
+on:
+  schedule:
+    - cron: '17 2 * * *'   # každý den ve 2:17 UTC (3:17 / 4:17 českého času)
+  workflow_dispatch:
+
+concurrency:
+  group: zaloha
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Stažení zálohy ze serveru
+        env:
+          BACKUP_URL: ${{ secrets.BACKUP_URL }}
+        run: |
+          test -n "$BACKUP_URL" || { echo "Chybí secret BACKUP_URL."; exit 1; }
+          umask 077
+          curl -fsS --retry 3 --retry-delay 20 --max-time 900 -o zaloha.zip "$BACKUP_URL"
+          unzip -tq zaloha.zip
+          unzip -l zaloha.zip | tail -1
+          unzip -Z1 zaloha.zip | grep -qE '^storage/(platform-|svj-).*\.sqlite$' || { echo "V záloze chybí databáze – záloha je neúplná."; exit 1; }
+
+      - name: Zašifrování (age)
+        env:
+          RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+        run: |
+          case "$RECIPIENT" in age1*) ;; *) echo "Proměnná BACKUP_AGE_RECIPIENT musí obsahovat veřejný klíč age (age1…)."; exit 1 ;; esac
+          sudo apt-get install -y -qq age > /dev/null
+          NAME="zaloha-$(date -u +%Y-%m-%d).zip.age"
+          age -r "$RECIPIENT" -o "$NAME" zaloha.zip
+          shred -u zaloha.zip
+          ls -l "$NAME"
+          echo "NAME=$NAME" >> "$GITHUB_ENV"
+
+      - name: Uložení zašifrované zálohy
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NAME }}
+          path: ${{ env.NAME }}
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: error

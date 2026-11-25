@@ -179,6 +179,15 @@ if (preg_match('~^/cron/([A-Za-z0-9_\-]{16,100})$~', $PATH, $cronKey) && ($IS_PL
     }
     exit;
 }
+// Pravidelná záloha (GitHub Actions ji stáhne, zašifruje a uloží): tajný klíč 'backup_key' v config.php.
+if (preg_match('~^/zaloha/([A-Za-z0-9_\-]{32,100})$~', $PATH, $bk) && ($IS_PLATFORM || !platform_enabled())) {
+    $key = (string) (app_config()['backup_key'] ?? '');
+    if ($key === '' || strlen($key) < 32 || !hash_equals($key, $bk[1])) {
+        http_response_code(404);
+        exit;
+    }
+    backup_send();
+}
 if ($IS_PLATFORM && preg_match('~^/sprava(/mcp(?:/[A-Za-z0-9_\-]{20,})?)$~', $PATH, $mcpPath)) {
     // MCP server pro hlášení: vlastní ověření klíčem, bez formulářového tokenu a bez přihlášení do konzole.
     $PATH = $mcpPath[1];

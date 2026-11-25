@@ -38,6 +38,9 @@ return [
     // i u webů, kam ten den nikdo nepřišel. Klíč: náhodný řetězec (např. `openssl rand -hex 20`).
     // 'cron_key' => '…',
 
+    // Pravidelná záloha (GitHub Actions stahuje https://vase-domena.cz/zaloha/<klíč>), klíč aspoň 32 znaků: `openssl rand -hex 32`.
+    // 'backup_key' => '…',
+
     // Limit odesílání e-mailů za hodinu pro celou službu (Český hosting: nejvýš 1 000 na doménu, doporučeno ~200).
     // Hromadné zprávy (rozeslání, upozornění na spotřebu, upomínky) nad limit čekají ve frontě a odcházejí postupně.
     // 'mail' => ['per_hour' => 800, 'bulk_per_hour' => 200],
