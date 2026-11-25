@@ -1,7 +1,7 @@
 <?php /* Plovoucí AI asistent v rohu stránky (jako chat na e-shopech). */ $history = $_SESSION['asistent'] ?? []; ?>
 <div class="asst" data-asst data-url="<?= e(url('/asistent')) ?>" data-csrf="<?= e(csrf_token()) ?>">
   <button class="asst-fab" type="button" aria-expanded="false" aria-controls="asst-panel" data-asst-toggle>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Zeptejte se asistenta</span></button>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg><span>AI asistent</span></button>
   <section class="asst-panel" id="asst-panel" aria-label="AI asistent" hidden>
     <header class="asst-head"><strong>AI asistent</strong><small>odpovídá podle dokumentů domu</small>
       <button class="asst-x" type="button" aria-label="Zavřít" data-asst-toggle>×</button></header>
