@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -221,6 +221,11 @@ SQL);
             ALTER TABLE payments ADD COLUMN storno_by TEXT NOT NULL DEFAULT '';
             ALTER TABLE payments ADD COLUMN storno_reason TEXT NOT NULL DEFAULT '';
             PRAGMA user_version = 22;");
+    }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 23) {
+        // Partneři – správcovské firmy s více domy a společnou fakturou.
+        partner_schema($pdo);
+        $pdo->exec('PRAGMA user_version = 23');
     }
     return $pdo;
 }
@@ -553,6 +558,7 @@ const PLATFORM_DEFAULTS = [
     'op_name' => '', 'op_ico' => '', 'op_dic' => '', 'op_address' => '', 'op_register' => '', 'op_phone' => '',
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14', 'vat_payer' => '0', 'vat_rate' => '21', 'legal_checked' => '0',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
+    'partner_discounts' => "5:10\n20:15\n50:20",
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];
@@ -754,6 +760,9 @@ function billing_order(array $t, string $edition): ?array
 /** Potvrzení přijaté platby: prodlouží předplatné o zaplacené období (od konce dosavadního, po splatnosti ode dneška). */
 function billing_confirm(array $p, string $by): ?array
 {
+    if (($p['kind'] ?? '') === 'partner') {
+        return partner_billing_confirm($p, $by);
+    }
     $t = tenant_row($p['tenant']);
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
         return null;
@@ -1025,6 +1034,9 @@ function invoice_parties(array $t): array
 /** Podklady pro tisk dokladu: u čekající platby zálohová faktura, u zaplacené faktura s údaji uloženými při vystavení. */
 function invoice_view(array $p): ?array
 {
+    if (($p['kind'] ?? '') === 'partner') {
+        return partner_invoice_view($p);
+    }
     $t = tenant_row($p['tenant']);
     $paid = in_array($p['status'], ['paid', 'storno'], true);
     $parties = $paid && $p['invoice_data'] !== '' ? (array) json_decode($p['invoice_data'], true) : ($t ? invoice_parties($t) : null);
@@ -1812,6 +1824,9 @@ function billing_storno(array $p, string $by, string $reason): ?array
     $no = 'D' . $year . sprintf('%04d', 1 + (int) pq("SELECT COUNT(*) FROM payments WHERE storno_no LIKE ?", ['D' . $year . '%'])->fetchColumn());
     pq("UPDATE payments SET status = 'storno', storno_no = ?, storno_at = ?, storno_by = ?, storno_reason = ? WHERE id = ? AND status = 'paid'",
         [$no, date('Y-m-d H:i:s'), $by, mb_substr(trim($reason), 0, 300), $p['id']]);
+    if (($p['kind'] ?? '') === 'partner') {
+        return [$no, partner_storno_revert($p)];
+    }
     $t = tenant_row($p['tenant']);
     $notes = [];
     if ($t) {

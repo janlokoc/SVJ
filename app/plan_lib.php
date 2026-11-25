@@ -112,7 +112,8 @@ function plan_storage_mb(): float
 function plan_used(string $key): int
 {
     return match ($key) {
-        'admins' => (int) one("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND active = 1")['n'],
+        // Pracovníci správcovské firmy (partnera) se do limitu správců nepočítají.
+        'admins' => max(0, (int) one("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND active = 1")['n'] - (($pids = partner_tenant_user_ids()) ? (int) one("SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND active = 1 AND id IN (" . implode(',', $pids) . ')')['n'] : 0)),
         'users' => (int) one('SELECT COUNT(*) AS n FROM users WHERE active = 1')['n'],
         'mails' => (int) one('SELECT COALESCE(SUM(sent_count), 0) AS n FROM mailings WHERE sent_at >= ?', [date('Y-m-01 00:00:00')])['n'],
         'storage' => (int) ceil(plan_storage_mb()),

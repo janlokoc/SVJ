@@ -11,4 +11,12 @@ if ($PATH === '/sprava' || str_starts_with($PATH, '/sprava/')) {
     require __DIR__ . '/platform_console.php';
     exit;
 }
+if ($PATH === '/partner' || str_starts_with($PATH, '/partner/')) {
+    // Partnerský portál správcovských firem – stejně jako konzole běží „o patro níž“, od /partner.
+    $GLOBALS['ASSET_BASE'] = $BASE;
+    $BASE .= '/partner';
+    $PATH = '/' . ltrim(substr($PATH, 8), '/');
+    require __DIR__ . '/partner_portal.php';
+    exit;
+}
 require __DIR__ . '/platform_site.php';

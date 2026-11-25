@@ -34,6 +34,50 @@ $route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
     redirect($u['role'] === 'admin' ? '/admin' : '/');
 });
 
+// Vstup pracovníka správcovské firmy (partnera): jednorázový odkaz z partnerského portálu, platí 2 minuty.
+$route('GET', '/spravce-vstup/([a-f0-9]{64})', function (string $token) {
+    $d = (array) json_decode(setting('partner_login'), true);
+    q("DELETE FROM settings WHERE `key` = 'partner_login'");
+    $t = tenant_row(TENANT);
+    $u = isset($d['uid']) && in_array((int) $d['uid'], partner_tenant_user_ids(), true) ? one("SELECT * FROM users WHERE id = ? AND active = 1 AND role = 'admin'", [(int) $d['uid']]) : null;
+    if (!$u || !$t || $t['partner_status'] !== 'active' || !hash_equals((string) ($d['hash'] ?? ''), hash('sha256', $token)) || time() > (int) ($d['expires'] ?? 0)) {
+        flash('Odkaz pro vstup správce už neplatí. Otevřete dům znovu z partnerského portálu.', 'error');
+        redirect('/');
+    }
+    login_user($u);
+    $_SESSION['partner'] = (string) ($d['by'] ?? $u['name']);
+    q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$u['id']]);
+    audit('partner_login', (string) ($d['by'] ?? $u['name']));
+    redirect('/admin');
+});
+// Správce domu (správcovská firma): výbor schvaluje přístup, vidí, kdo dům spravuje, a může přístup odebrat.
+$route('GET', '/admin/spravce-domu', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t) {
+        not_found();
+    }
+    render('admin/partner', ['title' => 'Správce domu', 't' => $t, 'partner' => partner_row((int) $t['partner_id'])]);
+});
+$route('POST', '/admin/spravce-domu', function () {
+    $u = require_admin();
+    $t = tenant_row(TENANT);
+    if (!$t || !(int) $t['partner_id'] || !empty($_SESSION['partner'])) {
+        redirect('/admin/spravce-domu');   // o přístupu rozhoduje výbor, ne sám správce
+    }
+    $p = partner_row((int) $t['partner_id']);
+    if (post('action') === 'approve' && $t['partner_status'] === 'pending') {
+        partner_approve($t, isset($_POST['billing']), $u['email']);
+        audit('partner_approved', ($p['name'] ?? '') . (isset($_POST['billing']) ? ' · předplatné hradí správce' : ''));
+        flash('Přístup správce ' . ($p['name'] ?? '') . ' je schválený.');
+    } elseif (in_array(post('action'), ['reject', 'revoke'], true)) {
+        partner_revoke($t, $u['email']);
+        audit('partner_revoked', $p['name'] ?? '');
+        flash(post('action') === 'reject' ? 'Žádost je odmítnutá.' : 'Přístup správce je ukončený. Jeho účty ve webu jsou vypnuté.', 'info');
+    }
+    redirect('/admin/spravce-domu');
+});
+
 $route('GET', '/admin/predplatne', function () {
     require_admin();
     $t = tenant_row(TENANT);
@@ -295,7 +339,7 @@ $route('POST', '/admin/predplatne/prevod', function () {
 $route('POST', '/admin/predplatne/edice', function () {
     require_admin();
     $t = tenant_row(TENANT);
-    if (empty($t['billing'])) {
+    if (empty($t['billing']) || (!empty($t['partner_billing']) && $t['partner_status'] === 'active')) {
         redirect('/admin/predplatne');
     }
     $open = billing_open($t);

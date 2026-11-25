@@ -125,6 +125,9 @@
     </div>
     <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
     <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby; datem plnění je den přijetí platby. Zálohová faktura před platbou není daňovým dokladem. <?php $vs = vat_split(edition_price('standard'), (int) $v['vat_rate']) ?><?= $v['vat_payer'] === '1' ? 'Při ceně ' . money_czk(edition_price('standard')) . ' zákazník zaplatí ' . money_czk2($vs['total']) . ' (z toho DPH ' . money_czk2($vs['vat']) . ').' : 'Neplátce nechává poznámku „Dodavatel není plátcem DPH.“' ?> Podobu dokladů si nechte potvrdit účetní.</p>
+    <h2 id="partneri">Partneři – množstevní sleva</h2>
+    <label>Sleva podle počtu domů ve správě partnera <textarea name="partner_discounts" rows="4"><?= e($v['partner_discounts']) ?></textarea></label>
+    <p class="hint">Na každý řádek „od kolika domů : sleva v %“, např. <code>5:10</code> znamená 10 % od 5 domů. Platí pro společnou fakturu partnera ze součtu cen všech domů na ní.</p>
     <h2 id="podminky">Obchodní podmínky</h2>
     <p class="hint">Výchozí text je návrh. Před otevřením registrace ho nechte projít právníkem. Formátování: řádek začínající ## je nadpis, **tučně**.</p>
     <label class="check"><input type="checkbox" name="legal_checked"<?= $v['legal_checked'] === '1' ? ' checked' : '' ?>> <span>Obchodní podmínky a smlouvu o zpracování údajů jsme zkontrolovali <small>Texty níže jsou vzor; před spuštěním je nechte projít právníkem a upravte podle své situace.</small></span></label>

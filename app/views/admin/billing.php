@@ -1,5 +1,8 @@
 <div class="wrap page narrow">
   <h1>Předplatné</h1>
+  <?php if (!empty($t['partner_billing']) && $t['partner_status'] === 'active' && ($bp = partner_row((int) $t['partner_id']))): ?>
+  <div class="callout">Předplatné tohoto webu hradí <strong>správce domu <?= e($bp['name']) ?></strong> na své společné faktuře. Edici objednává a prodlužuje on; doplňky níže si můžete objednat sami. <a href="<?= url('/admin/spravce-domu') ?>">Správce domu</a></div>
+  <?php endif ?>
   <?php if ($state['mode'] === 'free'): ?>
     <p class="lead">Tento web běží bez placení – provoz je domluven přímo s provozovatelem služby.</p>
   <?php else: ?>

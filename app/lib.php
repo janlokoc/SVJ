@@ -1884,6 +1884,7 @@ function user_badge(array $u): string
 // Části aplikace, které knihovna potřebuje vždy (i v nástrojích z příkazové řádky).
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
+require_once __DIR__ . '/partner_lib.php';
 require_once __DIR__ . '/plan_lib.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';

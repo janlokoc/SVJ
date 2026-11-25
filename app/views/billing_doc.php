@@ -13,7 +13,7 @@ $vat = ['rate' => (int) ($p['vat_rate'] ?? 0)]; $vatOn = $vat['rate'] > 0; $spli
       <?= $s['ico'] !== '' ? '<br>IČO: ' . e($s['ico']) : '' ?><?= $s['dic'] !== '' ? '<br>DIČ: ' . e($s['dic']) : '' ?><?= $s['register'] !== '' ? '<br><small>' . e($s['register']) . '</small>' : '' ?>
       <?= $s['email'] !== '' ? '<br>' . e($s['email']) : '' ?><?= $s['phone'] !== '' ? ' · ' . e($s['phone']) : '' ?></div>
     <div><span class="h-small">Odběratel</span>
-      <strong><?= e($c['name']) ?></strong><br><?= nl2br(e($c['address'])) ?><?= $c['ico'] !== '' ? '<br>IČO: ' . e($c['ico']) : '' ?></div>
+      <strong><?= e($c['name']) ?></strong><br><?= nl2br(e($c['address'])) ?><?= $c['ico'] !== '' ? '<br>IČO: ' . e($c['ico']) : '' ?><?= ($c['dic'] ?? '') !== '' ? '<br>DIČ: ' . e($c['dic']) : '' ?></div>
   </div>
   <dl class="pay-data invoice-dates">
     <dt>Datum vystavení</dt><dd><?= cz_date($d['issued']) ?></dd>
@@ -25,7 +25,7 @@ $vat = ['rate' => (int) ($p['vat_rate'] ?? 0)]; $vatOn = $vat['rate'] > 0; $spli
   </dl>
   <table class="table print-table invoice-items">
     <thead><tr><th>Položka</th><th class="t-actions"><?= $vatOn ? 'Cena bez DPH' : 'Cena' ?></th></tr></thead>
-    <tbody><tr><td><?php if ($d['item']): $once = in_array($p['kind'] ?? '', ['migration', 'aicredits'], true); ?><?= e($d['item']) ?><?= $once ? '' : ($paid ? ($p['period_from'] ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '') : (in_array($p['kind'] ?? '', ['domain', 'ai'], true) ? ' na 1 rok' : '')) ?><?php else: ?>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?><?php endif ?></td><td class="t-actions"><?= $sign . money_czk((int) $p['amount']) ?></td></tr></tbody>
+    <tbody><?php if (!empty($d['lines'])): foreach ($d['lines'] as [$lt, $la]): ?><tr><td><?= e($lt) ?></td><td class="t-actions"><?= ($la < 0 ? '−' : $sign) . money_czk(abs((int) $la)) ?></td></tr><?php endforeach; else: ?><tr><td><?php if ($d['item']): $once = in_array($p['kind'] ?? '', ['migration', 'aicredits'], true); ?><?= e($d['item']) ?><?= $once ? '' : ($paid ? ($p['period_from'] ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '') : (in_array($p['kind'] ?? '', ['domain', 'ai'], true) ? ' na 1 rok' : '')) ?><?php else: ?>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?><?php endif ?></td><td class="t-actions"><?= $sign . money_czk((int) $p['amount']) ?></td></tr><?php endif ?></tbody>
     <tfoot><?php if ($vatOn): ?><tr class="vat-row"><td>Základ daně</td><td class="t-actions"><?= $sign . money_czk2($split['base']) ?></td></tr><tr class="vat-row"><td>DPH <?= (int) $vat['rate'] ?> %</td><td class="t-actions"><?= $sign . money_czk2($split['vat']) ?></td></tr><?php endif ?>
     <tr><th><?= $credit ? 'Celkem opravou' : ($paid ? 'Celkem (uhrazeno)' : 'Celkem k úhradě') ?><?= $vatOn ? ' včetně DPH' : '' ?></th><th class="t-actions"><?= $sign . pay_money($p) ?></th></tr></tfoot>
   </table>

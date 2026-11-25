@@ -581,7 +581,7 @@ if ($PATH === '/platby' || preg_match('~^/platby/(\d+)/(potvrdit|zrusit)$~', $PA
         }
         redirect('/platby');
     }
-    render('platform/payments', ['title' => 'Platby', 'rows' => pq("SELECT p.*, t.name AS tenant_name FROM payments p LEFT JOIN tenants t ON t.slug = p.tenant
+    render('platform/payments', ['title' => 'Platby', 'rows' => pq("SELECT p.*, t.name AS tenant_name, pa.name AS partner_name FROM payments p LEFT JOIN tenants t ON t.slug = p.tenant LEFT JOIN partners pa ON pa.id = p.partner_id AND p.partner_id > 0
         ORDER BY CASE p.status WHEN 'claimed' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END, p.id DESC LIMIT 500")->fetchAll()]);
     exit;
 }
@@ -734,6 +734,73 @@ if ($PATH === '/zajem') {
 if ($PATH === '/zaznamy') {
     render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices ORDER BY id DESC LIMIT 200')->fetchAll()]);
+    exit;
+}
+// ---------- Partneři (správcovské firmy) ----------
+if ($PATH === '/partneri') {
+    $errors = [];
+    $in = ['name' => '', 'ico' => '', 'dic' => '', 'address' => '', 'email' => '', 'phone' => '', 'user_name' => '', 'user_email' => ''];
+    if ($METHOD === 'POST') {
+        foreach ($in as $k => $_) {
+            $in[$k] = trim(post($k));
+        }
+        $in['ico'] = preg_replace('/\s+/', '', $in['ico']);
+        if ($in['name'] === '') {
+            $errors[] = 'Vyplňte název firmy.';
+        }
+        if ($in['ico'] !== '' && ares_ico($in['ico']) === null) {
+            $errors[] = 'IČO není platné.';
+        }
+        if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Vyplňte fakturační e-mail firmy.';
+        }
+        if ($in['user_name'] === '' || !filter_var($in['user_email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Vyplňte jméno a e-mail prvního pracovníka (správce účtu firmy).';
+        } elseif (pq('SELECT 1 FROM partner_users WHERE email = ?', [$in['user_email']])->fetchColumn()) {
+            $errors[] = 'Tento e-mail už v partnerském portálu účet má.';
+        }
+        if (!$errors) {
+            pq('INSERT INTO partners (name, ico, dic, address, email, phone, created_at) VALUES (?,?,?,?,?,?,?)', [$in['name'], $in['ico'], $in['dic'], $in['address'], $in['email'], $in['phone'], date('Y-m-d H:i:s')]);
+            $pid = (int) platform_db()->lastInsertId();
+            $link = partner_invite(partner_row($pid), $in['user_name'], $in['user_email'], 'owner');
+            platform_log('Založení partnera', $in['name'] . ' · ' . $in['user_email']);
+            $_SESSION['partner_invite'] = ['name' => $in['user_name'], 'email' => $in['user_email'], 'link' => $link];
+            redirect('/partneri/' . $pid);
+        }
+        http_response_code(422);
+    }
+    render('platform/partners', ['title' => 'Partneři', 'errors' => $errors, 'in' => $in,
+        'rows' => pq("SELECT p.*, (SELECT COUNT(*) FROM tenants t WHERE t.partner_id = p.id AND t.partner_status = 'active') AS houses,
+            (SELECT COUNT(*) FROM tenants t WHERE t.partner_id = p.id AND t.partner_status = 'pending') AS pending,
+            (SELECT COUNT(*) FROM partner_users u WHERE u.partner_id = p.id AND u.active = 1) AS people FROM partners p ORDER BY p.active DESC, p.name")->fetchAll()]);
+    exit;
+}
+if (preg_match('~^/partneri/(\d+)$~', $PATH, $m) && ($pa = partner_row((int) $m[1]))) {
+    if ($METHOD === 'POST') {
+        $action = post('action');
+        if ($action === 'save') {
+            pq('UPDATE partners SET name = ?, ico = ?, dic = ?, address = ?, email = ?, phone = ?, note = ? WHERE id = ?',
+                [trim(post('name')) ?: $pa['name'], preg_replace('/\s+/', '', post('ico')), trim(post('dic')), trim(post('address')), trim(post('email')), trim(post('phone')), trim(post('note')), $pa['id']]);
+            platform_log('Úprava partnera', $pa['name']);
+            flash('Údaje partnera jsou uložené.');
+        } elseif ($action === 'invite' && filter_var(post('email'), FILTER_VALIDATE_EMAIL) && post('name') !== '' && !pq('SELECT 1 FROM partner_users WHERE email = ?', [post('email')])->fetchColumn()) {
+            $link = partner_invite($pa, post('name'), post('email'), post('role') === 'owner' ? 'owner' : 'member');
+            platform_log('Pozvání pracovníka partnera', $pa['name'] . ' · ' . post('email'));
+            $_SESSION['partner_invite'] = ['name' => post('name'), 'email' => post('email'), 'link' => $link];
+        } elseif ($action === 'toggle') {
+            pq('UPDATE partners SET active = ? WHERE id = ?', [$pa['active'] ? 0 : 1, $pa['id']]);
+            platform_log($pa['active'] ? 'Vypnutí partnera' : 'Zapnutí partnera', $pa['name']);
+            flash($pa['active'] ? 'Partner je vypnutý – jeho pracovníci se do portálu ani do domů nepřihlásí. Domy a jejich data zůstávají.' : 'Partner je znovu zapnutý.', 'info');
+        } else {
+            flash('Vyplňte jméno a e-mail, který v portálu ještě není.', 'error');
+        }
+        redirect('/partneri/' . $pa['id']);
+    }
+    $invite = $_SESSION['partner_invite'] ?? null;
+    unset($_SESSION['partner_invite']);
+    render('platform/partner', ['title' => $pa['name'], 'pa' => $pa, 'invite' => $invite, 'houses' => partner_tenants((int) $pa['id'], ''),
+        'people' => pq('SELECT * FROM partner_users WHERE partner_id = ? ORDER BY active DESC, name', [$pa['id']])->fetchAll(),
+        'payments' => pq("SELECT * FROM payments WHERE partner_id = ? AND kind = 'partner' ORDER BY id DESC LIMIT 50", [$pa['id']])->fetchAll()]);
     exit;
 }
 if ($PATH === '/ucet') {
