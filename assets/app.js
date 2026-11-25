@@ -499,18 +499,20 @@ document.querySelectorAll('.chat-form').forEach((f) => f.addEventListener('submi
 
 // Plovoucí AI asistent
 document.querySelectorAll('[data-asst]').forEach((box) => {
-  const panel = box.querySelector('.asst-panel'), fab = box.querySelector('.asst-fab'), log = box.querySelector('.asst-log'), form = box.querySelector('[data-asst-form]'), ta = form.querySelector('textarea'), ex = box.querySelector('.asst-examples');
+  const panel = box.querySelector('.asst-panel'), fab = box.querySelector('.asst-fab'), log = box.querySelector('.asst-log'), form = box.querySelector('[data-asst-form]'), ta = form.querySelector('textarea'), ex = box.querySelector('.asst-examples'), body = box.querySelector('.asst-body') || log;
+  // Bez rozhovoru zůstane nahoře uvítání (příklady jsou pod ním); s rozhovorem se skočí na poslední zprávu.
+  const toEnd = () => { body.scrollTop = ex && !ex.hidden ? 0 : body.scrollHeight; };
   const store = (v) => { try { sessionStorage.setItem('asst-open', v ? '1' : ''); } catch (e) {} };
   // V telefonu panel zabere celou obrazovku – stránka pod ním se nesmí posouvat.
   const mobile = window.matchMedia('(max-width: 560px)');
   const lock = () => document.documentElement.classList.toggle('asst-lock', !panel.hidden && mobile.matches);
   mobile.addEventListener('change', lock);
-  const open = (v, focus) => { panel.hidden = !v; fab.setAttribute('aria-expanded', v ? 'true' : 'false'); box.classList.toggle('is-open', v); store(v); lock(); if (v) { log.scrollTop = log.scrollHeight; if (focus) ta.focus(); } };
+  const open = (v, focus) => { panel.hidden = !v; fab.setAttribute('aria-expanded', v ? 'true' : 'false'); box.classList.toggle('is-open', v); store(v); lock(); if (v) { toEnd(); if (focus) ta.focus(); } };
   box.querySelectorAll('[data-asst-toggle]').forEach((b) => b.addEventListener('click', () => open(panel.hidden, !mobile.matches)));
   // tah prstem mimo seznam zpráv (záhlaví, formulář) neposouvá stránku za oknem
-  panel.addEventListener('touchmove', (e) => { if (!e.target.closest('.asst-log, .asst-examples, textarea')) e.preventDefault(); }, { passive: false });
+  panel.addEventListener('touchmove', (e) => { if (!e.target.closest('.asst-body, textarea')) e.preventDefault(); }, { passive: false });
   try { if (sessionStorage.getItem('asst-open') === '1') open(true, false); } catch (e) {}
-  const add = (cls, html) => { const li = document.createElement('li'); li.className = cls; li.innerHTML = html; log.appendChild(li); log.scrollTop = log.scrollHeight; return li; };
+  const add = (cls, html) => { const li = document.createElement('li'); li.className = cls; li.innerHTML = html; log.appendChild(li); toEnd(); return li; };
   const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ask = async (q) => {
     q = q.trim(); if (!q) return;
@@ -519,7 +521,7 @@ document.querySelectorAll('[data-asst]').forEach((box) => {
     const f = new FormData(); f.append('_csrf', box.dataset.csrf); f.append('ajax', '1'); f.append('q', q);
     try { const r = await (await fetch(box.dataset.url, { method: 'POST', body: f, credentials: 'same-origin' })).json(); wait.classList.remove('asst-wait'); wait.innerHTML = r.ok ? r.html : '<p class="asst-err">' + esc(r.error || 'Asistent teď neodpovídá.') + '</p>'; }
     catch (e) { wait.classList.remove('asst-wait'); wait.innerHTML = '<p class="asst-err">Asistent teď neodpovídá. Zkuste to prosím znovu.</p>'; }
-    form.querySelector('button').disabled = false; log.scrollTop = log.scrollHeight; ta.focus();
+    form.querySelector('button').disabled = false; toEnd(); ta.focus();
   };
   form.addEventListener('submit', (e) => { e.preventDefault(); ask(ta.value); });
   ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(ta.value); } });

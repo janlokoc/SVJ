@@ -5,12 +5,14 @@
   <section class="asst-panel" id="asst-panel" aria-label="AI asistent" hidden>
     <header class="asst-head"><strong>AI asistent</strong><small>odpovídá podle dokumentů domu</small>
       <button class="asst-x" type="button" aria-label="Zavřít" data-asst-toggle>×</button></header>
+    <div class="asst-body">
     <ol class="asst-log" aria-live="polite">
       <li class="chat-a asst-hello">Dobrý den, <?= e(cz_vocative(explode(' ', trim(user()['name']))[0])) ?>. Zeptejte se na cokoli o domě – odpovím podle stanov, domovního řádu, dokumentů a oznámení na webu a ukážu, odkud odpověď mám.</li>
       <?php foreach ($history as $h): ?><li class="chat-q"><?= nl2br(e($h['q'])) ?></li><li class="chat-a"><?= assistant_entry_html($h) ?></li><?php endforeach ?>
     </ol>
     <div class="asst-examples"<?= $history ? ' hidden' : '' ?>><p>Na co se můžete zeptat:</p>
       <?php foreach (assistant_examples() as $ex): ?><button type="button" class="asst-chip" data-asst-ask><?= e($ex) ?></button><?php endforeach ?></div>
+    </div>
     <form class="asst-form" data-asst-form>
       <label class="sr-only" for="asst-q">Vaše otázka</label>
       <textarea id="asst-q" name="q" rows="2" maxlength="1000" placeholder="Napište otázku…" required></textarea>
