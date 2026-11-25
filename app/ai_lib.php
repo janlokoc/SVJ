@@ -18,6 +18,8 @@ const AI_TASKS = [
         . 'U shromáždění drž obvyklé pořadí: zahájení a kontrola usnášeníschopnosti na začátku, body k hlasování, diskuze a závěr na konci; jinak pořadí neměň. '
         . 'U bodu, o kterém se hlasuje, stručně a jednoznačně napiš, co se schvaluje. Oprav pravopis a zjednoduš kostrbaté formulace. '
         . 'Tučně (**…**) zvýrazni jen několik opravdu důležitých míst – např. co si mají vlastníci přinést, termín, „Účast nutná“. '
+        . 'Datum, čas ani místo do programu nepiš (web je u termínu ukazuje zvlášť) a nezačínej úvodním řádkem – první řádek je první bod. '
+        . 'Obecné pokyny, které se netýkají jednoho bodu (např. „Účast nutná“, plná moc), dej až na úplný konec jako samostatný řádek bez pomlčky. '
         . 'Nepřidávej body, čísla, částky ani jména, které v textu nejsou; když je vstup jen pár poznámek, udělej z nich body programu.'],
     'resolution' => ['Formulovat návrhy usnesení', 'Z poznámek níže formuluj návrhy usnesení, o kterých budou vlastníci hlasovat (pro / proti / zdržuji se). '
         . 'Každý návrh napiš na jeden samostatný řádek – bez odrážek, číslování a bez jakéhokoli formátování (žádné hvězdičky). '
