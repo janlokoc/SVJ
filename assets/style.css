@@ -462,6 +462,15 @@ div.stat:hover { border-color: var(--line); }
   .print-table thead { display: table-header-group !important; }
   .print-table, .print-table tbody { display: table !important; } .print-table tbody { display: table-row-group !important; }
   .print-table tr { display: table-row !important; page-break-inside: avoid; } .print-table td, .print-table th { display: table-cell !important; }
+  /* Tisk na výšku je užší než mobilní zlom – mobilní úprava tabulek (bez mřížky, buňky pod sebou) se při tisku nepoužije. */
+  .print-table { width: 100% !important; border-collapse: collapse !important; border-radius: 0 !important; table-layout: auto; background: #fff !important; }
+  .print-table th, .print-table td { border: 1px solid #000 !important; padding: 4pt 6pt !important; vertical-align: top; color: #000 !important; background: #fff !important; }
+  .print-table tr { border: 0 !important; padding: 0 !important; }
+  .print-table td:empty { display: table-cell !important; }
+  .print-table td::before { content: none !important; }
+  .print-table th { font-size: 8pt; }
+  .print-table td:nth-child(1), .print-table td:nth-child(3), .print-table th:nth-child(3) { white-space: nowrap; overflow-wrap: normal; }
+  .print-table .sign-cell { min-width: 28mm; }
   a { color: #000; text-decoration: none; }
 }
 
