@@ -56,8 +56,11 @@
           <button class="btn btn-ghost" type="submit">Vypnout dvoufázové ověření</button>
         </form>
       <?php elseif ($totpSetup): ?>
-        <p><strong>1.</strong> V telefonu otevřete ověřovací aplikaci (Google Authenticator, Microsoft Authenticator, Aegis apod.), zvolte přidání účtu a <strong>zadání klíče ručně</strong>. Typ klíče: podle času.</p>
-        <p><strong>2.</strong> Opište tento klíč:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
+        <?php $host = (string) parse_url(absolute_url('/'), PHP_URL_HOST); ?>
+        <p><strong>1.</strong> V telefonu otevřete ověřovací aplikaci (Microsoft Authenticator, Google Authenticator, Aegis apod.), zvolte přidání účtu a <strong>naskenujte tento QR kód</strong>:</p>
+        <div class="totp-qr"><?= totp_qr($totpSetup, site('name'), $u['email'], $host) ?></div>
+        <p class="hint">Nastavujete to přímo v telefonu? <a href="<?= e(totp_uri($totpSetup, site('name'), $u['email'])) ?>">Otevřít v ověřovací aplikaci</a>. Nebo v aplikaci zvolte zadání klíče ručně (typ: podle času) a opište klíč:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
+        <p><strong>2.</strong> Aplikace začne ukazovat šestimístný kód, který se každých 30 sekund mění.</p>
         <form method="post" action="<?= url('/muj-ucet/overeni') ?>" class="form">
           <?= csrf_field() ?><input type="hidden" name="action" value="confirm">
           <label><strong>3.</strong> Zadejte šestimístný kód, který aplikace ukazuje <input type="text" name="code" id="totp-confirm" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></label>

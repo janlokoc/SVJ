@@ -13,7 +13,10 @@
         <p><span class="status status-done">Zapnuto</span></p>
         <form method="post" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="totp_disable"><label>Pro vypnutí zadejte heslo <input type="password" name="current_password" required></label><button class="btn btn-ghost" type="submit">Vypnout</button></form>
       <?php elseif ($totpSetup): ?>
-        <p>V ověřovací aplikaci přidejte účet zadáním klíče:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
+        <?php $svc = pset('service_name') !== '' ? pset('service_name') . ' – správa' : platform_main_domain() . ' – správa'; ?>
+        <p>V ověřovací aplikaci (Microsoft Authenticator, Google Authenticator…) přidejte účet <strong>naskenováním QR kódu</strong>:</p>
+        <div class="totp-qr"><?= totp_qr($totpSetup, $svc, $super['email'], platform_main_domain()) ?></div>
+        <p class="hint">V telefonu: <a href="<?= e(totp_uri($totpSetup, $svc, $super['email'])) ?>">otevřít v ověřovací aplikaci</a>. Nebo klíč zadejte ručně:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
         <form method="post" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="totp_confirm"><label>Kód z aplikace <input type="text" name="code" id="totp-confirm" inputmode="numeric" maxlength="7" required></label><button class="btn" type="submit">Zapnout</button></form>
       <?php else: ?>
         <p>Hlavní správce má přístup ke všem společenstvím – dvoufázové ověření důrazně doporučujeme.</p>

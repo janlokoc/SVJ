@@ -1503,6 +1503,27 @@ function totp_new_secret(): string
     }
     return implode('', array_map(fn($c) => BASE32[bindec($c)], str_split($s, 5)));
 }
+/**
+ * Odkaz otpauth:// pro ověřovací aplikace (Microsoft/Google Authenticator, Aegis…): jako QR kód, nebo k otevření v telefonu.
+ * Standardní nastavení: SHA-1, 6 číslic, 30 sekund.
+ */
+function totp_uri(string $secret, string $issuer, string $account): string
+{
+    $issuer = trim(str_replace(':', ' ', $issuer));
+    return 'otpauth://totp/' . rawurlencode($issuer) . ':' . rawurlencode($account) . '?secret=' . $secret . '&issuer=' . rawurlencode($issuer) . '&algorithm=SHA1&digits=6&period=30';
+}
+/** QR kód (SVG) k naskenování v ověřovací aplikaci; když se dlouhý název nevejde, použije kratší. */
+function totp_qr(string $secret, string $issuer, string $account, string $short): string
+{
+    require_once __DIR__ . '/qr.php';
+    foreach ([[$issuer, $account], [$short, $account], [$short, '']] as [$i, $a]) {
+        $svg = qr_svg(totp_uri($secret, $i, $a), 'QR kód pro ověřovací aplikaci');
+        if ($svg !== '') {
+            return $svg;
+        }
+    }
+    return '';
+}
 function totp_code(string $secret, int $counter): string
 {
     $bits = '';
