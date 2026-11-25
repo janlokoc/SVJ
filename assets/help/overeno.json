@@ -41,6 +41,18 @@
     ],
     "note": "Přidání webu na plochu na skutečném iPhonu a telefonu s Androidem jsme ověřit nemohli – ověřovací běh nemá skutečný telefon. Ověřeno je zapnutí na webu, šifrování a doručení zprávy přes zkušební push službu a zobrazení upozornění v prohlížeči."
   },
+  "parovani-plateb": {
+    "date": "2026-11-25",
+    "checks": 5,
+    "steps": [
+      "Stav dvou jednotek z účetnictví s variabilními symboly 4801 a 4803 nahrán k 1. 11.",
+      "Výpis GPC: platba s VS 4801 se spárovala, platba s neznámým VS zůstala k ručnímu přiřazení.",
+      "Jednotka s VS 4801 je po započtení platby vyrovnaná.",
+      "Opakované nahrání stejného výpisu nic nepřidalo.",
+      "Ručně přiřazená platba vyrovnala druhou jednotku."
+    ],
+    "note": "Postup v internetovém bankovnictví (stažení výpisu, vytvoření tokenu Fio) nešlo ověřit – je na webu banky. Ověřeno je načtení výpisu ve formátu GPC, spárování podle VS a ruční přiřazení."
+  },
   "import-z-katastru": {
     "date": "2026-11-25",
     "checks": 3,

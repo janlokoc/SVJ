@@ -26,6 +26,7 @@ $with = array_filter($rows, fn($r) => $r['as_of'] !== null); $debtors = array_fi
   <?php endif ?>
   <section class="card" id="banka">
     <h2>Párování plateb s bankou</h2>
+    <p><?= help_link('parovani-plateb') ?></p>
     <p>Příchozí platby z výpisu účtu společenství se podle variabilního symbolu přiřadí k jednotkám a <strong>přičtou se ke stavu z účetnictví</strong> – jen ty, které přišly po dni, ke kterému stav platí. Nic se tak nezapočítá dvakrát; po dalším nahrání z účetnictví se počítá zase od nového dne.</p>
     <div class="two-col">
       <form method="post" enctype="multipart/form-data" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="bank_upload">

@@ -332,6 +332,32 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     } else { check(false, 'service worker se nezaregistroval'); }
     pushSrv.close(); if (b2 !== b) await b2.close();
 
+    begin('parovani-plateb', 'Postup v internetovém bankovnictví (stažení výpisu, vytvoření tokenu Fio) nešlo ověřit – je na webu banky. Ověřeno je načtení výpisu ve formátu GPC, spárování podle VS a ruční přiřazení.');
+    {
+      const u1 = sql("SELECT entrance || '/' || number FROM units ORDER BY id LIMIT 1"), u2 = sql("SELECT entrance || '/' || number FROM units ORDER BY id LIMIT 1 OFFSET 2");
+      const pre = sql("SELECT value FROM settings WHERE key = 'site_unit_prefix'") || '';
+      await admin.goto(T + '/admin/platby');
+      await admin.fill('textarea[name=text]', pre + u1 + ' ; 4 250 ; -4 250 ; 4801\n' + pre + u2 + ' ; 3 000 ; -3 000 ; 4803');
+      await admin.fill('[name=as_of]', '2026-11-01');
+      await admin.click('form:has([value=import]) button');
+      check(sql("SELECT COUNT(*) FROM unit_accounts WHERE vs IN ('4801','4803')") === '2', 'stav z účetnictví nahrán'); step('Stav dvou jednotek z účetnictví s variabilními symboly 4801 a 4803 nahrán k 1. 11.');
+      await admin.setInputFiles('[name=statement]', path.join(__dirname, 'vypis-ukazka.gpc'));
+      await admin.click('form:has([value=bank_upload]) button');
+      const fl = await text(admin, '.flash');
+      check(fl.includes('spárováno s jednotkou 1') && fl.includes('nespárováno 1'), 'výpis GPC: ' + fl); step('Výpis GPC: platba s VS 4801 se spárovala, platba s neznámým VS zůstala k ručnímu přiřazení.');
+      const st = async (u) => (await admin.locator('table.table').last().locator('tr', { hasText: u }).first().locator('td').nth(3).textContent()).replace(/\s+/g, ' ');
+      check((await st(u1)).includes('vyrovnáno'), 'jednotka s VS 4801 vyrovnána: ' + await st(u1)); step('Jednotka s VS 4801 je po započtení platby vyrovnaná.');
+      await shot(admin.locator('#banka'), 'banka-1-nacteno.jpg', 1000);
+      await admin.setInputFiles('[name=statement]', path.join(__dirname, 'vypis-ukazka.gpc'));
+      await admin.click('form:has([value=bank_upload]) button');
+      check((await text(admin, '.flash')).includes('nových plateb 0'), 'opakované nahrání nic nezdvojí'); step('Opakované nahrání stejného výpisu nic nepřidalo.');
+      const um = admin.locator('.bank-tx tr.is-unmatched');
+      await um.locator('select').selectOption({ label: pre + u2 });
+      await um.locator('button').click();
+      check((await st(u2)).includes('vyrovnáno'), 'ruční přiřazení: ' + await st(u2)); step('Ručně přiřazená platba vyrovnala druhou jednotku.');
+      await shot(admin.locator('#banka'), 'banka-2-prirazeno.jpg', 1000);
+    }
+
     begin('import-z-katastru', 'Kopírování ze stránky Nahlížení do KN nešlo ověřit automaticky – web katastru strojové procházení blokuje. Ověřeno je vložení textu ve stejné podobě, v jaké ho stránka katastru zkopíruje.');
     // Nové společenství zatím jednotky nemá – stejně jako při prvním importu.
     run('DELETE FROM user_units; DELETE FROM units;');

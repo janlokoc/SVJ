@@ -10,6 +10,7 @@ const HELP = [
     'import-z-katastru' => ['Import jednotek z katastru', 'Jak z Nahlížení do katastru nemovitostí naráz založit jednotky s vlastníky a podíly.', false, ['/admin/jednotky']],
     'shromazdeni' => ['Shromáždění od pozvánky po zápis', 'Přihlášky, plné moci, prezence na místě, hlasování o návrzích a zápis.', false, ['/admin/terminy']],
     'upozorneni-do-telefonu' => ['Web na ploše telefonu a upozornění', 'Jak si web přidat na plochu jako aplikaci a zapnout upozornění na displej (iPhone i Android).', true, ['/muj-ucet']],
+    'parovani-plateb' => ['Párování plateb s bankou', 'Jak nahrát výpis z banky (nebo zapojit Fio API), aby se zálohy jednotek aktualizovaly samy.', false, ['/admin/platby']],
     'odecty-api' => ['Dálkové odečty: příjem dat od odečtové firmy', 'Technický popis pro odečtovou firmu – formát dat, ukázky a odpovědi.', true, ['/admin/odecty']],
 ];
 
