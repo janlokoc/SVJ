@@ -744,7 +744,11 @@ function tel_href(string $phone): string
 }
 
 /** Bezpečné formátování textu: odstavce, odrážky (- ), nadpisy (## ), **tučně**, odkazy. */
-function format_text(string $text): string
+/**
+ * Jednoduché formátování textu. $notes: řádek bez pomlčky hned pod bodem výčtu je poznámka k tomuto bodu
+ * (program termínu: „- Volba výboru“ + „Schvaluje se…“), ne nový odstavec.
+ */
+function format_text(string $text, bool $notes = false): string
 {
     $inline = function (string $s): string {
         $s = e($s);
@@ -759,7 +763,7 @@ function format_text(string $text): string
             $out .= '<p>' . implode('<br>', array_map($inline, $paragraph)) . '</p>';
         }
         if ($list) {
-            $out .= '<ul>' . implode('', array_map(fn($l) => '<li>' . $inline($l) . '</li>', $list)) . '</ul>';
+            $out .= '<ul>' . implode('', array_map(fn($l) => '<li>' . implode('<br><span class="li-note">', array_map($inline, (array) $l)) . str_repeat('</span>', count((array) $l) - 1) . '</li>', $list)) . '</ul>';
         }
         $paragraph = $list = [];
     };
@@ -775,6 +779,8 @@ function format_text(string $text): string
                 $flush();
             }
             $list[] = substr($line, 2);
+        } elseif ($notes && $list) {
+            $list[count($list) - 1] = array_merge((array) $list[count($list) - 1], [$line]);
         } else {
             if ($list) {
                 $flush();

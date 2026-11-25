@@ -247,7 +247,7 @@ document.querySelectorAll('.ai-box').forEach((box) => {
   // Výsledek se vkládá buď zpět do pole, nebo do jiného místa na stránce (zápis ze shromáždění).
   const out = box.dataset.aiOutput ? document.querySelector(box.dataset.aiOutput) : null;
   const read = () => (out ? out.innerText : field.value);
-  const write = (v) => { if (out) out.innerText = v; else field.value = v; };
+  const write = (v) => { if (out) out.innerText = v; else { field.value = v; field.dispatchEvent(new Event('input', { bubbles: true })); } };
   let before = null;
   undo.addEventListener('click', () => { if (before !== null) { write(before); before = null; undo.hidden = true; status.textContent = ''; } });
   box.querySelectorAll('[data-ai-task]').forEach((btn) => btn.addEventListener('click', async () => {
@@ -604,3 +604,36 @@ document.addEventListener('click', (e) => {
   dlg.showModal();
   close.focus();
 });
+
+// Živý náhled textu pod polem (stejná pravidla jako format_text() na serveru: odstavce, „- “ odrážky, ## nadpis, **tučně**, odkazy).
+(() => {
+  const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const inline = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/https?:\/\/[^\s<]+[^\s<.,;:!?)]/g, (u) => '<a href="' + u + '" rel="noopener noreferrer">' + u + '</a>');
+  const format = (text, notes) => {
+    let html = ''; let par = []; let list = [];
+    const flush = () => {
+      if (par.length) html += '<p>' + par.map(inline).join('<br>') + '</p>';
+      if (list.length) html += '<ul>' + list.map((l) => '<li>' + [].concat(l).map(inline).join('<br><span class="li-note">') + '</span>'.repeat([].concat(l).length - 1) + '</li>').join('') + '</ul>';
+      par = []; list = [];
+    };
+    text.replace(/\r/g, '').trim().split('\n').forEach((raw) => {
+      const line = raw.trim();
+      if (line === '') flush();
+      else if (line.startsWith('## ')) { flush(); html += '<h3>' + inline(line.slice(3)) + '</h3>'; }
+      else if (line.startsWith('- ')) { if (par.length) flush(); list.push(line.slice(2)); }
+      else if (notes && list.length) list[list.length - 1] = [].concat(list[list.length - 1], line);
+      else { if (list.length) flush(); par.push(line); }
+    });
+    flush();
+    return html;
+  };
+  document.querySelectorAll('[data-preview-for]').forEach((box) => {
+    const form = box.closest('form');
+    const field = form && form.querySelector('[name="' + box.dataset.previewFor + '"]');
+    const out = box.querySelector('.prose');
+    if (!field || !out) return;
+    const update = () => { const v = field.value.trim(); box.hidden = v === ''; out.innerHTML = v ? format(v, box.hasAttribute('data-preview-notes')) : ''; };
+    field.addEventListener('input', update);
+    update();
+  });
+})();

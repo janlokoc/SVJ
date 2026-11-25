@@ -7,6 +7,7 @@
     <label>Nadpis <input type="text" name="title" value="<?= e($post['title']) ?>" maxlength="200" required></label>
     <label>Text
       <textarea name="body" rows="10"><?= e($post['body']) ?></textarea>
+      <div class="text-preview" data-preview-for="body" hidden><p class="h-small">Náhled – takhle text uvidí obyvatelé</p><div class="prose" aria-live="polite"></div></div>
       <?php $aiTarget = 'textarea[name=body]'; $aiTasks = ['draft', 'polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai.php'; ?>
     </label>
     <p class="hint">Odstavce oddělte prázdným řádkem. Odrážky začněte pomlčkou a mezerou (- ), tučné písmo zapište **takto**, odkazy stačí vložit celé (https://…).</p>

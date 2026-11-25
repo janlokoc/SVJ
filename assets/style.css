@@ -624,6 +624,10 @@ div.stat:hover { border-color: var(--line); }
 .report-msg-head { margin: 0 0 .25rem; display: flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
 .report-msg .prose > :last-child { margin-bottom: 0; }
 .report-followup { margin-top: .75rem; }
+.li-note { color: var(--muted); font-size: .95em; }
+.text-preview { border: 1px dashed var(--line); border-radius: var(--radius); padding: .8rem 1rem; background: var(--surface); }
+.text-preview .h-small { margin: 0 0 .4rem; }
+.text-preview .prose > :last-child { margin-bottom: 0; }
 .report-followup summary { cursor: pointer; font-weight: 600; color: var(--primary); }
 .report-followup .form { margin-top: .6rem; }
 .report-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; max-height: 360px; object-fit: contain; }

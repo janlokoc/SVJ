@@ -14,7 +14,7 @@
   <h2>1. Účast a usnášeníschopnost</h2>
   <p>Přítomni jsou vlastníci <?= $present ?> z <?= (int) $att['units'] ?> jednotek (osobně <?= (int) $att['counts']['yes'] ?>, v zastoupení <?= (int) $att['counts']['proxy'] ?>), kteří mají <strong><?= percent_cz($att['percent']) ?></strong> <?= $att['byShare'] ? 'všech hlasů podle spoluvlastnických podílů' : 'všech hlasů (jeden hlas na jednotku)' ?>.
     Shromáždění <strong><?= $att['quorate'] ? 'je' : 'není' ?> usnášeníschopné</strong> (potřeba je více než <?= (int) $att['threshold'] ?> %). Prezenční listina je přílohou zápisu.</p>
-  <?php if ($ev['program'] !== ''): ?><h2>2. Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
+  <?php if ($ev['program'] !== ''): ?><h2>2. Program</h2><div class="prose"><?= format_text($ev['program'], true) ?></div><?php endif ?>
   <h2><?= $ev['program'] !== '' ? '3' : '2' ?>. Průběh jednání</h2>
 <?php
     $aiContext = 'Jednání: ' . $ev['title'] . ', ' . cz_date($ev['event_date'], true) . ($ev['event_time'] !== '' ? ' v ' . $ev['event_time'] : '') . ($ev['place'] !== '' ? ', ' . $ev['place'] : '')

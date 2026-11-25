@@ -115,6 +115,11 @@ function program_points(string $program): array
     $hasBullets = (bool) preg_grep($bullet, $lines);
     foreach ($lines as $line) {
         if ($hasBullets && !preg_match($bullet, $line)) {
+            // Upřesnění pod bodem, které říká, o čem se rozhoduje („Schvaluje se zvýšení z 110 na 170 Kč“), patří ke znění návrhu.
+            $note = trim(str_replace('**', '', $line));
+            if ($out && $out[count($out) - 1][1] && preg_match('/^(schval|volí|volba|bere se na vědomí|bere na vědomí|návrh)/iu', $note)) {
+                $out[count($out) - 1][0] = mb_substr($out[count($out) - 1][0] . ' – ' . mb_strtolower(mb_substr($note, 0, 1)) . mb_substr($note, 1), 0, 300);
+            }
             continue;
         }
         $t = trim(str_replace('**', '', preg_replace($bullet, '', $line)));   // tučné zvýraznění do názvu návrhu nepatří

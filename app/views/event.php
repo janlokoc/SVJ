@@ -65,7 +65,7 @@
     </section>
   <?php endif ?>
 
-  <?php if ($ev['program'] !== ''): ?><h2>Program</h2><div class="prose"><?= format_text($ev['program']) ?></div><?php endif ?>
+  <?php if ($ev['program'] !== ''): ?><h2>Program</h2><div class="prose"><?= format_text($ev['program'], true) ?></div><?php endif ?>
   <?php if ($evDocs): ?><h2>Podklady</h2><?php $docs = $evDocs; require __DIR__ . '/_doclist.php'; ?><?php endif ?>
   <?php if ($evPolls): ?><h2>Hlasování</h2><ul class="thread-list"><?php foreach ($evPolls as $pl): ?><li><a href="<?= url('/hlasovani/' . $pl['id']) ?>"><span class="thread-title"><?= e($pl['title']) ?></span><span class="thread-meta"><?= POLL_STATES[poll_state($pl)] ?></span></a></li><?php endforeach ?></ul><?php endif ?>
   <?php if (is_admin()): ?><p><a class="btn btn-small btn-ghost" href="<?= url('/admin/terminy/' . $ev['id'] . '/ucast') ?>">Přehled účasti pro výbor</a></p><?php endif ?>
