@@ -186,7 +186,7 @@ if (isset($steps[$PATH])) {
             }
             $pdo = tenant_pdo($slug);
             // Zakládající, který je zapsaný ve výboru, dostane i funkci (porovnává se jméno bez titulů).
-            $norm = fn(string $n) => trim(preg_replace('/\s+/', ' ', search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $n))));
+            $norm = 'ares_name_key';
             $position = '';
             foreach ($_SESSION['signup']['officers'] ?? [] as $o) {
                 if ($norm($o['name']) === $norm($person)) {

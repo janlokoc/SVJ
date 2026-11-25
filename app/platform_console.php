@@ -182,7 +182,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni|/vybor)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -392,6 +392,61 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
             flash('Účet ' . $u['email'] . ' dvoufázové ověření zapnuté nemá.', 'info');
         }
         redirect('/svj/' . $slug . '#podpora');
+    }
+    // Výbor podle veřejného rejstříku (ARES): účty pro členy orgánů s funkcí; pozvánky se zobrazí k předání.
+    if ($action === '/vybor') {
+        $pdo = tenant_pdo($slug);
+        $ico = tenant_settings($slug)['ico'] ?? '';
+        $res = ares_officers($ico);
+        $users = $pdo->query('SELECT id, name, email, role, position FROM users ORDER BY name')->fetchAll();
+        $byName = [];
+        foreach ($users as $u) {
+            $byName[ares_name_key($u['name'])] = $u;
+        }
+        $errors = $created = [];
+        if ($res['ok'] && $METHOD === 'POST') {
+            foreach ($res['members'] as $i => $m) {
+                if (!isset($_POST['use'][$i])) {
+                    continue;
+                }
+                $pos = isset(POSITIONS[$_POST['position'][$i] ?? '']) ? (string) $_POST['position'][$i] : '';
+                $role = ($_POST['role'][$i] ?? '') === 'admin' ? 'admin' : 'resident';
+                if ($existing = $byName[ares_name_key($m['name'])] ?? null) {
+                    $pdo->prepare('UPDATE users SET position = ? WHERE id = ?')->execute([$pos, $existing['id']]);
+                    $created[] = ['name' => $existing['name'], 'note' => 'funkce nastavena (účet už existoval)', 'link' => ''];
+                    continue;
+                }
+                $email = trim((string) ($_POST['email'][$i] ?? ''));
+                $dup = $pdo->prepare('SELECT 1 FROM users WHERE email = ?');
+                $dup->execute([$email]);
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $errors[] = 'U člena ' . $m['name'] . ' chybí platný e-mail.';
+                    continue;
+                }
+                if ($dup->fetchColumn()) {
+                    $errors[] = 'E-mail ' . $email . ' už na webu má jiný účet (' . $m['name'] . ').';
+                    continue;
+                }
+                $token = bin2hex(random_bytes(32));
+                $pdo->prepare("INSERT INTO users (name, email, role, kind, position, password_hash, invite_hash, invite_expires) VALUES (?,?,?,'owner',?,?,?,?)")
+                    ->execute([$m['name'], $email, $role, $pos, NO_PASSWORD, hash('sha256', $token), date('Y-m-d H:i:s', time() + 14 * 86400)]);
+                platform_log('Účet člena výboru z rejstříku', $slug . ' · ' . $email . ($role === 'admin' ? ' · správce webu' : ''));
+                $created[] = ['name' => $m['name'], 'note' => ($role === 'admin' ? 'správce webu' : 'obyvatel') . ' · ' . $email, 'link' => tenant_url($t, '/pozvanka/' . $token)];
+            }
+            if ($errors) {
+                http_response_code(422);
+            }
+            // nově uložené účty se v seznamu hned ukážou jako existující
+            foreach ($pdo->query('SELECT id, name, email, role, position FROM users')->fetchAll() as $u) {
+                $byName[ares_name_key($u['name'])] = $u;
+            }
+        }
+        $rows = [];
+        foreach ($res['members'] ?? [] as $i => $m) {
+            $rows[$i] = $m + ['user' => $byName[ares_name_key($m['name'])] ?? null];
+        }
+        render('platform/tenant_committee', ['title' => 'Výbor z rejstříku · ' . $t['name'], 't' => $t, 'ico' => $ico, 'res' => $res, 'rows' => $rows, 'errors' => $errors, 'created' => $created, 'hasAdmin' => (bool) array_filter($users, fn($u) => $u['role'] === 'admin')]);
+        exit;
     }
     if ($METHOD === 'POST' && $action === '/spravce') {
         $pdo = tenant_pdo($slug);

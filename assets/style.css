@@ -1666,3 +1666,4 @@ body:has(.asst) .site-footer { padding-bottom: 5.5rem; }
 .committee-has { align-self: end; }
 .committee-how p { margin: .4rem 0 0; }
 .ares-officers { display: flex; flex-wrap: wrap; gap: .4rem; } .ares-officers .h-small, .ares-officers .hint { width: 100%; margin: 0; }
+.ares-later > summary { cursor: pointer; font-weight: 600; margin-bottom: .5rem; } .committee-done { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; } .committee-done code { overflow-wrap: anywhere; }

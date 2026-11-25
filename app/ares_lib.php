@@ -213,3 +213,8 @@ function ares_officers(string $raw): array
     }
     return ['ok' => true, 'ico' => $ico, 'name' => (string) ($rec['obchodniJmeno'][0]['hodnota'] ?? ($rec['obchodniJmeno'] ?? '')), 'members' => $members, 'how' => array_values(array_unique($how))];
 }
+/** Jméno pro porovnání účtu s členem z rejstříku: bez titulů, diakritiky a velikosti písmen. */
+function ares_name_key(string $name): string
+{
+    return trim(preg_replace('/\s+/', ' ', search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $name))));
+}

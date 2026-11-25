@@ -891,7 +891,7 @@ $userImport = function () {
 // Výbor podle veřejného rejstříku (ARES): správce u každého člena doplní e-mail a pošle pozvánku, nebo jen nastaví funkci existujícímu účtu.
 $committee = function () {
     require_admin();
-    $key = fn(string $n) => search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $n));
+    $key = 'ares_name_key';
     $users = all('SELECT id, name, email, position, active, password_hash FROM users ORDER BY name');
     $byName = [];
     foreach ($users as $u) {

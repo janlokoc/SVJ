@@ -11,7 +11,7 @@
   <?php endif ?>
   <?php if (!$new): ?>
   <nav class="tenant-jump" aria-label="Části stránky">
-    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu (' . count($externalDocs) . ')</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu (' . count($externalDocs) . ')</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#vybor">Výbor z rejstříku</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
   </nav>
   <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
   <details class="card tenant-users" id="uzivatele" open>
@@ -71,8 +71,10 @@
   <?php endif ?>
   <form method="post" class="card form" id="udaje">
     <?= csrf_field() ?>
+    <?php $aresUrl = url('/ares'); ?>
+    <?php if (!$new): ?><details class="ares-later"><summary>Doplnit nebo opravit údaje z ARES</summary><?php require __DIR__ . '/_ares.php'; ?><p class="hint">Vyplní název, celý název, adresu a IČO níže – uloží se až tlačítkem pod formulářem.</p></details><?php endif ?>
     <?php if ($new): ?>
-      <?php $aresUrl = url('/ares'); require __DIR__ . '/_ares.php'; ?>
+      <?php require __DIR__ . '/_ares.php'; ?>
       <label>Adresa webu <span class="slug-row"><?php if (platform_main_paths()): ?><span><?= e(platform_main_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_main_domain()) ?>" aria-describedby="slug-fixed-note" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><?php if (!platform_main_paths()): ?><span>.<?= e(platform_main_domain()) ?></span><?php endif ?></span></label>
       <p class="hint">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
     <?php endif ?>
@@ -246,6 +248,11 @@
     <p class="hint">Zapomenuté heslo si každý obnoví sám odkazem „Zapomněli jste heslo?“ na přihlašovací stránce. Tady pomůžete, když mu e-mail nechodí nebo ztratil telefon s ověřovacím kódem. Odkaz na nové heslo platí 24 hodin; dosavadní heslo platí, dokud si uživatel nenastaví nové. Hesla uživatelů neznáte a nejdou zobrazit.</p>
     <?php endif ?>
   </div>
+  <section class="card" id="vybor">
+    <h2>Výbor z rejstříku</h2>
+    <p>Načte současné členy výboru a kontrolní komise z veřejného rejstříku (ARES) podle IČO webu<?= ($t['ico'] ?? '') !== '' ? ' ' . e($t['ico']) : '' ?> a založí jim účty s funkcí – předsedovi třeba rovnou jako správci webu.</p>
+    <a class="btn" href="<?= url('/svj/' . $t['slug'] . '/vybor') ?>">Načíst výbor z rejstříku</a>
+  </section>
   <form method="post" action="<?= url('/svj/' . $t['slug'] . '/spravce') ?>" class="card form">
     <h2>Přidat správce tohoto webu</h2>
     <?= csrf_field() ?>
