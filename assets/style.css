@@ -1673,3 +1673,8 @@ dialog.zoom[open] { padding: 0; border: 0; background: transparent; max-width: 1
 dialog.zoom::backdrop { background: rgba(0, 0, 0, .82); }
 dialog.zoom img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 5rem); object-fit: contain; border-radius: 8px; background: #fff; cursor: zoom-out; }
 .zoom-x { position: fixed; top: max(.75rem, env(safe-area-inset-top)); right: max(.75rem, env(safe-area-inset-right)); width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0; background: #fff; color: #111; font-size: 1.8rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }
+/* Storno faktury */
+.invoice-storno { display: inline-block; margin: .4rem 0 0; padding: .3rem .7rem; border: 2px solid #b42318; color: #b42318; font-weight: 700; letter-spacing: .04em; }
+details.storno { margin-top: .35rem; text-align: left; }
+details.storno summary { cursor: pointer; font-size: .85rem; color: var(--muted); }
+details.storno form { margin-top: .5rem; min-width: 16rem; }

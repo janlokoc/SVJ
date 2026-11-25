@@ -536,16 +536,30 @@ if ($METHOD === 'POST' && $PATH === '/demo') {
     flash('Ukázkový web je připraven a úvodní stránka na něj odkazuje.');
     redirect('/');
 }
-if (preg_match('~^/platby/(\d+)/doklad$~', $PATH, $m)) {
+if (preg_match('~^/platby/(\d+)/(doklad|opravny-doklad)$~', $PATH, $m)) {
     $p = pq('SELECT * FROM payments WHERE id = ?', [$m[1]])->fetch();
-    $d = $p ? invoice_view($p) : null;
+    $d = $p ? ($m[2] === 'opravny-doklad' ? credit_view($p) : invoice_view($p)) : null;
     if (!$d) {
         http_response_code(404);
         render('platform/message', ['title' => 'Doklad nenalezen', 'message' => 'K této platbě doklad není.']);
         exit;
     }
-    render('billing_doc', ['title' => $d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs'], 'd' => $d, 'backUrl' => url('/platby')]);
+    render('billing_doc', ['title' => $d['credit'] ? 'Opravný doklad ' . $p['storno_no'] : ($d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs']), 'd' => $d, 'backUrl' => url('/platby')]);
     exit;
+}
+if ($METHOD === 'POST' && preg_match('~^/platby/(\d+)/storno$~', $PATH, $m)) {
+    $p = pq('SELECT * FROM payments WHERE id = ?', [$m[1]])->fetch();
+    $reason = trim(post('reason'));
+    if (!$p || $p['status'] !== 'paid') {
+        flash('Stornovat jde jen zaplacenou platbu s vystavenou fakturou.', 'error');
+    } elseif (mb_strlen($reason) < 3) {
+        flash('Napište důvod storna – uvede se na opravném dokladu.', 'error');
+    } elseif ($res = billing_storno($p, $super['email'], $reason)) {
+        [$no, $notes] = $res;
+        platform_log('Storno faktury', $p['tenant'] . ' · faktura ' . $p['invoice_no'] . ' · opravný doklad ' . $no . ' · ' . $reason);
+        flash('Faktura ' . $p['invoice_no'] . ' je stornovaná opravným dokladem ' . $no . '. ' . implode(' ', $notes));
+    }
+    redirect('/platby');
 }
 if ($PATH === '/platby' || preg_match('~^/platby/(\d+)/(potvrdit|zrusit)$~', $PATH, $m)) {
     if ($METHOD === 'POST' && !empty($m)) {

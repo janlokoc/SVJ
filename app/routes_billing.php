@@ -50,16 +50,16 @@ $route('GET', '/admin/predplatne', function () {
         'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($dp), $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
         'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
 
-        'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status = 'paid' ORDER BY id DESC", [TENANT])->fetchAll()]);
+        'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status IN ('paid', 'storno') ORDER BY id DESC", [TENANT])->fetchAll()]);
 });
-$route('GET', '/admin/predplatne/doklad/(\d+)', function (int $id) {
+$route('GET', '/admin/predplatne/(doklad|opravny-doklad)/(\d+)', function (string $kind, int $id) {
     require_admin();
     $p = pq('SELECT * FROM payments WHERE id = ? AND tenant = ?', [$id, TENANT])->fetch();
-    $d = $p ? invoice_view($p) : null;
+    $d = $p ? ($kind === 'opravny-doklad' ? credit_view($p) : invoice_view($p)) : null;
     if (!$d) {
         not_found();
     }
-    render('billing_doc', ['title' => $d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs'], 'd' => $d, 'backUrl' => url('/admin/predplatne')]);
+    render('billing_doc', ['title' => $d['credit'] ? 'Opravný doklad ' . $p['storno_no'] : ($d['paid'] ? 'Faktura ' . $p['invoice_no'] : 'Zálohová faktura ' . $p['vs']), 'd' => $d, 'backUrl' => url('/admin/predplatne')]);
 });
 $route('POST', '/admin/predplatne/domena', function () {
     require_admin();

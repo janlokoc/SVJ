@@ -214,6 +214,14 @@ SQL);
         // AI kredity: dokoupené dotazy na AI nad rámec měsíčního limitu edice (nepropadají).
         $pdo->exec("ALTER TABLE tenants ADD COLUMN ai_credits INTEGER NOT NULL DEFAULT 0; PRAGMA user_version = 21;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 22) {
+        // Storno zaplacené faktury opravným dokladem (vlastní číselná řada D+rok+pořadí).
+        $pdo->exec("ALTER TABLE payments ADD COLUMN storno_no TEXT NOT NULL DEFAULT '';
+            ALTER TABLE payments ADD COLUMN storno_at TEXT NOT NULL DEFAULT '';
+            ALTER TABLE payments ADD COLUMN storno_by TEXT NOT NULL DEFAULT '';
+            ALTER TABLE payments ADD COLUMN storno_reason TEXT NOT NULL DEFAULT '';
+            PRAGMA user_version = 22;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -547,7 +555,7 @@ const PLATFORM_DEFAULTS = [
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
-const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno'];
+const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];
 
 function pset(string $key): string
 {
@@ -1017,7 +1025,7 @@ function invoice_parties(array $t): array
 function invoice_view(array $p): ?array
 {
     $t = tenant_row($p['tenant']);
-    $paid = $p['status'] === 'paid';
+    $paid = in_array($p['status'], ['paid', 'storno'], true);
     $parties = $paid && $p['invoice_data'] !== '' ? (array) json_decode($p['invoice_data'], true) : ($t ? invoice_parties($t) : null);
     if (!$parties || $p['status'] === 'cancelled') {
         return null;
@@ -1026,6 +1034,7 @@ function invoice_view(array $p): ?array
     $iban = (string) ($parties['supplier']['iban'] ?? '');
     return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
+        'storno' => $p['status'] === 'storno', 'credit' => false,
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
 }
 function demo_tenant(): ?array
@@ -1786,4 +1795,91 @@ function cron_wake_tenants(int $seconds): array
         curl_close($ch);
     }
     return [$woke, 0];
+}
+
+/**
+ * Storno zaplacené faktury: vystaví opravný doklad (vlastní řada D+rok+pořadí), platbu označí jako stornovanou
+ * a vrátí, co platba zapnula – jen tam, kde to jde jednoznačně (období končí právě touto platbou).
+ * Vrací [číslo opravného dokladu, seznam vět o tom, co se vrátilo nebo co je potřeba zkontrolovat], nebo null.
+ */
+function billing_storno(array $p, string $by, string $reason): ?array
+{
+    if ($p['status'] !== 'paid' || $p['invoice_no'] === '') {
+        return null;
+    }
+    $year = date('Y');
+    $no = 'D' . $year . sprintf('%04d', 1 + (int) pq("SELECT COUNT(*) FROM payments WHERE storno_no LIKE ?", ['D' . $year . '%'])->fetchColumn());
+    pq("UPDATE payments SET status = 'storno', storno_no = ?, storno_at = ?, storno_by = ?, storno_reason = ? WHERE id = ? AND status = 'paid'",
+        [$no, date('Y-m-d H:i:s'), $by, mb_substr(trim($reason), 0, 300), $p['id']]);
+    $t = tenant_row($p['tenant']);
+    $notes = [];
+    if ($t) {
+        $before = fn(string $d) => date('Y-m-d', strtotime($d . ' -1 day'));
+        switch ($p['kind'] ?? 'service') {
+            case 'migration':
+                pq("UPDATE migrations SET status = 'cancelled' WHERE payment_id = ?", [$p['id']]);
+                $notes[] = 'Objednávka převodu obsahu je zrušená (už převedený obsah na webu zůstává).';
+                break;
+            case 'aicredits':
+                pq('UPDATE tenants SET ai_credits = MAX(0, ai_credits - ?) WHERE slug = ?', [(int) $p['item'], $t['slug']]);
+                $notes[] = 'Odebráno ' . (int) $p['item'] . ' AI kreditů (nejvýš tolik, kolik jich zbývalo).';
+                break;
+            case 'storage':
+                if ($t['storage_until'] === $p['period_to']) {
+                    pq("UPDATE tenants SET storage_extra = 0, storage_until = '' WHERE slug = ?", [$t['slug']]);
+                    $notes[] = 'Úložiště navíc je vypnuté.';
+                } else {
+                    $notes[] = 'Úložiště navíc mezitím prodloužila jiná platba – zkontrolujte ho ručně.';
+                }
+                break;
+            case 'ai':
+                if ($t['ai_until'] === $p['period_to']) {
+                    pq('UPDATE tenants SET ai_until = ? WHERE slug = ?', [$before($p['period_from']), $t['slug']]);
+                    $notes[] = 'Doplněk AI Plus platí jen do ' . cz_date($before($p['period_from'])) . '.';
+                } else {
+                    $notes[] = 'AI Plus mezitím prodloužila jiná platba – zkontrolujte ho ručně.';
+                }
+                break;
+            case 'domain':
+                if ($t['domain_until'] === $p['period_to']) {
+                    pq('UPDATE tenants SET domain_until = ? WHERE slug = ?', [$before($p['period_from']), $t['slug']]);
+                    $notes[] = 'Vlastní doména je zaplacená jen do ' . cz_date($before($p['period_from'])) . '.';
+                } else {
+                    $notes[] = 'Doménu mezitím prodloužila jiná platba – zkontrolujte ji ručně.';
+                }
+                break;
+            default:
+                if ($t['paid_until'] === $p['period_to']) {
+                    $until = $before($p['period_from']);
+                    pq('UPDATE tenants SET paid_until = ? WHERE slug = ?', [$until < date('Y-m-d') ? '' : $until, $t['slug']]);
+                    $notes[] = $until < date('Y-m-d') ? 'Placená edice touto platbou končí – web přechází podle předplatného (zkontrolujte u společenství).' : 'Edice je zaplacená jen do ' . cz_date($until) . '.';
+                } else {
+                    $notes[] = 'Předplatné mezitím prodloužila jiná platba – zkontrolujte ho u společenství ručně.';
+                }
+                if ((int) ($p['discount'] ?? 0) > 0) {
+                    $notes[] = 'Platba čerpala slevu ' . money_czk((int) $p['discount']) . ' – kredit se nevrací automaticky.';
+                }
+        }
+        if ($t['owner_email'] !== '') {
+            platform_mail($t['owner_email'], 'Opravný doklad k faktuře ' . $p['invoice_no'] . ' – ' . $t['name'], "Dobrý den,\n\nfakturu č. " . $p['invoice_no'] . " (" . pay_money($p) . ") jsme stornovali opravným dokladem č. $no."
+                . (trim($reason) !== '' ? "\nDůvod: " . trim($reason) : '') . "\n\nOpravný doklad najdete v administraci: " . tenant_url($t, '/admin/predplatne') . "\n\nDěkujeme za pochopení.");
+        }
+    }
+    return [$no, $notes];
+}
+
+/** Podklady pro tisk opravného dokladu ke stornované faktuře. */
+function credit_view(array $p): ?array
+{
+    if ($p['status'] !== 'storno' || $p['storno_no'] === '') {
+        return null;
+    }
+    $d = invoice_view($p);
+    if (!$d) {
+        return null;
+    }
+    $d['credit'] = true;
+    $d['issued'] = substr((string) $p['storno_at'], 0, 10);
+    $d['qr'] = '';
+    return $d;
 }
