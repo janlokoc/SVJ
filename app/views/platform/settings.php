@@ -133,4 +133,14 @@
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
   </form>
 <form id="ai-test-form" method="post" action="<?= url('/nastaveni/ai-test') ?>" hidden><?= csrf_field() ?></form>
+  <section class="card" id="prenos">
+    <h2>Přenos nastavení na jiný web služby</h2>
+    <p>Např. ze skutečného webu na zkušební: stáhněte nastavení zde a na druhém webu ho načtěte. Přenesou se jen údaje z této stránky (provozovatel, účet, ceny, limity, texty a podmínky) – žádná společenství, uživatelé ani platby. Klíč pro AI ani přístup pro AI k hlášením se nepřenášejí.</p>
+    <div class="actions"><a class="btn" href="<?= url('/nastaveni/export') ?>">Stáhnout nastavení</a></div>
+    <form method="post" action="<?= url('/nastaveni/import') ?>" enctype="multipart/form-data" class="form" data-confirm="Přepsat nastavení služby hodnotami ze souboru?">
+      <?= csrf_field() ?>
+      <label>Načíst nastavení ze souboru (.json) <input type="file" name="file" accept=".json,application/json" required></label>
+      <div class="actions"><button class="btn btn-ghost" type="submit">Načíst a přepsat nastavení</button></div>
+    </form>
+  </section>
 </div>

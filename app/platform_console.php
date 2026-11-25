@@ -651,6 +651,47 @@ if ($PATH === '/nastaveni') {
     render('platform/settings', ['title' => 'Nastavení služby', 'errors' => $errors, 'v' => $values]);
     exit;
 }
+// Přenos nastavení služby mezi instalacemi (např. z produkce na zkušební web): jen hodnoty z formuláře Nastavení služby –
+// žádná data společenství, uživatelů, plateb ani klíče (klíč pro AI a přístup MCP se nepřenášejí).
+if ($PATH === '/nastaveni/export' && $METHOD === 'GET') {
+    $out = [];
+    foreach (array_keys(PLATFORM_DEFAULTS) as $k) {
+        $out[$k] = pset($k);
+    }
+    platform_log('Export nastavení služby', count($out) . ' položek');
+    header('Content-Type: application/json; charset=utf-8');
+    header('Content-Disposition: attachment; filename="nastaveni-sluzby-' . date('Y-m-d') . '.json"');
+    header('Cache-Control: no-store');
+    echo json_encode(['format' => 'svj-nastaveni-sluzby', 'version' => 1, 'from' => platform_domain(), 'created' => date('Y-m-d H:i:s'), 'settings' => $out], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+if ($PATH === '/nastaveni/import' && $METHOD === 'POST') {
+    $f = $_FILES['file'] ?? null;
+    $data = $f && ($f['error'] ?? 1) === UPLOAD_ERR_OK && $f['size'] < 2_000_000 ? json_decode((string) file_get_contents($f['tmp_name']), true) : null;
+    if (!is_array($data) || ($data['format'] ?? '') !== 'svj-nastaveni-sluzby' || !is_array($data['settings'] ?? null)) {
+        flash('Soubor není export nastavení služby (stáhněte ho tlačítkem „Stáhnout nastavení“ na druhém webu).', 'error');
+        redirect('/nastaveni#prenos');
+    }
+    $changed = [];
+    foreach ($data['settings'] as $k => $v) {
+        if (!array_key_exists($k, PLATFORM_DEFAULTS) || !is_string($v) || mb_strlen($v) > 200000) {
+            continue;   // neznámé položky (např. z novější verze) a podezřelé hodnoty se přeskočí
+        }
+        if ($k === 'account' && $v !== '' && !cz_iban($v)) {
+            continue;
+        }
+        if ($v !== pset($k)) {
+            pset_save($k, $v);
+            $changed[] = $k;
+        }
+    }
+    if (array_intersect($changed, ['vat_payer', 'vat_rate'])) {
+        pq("UPDATE payments SET vat_rate = ? WHERE status IN ('pending', 'claimed')", [pset('vat_payer') === '1' ? pset_int('vat_rate', 0, 100) : 0]);
+    }
+    platform_log('Import nastavení služby', 'z ' . mb_substr((string) ($data['from'] ?? '?'), 0, 100) . ': ' . ($changed ? implode(', ', $changed) : 'beze změny'));
+    flash($changed ? 'Nastavení je načtené ze souboru (změněno položek: ' . count($changed) . '). Zkontrolujte ho prosím.' : 'Nastavení ze souboru je stejné jako současné – nic se nezměnilo.');
+    redirect('/nastaveni');
+}
 if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
     // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.
     $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 2000) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];
