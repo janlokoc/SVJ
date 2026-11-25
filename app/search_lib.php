@@ -313,7 +313,7 @@ function site_search(string $q): array
         $rows = [];
         foreach (all('SELECT id, title, event_date, event_time, place, note, program FROM events') as $r) {
             if (($s = $hit([$r['title'], $r['place'] . ' ' . $r['note'] . ' ' . $r['program']])) !== null) {
-                $rows[] = [$r['title'], '/terminy/' . $r['id'], search_snippet(trim($r['note'] . ' ' . $r['program']) ?: $r['place'], $terms), cz_date($r['event_date'], true) . ($r['place'] ? ' · ' . $r['place'] : ''), $s];
+                $rows[] = [$r['title'], '/terminy/' . $r['id'], search_snippet(trim($r['note'] . ' ' . str_replace('**', '', $r['program'])) ?: $r['place'], $terms), cz_date($r['event_date'], true) . ($r['place'] ? ' · ' . $r['place'] : ''), $s];
             }
         }
         $add('terminy', 'Termíny', $rows);

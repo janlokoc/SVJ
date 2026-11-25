@@ -384,7 +384,7 @@ function ics_calendar(array $events): string
         'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'TZNAME:CET', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD', 'END:VTIMEZONE'];
     foreach ($events as $ev) {
         [$start, $end, $allDay] = event_times($ev);
-        $about = trim($ev['note'] . ($ev['program'] !== '' ? "\n\nProgram:\n" . $ev['program'] : '') . "\n\n" . absolute_url('/terminy/' . $ev['id']));
+        $about = trim($ev['note'] . ($ev['program'] !== '' ? "\n\nProgram:\n" . str_replace('**', '', $ev['program']) : '') . "\n\n" . absolute_url('/terminy/' . $ev['id']));
         array_push($lines, 'BEGIN:VEVENT', 'UID:termin-' . (int) $ev['id'] . '@' . $host, 'DTSTAMP:' . gmdate('Ymd\THis\Z'),
             $allDay ? 'DTSTART;VALUE=DATE:' . date('Ymd', $start) : 'DTSTART;TZID=Europe/Prague:' . date('Ymd\THis', $start),
             $allDay ? 'DTEND;VALUE=DATE:' . date('Ymd', $end) : 'DTEND;TZID=Europe/Prague:' . date('Ymd\THis', $end),

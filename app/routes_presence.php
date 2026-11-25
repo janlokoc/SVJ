@@ -117,7 +117,7 @@ function program_points(string $program): array
         if ($hasBullets && !preg_match($bullet, $line)) {
             continue;
         }
-        $t = trim(preg_replace($bullet, '', $line));
+        $t = trim(str_replace('**', '', preg_replace($bullet, '', $line)));   // tučné zvýraznění do názvu návrhu nepatří
         if ($t === '' || mb_strlen($t) < 4) {
             continue;
         }

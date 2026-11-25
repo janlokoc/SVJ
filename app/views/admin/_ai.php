@@ -1,6 +1,6 @@
-<?php /* AI pomocník u textového pole: $aiTarget = selektor pole, $aiTasks = které úkoly nabídnout, $aiContext = volitelný kontext (např. text hlášení) */
+<?php /* AI pomocník u textového pole: $aiTarget = selektor pole, $aiTasks = které úkoly nabídnout, $aiContext = volitelný kontext (např. text hlášení), $aiFields = [jméno pole => popisek] – hodnoty dalších polí formuláře se přidají ke kontextu */
 if (ai_available()): ?>
-<div class="ai-box" data-ai-target="<?= e($aiTarget) ?>" data-ai-url="<?= url('/admin/ai') ?>" data-ai-context="<?= e($aiContext ?? '') ?>"<?= !empty($aiOutput) ? ' data-ai-output="' . e($aiOutput) . '"' : '' ?>>
+<div class="ai-box" data-ai-target="<?= e($aiTarget) ?>" data-ai-url="<?= url('/admin/ai') ?>" data-ai-context="<?= e($aiContext ?? '') ?>"<?= !empty($aiFields) ? ' data-ai-fields="' . e(json_encode($aiFields, JSON_UNESCAPED_UNICODE)) . '"' : '' ?><?= !empty($aiOutput) ? ' data-ai-output="' . e($aiOutput) . '"' : '' ?>>
   <span class="ai-label">AI pomocník</span>
   <?php foreach ($aiTasks as $task): ?><button class="btn btn-small btn-ghost" type="button" data-ai-task="<?= e($task) ?>"><?= e(AI_TASKS[$task][0]) ?></button><?php endforeach ?>
   <button class="btn btn-small btn-ghost" type="button" data-ai-undo hidden>Vrátit původní text</button>

@@ -255,7 +255,14 @@ document.querySelectorAll('.ai-box').forEach((box) => {
     buttons.forEach((b) => { b.disabled = true; });
     status.className = 'ai-status';
     status.textContent = 'Pomocník píše… může to trvat až minutu.';
-    const body = new URLSearchParams({ _csrf: form.querySelector('[name=_csrf]').value, task: btn.dataset.aiTask, text: field.value, context: box.dataset.aiContext || '' });
+    // Kontext z dalších polí formuláře (např. název, datum a místo termínu), jak je správce právě vyplnil.
+    let context = box.dataset.aiContext || '';
+    if (box.dataset.aiFields) {
+      try {
+        Object.entries(JSON.parse(box.dataset.aiFields)).forEach(([name, label]) => { const el = form.querySelector('[name="' + name + '"]'); if (el && el.value.trim()) context += (context ? '\n' : '') + label + ': ' + el.value.trim(); });
+      } catch (e) { /* bez kontextu */ }
+    }
+    const body = new URLSearchParams({ _csrf: form.querySelector('[name=_csrf]').value, task: btn.dataset.aiTask, text: field.value, context });
     try {
       const r = await fetch(box.dataset.aiUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
       const d = await r.json();

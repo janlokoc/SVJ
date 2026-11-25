@@ -13,6 +13,12 @@ const AI_TASKS = [
         . 'Postupuj podle bodů programu z kontextu; u každého bodu shrň, co zaznělo, kdo co přednesl nebo navrhl (jména jen tak, jak jsou v poznámkách) a k čemu se dospělo. '
         . 'Výsledky hlasování a účast neopisuj – jsou v zápisu uvedeny zvlášť; jen na příslušném místě napiš, že se hlasovalo. Diskuzi shrň, nepřepisuj doslova. '
         . 'Co v poznámkách není, nedoplňuj; nejasné místo označ [ověřit: …]. Každý bod programu začni jeho názvem na samostatném řádku.'],
+    'program' => ['Uspořádat program', 'Z textu níže udělej přehledný program akce v domě (shromáždění vlastníků, schůze výboru, brigáda…), jejíž údaje jsou v kontextu. '
+        . 'Každý bod na samostatný řádek začínající „- “; upřesnění k bodu (co se schvaluje, kdo předkládá, co si přinést) dej na další řádek bez pomlčky. '
+        . 'U shromáždění drž obvyklé pořadí: zahájení a kontrola usnášeníschopnosti na začátku, body k hlasování, diskuze a závěr na konci; jinak pořadí neměň. '
+        . 'U bodu, o kterém se hlasuje, stručně a jednoznačně napiš, co se schvaluje. Oprav pravopis a zjednoduš kostrbaté formulace. '
+        . 'Tučně (**…**) zvýrazni jen několik opravdu důležitých míst – např. co si mají vlastníci přinést, termín, „Účast nutná“. '
+        . 'Nepřidávej body, čísla, částky ani jména, které v textu nejsou; když je vstup jen pár poznámek, udělej z nich body programu.'],
     'reply' => ['Navrhnout odpověď', 'Napiš krátkou odpověď výboru obyvateli na jeho hlášení uvedené v kontextu. Poznámky níže říkají, co mu má výbor sdělit; když jsou prázdné, potvrď přijetí a napiš, že se výbor ozve.'],
 ];
 
