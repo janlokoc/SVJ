@@ -25,13 +25,34 @@ function mailq_pdo(): PDO
 {
     static $pdo = null;
     if ($pdo === null) {
-        $pdo = new PDO('sqlite:' . ROOT_STORAGE . '/mailq.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_TIMEOUT => 10]);
+        $pdo = new PDO('sqlite:' . mailq_file(), null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_TIMEOUT => 10]);
         $pdo->exec('PRAGMA busy_timeout = 10000');
         $pdo->exec('CREATE TABLE IF NOT EXISTS mailq (id INTEGER PRIMARY KEY AUTOINCREMENT, tenant TEXT NOT NULL DEFAULT \'\', bulk INTEGER NOT NULL DEFAULT 0,
             created TEXT NOT NULL, sent_at TEXT, failed INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, error TEXT, msg TEXT)');
         $pdo->exec('CREATE INDEX IF NOT EXISTS mailq_sent ON mailq (sent_at)');
     }
     return $pdo;
+}
+/**
+ * Soubor fronty má náhodný název jako ostatní databáze: kdyby server neuplatnil zákaz přístupu ke složce storage
+ * (např. chybějící .htaccess u subdomény), nedá se adresa uhodnout. Dřívější mailq.sqlite se přejmenuje.
+ */
+function mailq_file(): string
+{
+    $found = glob(ROOT_STORAGE . '/mailq-*.sqlite');
+    if ($found) {
+        return $found[0];
+    }
+    $file = ROOT_STORAGE . '/mailq-' . bin2hex(random_bytes(12)) . '.sqlite';
+    if (is_file(ROOT_STORAGE . '/mailq.sqlite')) {
+        @rename(ROOT_STORAGE . '/mailq.sqlite', $file);
+        foreach (['-wal', '-shm', '-journal'] as $x) {
+            if (is_file(ROOT_STORAGE . '/mailq.sqlite' . $x)) {
+                @rename(ROOT_STORAGE . '/mailq.sqlite' . $x, $file . $x);
+            }
+        }
+    }
+    return $file;
 }
 function mailq_marker(): string
 {
