@@ -25,11 +25,11 @@ $vat = ['rate' => (int) ($p['vat_rate'] ?? 0)]; $vatOn = $vat['rate'] > 0; $spli
   </dl>
   <table class="table print-table invoice-items">
     <thead><tr><th>Položka</th><th class="t-actions"><?= $vatOn ? 'Cena bez DPH' : 'Cena' ?></th></tr></thead>
-    <tbody><tr><td><?php if ($d['item']): ?><?= e($d['item']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na 1 rok' ?><?php else: ?>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?><?php endif ?></td><td class="t-actions"><?= $sign . money_czk((int) $p['amount']) ?></td></tr></tbody>
+    <tbody><tr><td><?php if ($d['item']): $once = in_array($p['kind'] ?? '', ['migration', 'aicredits'], true); ?><?= e($d['item']) ?><?= $once ? '' : ($paid ? ($p['period_from'] ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : '') : (in_array($p['kind'] ?? '', ['domain', 'ai'], true) ? ' na 1 rok' : '')) ?><?php else: ?>Provoz webu <?= e($d['site']) ?><?= $paid ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na ' . ((int) $p['months'] === 12 ? '1 rok' : '1 měsíc') ?><?php endif ?></td><td class="t-actions"><?= $sign . money_czk((int) $p['amount']) ?></td></tr></tbody>
     <tfoot><?php if ($vatOn): ?><tr class="vat-row"><td>Základ daně</td><td class="t-actions"><?= $sign . money_czk2($split['base']) ?></td></tr><tr class="vat-row"><td>DPH <?= (int) $vat['rate'] ?> %</td><td class="t-actions"><?= $sign . money_czk2($split['vat']) ?></td></tr><?php endif ?>
     <tr><th><?= $credit ? 'Celkem opravou' : ($paid ? 'Celkem (uhrazeno)' : 'Celkem k úhradě') ?><?= $vatOn ? ' včetně DPH' : '' ?></th><th class="t-actions"><?= $sign . pay_money($p) ?></th></tr></tfoot>
   </table>
-  <?php if ($d['qr'] !== ''): ?><div class="pay-qr invoice-qr"><?= $d['qr'] ?><small>QR platba</small></div><?php endif ?>
+  <?php if ($d['qr'] !== ''): ?><div class="pay-qr invoice-qr"><?= $d['qr'] ?><small><strong>QR platba – okamžitá platba</strong><br>Naskenujte kód v aplikaci své banky. Částka, účet a variabilní symbol se vyplní samy.</small></div><?php endif ?>
   <?php if ($credit): ?><p class="invoice-zero">Opravný doklad snižuje fakturu č. <?= e($p['invoice_no']) ?> o celou částku. Případné vrácení peněz proběhne převodem na účet odběratele.</p>
   <?php elseif ($paid): ?><p class="invoice-zero">K úhradě: 0 Kč. Neplaťte, faktura je již uhrazena.</p><?php endif ?>
 </div>

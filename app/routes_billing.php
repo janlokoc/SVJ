@@ -42,13 +42,13 @@ $route('GET', '/admin/predplatne', function () {
     $iban = cz_iban(pset('account'));
     render('admin/billing', ['title' => 'Předplatné', 't' => $t, 'state' => $state, 'payment' => $payment, 'iban' => $iban, 'migration' => ($mig = migration_row(TENANT)), 'migrationPayment' => ($mp = migration_payment($mig)),
         'refLink' => referral_link($t), 'ref' => referral_overview($t),
-        'storagePayment' => ($sp = storage_payment($t)), 'storageQr' => $sp && $iban ? qr_svg(spayd($iban, pay_total($sp), $sp['vs'], 'Uloziste ' . $t['slug'], pset('recipient')), 'QR platba za úložiště') : '',
-        'migrationQr' => $mp && $iban && in_array($mp['status'], ['pending', 'claimed'], true) ? qr_svg(spayd($iban, pay_total($mp), $mp['vs'], 'Prevod webu ' . $t['slug'], pset('recipient')), 'QR platba za převod obsahu') : '', 'edition' => $state['edition'],
+        'storagePayment' => ($sp = storage_payment($t)), 'storageQr' => $sp && $iban ? qr_svg(spayd($iban, pay_total($sp), $sp['vs'], 'Uloziste ' . $t['slug'], pset('recipient'), true), 'QR platba za úložiště') : '',
+        'migrationQr' => $mp && $iban && in_array($mp['status'], ['pending', 'claimed'], true) ? qr_svg(spayd($iban, pay_total($mp), $mp['vs'], 'Prevod webu ' . $t['slug'], pset('recipient'), true), 'QR platba za převod obsahu') : '', 'edition' => $state['edition'],
         'usage' => array_map(fn($k) => ['used' => plan_used($k), 'limit' => plan_limit($k)], array_combine(array_keys(PLAN_LIMITS), array_keys(PLAN_LIMITS))), 'deleteOn' => tenant_delete_date($t), 'domainPayment' => domain_payment($t), 'certInfo' => cert_info($t['custom_domain'] !== '' ? $t['custom_domain'] : $t['domain_request']), 'aiPayment' => ai_payment($t),
-        'creditsPayment' => ($cp = ai_credits_payment($t)), 'creditsQr' => $cp && $iban ? qr_svg(spayd($iban, pay_total($cp), $cp['vs'], 'AI kredity ' . $t['slug'], pset('recipient')), 'QR platba za AI kredity') : '',
-        'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($ap), $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient')), 'QR platba za AI Plus') : '',
-        'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($dp), $dp['vs'], 'Domena ' . $dp['item'], pset('recipient')), 'QR platba za doménu') : '',
-        'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient')), 'QR platba') : '',
+        'creditsPayment' => ($cp = ai_credits_payment($t)), 'creditsQr' => $cp && $iban ? qr_svg(spayd($iban, pay_total($cp), $cp['vs'], 'AI kredity ' . $t['slug'], pset('recipient'), true), 'QR platba za AI kredity') : '',
+        'aiQr' => ($ap = ai_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($ap), $ap['vs'], 'AI Plus ' . $t['slug'], pset('recipient'), true), 'QR platba za AI Plus') : '',
+        'domainQr' => ($dp = domain_payment($t)) && $iban ? qr_svg(spayd($iban, pay_total($dp), $dp['vs'], 'Domena ' . $dp['item'], pset('recipient'), true), 'QR platba za doménu') : '',
+        'qr' => $payment && $iban ? qr_svg(spayd($iban, pay_total($payment), $payment['vs'], 'Web SVJ ' . $t['slug'], pset('recipient'), true), 'QR platba') : '',
 
         'history' => pq("SELECT * FROM payments WHERE tenant = ? AND status IN ('paid', 'storno') ORDER BY id DESC", [TENANT])->fetchAll()]);
 });

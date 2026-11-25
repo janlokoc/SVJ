@@ -878,11 +878,12 @@ function cz_iban(string $account): ?string
     return 'CZ' . sprintf('%02d', 98 - $mod97($bban . '123500')) . $bban;
 }
 /** Text QR platby (český standard „QR Platba“, formát SPAYD), který přečte bankovní aplikace. */
-function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = ''): string
+/** $instant: požádat o okamžitou platbu (pole PT:IP); banka, která ho nezná, provede běžný převod. */
+function spayd(string $iban, int|float $amount, string $vs, string $message, string $recipient = '', bool $instant = false): string
 {
     $clean = fn(string $s, int $max) => substr(trim(str_replace('*', ' ', strtoupper(ascii_text($s)))), 0, $max);
     return 'SPD*1.0*ACC:' . $iban . '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK' . ($vs !== '' ? '*X-VS:' . $vs : '')
-        // Trvalý příkaz podle standardu QR Platba: první platba dnes, opakování každý měsíc, bez data ukončení.
+        . ($instant ? '*PT:IP' : '')
         . '*MSG:' . $clean($message, 60) . ($recipient !== '' ? '*RN:' . $clean($recipient, 35) : '');
 }
 /** Jednou denně: připomene blížící se konec placené edice a přechod na edici Zdarma, konec zkoušky funkcí a uklidí nepoužívané weby. */
@@ -1035,7 +1036,7 @@ function invoice_view(array $p): ?array
     return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'storno' => $p['status'] === 'storno', 'credit' => false,
-        'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient')), 'QR platba') : ''];
+        'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient'), true), 'QR kód pro okamžitou platbu') : ''];
 }
 function demo_tenant(): ?array
 {

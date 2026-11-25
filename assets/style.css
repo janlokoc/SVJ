@@ -671,6 +671,7 @@ div.stat:hover { border-color: var(--line); }
 .invoice-items tfoot th { font-size: 1.1rem; text-align: left; padding: .8rem 1rem; }
 .invoice-items tfoot th.t-actions { text-align: right; }
 .invoice-qr { justify-items: start; margin-top: 1.5rem; }
+.invoice-qr small { max-width: 30rem; line-height: 1.45; }
 .invoice-zero { margin-top: 1.5rem; font-weight: 600; }
 .print-doc.invoice p { line-height: 1.6; }
 @media print { .demo-bar { display: none; } .invoice .qr { width: 42mm; height: 42mm; } }
