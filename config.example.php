@@ -34,6 +34,10 @@ return [
     // Brevo: smtp-relay.brevo.com, 587, tls. Odesílatel (Nastavení webu → e-mail odesílatele) musí patřit k tomuto účtu.
     // 'smtp' => ['host' => 'smtp.seznam.cz', 'port' => 465, 'secure' => 'ssl', 'user' => 'vy@seznam.cz', 'password' => '…'],
 
+    // Plánovač hostingu (webcron) volá https://vase-domena.cz/cron/<klíč> – odešle frontu e-mailů a spustí denní úlohy
+    // i u webů, kam ten den nikdo nepřišel. Klíč: náhodný řetězec (např. `openssl rand -hex 20`).
+    // 'cron_key' => '…',
+
     // Limit odesílání e-mailů za hodinu pro celou službu (Český hosting: nejvýš 1 000 na doménu, doporučeno ~200).
     // Hromadné zprávy (rozeslání, upozornění na spotřebu, upomínky) nad limit čekají ve frontě a odcházejí postupně.
     // 'mail' => ['per_hour' => 800, 'bulk_per_hour' => 200],

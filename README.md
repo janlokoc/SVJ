@@ -106,8 +106,12 @@ Jednorázové nastavení:
 5. Přes FTP vytvořte `storage/config.php` (viz `config.example.php`):
    doména služby, SMTP hostingu, případně klíč k AI. Databáze: SQLite
    (výchozí) – každé společenství má vlastní soubor v `storage/tenants/`.
-6. Cron není nutný: denní úlohy (upozornění na revize, odečty, indexace
-   dokumentů) spustí u každého společenství jeho první návštěva dne.
+6. Cron (doporučeno): denní úlohy (upozornění na revize, odečty, indexace
+   dokumentů) spustí u každého společenství jeho první návštěva dne a frontu
+   e-mailů návštěvy webu. Aby proběhly i u webů, kam nikdo nechodí, a e-maily
+   odcházely i v noci, nastavte v klientské sekci **Cron → Webcron** volání
+   `https://spolecnyweb.cz/cron/<klíč>` každých 15–30 minut a stejný klíč
+   zapište do `storage/config.php` jako `'cron_key' => '…'`.
 
 ### Zkušební web na hostingu (staging.spolecnyweb.cz)
 

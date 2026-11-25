@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -1754,4 +1754,36 @@ function interest_counts(): array
         }
     }
     return $out;
+}
+
+/**
+ * Pro webcron: otevře úvodní stránku webů, které dnes ještě neproběhly denní úlohy (první návštěva dne je spouští).
+ * Nejvýš $seconds sekund; zbytek dokončí další spuštění. Vrací [spuštěno, zbývá].
+ */
+function cron_wake_tenants(int $seconds): array
+{
+    $start = time();
+    $woke = 0;
+    $todo = [];
+    foreach (pq('SELECT * FROM tenants WHERE active = 1 ORDER BY slug')->fetchAll() as $t) {
+        try {
+            if ((tenant_settings($t['slug'])['last_daily'] ?? '') !== date('Y-m-d')) {
+                $todo[] = $t;
+            }
+        } catch (Throwable $e) {
+            continue;
+        }
+    }
+    foreach ($todo as $i => $t) {
+        if (time() - $start >= $seconds) {
+            return [$woke, count($todo) - $i];
+        }
+        $ch = curl_init(tenant_url($t, '/'));
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_FOLLOWLOCATION => false, CURLOPT_USERAGENT => 'spolecnyweb-cron/1.0',
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS | CURLPROTO_HTTP]);
+        curl_exec($ch);
+        $woke += curl_getinfo($ch, CURLINFO_RESPONSE_CODE) > 0 ? 1 : 0;
+        curl_close($ch);
+    }
+    return [$woke, 0];
 }

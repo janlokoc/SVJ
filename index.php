@@ -156,6 +156,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && preg_match('~^(/sprava)?/vzhled/(sve
     header('Location: ' . url(preg_match('~^/(?![/\\\\])[^\s\\\\]*$~', $back) && !str_contains($back, '/vzhled/') ? $back : ($tm[1] !== '' ? '/sprava' : '/')), true, 303);
     exit;
 }
+// Plánovač hostingu (webcron) volá tuto adresu s tajným klíčem z config.php ('cron_key'): odešle frontu e-mailů
+// a spustí denní úlohy i u webů, na které ten den nikdo nepřišel (upozornění na spotřebu, revize, platby).
+if (preg_match('~^/cron/([A-Za-z0-9_\-]{16,100})$~', $PATH, $cronKey) && ($IS_PLATFORM || !platform_enabled())) {
+    $ck = (string) (app_config()['cron_key'] ?? '');
+    if ($ck === '' || !hash_equals($ck, $cronKey[1])) {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    @set_time_limit(150);
+    [$sentQ, $badQ, $leftQ] = mailq_run(100, true);
+    echo "E-maily z fronty: odesláno $sentQ, nepodařilo se $badQ, čeká $leftQ\n";
+    if (platform_enabled()) {
+        platform_daily();
+        [$woke, $waiting] = cron_wake_tenants(60);
+        echo "Denní úlohy webů: spuštěno $woke" . ($waiting ? ", zbývá $waiting (příště)" : '') . "\n";
+    } elseif ((int) val("SELECT COUNT(*) FROM users WHERE role = 'admin'") > 0) {
+        daily_tasks();
+        echo "Denní úlohy: hotovo\n";
+    }
+    exit;
+}
 if ($IS_PLATFORM && preg_match('~^/sprava(/mcp(?:/[A-Za-z0-9_\-]{20,})?)$~', $PATH, $mcpPath)) {
     // MCP server pro hlášení: vlastní ověření klíčem, bez formulářového tokenu a bez přihlášení do konzole.
     $PATH = $mcpPath[1];
