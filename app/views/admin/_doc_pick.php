@@ -1,7 +1,9 @@
 <?php
 /* Výběr existujících dokumentů: nahoře zaškrtnuté a nejnovější, starší se ukážou hledáním nebo tlačítkem „Zobrazit všechny“.
-   $pickId, $pickLabel, $documents (nejnovější první), $pickSelected = id zaškrtnutých */
+   $pickId, $pickLabel, $documents, $pickSelected = id zaškrtnutých */
 $pickRecent = 10;
+// „Nejnovější“ podle data dokumentu (datum nahrání nic neříká – po převodu webu mají všechny stejné); bez data na konec.
+usort($documents, fn($a, $b) => [(string) $a['doc_date'] === '' ? 1 : 0, (string) $b['doc_date']] <=> [(string) $b['doc_date'] === '' ? 1 : 0, (string) $a['doc_date']]);
 $pickSel = array_flip($pickSelected);
 $pickRows = array_merge(array_filter($documents, fn($d) => isset($pickSel[(int) $d['id']])), array_filter($documents, fn($d) => !isset($pickSel[(int) $d['id']])));
 $pickMore = max(0, count($documents) - count(array_filter($documents, fn($d) => isset($pickSel[(int) $d['id']]))) - $pickRecent);
