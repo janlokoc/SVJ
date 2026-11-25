@@ -109,6 +109,14 @@ a otevřít <http://localhost:8000>.
    Nastavení – jinak ji SMTP server přepíše na přihlašovací účet. U domény
    nastavte SPF, DKIM a DMARC. Testovací Gmail z vývoje z konfigurace
    odstraňte. Pošlete si zkušební zprávu na soukromou i firemní adresu.
+8. **Doména služby `spolecnyweb.cz`.** V `storage/config.php` nastavte
+   `'platform' => ['domain' => 'spolecnyweb.cz']`. Weby společenství běží na
+   subdoménách (`nazev.spolecnyweb.cz`), proto u domény potřebujete:
+   DNS záznam pro `spolecnyweb.cz` i `*.spolecnyweb.cz` mířící na hosting,
+   na hostingu nasměrované všechny subdomény (wildcard) do kořene webu a
+   HTTPS certifikát i pro `*.spolecnyweb.cz` (u Let's Encrypt jen přes
+   ověření v DNS). Pokud to hosting neumí, musela by se každá subdoména
+   zakládat ručně. Dále: PHP 8.1+, cron spouštějící denní úlohu webu.
 
 ### Rozesílání e-mailů
 
