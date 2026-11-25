@@ -43,10 +43,16 @@ document.querySelectorAll('input[data-filter]').forEach((input) => {
   const box = document.querySelector(input.dataset.filter);
   if (!box) return;
   const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  input.addEventListener('input', () => {
+  // Řádky data-more (starší dokumenty) jsou bez hledání skryté, dokud správce nezvolí „zobrazit všechny“; hledá se ve všech.
+  const filter = () => {
     const q = norm(input.value.trim());
-    box.querySelectorAll(input.dataset.filterRows || 'label').forEach((l) => { l.hidden = q !== '' && !norm(l.textContent).includes(q); });
-  });
+    box.querySelectorAll(input.dataset.filterRows || 'label').forEach((l) => {
+      const more = l.hasAttribute('data-more') && !box.classList.contains('show-all') && !(l.querySelector('input:checked'));
+      l.hidden = q !== '' ? !norm(l.textContent).includes(q) : more;
+    });
+  };
+  input.addEventListener('input', filter);
+  document.querySelectorAll('[data-pick-all="' + input.dataset.filter + '"]').forEach((b) => b.addEventListener('click', () => { box.classList.add('show-all'); filter(); b.closest('.pick-more').hidden = true; }));
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
 });
 

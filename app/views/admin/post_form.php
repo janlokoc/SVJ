@@ -21,13 +21,7 @@
       <legend>Přílohy</legend>
       <label>Nahrát nové soubory <input type="file" name="files[]" multiple accept=".<?= implode(',.', ALLOWED_EXT) ?>"></label>
       <p class="hint">Nahrané soubory se zároveň zařadí do sekce Dokumenty (kategorie Oznámení). Limit serveru: <?= e(ini_get('upload_max_filesize')) ?> na soubor.</p>
-      <label>Nebo vyberte z existujících dokumentů <input type="search" data-filter="#doc-pick" placeholder="Hledat dokument…"></label>
-      <div class="pick" id="doc-pick">
-        <?php foreach ($documents as $d): ?>
-          <label class="check"><input type="checkbox" name="documents[]" value="<?= $d['id'] ?>"<?= in_array((int) $d['id'], $selected, true) ? ' checked' : '' ?>>
-            <span><?= e($d['title']) ?> <small><?= CATEGORIES[$d['category']] ?? '' ?><?= $d['doc_date'] ? ' · ' . cz_date($d['doc_date']) : '' ?></small></span></label>
-        <?php endforeach ?>
-      </div>
+      <?php $pickId = 'doc-pick'; $pickLabel = 'Nebo vyberte z existujících dokumentů'; $pickSelected = $selected; require __DIR__ . '/_doc_pick.php'; ?>
     </fieldset>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit aktualitu</button><a class="btn btn-ghost" href="<?= url('/admin/aktuality') ?>">Zrušit</a></div>
   </form>
