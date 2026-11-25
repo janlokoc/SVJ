@@ -11,7 +11,7 @@
       <dt>Stránka</dt><dd><?php if ($r['url'] !== ''): ?><a href="<?= e($r['url']) ?>" rel="noopener noreferrer"><?= e($r['url']) ?></a><?php else: ?>—<?php endif ?><?= $r['page_title'] !== '' ? '<br><small class="muted">' . e($r['page_title']) . '</small>' : '' ?></dd>
       <dt>Prohlížeč</dt><dd><small><?= e($r['agent']) ?: '—' ?><?= $r['viewport'] !== '' ? ' · okno ' . e($r['viewport']) : '' ?></small></dd>
     </dl>
-    <?php if ($r['screenshot'] !== ''): ?><p><a href="<?= url($base . '/' . $r['id'] . '/snimek') ?>"><img class="report-img" src="<?= url($base . '/' . $r['id'] . '/snimek') ?>" alt="Snímek stránky přiložený k hlášení"></a></p><?php endif ?>
+    <?php if ($r['screenshot'] !== ''): ?><p><a href="<?= url($base . '/' . $r['id'] . '/snimek') ?>" target="_blank" rel="noopener" data-zoom><img class="report-img" src="<?= url($base . '/' . $r['id'] . '/snimek') ?>" alt="Snímek stránky přiložený k hlášení"></a></p><?php endif ?>
   </div>
   <form method="post" class="card form">
     <?= csrf_field() ?>

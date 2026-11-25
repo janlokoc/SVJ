@@ -606,7 +606,7 @@ div.stat:hover { border-color: var(--line); }
 .report-preview { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; font-weight: 600; color: var(--ok); }
 .report-preview canvas { width: 240px; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 .report-reply { margin-top: .75rem; }
-.report-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+.report-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; max-height: 360px; object-fit: contain; }
 .report-meta { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .report-meta dd { font-weight: 400; }
 .report-trace { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .88rem; background: var(--surface-2); padding: .8rem; border-radius: 8px; margin: 0; }
@@ -1668,3 +1668,8 @@ body:has(.asst) .site-footer { padding-bottom: 5.5rem; }
 .ares-officers { display: flex; flex-wrap: wrap; gap: .4rem; } .ares-officers .h-small, .ares-officers .hint { width: 100%; margin: 0; }
 .ares-later > summary { cursor: pointer; font-weight: 600; margin-bottom: .5rem; } .committee-done { margin: 0; padding-left: 1.1rem; display: grid; gap: .5rem; } .committee-done code { overflow-wrap: anywhere; }
 .ai-test { scroll-margin-top: 6rem; } .ai-test .flash { margin: .5rem 0; overflow-wrap: anywhere; }
+/* Zvětšený obrázek */
+dialog.zoom[open] { padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; width: 100vw; height: 100dvh; margin: 0; display: grid; place-items: center; }
+dialog.zoom::backdrop { background: rgba(0, 0, 0, .82); }
+dialog.zoom img { max-width: calc(100vw - 2rem); max-height: calc(100dvh - 5rem); object-fit: contain; border-radius: 8px; background: #fff; cursor: zoom-out; }
+.zoom-x { position: fixed; top: max(.75rem, env(safe-area-inset-top)); right: max(.75rem, env(safe-area-inset-right)); width: 2.75rem; height: 2.75rem; border-radius: 50%; border: 0; background: #fff; color: #111; font-size: 1.8rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, .35); }

@@ -519,3 +519,26 @@ document.querySelectorAll('[data-fill-target]').forEach((b) => b.addEventListene
   if (document.readyState === 'complete') show(); else window.addEventListener('load', show, { once: true });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(show);
 })();
+
+// Zvětšení obrázku (např. snímek u hlášení) v okně nad stránkou. Odkaz na samotný obrázek by ve webu
+// přidaném na plochu telefonu otevřel obrázek bez tlačítka Zpět a nešlo by se vrátit.
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-zoom]');
+  if (!a || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  e.preventDefault();
+  const dlg = document.createElement('dialog');
+  dlg.className = 'zoom';
+  dlg.setAttribute('aria-label', 'Zvětšený obrázek');
+  const close = document.createElement('button');
+  close.type = 'button'; close.className = 'zoom-x'; close.setAttribute('aria-label', 'Zavřít'); close.textContent = '×';
+  const img = document.createElement('img');
+  img.src = a.href; img.alt = (a.querySelector('img') || {}).alt || 'Obrázek';
+  dlg.append(close, img);
+  document.body.append(dlg);
+  const done = () => { dlg.close(); dlg.remove(); };
+  close.addEventListener('click', done);
+  dlg.addEventListener('click', (ev) => { if (ev.target === dlg || ev.target === img) done(); });
+  dlg.addEventListener('cancel', (ev) => { ev.preventDefault(); done(); });
+  dlg.showModal();
+  close.focus();
+});

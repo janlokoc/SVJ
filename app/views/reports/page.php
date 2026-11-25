@@ -10,7 +10,7 @@
     <article class="ticket">
       <header class="post-meta"><span class="status status-<?= REPORT_STATUS_CLASS[$r['status']] ?>"><?= e(REPORT_STATUS[$r['status']]) ?></span><span><?= e(REPORT_TYPES[$r['type']] ?? '') ?></span><time><?= cz_datetime($r['created_at']) ?></time></header>
       <div class="prose" translate="no"><?= format_text($r['body']) ?></div>
-      <?php if ($r['screenshot'] !== ''): ?><p><a href="<?= url('/hlaseni/' . $r['id'] . '/snimek') ?>">Přiložený snímek</a></p><?php endif ?>
+      <?php if ($r['screenshot'] !== ''): ?><p><a href="<?= url('/hlaseni/' . $r['id'] . '/snimek') ?>" target="_blank" rel="noopener" data-zoom><img class="report-img" src="<?= url('/hlaseni/' . $r['id'] . '/snimek') ?>" alt="Přiložený snímek" loading="lazy"></a></p><?php endif ?>
       <?php if ((string) $r['reply'] !== ''): ?><div class="callout report-reply"><strong>Odpověď</strong> <small class="muted"><?= cz_datetime($r['replied_at']) ?></small><div class="prose" translate="no"><?= format_text($r['reply']) ?></div></div><?php endif ?>
     </article>
     <?php endforeach ?>
