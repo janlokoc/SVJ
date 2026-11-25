@@ -265,7 +265,13 @@ document.querySelectorAll('.ai-box').forEach((box) => {
     const body = new URLSearchParams({ _csrf: form.querySelector('[name=_csrf]').value, task: btn.dataset.aiTask, text: field.value, context });
     try {
       const r = await fetch(box.dataset.aiUrl, { method: 'POST', body, headers: { Accept: 'application/json' } });
-      const d = await r.json();
+      let d;
+      try { d = await r.json(); } catch (e) {
+        // Server nevrátil JSON – typicky vypršel čas na hostingu (504) nebo chyba serveru (500).
+        d = { error: r.status === 504 || r.status === 502 ? 'Pomocník nestihl odpovědět v časovém limitu serveru. Zkuste to prosím znovu, případně s kratším textem.'
+          : r.status === 403 || r.status === 419 ? 'Přihlášení vypršelo. Obnovte stránku (text si předtím zkopírujte) a zkuste to znovu.'
+          : 'Server vrátil chybu (' + r.status + '). Zkuste to prosím znovu za chvíli.' };
+      }
       if (d.text) {
         before = read(); write(d.text); undo.hidden = false;
         status.textContent = d.truncated ? 'Hotovo, ale text byl příliš dlouhý a je uříznutý. Zkontrolujte konec.' : 'Hotovo. Text si přečtěte a upravte, než ho uložíte.';

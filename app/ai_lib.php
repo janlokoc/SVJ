@@ -178,7 +178,10 @@ function ai_run(string $task, string $input, string $context = ''): array
     try {
         $client = new \Anthropic\Client(apiKey: $cfg['key'], baseUrl: $cfg['base_url'] !== '' ? $cfg['base_url'] : null);
         // Když model žádost z bezpečnostních důvodů odmítne, zkusí ji služba sama na náhradním modelu.
+        // Krátké úpravy textu nepotřebují dlouhé přemýšlení: nízké úsilí = odpověď za pár sekund (hosting požadavek
+        // po určité době utne). Zápis ze schůze je delší a náročnější, proto střední.
         $message = $client->beta->messages->create(maxTokens: 16000, messages: [['role' => 'user', 'content' => $prompt]], model: $cfg['model'], system: AI_SYSTEM,
+            outputConfig: ['effort' => $task === 'minutes' ? 'medium' : 'low'],
             fallbacks: 'default', betas: ['server-side-fallback-2026-07-01'], requestOptions: ai_request_options($cfg));
     } catch (\Anthropic\Core\Exceptions\AuthenticationException | \Anthropic\Core\Exceptions\PermissionDeniedException $e) {
         error_log('SVJ web, AI: ' . $e->getMessage());
