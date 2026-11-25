@@ -13,7 +13,7 @@
         <td data-label="Kdo"><?= e($r['user_name'] !== '' ? $r['user_name'] : ($r['user_email'] !== '' ? $r['user_email'] : '—')) ?><?= $r['tenant'] !== '' ? '<br><small class="muted">' . e($r['tenant']) . '</small>' : '' ?></td>
         <td data-label="Stránka"><small><?= e(mb_strimwidth($path !== '' ? $path : '—', 0, 40, '…')) ?></small></td>
         <td data-label="Přijato"><?= cz_datetime($r['created_at']) ?></td>
-        <td data-label="Stav"><span class="status status-<?= REPORT_STATUS_CLASS[$r['status']] ?>"><?= e(REPORT_STATUS[$r['status']]) ?></span><?= (string) $r['reply'] !== '' ? '<br><small class="muted">odpovězeno</small>' : '' ?></td>
+        <td data-label="Stav"><span class="status status-<?= REPORT_STATUS_CLASS[$r['status']] ?>"><?= e(REPORT_STATUS[$r['status']]) ?></span><?= ($r['last_author'] ?? '') === 'user' ? '<br><small class="tag tag-pin">doplnil autor</small>' : ((string) $r['reply'] !== '' ? '<br><small class="muted">odpovězeno</small>' : '') ?></td>
       </tr>
     <?php endforeach ?></tbody>
   </table>

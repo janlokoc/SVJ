@@ -608,6 +608,15 @@ div.stat:hover { border-color: var(--line); }
 .report-preview { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; font-weight: 600; color: var(--ok); }
 .report-preview canvas { width: 240px; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 .report-reply { margin-top: .75rem; }
+.report-thread { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; gap: .6rem; }
+.report-msg { padding: .7rem .95rem; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); }
+.report-msg-staff { border-left: 4px solid var(--primary); }
+.report-msg-user { margin-left: clamp(0rem, 4vw, 2rem); }
+.report-msg-head { margin: 0 0 .25rem; display: flex; flex-wrap: wrap; gap: .1rem .6rem; align-items: baseline; }
+.report-msg .prose > :last-child { margin-bottom: 0; }
+.report-followup { margin-top: .75rem; }
+.report-followup summary { cursor: pointer; font-weight: 600; color: var(--primary); }
+.report-followup .form { margin-top: .6rem; }
 .report-img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; max-height: 360px; object-fit: contain; }
 .report-meta { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .report-meta dd { font-weight: 400; }

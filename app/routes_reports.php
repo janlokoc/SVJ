@@ -8,7 +8,8 @@ $reportForm = function (array $errors = []) {
     if ($errors) {
         http_response_code(422);
     }
-    render('reports/page', ['title' => 'Nahlásit problém nebo nápad', 'errors' => $errors, 'mine' => $mine, 'back' => report_back((string) ($_GET['z'] ?? post('z', '/')))]);
+    render('reports/page', ['title' => 'Nahlásit problém nebo nápad', 'errors' => $errors, 'mine' => $mine, 'msgs' => report_messages_for(array_column($mine, 'id')),
+        'back' => report_back((string) ($_GET['z'] ?? post('z', '/')))]);
 };
 $route('GET', '/hlaseni', fn() => $reportForm());
 $route('POST', '/hlaseni', function () use ($reportForm) {
@@ -23,10 +24,24 @@ $route('POST', '/hlaseni', function () use ($reportForm) {
     // Zpět na stránku, odkud hlášení přišlo – ne na seznam hlášení (uživatel tam mohl mít rozdělanou práci).
     redirect(report_back(post('z', '/')));
 });
-$route('GET', '/hlaseni/(\d+)/snimek', function (int $id) {
+$myReport = function (int $id): array {
     $u = require_login();
     $r = rq('SELECT * FROM reports WHERE id = ? AND tenant = ? AND user_id = ?', [$id, TENANT, $u['id']])->fetch();
-    $r ? report_image($r) : not_found();
+    return $r ?: not_found();
+};
+$route('GET', '/hlaseni/(\d+)/snimek', fn(int $id) => report_image($myReport($id)));
+$route('GET', '/hlaseni/(\d+)/snimek/(\d+)', fn(int $id, int $msg) => report_image($myReport($id), $msg));
+// Autor doplní hlášení nebo odpoví na dotaz – zpráva přibude do vlákna a hlášení se vrátí mezi nová.
+$route('POST', '/hlaseni/(\d+)/doplnit', function (int $id) use ($myReport) {
+    $r = $myReport($id);
+    $errors = report_user_followup($r, report_who());
+    if ($errors) {
+        flash(implode(' ', $errors), 'error');
+        $_SESSION['report_draft'] = [$id, mb_substr(post('body'), 0, 5000)];
+    } else {
+        flash('Děkujeme, doplnění jsme přijali.');
+    }
+    redirect('/hlaseni#hlaseni-' . $id);
 });
 // Web jednoho společenství (bez platformy): hlášení vyřizují jeho správci.
 if (!reports_central()) {
@@ -35,6 +50,6 @@ if (!reports_central()) {
         report_admin_page('/admin/hlaseni', $rest, $GLOBALS['METHOD'], $u['name']);
     };
     $route('GET', '/admin/hlaseni', fn() => $adminReports());
-    $route('GET', '/admin/hlaseni(/\d+(?:/snimek)?)', $adminReports);
+    $route('GET', '/admin/hlaseni(/\d+(?:/snimek(?:/\d+)?)?)', $adminReports);
     $route('POST', '/admin/hlaseni(/\d+)', $adminReports);
 }

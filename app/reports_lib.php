@@ -89,20 +89,7 @@ function report_submit(array $who): array
     if ((int) rq('SELECT COUNT(*) FROM reports WHERE ip = ? AND created_at > ? AND type <> ?', [client_ip(), date('Y-m-d H:i:s', time() - 3600), 'auto'])->fetchColumn() >= ($who['user_id'] ? 20 : 5)) {
         $errors[] = 'Za poslední hodinu od Vás přišlo hodně hlášení. Zkuste to prosím později.';
     }
-    $shot = '';
-    $f = $_FILES['screenshot'] ?? null;
-    if (!$errors && $f && ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-        $mime = ($f['error'] ?? 1) === UPLOAD_ERR_OK ? (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']) : '';
-        $ext = ['image/png' => 'png', 'image/jpeg' => 'jpg'][$mime] ?? null;
-        if (!$ext || $f['size'] > 6 * 1048576 || !@getimagesize($f['tmp_name'])) {
-            $errors[] = 'Snímek se nepodařilo přiložit. Povolený je obrázek PNG nebo JPG do 6 MB.';
-        } else {
-            $shot = bin2hex(random_bytes(16)) . '.' . $ext;
-            if (!move_uploaded_file($f['tmp_name'], reports_dir() . '/' . $shot)) {
-                $errors[] = 'Snímek se nepodařilo uložit.';
-            }
-        }
-    }
+    $shot = $errors ? '' : report_store_shot($errors);
     if ($errors) {
         return $errors;
     }
@@ -115,6 +102,112 @@ function report_submit(array $who): array
     if (reports_central() && pset('contact_email') !== '') {
         platform_mail(pset('contact_email'), 'Nové hlášení: ' . REPORT_TYPES[$type], ($who['name'] !== '' ? $who['name'] . ' ' : '') . '<' . $who['email'] . '>' . ($who['tenant'] !== '' ? ', web ' . $who['tenant'] : '')
             . "\nStránka: $url\n\n$body\n\nVyřídit: " . platform_url('/sprava/hlaseni'));
+    }
+    return [];
+}
+/** Uloží přiložený snímek (pole screenshot) mezi soubory hlášení; vrací název souboru, nebo '' (bez snímku / chyba v $errors). */
+function report_store_shot(array &$errors): string
+{
+    $f = $_FILES['screenshot'] ?? null;
+    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return '';
+    }
+    $mime = ($f['error'] ?? 1) === UPLOAD_ERR_OK ? (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']) : '';
+    $ext = ['image/png' => 'png', 'image/jpeg' => 'jpg'][$mime] ?? null;
+    if (!$ext || $f['size'] > 6 * 1048576 || !@getimagesize($f['tmp_name'])) {
+        $errors[] = 'Snímek se nepodařilo přiložit. Povolený je obrázek PNG nebo JPG do 6 MB.';
+        return '';
+    }
+    $shot = bin2hex(random_bytes(16)) . '.' . $ext;
+    if (!move_uploaded_file($f['tmp_name'], reports_dir() . '/' . $shot)) {
+        $errors[] = 'Snímek se nepodařilo uložit.';
+        return '';
+    }
+    return $shot;
+}
+/**
+ * Vlákno zpráv k hlášení: doplnění od autora (author = 'user') a odpovědi (author = 'staff'). Tabulka se založí při prvním
+ * použití; dřívější jediná odpověď u hlášení se přitom převede do vlákna jako první odpověď.
+ */
+function report_messages_ready(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    reports_ready();
+    $pdo = reports_pdo();
+    $mysql = !reports_central() && db_driver() === 'mysql';
+    if ($mysql ? $pdo->query("SHOW TABLES LIKE 'report_messages'")->fetch() : $pdo->query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'report_messages'")->fetch()) {
+        return;
+    }
+    $text = fn(int $n) => $mysql ? "VARCHAR($n) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''";
+    $pdo->exec('CREATE TABLE IF NOT EXISTS report_messages (id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT') . ', report_id INT NOT NULL, author ' . $text(10)
+        . ", by_name {$text(191)}, body TEXT NOT NULL, screenshot {$text(80)}, created_at {$text(19)})" . ($mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : ''));
+    $pdo->exec('CREATE INDEX report_messages_report ON report_messages (report_id)');
+    $pdo->exec("INSERT INTO report_messages (report_id, author, by_name, body, screenshot, created_at)
+        SELECT id, 'staff', replied_by, reply, '', CASE WHEN replied_at <> '' THEN replied_at ELSE updated_at END FROM reports WHERE reply IS NOT NULL AND reply <> ''");
+}
+/** Zprávy ve vlákně hlášení (nejstarší první); pro více hlášení najednou pole [id hlášení => zprávy]. */
+function report_messages(int $id): array
+{
+    return report_messages_for([$id])[$id] ?? [];
+}
+function report_messages_for(array $ids): array
+{
+    report_messages_ready();
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!$ids) {
+        return [];
+    }
+    $out = [];
+    foreach (rq('SELECT * FROM report_messages WHERE report_id IN (' . implode(',', $ids) . ') ORDER BY id')->fetchAll() as $m) {
+        $out[(int) $m['report_id']][] = $m;
+    }
+    return $out;
+}
+/** Adresa, kde autor hlášení uvidí vlákno a může odpovědět (jen přihlášený uživatel webu společenství); jinak ''. */
+function report_reply_url(array $r): string
+{
+    if ((int) $r['user_id'] === 0 || $r['type'] === 'auto') {
+        return '';
+    }
+    if (!reports_central()) {
+        return report_page_url('/hlaseni') . '#hlaseni-' . $r['id'];
+    }
+    $t = $r['tenant'] !== '' ? tenant_row($r['tenant']) : null;
+    return $t ? tenant_url($t, '/hlaseni#hlaseni-' . $r['id']) : '';
+}
+/**
+ * Autor hlášení doplní informace nebo odpoví na dotaz (Moje hlášení). Hlášení se vrátí mezi nová, aby ho vyřizující viděl.
+ * Vrací seznam chyb; prázdný = uloženo.
+ */
+function report_user_followup(array $r, array $who): array
+{
+    report_messages_ready();
+    $errors = [];
+    $body = mb_substr(trim(post('body')), 0, 5000);
+    if (mb_strlen($body) < 2) {
+        $errors[] = 'Napište prosím, co chcete doplnit.';
+    }
+    if ((int) rq("SELECT COUNT(*) FROM report_messages WHERE report_id = ? AND author = 'user' AND created_at > ?", [$r['id'], date('Y-m-d H:i:s', time() - 3600)])->fetchColumn() >= 10) {
+        $errors[] = 'K tomuto hlášení jste za poslední hodinu poslali hodně zpráv. Zkuste to prosím později.';
+    }
+    $shot = $errors ? '' : report_store_shot($errors);
+    if ($errors) {
+        return $errors;
+    }
+    $now = date('Y-m-d H:i:s');
+    rq('INSERT INTO report_messages (report_id, author, by_name, body, screenshot, created_at) VALUES (?,?,?,?,?,?)', [$r['id'], 'user', $who['name'], $body, $shot, $now]);
+    rq("UPDATE reports SET status = 'new', updated_at = ? WHERE id = ?", [$now, $r['id']]);
+    if (reports_central() && pset('contact_email') !== '') {
+        platform_mail(pset('contact_email'), 'Doplnění k hlášení č. ' . $r['id'], ($who['name'] !== '' ? $who['name'] . ' ' : '') . '<' . $who['email'] . '>' . ($r['tenant'] !== '' ? ', web ' . $r['tenant'] : '')
+            . "
+
+$body
+
+Vyřídit: " . platform_url('/sprava/hlaseni/' . $r['id']));
     }
     return [];
 }
@@ -139,26 +232,42 @@ function report_auto(Throwable $e): void
     } catch (Throwable $ignored) {
     }
 }
-/** Uloží rozhodnutí správce (stav, odpověď uživateli, interní poznámka); novou odpověď pošle autorovi e-mailem. */
+/** Uloží rozhodnutí správce (stav, nová odpověď do vlákna, interní poznámka); novou odpověď pošle autorovi e-mailem. */
 function report_admin_save(array $r, string $by): void
 {
     report_update($r, isset(REPORT_STATUS[post('status')]) ? post('status') : $r['status'], post('reply'), post('note'), $by);
 }
-/** Změní stav, odpověď a interní poznámku hlášení; novou odpověď nebo změnu stavu pošle autorovi e-mailem (formulář v konzoli i MCP). */
+/**
+ * Změní stav a interní poznámku hlášení a případně přidá do vlákna novou odpověď autorovi ($reply; '' = bez odpovědi).
+ * Novou odpověď nebo změnu stavu pošle autorovi e-mailem (formulář v konzoli i MCP).
+ */
 function report_update(array $r, string $status, string $reply, string $note, string $by): void
 {
+    report_messages_ready();
     $status = isset(REPORT_STATUS[$status]) ? $status : $r['status'];
-    $reply = mb_substr($reply, 0, 5000);
-    $changedReply = $reply !== (string) $r['reply'];
-    rq('UPDATE reports SET status = ?, reply = ?, note = ?, updated_at = ?, replied_at = ?, replied_by = ? WHERE id = ?',
-        [$status, $reply, mb_substr($note, 0, 5000), date('Y-m-d H:i:s'), $changedReply ? date('Y-m-d H:i:s') : $r['replied_at'], $changedReply ? $by : $r['replied_by'], $r['id']]);
-    if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && ($changedReply && $reply !== '' || $status !== $r['status']) && $r['type'] !== 'auto') {
-        $text = "Dobrý den,\n\nk Vašemu hlášení ze dne " . cz_date($r['created_at']) . " („" . mb_strimwidth($r['body'], 0, 120, '…') . "“):\n\nStav: " . REPORT_STATUS[$status] . ($reply !== '' ? "\n\n" . $reply : '') . "\n\nDěkujeme, že pomáháte web zlepšovat.";
+    $reply = mb_substr(trim($reply), 0, 5000);
+    $now = date('Y-m-d H:i:s');
+    if ($reply !== '' && $r['type'] !== 'auto') {
+        rq('INSERT INTO report_messages (report_id, author, by_name, body, screenshot, created_at) VALUES (?,?,?,?,?,?)', [$r['id'], 'staff', $by, $reply, '', $now]);
+        rq('UPDATE reports SET reply = ?, replied_at = ?, replied_by = ? WHERE id = ?', [$reply, $now, $by, $r['id']]);
+    }
+    rq('UPDATE reports SET status = ?, note = ?, updated_at = ? WHERE id = ?', [$status, mb_substr($note, 0, 5000), $now, $r['id']]);
+    if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && ($reply !== '' || $status !== $r['status']) && $r['type'] !== 'auto') {
+        $link = report_reply_url($r);
+        $text = "Dobrý den,\n\nk Vašemu hlášení ze dne " . cz_date($r['created_at']) . " („" . mb_strimwidth($r['body'], 0, 120, '…') . "“):\n\nStav: " . REPORT_STATUS[$status] . ($reply !== '' ? "\n\n" . $reply : '')
+            . ($link !== '' ? "\n\nOdpovědět nebo něco doplnit můžete u hlášení na webu (po přihlášení):\n" . $link . "\nOdpověď na tento e-mail se k hlášení nepřipojí."
+                : ($r['type'] !== 'auto' && (int) $r['user_id'] === 0 ? "\n\nPokud chcete něco doplnit, odpovězte prosím na tento e-mail." : ''))
+            . "\n\nDěkujeme, že pomáháte web zlepšovat.";
         reports_central() ? platform_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status], $text) : send_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status] . ' – ' . site('name'), $text);
     }
 }
-function report_image(array $r): never
+/** Pošle snímek hlášení, případně snímek ze zprávy ve vlákně ($msgId). */
+function report_image(array $r, int $msgId = 0): never
 {
+    if ($msgId) {
+        report_messages_ready();
+        $r['screenshot'] = (string) (rq('SELECT screenshot FROM report_messages WHERE id = ? AND report_id = ?', [$msgId, $r['id']])->fetchColumn() ?: '');
+    }
     $file = reports_dir() . '/' . basename((string) $r['screenshot']);
     if ($r['screenshot'] === '' || !is_file($file)) {
         http_response_code(404);
@@ -180,7 +289,7 @@ function report_who(): array
 /** Seznam a detail hlášení pro toho, kdo je vyřizuje. $base je adresa seznamu (v konzoli /hlaseni, v administraci /admin/hlaseni). */
 function report_admin_page(string $base, string $rest, string $method, string $by): void
 {
-    if (preg_match('~^/(\d+)(/snimek)?$~', $rest, $m)) {
+    if (preg_match('~^/(\d+)(/snimek(?:/(\d+))?)?$~', $rest, $m)) {
         $r = rq('SELECT * FROM reports WHERE id = ?', [$m[1]])->fetch();
         if (!$r) {
             http_response_code(404);
@@ -188,7 +297,7 @@ function report_admin_page(string $base, string $rest, string $method, string $b
             return;
         }
         if (!empty($m[2])) {
-            report_image($r);
+            report_image($r, (int) ($m[3] ?? 0));
         }
         if ($method === 'POST') {
             report_admin_save($r, $by);
@@ -198,7 +307,7 @@ function report_admin_page(string $base, string $rest, string $method, string $b
             flash('Uloženo.' . (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && $r['type'] !== 'auto' ? ' Autor hlášení uvidí stav a odpověď v části Moje hlášení.' : ''));
             redirect($base . '/' . $r['id']);
         }
-        render('reports/admin_detail', ['title' => 'Hlášení č. ' . $r['id'], 'r' => $r, 'base' => $base]);
+        render('reports/admin_detail', ['title' => 'Hlášení č. ' . $r['id'], 'r' => $r, 'base' => $base, 'msgs' => report_messages((int) $r['id'])]);
         return;
     }
     $filter = (string) ($_GET['stav'] ?? 'open');
@@ -208,8 +317,9 @@ function report_admin_page(string $base, string $rest, string $method, string $b
         isset(REPORT_STATUS[$filter]) => 'status = ' . reports_pdo()->quote($filter),
         default => "status IN ('new','in_progress','planned')",
     };
+    report_messages_ready();
     render('reports/admin_list', ['title' => 'Hlášení', 'base' => $base, 'filter' => $filter,
-        'rows' => rq("SELECT * FROM reports WHERE $where ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT 500")->fetchAll(),
+        'rows' => rq("SELECT *, (SELECT author FROM report_messages m WHERE m.report_id = reports.id ORDER BY m.id DESC LIMIT 1) AS last_author FROM reports WHERE $where ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT 500")->fetchAll(),
         'counts' => array_column(rq('SELECT status, COUNT(*) AS n FROM reports GROUP BY status')->fetchAll(), 'n', 'status')]);
 }
 function report_page_url(string $path): string

@@ -12,14 +12,15 @@
       <dt>Prohlížeč</dt><dd><small><?= e($r['agent']) ?: '—' ?><?= $r['viewport'] !== '' ? ' · okno ' . e($r['viewport']) : '' ?></small></dd>
     </dl>
     <?php if ($r['screenshot'] !== ''): ?><p><a href="<?= url($base . '/' . $r['id'] . '/snimek') ?>" target="_blank" rel="noopener" data-zoom><img class="report-img" src="<?= url($base . '/' . $r['id'] . '/snimek') ?>" alt="Snímek stránky přiložený k hlášení"></a></p><?php endif ?>
+    <?php $thread = $msgs ?? []; $imgBase = $base . '/' . $r['id'] . '/snimek/'; $forStaff = true; require __DIR__ . '/_thread.php'; ?>
   </div>
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <h2>Vyřízení</h2>
     <label>Stav <select name="status"><?php foreach (REPORT_STATUS as $k => $label): ?><option value="<?= $k ?>"<?= $r['status'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
     <?php if ($r['type'] !== 'auto'): ?>
-    <label>Odpověď autorovi hlášení <textarea name="reply" rows="5" maxlength="5000"><?= e((string) $r['reply']) ?></textarea></label>
-    <p class="hint">Stav a odpověď uvidí autor v části Moje hlášení<?= filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) ? ' a při změně mu přijdou e-mailem na ' . e($r['user_email']) : '' ?>.<?= (string) $r['replied_at'] !== '' ? ' Naposledy odpovězeno ' . cz_datetime($r['replied_at']) . ' (' . e($r['replied_by']) . ').' : '' ?></p>
+    <label><?= $msgs ? 'Nová odpověď autorovi' : 'Odpověď autorovi hlášení' ?> (nepovinné) <textarea name="reply" rows="5" maxlength="5000"></textarea></label>
+    <p class="hint">Odpověď přibude do vlákna. Stav a odpovědi uvidí autor v části Moje hlášení<?= filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) ? ' a při změně mu přijdou e-mailem na ' . e($r['user_email']) : '' ?>.<?= (int) $r['user_id'] > 0 ? ' Autor může odpovědět přímo u hlášení; jeho odpověď vrátí hlášení mezi nová.' : ' Autor není přihlášený uživatel – odpovědět může jen e-mailem.' ?></p>
     <?php endif ?>
     <label>Interní poznámka (autor ji nevidí) <textarea name="note" rows="3" maxlength="5000"><?= e((string) $r['note']) ?></textarea></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
