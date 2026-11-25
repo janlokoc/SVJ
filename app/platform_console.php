@@ -639,7 +639,7 @@ if ($PATH === '/nastaveni') {
 }
 if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
     // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.
-    $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 20) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];
+    $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 2000) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];
     platform_log('Zkouška spojení s AI', isset($r['error']) ? 'chyba' : 'v pořádku');
     // Výsledek se ukáže přímo u tlačítka (hlášení nahoře by po skoku na část AI nebylo vidět).
     $_SESSION['ai_test'] = isset($r['error']) ? ['ok' => false, 'text' => 'Spojení s Claude nefunguje: ' . (($r['detail'] ?? '') !== '' ? $r['detail'] : $r['error'])]

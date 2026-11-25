@@ -133,7 +133,7 @@ function assistant_ask(string $question, array $history = []): array
         $messages[] = ['role' => 'assistant', 'content' => $a];
     }
     $messages[] = ['role' => 'user', 'content' => 'Společenství: ' . site('full') . ', ' . setting('address') . "\nDnes je " . cz_date(date('Y-m-d'), true) . ".\n\n<podklady>\n$podklady\n</podklady>\n\n<otazka>\n$question\n</otazka>"];
-    $r = ai_call(ASSISTANT_SYSTEM, $messages, 2000);
+    $r = ai_call(ASSISTANT_SYSTEM, $messages, 16000);
     if (isset($r['error'])) {
         return $r;
     }
@@ -189,7 +189,7 @@ function ai_call(string $system, array $messages, int $maxTokens): array
     if (defined('TENANT') && (TENANT !== '' || !platform_enabled())) {
         ai_track_tokens($message);   // zkouška spojení z konzole se nepočítá k žádnému webu
     }
-    return trim($text) === '' ? ['error' => 'Asistent nevrátil odpověď. Zkuste to znovu.'] : ['text' => trim($text)];
+    return trim($text) === '' ? ['error' => 'Asistent nevrátil odpověď. Zkuste to znovu.', 'detail' => 'model nevrátil žádný text (důvod ukončení: ' . (string) ($message->stopReason ?? '?') . ($message->stopReason === 'max_tokens' ? ' – málo tokenů na odpověď' : '') . ')'] : ['text' => trim($text)];
 }
 /** Odpověď jako HTML: odstavce, výčty a odkazy [n] na zdroje. */
 function assistant_html(string $text, array $sources): string

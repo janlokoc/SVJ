@@ -18,7 +18,7 @@
         <td data-label="Předplatné"><?php $b = $t['billing_state']; echo match ($b['mode']) { 'free' => '<span class="muted">bez placení a omezení</span>', 'basic' => 'Zdarma', 'trial' => 'Standard na zkoušku do ' . cz_date($b['until']), 'paid' => '<strong>' . EDITIONS[$b['edition']] . '</strong> do ' . cz_date($b['until']),
           'grace' => '<span class="tag tag-pin">' . EDITIONS[$b['edition']] . ' po splatnosti ' . -$b['days'] . ' d</span>', default => '' }; ?><?= !empty($t['trials']) ? '<br><small class="muted">zkouší ' . $t['trials'] . ' ' . ($t['trials'] === 1 ? 'funkci' : ($t['trials'] < 5 ? 'funkce' : 'funkcí')) . '</small>' : '' ?>
           <?php if (($t['delete_at'] ?? '') !== ''): ?><br><span class="tag tag-pin">správce žádá smazání <?= cz_date($t['delete_at']) ?></span><?php endif ?>
-          <?php if ($t['delete_on']): ?><br><small class="muted">smazání <?= cz_date($t['delete_on']) ?></small><?php endif ?>
+          <?php if ($t['delete_on'] && $t['delete_on'] <= date('Y-m-d', strtotime('+30 day'))): ?><br><small class="muted">smazání <?= cz_date($t['delete_on']) ?></small><?php endif ?>
           <?php if ($t['last_notice']): ?><br><small class="muted">upozornění <?= cz_date($t['last_notice']['at']) ?>: <?= e(NOTICE_KINDS[$t['last_notice']['kind']] ?? '') ?><?= $t['last_notice']['sent'] ? '' : ' (neodesláno)' ?></small><?php endif ?></td>
         <td data-label="Stav"><span class="status status-<?= $t['active'] ? 'done' : 'new' ?>"><?= $t['active'] ? 'běží' : 'pozastaveno' ?></span></td>
       </tr>

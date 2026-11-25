@@ -197,7 +197,8 @@
   <?php if ($deleteOn || $notices): ?>
   <div class="card">
     <h2>Upozornění odeslaná společenství</h2>
-    <?php if ($deleteOn): ?><div class="flash flash-info">Na web se dlouho nikdo nepřihlásil. Automaticky se smaže <strong><?= cz_date($deleteOn) ?></strong>, nejdříve však 3 dny po odeslaném upozornění. Smazání zabrání přijatá nebo nahlášená platba, prodloužení zkušební doby nebo vypnutí „Web je placený“.</div><?php endif ?>
+    <?php if ($deleteOn && $deleteOn <= date('Y-m-d', strtotime('+30 day'))): ?><div class="flash flash-info">Na web se dlouho nikdo nepřihlásil. Automaticky se smaže <strong><?= cz_date($deleteOn) ?></strong>, nejdříve však 3 dny po odeslaném upozornění. Smazání zabrání přijatá nebo nahlášená platba, prodloužení zkušební doby nebo vypnutí „Web je placený“.</div>
+    <?php elseif ($deleteOn): ?><p class="hint">Web v edici Zdarma: kdyby se na něj nikdo nepřihlásil <?= pset_int('delete_days', 0, 3650) ?> dní, smazal by se – nejdříve <?= cz_date($deleteOn) ?> (každé přihlášení lhůtu posune). Před smazáním odejdou dvě upozornění.</p><?php endif ?>
     <?php if (!$notices): ?><p class="muted">Zatím nebylo odesláno žádné upozornění.</p><?php else: ?>
     <table class="table"><thead><tr><th>Kdy</th><th>Upozornění</th><th>Komu</th><th>Stav</th></tr></thead><tbody>
       <?php foreach ($notices as $n): ?><tr><td data-label="Kdy"><?= cz_datetime($n['at']) ?></td><td data-label="Upozornění"><?= e(NOTICE_KINDS[$n['kind']] ?? $n['kind']) ?></td><td data-label="Komu"><?= e($n['email'] !== '' ? $n['email'] : '—') ?></td>
