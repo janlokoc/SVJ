@@ -1512,6 +1512,15 @@ pre.code-sample { background: var(--surface-2); padding: .7rem .9rem; border-rad
 .attendance-table .t-actions select { max-width: 11rem; }
 .attendance-table .t-actions input[type=text] { max-width: 10rem; }
 .attendance-table td:nth-child(5) { font-size: .88rem; }
+/* Na širší obrazovce celý řádek na jednu linku: výběr účasti, zmocněnec a Zapsat vedle sebe. */
+@container (min-width: 901px) {
+  .attendance-table .t-actions { white-space: nowrap; width: 1%; }
+  .attendance-table .t-actions form { flex-wrap: nowrap; }
+  .attendance-table .t-actions select { width: 9.5rem; }
+  .attendance-table .t-actions input[type=text] { width: 8.5rem; }
+  .attendance-table td:nth-child(3), .attendance-table td:nth-child(4) { white-space: nowrap; }
+  .attendance-table td { vertical-align: middle; }
+}
 .look-picker:has(.look-tag) { row-gap: 1rem; }
 
 /* Nápověda */
