@@ -546,6 +546,10 @@ $route('POST', '/admin/nastaveni', function () {
     $shown = (array) ($_POST['features'] ?? []);
     $save('hidden_features', implode(',', array_values(array_diff(array_keys(FEATURES), $shown))));
     flash('Nastavení bylo uloženo.');
+    // Tlačítko Uložit u sekce: stránka se po uložení vrátí k ní (viz settings.php).
+    if (preg_match('/^[a-z]{2,20}$/', post('sekce'))) {
+        $_SESSION['settings_saved'] = post('sekce');
+    }
     redirect('/admin/nastaveni');
 });
 

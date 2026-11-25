@@ -122,6 +122,8 @@ html[data-style="noviny"] .eyebrow { font-size: .8rem; letter-spacing: .09em; te
 .btn-small { min-height: 38px; padding: .35rem .9rem; font-size: .92rem; }
 .btn-big { min-height: 52px; padding: .75rem 1.5rem; font-size: 1.05rem; }
 .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.section-save { justify-content: flex-end; }
+.saved-note { color: var(--ok); font-weight: 600; order: -1; }
 .link, .link-danger { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: .18em; color: var(--primary); }
 .link-danger { color: var(--accent); }
 
