@@ -310,6 +310,15 @@ if ($PATH === '/favicon.ico') {
 if ($METHOD === 'GET' && !$needsSetup && !support_mode()) {
     daily_tasks();
 }
+// Fronta e-mailů (limit hostingu): čekající zprávy odcházejí po vyřízení požadavku, nejvýš jednou za minutu.
+if (function_exists('mailq_run') && is_file(mailq_marker())) {
+    register_shutdown_function(function () {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();   // návštěvník nečeká na odeslání
+        }
+        mailq_run();
+    });
+}
 
 $routes = [];
 $route = function (string $method, string $pattern, callable $handler) use (&$routes): void {

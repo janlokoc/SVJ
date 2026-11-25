@@ -34,6 +34,10 @@ return [
     // Brevo: smtp-relay.brevo.com, 587, tls. Odesílatel (Nastavení webu → e-mail odesílatele) musí patřit k tomuto účtu.
     // 'smtp' => ['host' => 'smtp.seznam.cz', 'port' => 465, 'secure' => 'ssl', 'user' => 'vy@seznam.cz', 'password' => '…'],
 
+    // Limit odesílání e-mailů za hodinu pro celou službu (Český hosting: nejvýš 1 000 na doménu, doporučeno ~200).
+    // Hromadné zprávy (rozeslání, upozornění na spotřebu, upomínky) nad limit čekají ve frontě a odcházejí postupně.
+    // 'mail' => ['per_hour' => 800, 'bulk_per_hour' => 200],
+
     // Klíč z Claude Console → API keys. Osobní klíč (sk-ant-usr…), který není vázaný na jeden workspace,
     // potřebuje i ID workspace (Console → Workspaces, sloupec ID); klíč vytvořený pro jeden workspace ho nepotřebuje.
     // 'ai' => ['api_key' => 'sk-ant-…', 'workspace_id' => 'wrkspc_…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 30],

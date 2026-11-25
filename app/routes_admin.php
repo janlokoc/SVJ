@@ -415,7 +415,7 @@ $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
 
 // ---------- Nastavení ----------
 
-const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_style', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name',
+const SETTING_KEYS = ['site_name', 'site_title', 'site_accent', 'site_tagline', 'site_full', 'site_unit_prefix', 'site_entrances', 'site_look', 'site_style', 'site_lang', 'site_url', 'intro', 'address', 'ico', 'account', 'emergency_note', 'forum_note', 'webmaster_email', 'mail_from', 'mail_from_name', 'mail_reply_to',
     'mail_tracking', 'invite_enabled', 'invite_by_tenants', 'invite_kind', 'invite_max', 'invite_days', 'quorum_percent', 'privacy_text'];
 const BOOL_SETTINGS = ['mail_tracking', 'invite_enabled', 'invite_by_tenants'];
 // ---------- Uvolnění místa: promazání starých příloh závad, zpráv a rozeslaných e-mailů ----------
@@ -497,6 +497,10 @@ $route('POST', '/admin/nastaveni', function () {
     }
     if (post('mail_from') !== '' && !filter_var(post('mail_from'), FILTER_VALIDATE_EMAIL)) {
         flash('Adresa odesílatele e-mailů nemá správný tvar. Nastavení nebylo uloženo.', 'error');
+        redirect('/admin/nastaveni');
+    }
+    if (post('mail_reply_to') !== '' && !filter_var(post('mail_reply_to'), FILTER_VALIDATE_EMAIL)) {
+        flash('Adresa pro odpovědi na e-maily nemá správný tvar. Nastavení nebylo uloženo.', 'error');
         redirect('/admin/nastaveni');
     }
     if (post('site_name') === '' || post('site_title') === '') {
@@ -595,18 +599,21 @@ $mailForm = function () {
                 $mailingId = (int) db()->lastInsertId();
                 $sent = 0;
                 $failed = [];
-                foreach (mail_recipients($m['audience']) as $r) {
-                    $token = bin2hex(random_bytes(16));
-                    [$text, $html] = build_mail($m['body'], $tracked ? $token : null);
-                    $ok = send_mail($r['email'], $m['subject'], $text, $html);
-                    $ok ? $sent++ : $failed[] = $r['name'] . ' <' . $r['email'] . '>';
-                    q('INSERT INTO mailing_recipients (mailing_id, user_id, name, email, token, sent_ok) VALUES (?,?,?,?,?,?)', [$mailingId, $r['id'], $r['name'], $r['email'], $token, $ok ? 1 : 0]);
-                }
+                // Hromadná zpráva: nad hodinový limit hostingu čeká ve frontě a odchází postupně.
+                mail_bulk(function () use ($m, $tracked, $mailingId, &$sent, &$failed) {
+                    foreach (mail_recipients($m['audience']) as $r) {
+                        $token = bin2hex(random_bytes(16));
+                        [$text, $html] = build_mail($m['body'], $tracked ? $token : null);
+                        $ok = send_mail($r['email'], $m['subject'], $text, $html);
+                        $ok ? $sent++ : $failed[] = $r['name'] . ' <' . $r['email'] . '>';
+                        q('INSERT INTO mailing_recipients (mailing_id, user_id, name, email, token, sent_ok) VALUES (?,?,?,?,?,?)', [$mailingId, $r['id'], $r['name'], $r['email'], $token, $ok ? 1 : 0]);
+                    }
+                });
                 q('UPDATE mailings SET sent_count = ?, failed_count = ?, failed_list = ? WHERE id = ?', [$sent, count($failed), implode("\n", $failed), $mailingId]);
                 push_notify(array_column(mail_recipients($m['audience']), 'id'), site('name'), 'Zpráva od výboru: ' . $m['subject'], '/');
                 audit('mailing_sent', $m['subject'] . ' · ' . $sent . ' příjemců');
                 $fake = in_array(mail_route(), ['staging-off', 'local'], true);
-                flash(($fake ? "Zpráva se skutečně nikomu nedoručila ($sent příjemců). " . mail_route_note() : "Zpráva byla předána k odeslání $sent příjemcům.") . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed || $fake ? 'info' : 'ok');
+                flash(($fake ? "Zpráva se skutečně nikomu nedoručila ($sent příjemců). " . mail_route_note() : "Zpráva byla předána k odeslání $sent příjemcům." . mailq_note()) . ($failed ? ' Nepodařilo se: ' . count($failed) . ' – viz historie.' : ''), $failed || $fake ? 'info' : 'ok');
                 redirect('/admin/zpravy/' . $mailingId);
             }
         }

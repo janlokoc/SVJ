@@ -1107,7 +1107,7 @@ function mail_recipients(string $audience): array
     return all("SELECT id, name, email FROM users WHERE active = 1 AND email_notify = 1 AND (password_hash <> '!' OR invited_by IS NULL)" . ($audience === 'owners' ? " AND kind = 'owner'" : '') . ' ORDER BY name');
 }
 /** Odešle jeden e-mail jako prostý text v UTF-8. Vrací, zda ho server přijal k odeslání. */
-function send_mail(string $to, string $subject, string $text, ?string $html = null, ?string $from = null, ?string $fromName = null): bool
+function send_mail(string $to, string $subject, string $text, ?string $html = null, ?string $from = null, ?string $fromName = null, ?string $replyTo = null): bool
 {
     $from ??= setting('mail_from');
     if (!filter_var($from, FILTER_VALIDATE_EMAIL) || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -1127,30 +1127,55 @@ function send_mail(string $to, string $subject, string $text, ?string $html = nu
     }
     $name = trim(preg_replace('/[\r\n"<>]+/', ' ', $fromName ?? setting('mail_from_name', site('name'))));
     $subject = trim(preg_replace('/\s+/u', ' ', $subject));
+    // Odpovědi: na adresu, kterou výbor nastavil (odesílatel bývá schránka, kterou nikdo nečte).
+    $replyTo ??= defined('TENANT') && filter_var(setting('mail_reply_to'), FILTER_VALIDATE_EMAIL) ? setting('mail_reply_to') : $from;
+    if (!filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+        $replyTo = $from;
+    }
+    $domain = substr(strrchr($from, '@'), 1);
     $headers = [
         'From' => mb_encode_mimeheader($name, 'UTF-8', 'B', "\r\n") . ' <' . $from . '>',
-        'Reply-To' => $from,
+        'Reply-To' => $replyTo,
+        'Date' => date('r'),
+        // Identifikátor na doméně odesílatele (jinak ho doplní server s cizí doménou, což filtry hodnotí hůř).
+        'Message-ID' => '<' . bin2hex(random_bytes(12)) . '.' . time() . '@' . $domain . '>',
         'MIME-Version' => '1.0',
-        'Content-Type' => 'text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding' => 'base64',
         'Auto-Submitted' => 'auto-generated',
     ];
-    $body = chunk_split(base64_encode(str_replace(["\r\n", "\r"], "\n", $text)), 76, "\r\n");
-    if ($html !== null) {
-        $b = 'svj-' . bin2hex(random_bytes(12));
-        $headers['Content-Type'] = 'multipart/alternative; boundary="' . $b . '"';
-        unset($headers['Content-Transfer-Encoding']);
-        $body = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n$body\r\n--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
-            . chunk_split(base64_encode($html), 76, "\r\n") . "\r\n--$b--\r\n";
+    // Text i HTML verze; kódování quoted-printable (u čitelného textu ho filtry hodnotí lépe než base64).
+    $plain = quoted_printable_encode(str_replace("\n", "\r\n", str_replace(["\r\n", "\r"], "\n", $text)));
+    $html ??= mail_text_html($text);
+    $b = 'svj-' . bin2hex(random_bytes(12));
+    $headers['Content-Type'] = 'multipart/alternative; boundary="' . $b . '"';
+    $body = "--$b\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n$plain\r\n"
+        . "--$b\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n"
+        . quoted_printable_encode(str_replace(["\r\n", "\r", "\n"], ["\n", "\n", "\r\n"], $html)) . "\r\n--$b--\r\n";
+    $msg = ['to' => $to, 'from' => $from, 'subject' => mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), 'headers' => $headers, 'body' => $body];
+    return function_exists('mailq_send') ? mailq_send($msg) : mail_deliver($msg);
+}
+/** Prostý text e-mailu jako jednoduché HTML (odstavce, řádky, odkazy) – zprávy s oběma verzemi méně padají do spamu. */
+function mail_text_html(string $text): string
+{
+    $html = '';
+    foreach (preg_split('/\n\s*\n/u', trim(str_replace(["\r\n", "\r"], "\n", $text))) as $para) {
+        $p = nl2br(e($para), false);
+        $p = preg_replace('~(https?://[^\s<]+[^\s<.,;:!?)])~u', '<a href="$1">$1</a>', $p);
+        $html .= '<p style="margin:0 0 14px">' . $p . "</p>\n";
     }
+    return '<!doctype html><html lang="cs"><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;color:#1b2622">'
+        . '<div style="max-width:600px">' . $html . '</div></body></html>';
+}
+/** Předá hotovou zprávu serveru (SMTP z config.php, jinak PHP mail()). */
+function mail_deliver(array $msg): bool
+{
     $smtp = app_config()['smtp'] ?? null;
     if (is_array($smtp) && !empty($smtp['host'])) {
         $GLOBALS['MAIL_LAST'] = 'smtp';
-        return smtp_send($smtp, $from, $to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $headers, $body);
+        return smtp_send($smtp, $msg['from'], $msg['to'], $msg['subject'], $msg['headers'], $msg['body']);
     }
     $GLOBALS['MAIL_LAST'] = 'mail';
-    $params = preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$/', $from) ? '-f' . $from : '';
-    return @mail($to, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n"), $body, $headers, $params);
+    $params = preg_match('/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$/', $msg['from']) ? '-f' . $msg['from'] : '';
+    return @mail($msg['to'], $msg['subject'], $msg['body'], $msg['headers'], $params);
 }
 /**
  * Odeslání přes SMTP server (Seznam, Gmail, Brevo, hosting…). Konfigurace v storage/config.php:
@@ -1842,6 +1867,7 @@ require_once __DIR__ . '/search_lib.php';
 require_once __DIR__ . '/assistant_lib.php';
 require_once __DIR__ . '/extra_lib.php';
 require_once __DIR__ . '/ares_lib.php';
+require_once __DIR__ . '/mailq_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string
 {

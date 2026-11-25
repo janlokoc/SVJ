@@ -76,6 +76,8 @@
       <div class="form-row">
         <label>Adresa odesílatele <input type="email" name="mail_from" value="<?= e(setting('mail_from')) ?>" placeholder="vybor@vase-domena.cz"></label>
         <label>Jméno odesílatele <input type="text" name="mail_from_name" value="<?= e(setting('mail_from_name', site('name'))) ?>"></label>
+        <label>Odpovědi na e-maily posílat na (nepovinné) <input type="email" name="mail_reply_to" value="<?= e(setting('mail_reply_to')) ?>" placeholder="vybor@…"></label>
+        <p class="hint">Když obyvatel na e-mail z webu odpoví, odpověď dostane tato adresa (třeba společná schránka výboru). Nevyplněno = adresa odesílatele.</p>
       </div>
       <p class="hint">Použijte adresu na doméně webu (zřídíte ji u poskytovatele hostingu). Zprávy odeslané „z“ adresy u Seznamu, Centra nebo Gmailu většinou skončí ve spamu. Na tuto adresu také přijdou odpovědi.</p>
       <label class="check"><input type="checkbox" name="mail_tracking"<?= setting_on('mail_tracking') ? ' checked' : '' ?>> <span>Evidovat, kdo zprávu otevřel a kdo klikl na odkaz <small>Příjemci jsou o tom informováni v patičce každé zprávy.</small></span></label>

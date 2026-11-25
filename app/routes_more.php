@@ -197,6 +197,7 @@ $adminAccounts = function () {
         }
         if ($action === 'remind') {
             $sent = $failed = 0;
+            $GLOBALS['MAIL_BULK'] = true;   // upomínky jsou hromadné: nad limit hostingu čekají ve frontě
             foreach (all('SELECT un.*, a.balance, a.vs, a.as_of FROM unit_accounts a JOIN units un ON un.id = a.unit_id WHERE a.balance < 0') as $r) {
                 $text = "Dobrý den,\n\nu jednotky " . unit_name($r) . " evidujeme k " . cz_date($r['as_of']) . " nedoplatek " . account_money(-(float) $r['balance']) . ".\n"
                     . 'Prosíme o úhradu na účet společenství ' . setting('account') . ($r['vs'] !== '' ? ', variabilní symbol ' . $r['vs'] : '') . ".\nPlatební údaje včetně QR kódu najdete po přihlášení: " . absolute_url('/platby')
@@ -206,8 +207,9 @@ $adminAccounts = function () {
                 }
                 q('UPDATE unit_accounts SET reminded_at = ? WHERE unit_id = ?', [date('Y-m-d H:i:s'), $r['id']]);
             }
+            $GLOBALS['MAIL_BULK'] = false;
             audit('Platby na jednotku: upomínky', "odesláno $sent" . ($failed ? ", neodesláno $failed" : ''));
-            flash("Upomínky: odesláno $sent" . ($failed ? ", neodesláno $failed (zkontrolujte odesílatele e-mailů v Nastavení)" : '') . '. Jednotky bez přiřazeného účtu vlastníka upomínku nedostaly.', $sent || !$failed ? 'ok' : 'error');
+            flash("Upomínky: odesláno $sent" . ($failed ? ", neodesláno $failed (zkontrolujte odesílatele e-mailů v Nastavení)" : '') . '.' . mailq_note() . ' Jednotky bez přiřazeného účtu vlastníka upomínku nedostaly.', $sent || !$failed ? 'ok' : 'error');
             redirect('/admin/platby');
         }
     }

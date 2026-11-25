@@ -181,11 +181,13 @@ function meter_notice_send(string $ym): int
     $people = all('SELECT DISTINCT u.id, u.name, u.email FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.active = 1 AND uu.unit_id IN (' . implode(',', $units) . ')');
     $month = month_label($ym);
     $sent = 0;
+    $GLOBALS['MAIL_BULK'] = true;   // hromadné upozornění: nad limit hostingu čeká ve frontě
     foreach ($people as $p) {
         $text = "Dobrý den,\n\nna webu " . site('name') . " je informace o spotřebě tepla a vody ve Vaší jednotce za $month.\n"
             . "Najdete ji po přihlášení v části Odečty měřidel: " . absolute_url('/odecty') . "\n\nTuto zprávu posíláme každý měsíc, protože měřidla se odečítají na dálku (zákon č. 67/2013 Sb., § 8a).\n";
         $sent += send_mail($p['email'], 'Spotřeba za ' . $month . ' – ' . site('name'), $text) ? 1 : 0;
     }
+    $GLOBALS['MAIL_BULK'] = false;
     push_notify(array_column($people, 'id'), site('name'), 'Spotřeba za ' . $month . ' je na webu.', '/odecty');
     meter_setting('meter_notice_' . $ym, date('Y-m-d H:i') . '|' . $sent);
     audit('meter_notice', 'informace o spotřebě za ' . $month . ' · odesláno ' . $sent . ' z ' . count($people));

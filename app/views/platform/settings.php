@@ -102,6 +102,10 @@
       <label>Odesílatel e-mailů služby <input type="email" name="mail_from" value="<?= e($v['mail_from']) ?>"></label>
     </div>
     <p class="hint">Z adresy odesílatele chodí potvrzení registrace, připomenutí konce zkušební doby a potvrzení plateb. Bez ní se tyto e-maily neposílají. Nově založené weby ji dostanou jako výchozího odesílatele.</p>
+    <?php $mq = mailq_status(); ?>
+    <p class="hint" id="fronta-emailu"><strong>Odesílání e-mailů (všechny weby):</strong> za poslední hodinu <?= $mq['sent'] ?> z limitu <?= $mq['limits']['hour'] ?> (hromadné zprávy nejvýš <?= $mq['limits']['bulk'] ?> za hodinu).
+      <?= $mq['pending'] ? 'Ve frontě čeká <strong>' . $mq['pending'] . '</strong>' . ($mq['bulk'] ? ' (hromadných ' . $mq['bulk'] . ')' : '') . ', nejstarší od ' . e(cz_datetime($mq['oldest'])) . '. Odcházejí postupně při návštěvách webů.' : 'Fronta je prázdná.' ?>
+      <?= $mq['failed'] ? ' Za posledních 24 hodin se nepodařilo odeslat ' . $mq['failed'] . ' zpráv.' : '' ?> Limity: <code>'mail' =&gt; ['per_hour' =&gt; 800, 'bulk_per_hour' =&gt; 200]</code> v storage/config.php.</p>
     <h2 id="provozovatel">Provozovatel</h2>
     <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
     <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
