@@ -41,7 +41,15 @@ function ai_settings(): array
         }
         $model = pset('ai_model') !== '' ? pset('ai_model') : $model;
     }
-    return ['key' => (string) ($c['api_key'] ?? ''), 'model' => $model, 'base_url' => (string) ($c['base_url'] ?? ''), 'limit' => $limit, 'plus' => $plus];
+    // Klíč bez mezer a zalomení řádků kolem (častá chyba při vkládání do config.php).
+    // workspace_id je potřeba jen u osobního klíče (sk-ant-usr…), který není vázaný na jeden workspace.
+    return ['key' => trim((string) ($c['api_key'] ?? '')), 'model' => $model, 'base_url' => (string) ($c['base_url'] ?? ''), 'limit' => $limit, 'plus' => $plus,
+        'workspace' => trim((string) ($c['workspace_id'] ?? ''))];
+}
+/** Volby požadavku pro knihovnu Anthropic: hlavička workspace u klíčů, které ho samy neurčují. */
+function ai_request_options(array $cfg): ?array
+{
+    return $cfg['workspace'] !== '' ? ['extraHeaders' => ['anthropic-workspace-id' => $cfg['workspace']]] : null;
 }
 /** Knihovna je nainstalovaná (složka vendor vedle index.php). */
 function ai_sdk_ready(): bool
@@ -150,7 +158,7 @@ function ai_run(string $task, string $input, string $context = ''): array
         $client = new \Anthropic\Client(apiKey: $cfg['key'], baseUrl: $cfg['base_url'] !== '' ? $cfg['base_url'] : null);
         // Když model žádost z bezpečnostních důvodů odmítne, zkusí ji služba sama na náhradním modelu.
         $message = $client->beta->messages->create(maxTokens: 16000, messages: [['role' => 'user', 'content' => $prompt]], model: $cfg['model'], system: AI_SYSTEM,
-            fallbacks: 'default', betas: ['server-side-fallback-2026-07-01']);
+            fallbacks: 'default', betas: ['server-side-fallback-2026-07-01'], requestOptions: ai_request_options($cfg));
     } catch (\Anthropic\Core\Exceptions\AuthenticationException | \Anthropic\Core\Exceptions\PermissionDeniedException $e) {
         error_log('SVJ web, AI: ' . $e->getMessage());
         return ['error' => 'Služba odmítla přihlašovací klíč. Zkontrolujte api_key v souboru storage/config.php.'];

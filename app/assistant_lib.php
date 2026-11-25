@@ -151,10 +151,12 @@ function ai_error_detail(Throwable $e): string
     $msg = str_replace($cfg['key'] !== '' ? $cfg['key'] : "\0", '[klíč]', $e->getMessage());
     $msg = preg_replace('/sk-ant-[A-Za-z0-9_\-]+/', '[klíč]', $msg);
     $kind = match (true) {
-        $e instanceof \Anthropic\Core\Exceptions\AuthenticationException => 'klíč API nebyl přijat (zkontrolujte api_key)',
+        $e instanceof \Anthropic\Core\Exceptions\AuthenticationException => 'klíč API nebyl přijat (zkontrolujte api_key: celý, platný, nevypršel, není vypnutý)',
         $e instanceof \Anthropic\Core\Exceptions\PermissionDeniedException => 'klíč nemá oprávnění k modelu nebo službě',
         $e instanceof \Anthropic\Core\Exceptions\NotFoundException => 'model nenalezen (zkontrolujte název modelu: ' . $cfg['model'] . ')',
-        $e instanceof \Anthropic\Core\Exceptions\BadRequestException => 'služba odmítla požadavek (často nedostatek kreditu v Claude Console nebo neplatný model)',
+        $e instanceof \Anthropic\Core\Exceptions\BadRequestException => str_contains($e->getMessage(), 'workspace')
+            ? 'klíč není vázaný na workspace – doplňte do config.php \'workspace_id\' => \'wrkspc_…\' (ID z Claude Console → Workspaces), nebo vytvořte klíč pro jeden workspace'
+            : 'služba odmítla požadavek (často nedostatek kreditu v Claude Console nebo neplatný model)',
         $e instanceof \Anthropic\Core\Exceptions\PaymentRequiredException => 'chybí kredit nebo platba v Claude Console',
         $e instanceof \Anthropic\Core\Exceptions\RateLimitException => 'překročen limit požadavků',
         $e instanceof \Anthropic\Core\Exceptions\APIConnectionException => 'nepodařilo se spojit se serverem služby (síť nebo certifikát)',
@@ -168,7 +170,7 @@ function ai_call(string $system, array $messages, int $maxTokens): array
     try {
         $client = new \Anthropic\Client(apiKey: $cfg['key'], baseUrl: $cfg['base_url'] !== '' ? $cfg['base_url'] : null);
         $message = $client->beta->messages->create(maxTokens: $maxTokens, messages: $messages, model: $cfg['model'], system: $system,
-            fallbacks: 'default', betas: ['server-side-fallback-2026-07-01']);
+            fallbacks: 'default', betas: ['server-side-fallback-2026-07-01'], requestOptions: ai_request_options($cfg));
     } catch (\Anthropic\Core\Exceptions\RateLimitException | \Anthropic\Core\Exceptions\OverloadedException $e) {
         return ['error' => 'Asistent je teď přetížený. Zkuste to prosím za chvíli znovu.', 'detail' => ai_error_detail($e)];
     } catch (Throwable $e) {
