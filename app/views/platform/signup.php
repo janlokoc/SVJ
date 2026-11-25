@@ -10,11 +10,16 @@
   <?php if ($step === 1): ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
-    <label>Název společenství <input type="text" name="name" id="signup-name" value="<?= e($s['name']) ?>" required minlength="3" maxlength="120" placeholder="SVJ Zahradní 12" autofocus></label>
+    <?php $aresUrl = url('/registrace/ares'); require __DIR__ . '/_ares.php'; ?>
+    <label>Název společenství <input type="text" name="name" id="signup-name" data-ares-field="site_name" value="<?= e($s['name']) ?>" required minlength="3" maxlength="120" placeholder="SVJ Zahradní 12" autofocus></label>
     <label>Adresa webu <span class="slug-row"><?php if (platform_main_paths()): ?><span><?= e(platform_main_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_main_domain()) ?>" aria-describedby="slug-fixed-note" id="signup-slug" value="<?= e($s['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" maxlength="39" required placeholder="zahradni"
       data-slug-from="#signup-name" data-slug-check="<?= url('/registrace/adresa') ?>" data-slug-status="#slug-status" autocomplete="off"><?php if (!platform_main_paths()): ?><span>.<?= e(platform_main_domain()) ?></span><?php endif ?></span></label>
     <p class="hint" id="slug-status" role="status">Doplňte jen název – část <?= e(platform_main_paths() ? platform_main_domain() . '/' : '.' . platform_main_domain()) ?> je pevná. Malá písmena bez diakritiky, číslice a pomlčka; adresu později nejde změnit.</p>
-    <label>Adresa domu (nepovinné) <input type="text" name="address" value="<?= e($s['address']) ?>" maxlength="200" placeholder="Zahradní 12, Brno"></label>
+    <div class="form-row">
+      <label>Adresa domu (nepovinné) <input type="text" name="address" data-ares-field="address" value="<?= e($s['address']) ?>" maxlength="200" placeholder="Zahradní 12, Brno"></label>
+      <label>IČO (nepovinné) <input type="text" name="ico" data-ares-field="ico" value="<?= e($s['ico'] ?? '') ?>" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="12345678"></label>
+    </div>
+    <input type="hidden" name="full" data-ares-field="name" value="<?= e($s['full'] ?? '') ?>">
     <div class="actions"><button class="btn btn-big" type="submit">Pokračovat na vzhled</button></div>
   </form>
   <?php elseif ($step === 2): ?>

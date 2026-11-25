@@ -1645,3 +1645,17 @@ html.asst-lock { overflow: hidden; overscroll-behavior: none; }
 /* místo pod obsahem, aby plovoucí tlačítko nezakrylo poslední tlačítka a patičku */
 body:has(.asst) .site-footer { padding-bottom: 5.5rem; }
 @media (max-width: 300px) { .stat-grid { grid-template-columns: minmax(0, 1fr); } }
+/* Hledání společenství v ARES */
+.ares { display: grid; gap: .4rem; padding: 1rem; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--surface-2); margin-bottom: .5rem; }
+.ares > label { display: block; font-weight: 600; }
+.ares > label small { font-weight: 400; }
+.ares-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+.ares-row input { flex: 1 1 14rem; min-width: 0; }
+.ares .hint { margin: 0; }
+.ares .hint.is-error { color: #b42318; }
+.ares-results { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; max-height: 20rem; overflow-y: auto; overscroll-behavior: contain; }
+.ares-pick { display: grid; gap: .1rem; width: 100%; text-align: left; padding: .55rem .75rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.ares-pick:hover, .ares-pick:focus-visible { border-color: var(--primary); }
+.ares-pick small { color: var(--muted); overflow-wrap: anywhere; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ares .hint.is-error { color: #ff9a8c; } }
+:root[data-theme="dark"] .ares .hint.is-error { color: #ff9a8c; }

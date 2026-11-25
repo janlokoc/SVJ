@@ -421,7 +421,7 @@ Tyto zásady se týkají webu služby a jejích zákazníků. Správcem údajů 
 U webů jednotlivých společenství je správcem údajů vždy dané společenství a provozovatel je jeho zpracovatelem; podmínky upravuje smlouva o zpracování osobních údajů.
 
 ## Jaké údaje ukládáme
-- **Při založení webu:** název a adresu společenství, jméno a e-mail osoby, která web zakládá, čas souhlasu s podmínkami a IP adresu (kvůli ochraně před zneužitím registrace).
+- **Při založení webu:** název a adresu společenství, jméno a e-mail osoby, která web zakládá, čas souhlasu s podmínkami a IP adresu (kvůli ochraně před zneužitím registrace). Když při založení použijete hledání v ARES, pošleme do veřejného rejstříku ARES (Ministerstvo financí) jen to, co do hledání napíšete – IČO nebo část názvu společenství.
 - **Při platbě:** údaje na zálohové faktuře a faktuře, variabilní symbol a to, kdo platbu potvrdil.
 - **Když nám napíšete nebo nahlásíte problém:** text hlášení, adresu stránky, typ prohlížeče, případný snímek obrazovky a kontakt, který uvedete.
 - **Zájem o připravované funkce:** e-mail, pokud ho zadáte, abychom Vám dali vědět. U prokliků na detail funkce jen anonymní denní otisk (nelze z něj zjistit, kdo jste).

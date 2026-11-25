@@ -91,6 +91,18 @@ if ($PATH === '/registrace/adresa' && $METHOD === 'GET') {
     echo json_encode(['ok' => slug_problem($slug) === null, 'message' => slug_problem($slug) ?? 'Adresa ' . tenant_address($slug) . ' je volná.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
+if ($PATH === '/registrace/ares' && $METHOD === 'GET') {
+    // Veřejné, proto s omezením: nejvýš 30 dotazů za hodinu z jednoho prohlížeče.
+    $hits = array_filter($_SESSION['ares_hits'] ?? [], fn($t) => $t > time() - 3600);
+    if (count($hits) >= 30) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'error' => 'Hledali jste v ARES už mnohokrát. Údaje prosím vyplňte ručně, nebo to zkuste za hodinu.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $_SESSION['ares_hits'] = [...$hits, time()];
+    ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
+    exit;
+}
 if ($PATH === '/registrace/hotovo' && !empty($_SESSION['signup_done'])) {
     $done = $_SESSION['signup_done'];
     unset($_SESSION['signup_done']);
@@ -118,7 +130,14 @@ if (isset($steps[$PATH])) {
         if ($problem = slug_problem($slug)) {
             $errors[] = $problem;
         }
-        $signup = ['name' => $name, 'slug' => $slug, 'address' => mb_substr(post('address'), 0, 200), 'look' => $signup['look'] ?? '', 'style' => $signup['style'] ?? 'klasik'];
+        $ico = preg_replace('/\s+/', '', post('ico'));
+        if ($ico !== '' && ares_ico($ico) === null) {
+            $errors[] = 'IČO není platné – zkontrolujte ho, nebo pole nechte prázdné.';
+        }
+        // Celý úřední název z ARES platí, jen pokud název nezměnil člověk ručně na úplně jiný.
+        $full = mb_substr(post('full'), 0, 200);
+        $signup = ['name' => $name, 'slug' => $slug, 'address' => mb_substr(post('address'), 0, 200), 'ico' => $ico !== '' ? (string) ares_ico($ico) : '',
+            'full' => $full !== '' && $ico !== '' ? $full : '', 'look' => $signup['look'] ?? '', 'style' => $signup['style'] ?? 'klasik'];
         if (!$errors) {
             $_SESSION['signup'] = $signup;
             redirect('/registrace/vzhled');
@@ -155,7 +174,7 @@ if (isset($steps[$PATH])) {
         if (!$errors) {
             $slug = $signup['slug'];
             $title = trim(preg_replace('/^(SVJ|Společenství vlastníků( jednotek)?)\s+/iu', '', $signup['name'])) ?: $signup['name'];
-            tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'address' => $signup['address'], 'look' => $signup['look'], 'style' => $signup['style'] ?? 'klasik',
+            tenant_create(['slug' => $slug, 'name' => $signup['name'], 'title' => $title, 'full' => $signup['full'] ?? '', 'address' => $signup['address'], 'look' => $signup['look'], 'style' => $signup['style'] ?? 'klasik',
                 'billing' => 1, 'terms_at' => date('Y-m-d H:i:s'), 'trial_ends' => '', 'owner_name' => $person, 'owner_email' => $email, 'note' => 'registrace z webu']);
             if (!empty($_SESSION['ref']['code'])) {
                 referral_register($_SESSION['ref']['code'], tenant_row($slug));
@@ -168,6 +187,7 @@ if (isset($steps[$PATH])) {
             $pdo = tenant_pdo($slug);
             $pdo->prepare("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)")->execute([$person, $email, password_hash($pass, PASSWORD_DEFAULT)]);
             tenant_set($slug, 'webmaster_email', $email);
+            tenant_set($slug, 'ico', $signup['ico'] ?? '');
             if (pset('mail_from') !== '') {
                 tenant_set($slug, 'mail_from', pset('mail_from'));   // e-maily webu fungují hned; výbor si odesílatele může změnit
             }

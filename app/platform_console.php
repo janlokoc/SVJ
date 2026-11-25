@@ -34,10 +34,13 @@ $tenantInput = function (array $t = []): array {
         'lang' => isset(LANGS[post('lang')]) ? post('lang') : 'cs',
         'custom_domain' => strtolower(preg_replace('~^https?://|/.*$~', '', post('custom_domain'))), 'note' => post('note'), 'active' => isset($_POST['active']) ? 1 : 0,
         'billing' => isset($_POST['billing']) ? 1 : 0, 'trial_ends' => valid_date(post('trial_ends')) ? post('trial_ends') : '', 'paid_until' => valid_date(post('paid_until')) ? post('paid_until') : '', 'plan' => in_array(post('plan'), ['standard', 'premium'], true) ? post('plan') : '',
-        'owner_name' => post('owner_name'), 'owner_email' => post('owner_email')]);
+        'owner_name' => post('owner_name'), 'owner_email' => post('owner_email'), 'ico' => preg_replace('/\s+/', '', post('ico'))]);
 };
 $tenantErrors = function (array $t): array {
     $e = [];
+    if (($t['ico'] ?? '') !== '' && ares_ico($t['ico']) === null) {
+        $e[] = 'IČO není platné – zkontrolujte ho, nebo pole nechte prázdné.';
+    }
     if ($t['name'] === '' || $t['title'] === '') {
         $e[] = 'Vyplňte název společenství i krátký název na web.';
     }
@@ -145,9 +148,13 @@ if ($PATH === '/') {
     render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants, 'hasDemo' => (bool) demo_tenant()]);
     exit;
 }
+if ($PATH === '/ares' && $METHOD === 'GET') {
+    ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
+    exit;
+}
 if ($PATH === '/svj/nove') {
     $t = ['slug' => '', 'name' => '', 'title' => '', 'accent' => '', 'tagline' => 'Společenství vlastníků jednotek', 'full' => '', 'address' => '', 'unit_prefix' => '', 'entrances' => 'A',
-        'look' => 'les', 'style' => 'klasik', 'lang' => 'cs', 'custom_domain' => '', 'note' => '', 'active' => 1, 'seed' => '', 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => ''];
+        'look' => 'les', 'style' => 'klasik', 'lang' => 'cs', 'custom_domain' => '', 'note' => '', 'active' => 1, 'seed' => '', 'billing' => 0, 'trial_ends' => '', 'paid_until' => '', 'owner_name' => '', 'owner_email' => '', 'ico' => ''];
     $errors = [];
     if ($METHOD === 'POST') {
         $t = $tenantInput($t);
@@ -159,6 +166,9 @@ if ($PATH === '/svj/nove') {
         }
         if (!$errors) {
             tenant_create($t);
+            if ($t['ico'] !== '') {
+                tenant_set($t['slug'], 'ico', (string) ares_ico($t['ico']));
+            }
             if ($t['seed'] === 'tabor') {
                 @set_time_limit(150);
                 import_external_files_into(tenant_pdo($t['slug']), tenant_storage($t['slug']) . '/uploads', 500, 100);
@@ -412,6 +422,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
                 tenant_set($slug, 'site_' . $k, (string) $new[$k]);
             }
             tenant_set($slug, 'address', $new['address']);
+            tenant_set($slug, 'ico', $new['ico'] !== '' ? (string) ares_ico($new['ico']) : '');
             $billingNote = implode(' ', [$new['billing'], $new['trial_ends'], $new['paid_until']]) !== implode(' ', [$t['billing'], $t['trial_ends'], $t['paid_until']])
                 ? ' · předplatné: ' . ($new['billing'] ? 'zkušební doba do ' . ($new['trial_ends'] ?: '—') . ', zaplaceno do ' . ($new['paid_until'] ?: '—') : 'bez placení') : '';
             platform_log('Úprava společenství', $slug . ($new['active'] ? '' : ' · pozastaveno') . $billingNote);
@@ -426,6 +437,7 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
             $t[$k] = $settings['site_' . $k] ?? $t[$k];
         }
         $t['address'] = $settings['address'] ?? $t['address'];
+        $t['ico'] = $settings['ico'] ?? '';
     }
     $stats = tenant_stats($slug);
     $invite = $_SESSION['tenant_invite'] ?? null;

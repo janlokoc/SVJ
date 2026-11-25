@@ -74,7 +74,7 @@ document.querySelectorAll('input[data-slug-check]').forEach((slug) => {
   let own = slug.value !== '';
   let timer;
   const slugify = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    .replace(/^(svj|spolecenstvi-vlastniku(-jednotek)?)-(?=.{2})/, '').slice(0, 30).replace(/-+$/, '');
+    .replace(/^(svj|spolecenstvi-vlastniku(-jednotek)?)-(?=.{2})/, '').replace(/^(.{30}).+$/, (m, head) => (m[30] === '-' ? head : head.replace(/-[^-]*$/, '')).replace(/-[a-z]$/, '')).replace(/-+$/, '');
   const check = () => {
     clearTimeout(timer);
     if (!status) return;
@@ -465,4 +465,41 @@ document.querySelectorAll('[data-asst]').forEach((box) => {
   box.querySelector('[data-asst-new]').addEventListener('click', async () => { const f = new FormData(); f.append('_csrf', box.dataset.csrf); f.append('ajax', '1'); f.append('do', 'nova');
     await fetch(box.dataset.url, { method: 'POST', body: f, credentials: 'same-origin' }); log.querySelectorAll('li:not(.asst-hello)').forEach((li) => li.remove()); ex.hidden = false; ta.focus(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) open(false); });
+});
+
+// Vyhledání společenství v ARES při zakládání webu: IČO načte rovnou, část názvu nabídne seznam SVJ.
+document.querySelectorAll('[data-ares]').forEach((box) => {
+  const form = box.closest('form'), q = box.querySelector('[data-ares-q]'), go = box.querySelector('[data-ares-go]');
+  const status = box.querySelector('[data-ares-status]'), list = box.querySelector('[data-ares-results]');
+  const say = (text, bad) => { status.textContent = text; status.classList.toggle('is-error', !!bad); };
+  const fill = (s, warning) => {
+    form.querySelectorAll('[data-ares-field]').forEach((f) => {
+      const v = s[f.dataset.aresField]; if (v === undefined || v === '') return;
+      f.value = v; f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    list.hidden = true; list.innerHTML = '';
+    say('Doplněno z ARES: ' + s.name + ', IČO ' + s.ico + (s.address ? ', sídlo ' + s.address : '') + '. Zkontrolujte prosím název a adresu.' + (warning ? ' ' + warning : ''), !!warning);
+  };
+  const run = async () => {
+    const text = q.value.trim(); if (!text) { q.focus(); return; }
+    go.disabled = true; say('Hledám v ARES…');
+    try {
+      const r = await fetch(box.dataset.ares + '?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      const d = await r.json();
+      if (!d.ok) { list.hidden = true; say(d.error || 'Nepodařilo se načíst údaje z ARES.', true); return; }
+      if (d.subject) { fill(d.subject, d.warning); return; }
+      list.innerHTML = ''; list.hidden = false;
+      d.results.forEach((s) => {
+        const li = document.createElement('li'), b = document.createElement('button');
+        b.type = 'button'; b.className = 'ares-pick';
+        const n = document.createElement('strong'); n.textContent = s.name;
+        const m = document.createElement('small'); m.textContent = 'IČO ' + s.ico + (s.address ? ' · ' + s.address : '');
+        b.append(n, m); b.addEventListener('click', () => fill(s)); li.append(b); list.append(li);
+      });
+      say(d.total > d.results.length ? `Nalezeno ${d.total} SVJ, ukazujeme prvních ${d.results.length}. Vyberte své, nebo hledání upřesněte (třeba i číslem domu či obcí).` : 'Vyberte své společenství:');
+    } catch (e) { say('ARES se teď nepodařilo zastihnout. Údaje můžete vyplnit ručně.', true); }
+    finally { go.disabled = false; }
+  };
+  go.addEventListener('click', run);
+  q.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
 });
