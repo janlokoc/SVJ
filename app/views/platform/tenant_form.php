@@ -11,7 +11,7 @@
   <?php endif ?>
   <?php if (!$new): ?>
   <nav class="tenant-jump" aria-label="Části stránky">
-    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu (' . count($externalDocs) . ')</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#vybor">Výbor z rejstříku</a><a href="#domena">Doména</a><a href="#prevod">Převod webu</a><a href="#platby">Platby</a>
+    <a href="#uzivatele">Uživatelé</a><a href="#vyuziti">Využití a limity</a><?= !empty($externalDocs) ? '<a href="#soubory">Soubory ze starého webu (' . count($externalDocs) . ')</a>' : '' ?><a href="#udaje">Údaje a vzhled</a><a href="#predplatne">Předplatné</a><a href="#podpora">Podpora a hesla</a><a href="#vybor">Výbor z rejstříku</a><?= $raw['domain_status'] !== '' ? '<a href="#domena">Doména</a>' : '' ?><a href="#prevod">Převod webu</a><?= $payments ? '<a href="#platby">Platby</a>' : '' ?>
   </nav>
   <?php if (!empty($tenantUsers)): $active = array_filter($tenantUsers, fn($u) => (int) $u['active'] === 1); $seen30 = array_filter($active, fn($u) => $u['last_login_at'] && $u['last_login_at'] >= date('Y-m-d', time() - 30 * 86400)); $never = array_filter($active, fn($u) => !$u['last_login_at']); ?>
   <details class="card tenant-users" id="uzivatele" open>
@@ -178,6 +178,12 @@
         <div class="actions"><button class="btn" type="submit">Označit převod jako hotový</button></div></form>
     <?php else: ?><p>Dokončeno <?= cz_datetime($migration['done_at']) ?><?= $migration['done_note'] !== '' ? ' · ' . e($migration['done_note']) : '' ?></p><?php endif ?>
   </div>
+  <?php else: ?>
+  <div class="card" id="prevod">
+    <h2>Převod obsahu ze starého webu</h2>
+    <p>Společenství převod zatím neobjednalo. Objednává ho správce webu v části Předplatné → Převod obsahu ze starého webu; po zaplacení se objednávka objeví tady.</p>
+    <p class="hint">Obsah (soubor ve formátu svj-import-1) můžete nahrát i bez objednávky – v části <a href="#import">Import obsahu ze starého webu</a> níže. Dokumenty se nejdřív založí jako odkazy na starý web a stáhnete je tlačítkem „Stáhnout soubory ze starého webu“.</p>
+  </div>
   <?php endif ?>
   <?php if ($raw['domain_status'] !== ''): ?>
   <div class="card" id="domena">
@@ -261,7 +267,7 @@
     <button class="btn" type="submit">Vytvořit účet a zobrazit pozvánku</button>
     <p class="hint">Vytvoření účtu správce se zapisuje do záznamů platformy.</p>
   </form>
-  <form method="post" action="<?= url('/svj/' . $t['slug'] . '/import') ?>" enctype="multipart/form-data" class="card form">
+  <form method="post" action="<?= url('/svj/' . $t['slug'] . '/import') ?>" enctype="multipart/form-data" class="card form" id="import">
     <h2>Import obsahu ze starého webu</h2>
     <?= csrf_field() ?>
     <p>Nahraje aktuality, dokumenty, kontakty a název ze souboru připraveného převodem původního webu (formát JSON). Účty, jednotky ani hlasování se nemění.</p>
