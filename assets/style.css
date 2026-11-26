@@ -1873,3 +1873,6 @@ a.dash-tile:hover { border-color: var(--primary); }
 .hybrid-online-tag { margin-left: .4rem; background: var(--soft); color: var(--primary); }
 .hybrid-online-tag[hidden] { display: none; }
 .hybrid-protocol { margin-top: 1.5rem; }
+/* ---------- Modul D: účetnictví (export a import, app/views/ext/ucetnictvi) ---------- */
+.acct-preview tr.is-unmatched td { background: var(--accent-soft); }
+.acct-preview td small { display: inline-block; max-width: 32rem; }
