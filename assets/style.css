@@ -1829,3 +1829,7 @@ a.dash-tile:hover { border-color: var(--primary); }
 .mgr-grid h3 { margin-top: 0; }
 .lpx-partner-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); }
 .lpx-hero-plain { padding-bottom: 2rem; }
+
+/* ---------- Modul D: účetnictví (export a import, app/views/ext/ucetnictvi) ---------- */
+.acct-preview tr.is-unmatched td { background: var(--accent-soft); }
+.acct-preview td small { display: inline-block; max-width: 32rem; }

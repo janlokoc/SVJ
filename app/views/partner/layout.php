@@ -33,6 +33,7 @@
         <li><a href="<?= url('/hromadne') ?>"<?= in_array($path, ['/hromadne', '/sablony'], true) ? ' aria-current="page"' : '' ?>>Hromadně</a></li>
         <li><a href="<?= url('/firma') ?>"<?= $path === '/firma' ? ' aria-current="page"' : '' ?>>Firma</a></li>
         <li><a href="<?= url('/tym') ?>"<?= $path === '/tym' ? ' aria-current="page"' : '' ?>>Tým</a></li>
+        <?php foreach ((array) ($GLOBALS['EXT_PARTNER_NAV'] ?? []) as $extHref => $extLabel): // Rozšíření: položky menu portálu z modulů (app/ext/*_lib.php) ?><li><a href="<?= url($extHref) ?>"<?= str_starts_with($path, $extHref) ? ' aria-current="page"' : '' ?>><?= e($extLabel) ?></a></li><?php endforeach ?>
       </ul>
       <div class="nav-user">
         <a class="user-link" href="<?= url('/ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($pu['name']) ?></strong><small><?= $pu['role'] === 'owner' ? 'správce účtu firmy' : 'pracovník' ?></small></span></a>
