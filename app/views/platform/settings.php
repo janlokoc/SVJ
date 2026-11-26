@@ -96,6 +96,9 @@
     <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
     <p class="hint">Z čísla účtu se vytváří QR platba. Dokud není vyplněné, vidí správci společenství jen informaci, že platební údaje dostanou e-mailem.</p>
     <label>Název příjemce (nepovinné) <input type="text" name="recipient" value="<?= e($v['recipient']) ?>" maxlength="35"></label>
+    <h2 id="vyhledavace">Vyhledávače</h2>
+    <label>Ověření v Google Search Console <small class="muted">(nepovinné)</small> <input type="text" name="google_verification" value="<?= e($v['google_verification']) ?>" placeholder="kód z meta značky google-site-verification" maxlength="100"></label>
+    <p class="hint">V Search Console zvolte ověření „Značka HTML“ a sem vložte jen kód z atributu content. Mapa stránek pro vyhledávače je na <code><?= e(platform_url('/sitemap.xml')) ?></code>.</p>
     <h2 id="kontakt">Kontakt a e-maily</h2>
     <div class="form-row">
       <label>Kontaktní e-mail (zobrazuje se na webu) <input type="email" name="contact_email" value="<?= e($v['contact_email']) ?>"></label>

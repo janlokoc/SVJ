@@ -335,6 +335,66 @@ function tenant_usage(string $slug): array
     }
     return $out;
 }
+// ---------- Vyhledávače (SEO) hlavního webu služby ----------
+
+/** Veřejné stránky služby pro vyhledávače: cesta => [priorita, popis stránky do výsledků hledání]. */
+const PLATFORM_SEO_PAGES = [
+    '/' => ['1.0', 'Web pro SVJ zdarma: aktuality, dokumenty, e-maily vlastníkům, hlasování a shromáždění, hlášení závad a platby na jednotku. Hotový za pět minut, bez programování.'],
+    '/funkce' => ['0.8', 'Co umí web pro společenství vlastníků jednotek: shromáždění a hlasování podle podílů, dokumenty, hlášení závad, odečty, platby, upozornění do telefonu a AI pomocník.'],
+    '/cenik' => ['0.8', 'Ceník webu pro SVJ: edice Zdarma, Standard a Premium. Ceny bez DPH, placené edice 30 dní na zkoušku zdarma.'],
+    '/pro-spravce' => ['0.7', 'Pro správcovské firmy a bytová družstva: všechny spravované domy na jednom místě. Partnerský portál zdarma, SVJ platí Vám.'],
+    '/podminky' => ['0.2', 'Obchodní podmínky služby.'],
+    '/ochrana-udaju' => ['0.2', 'Zásady ochrany osobních údajů.'],
+    '/zpracovani-udaju' => ['0.2', 'Smlouva o zpracování osobních údajů pro weby společenství.'],
+];
+/** robots.txt hlavní domény: soukromé části mimo vyhledávače; zkušební web celý mimo. */
+function platform_robots_txt(): string
+{
+    if (is_staging()) {
+        return "User-agent: *\nDisallow: /\n";
+    }
+    return "User-agent: *\nDisallow: /sprava\nDisallow: /partner\nDisallow: /registrace/\nDisallow: /hlaseni\nDisallow: /vzhled/\nDisallow: /zajem\n\nSitemap: " . platform_url('/sitemap.xml') . "\n";
+}
+/** sitemap.xml s veřejnými stránkami služby. */
+function platform_sitemap_xml(): string
+{
+    $x = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    $lastmod = date('Y-m-d', (int) @filemtime(__DIR__ . '/views/platform/landing.php') ?: time());
+    foreach (PLATFORM_SEO_PAGES as $path => [$prio]) {
+        $x .= '  <url><loc>' . htmlspecialchars(platform_url($path), ENT_XML1) . '</loc><lastmod>' . $lastmod . '</lastmod><priority>' . $prio . "</priority></url>\n";
+    }
+    return $x . "</urlset>\n";
+}
+/** Hlavička stránky pro vyhledávače a sdílení: popis, kanonická adresa, Open Graph, strukturovaná data, ověření Google. */
+function platform_seo_head(string $path, string $title): string
+{
+    $desc = PLATFORM_SEO_PAGES[$path][1] ?? PLATFORM_SEO_PAGES['/'][1];
+    $out = '<meta name="description" content="' . e($desc) . '">' . "\n";
+    if (isset(PLATFORM_SEO_PAGES[$path])) {
+        $url = platform_url($path);
+        $out .= '<link rel="canonical" href="' . e($url) . '">' . "\n"
+            . '<meta property="og:type" content="website"><meta property="og:locale" content="cs_CZ">'
+            . '<meta property="og:site_name" content="' . e(pset('service_name')) . '"><meta property="og:title" content="' . e($title) . '">'
+            . '<meta property="og:description" content="' . e($desc) . '"><meta property="og:url" content="' . e($url) . '">' . "\n";
+    }
+    if (is_staging()) {
+        $out .= '<meta name="robots" content="noindex, nofollow">' . "\n";
+    }
+    if (preg_match('/^[A-Za-z0-9_-]{20,100}$/', pset('google_verification'))) {
+        $out .= '<meta name="google-site-verification" content="' . e(pset('google_verification')) . '">' . "\n";
+    }
+    if ($path === '/') {
+        $op = operator();
+        $data = ['@context' => 'https://schema.org', '@type' => 'SoftwareApplication', 'name' => pset('service_name'), 'url' => platform_url('/'),
+            'applicationCategory' => 'BusinessApplication', 'operatingSystem' => 'Web', 'inLanguage' => 'cs', 'description' => $desc,
+            'offers' => ['@type' => 'Offer', 'price' => '0', 'priceCurrency' => 'CZK', 'description' => 'Edice Zdarma bez časového omezení']];
+        if ($op['name'] !== '') {
+            $data['provider'] = ['@type' => 'Organization', 'name' => $op['name']] + ($op['ico'] !== '' ? ['identifier' => $op['ico']] : []);
+        }
+        $out .= '<script type="application/ld+json">' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) . '</script>' . "\n";
+    }
+    return $out;
+}
 function tenant_settings(string $slug): array
 {
     return array_column(tenant_pdo($slug)->query('SELECT `key`, value FROM settings')->fetchAll(), 'value', 'key');
@@ -621,6 +681,7 @@ const PLATFORM_DEFAULTS = [
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14', 'vat_payer' => '0', 'vat_rate' => '21', 'legal_checked' => '0',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'partner_discounts' => "5:10\n20:15\n50:20",
+    'google_verification' => '',
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];

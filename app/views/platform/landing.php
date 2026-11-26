@@ -17,7 +17,7 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
   <div class="wrap lpx-hero-grid">
     <div class="lpx-hero-text">
       <p class="lpx-eyebrow">Pro společenství vlastníků jednotek</p>
-      <h1>Web pro Vaše společenství. Hotový za pět minut.</h1>
+      <h1>Web pro Vaše SVJ. Hotový za pět minut.</h1>
       <p class="lpx-lead">Veřejný web domu, část pro obyvatele a administrace pro výbor. Shromáždění s prezencí, hlasováním a zápisem, závady i dokumenty na jednom místě.</p>
       <div class="actions"><?= $cta() ?><?php if ($demo): ?><a class="btn btn-big btn-ghost" href="<?= e(tenant_url($demo, '/vstup')) ?>">Prohlédnout ukázku</a><?php endif ?></div>
       <?php if (!empty($_SESSION['ref']['name'])): ?><p class="lp-note lp-ref">Doporučilo Vás <strong><?= e($_SESSION['ref']['name']) ?></strong>.</p><?php endif ?>

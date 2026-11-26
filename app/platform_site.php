@@ -36,6 +36,16 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }
+if ($METHOD === 'GET' && $PATH === '/robots.txt') {
+    header('Content-Type: text/plain; charset=utf-8');
+    echo platform_robots_txt();
+    exit;
+}
+if ($METHOD === 'GET' && $PATH === '/sitemap.xml') {
+    header('Content-Type: application/xml; charset=utf-8');
+    echo platform_sitemap_xml();
+    exit;
+}
 if ($METHOD === 'GET' && $PATH === '/pro-spravce') {
     render('platform/for_managers', ['title' => 'Pro správcovské firmy', 'demo' => demo_tenant()]);
     exit;

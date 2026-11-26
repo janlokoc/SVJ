@@ -4,8 +4,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e(($title ?? '') !== '' ? $title . ' · ' . $service : $service . ' – web společenství vlastníků hotový za pět minut') ?></title>
-<meta name="description" content="Web pro společenství vlastníků jednotek: aktuality, dokumenty, e-maily vlastníkům, shromáždění, hlasování a hlášení závad. Základní web zdarma.">
+<?php $pageTitle = ($title ?? '') !== '' ? $title . ' · ' . $service : 'Web pro SVJ zdarma – ' . $service . ': web společenství vlastníků za pět minut'; ?>
+<title><?= e($pageTitle) ?></title>
+<?= platform_seo_head((string) ($GLOBALS['PATH'] ?? '/'), $pageTitle) ?>
 <?= $GLOBALS['HEAD_EXTRA'] ?? '' ?>
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
 <link rel="apple-touch-icon" href="<?= asset('icon-sluzba-180.png') ?>">
