@@ -22,6 +22,7 @@
             </fieldset></li>
           <?php endforeach ?>
           </ol>
+          <?php if (function_exists('rollam_method')) { require __DIR__ . '/ext/rollam/_poll_note.php'; } ?>
           <button class="btn btn-big" type="submit">Odeslat hlas</button>
           <p class="hint">Za jednotku se hlasuje jednou; hlas platí za všechny její spoluvlastníky. Opravu po odeslání může provést jen výbor.</p>
         <?php endif ?>

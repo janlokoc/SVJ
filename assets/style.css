@@ -1942,3 +1942,15 @@ tr.is-neg td { color: var(--accent); }
 .sso-links { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: .5rem; }
 .sso-links li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--line); }
 .sso-links li > span:not(.sso-logo) { flex: 1; min-width: 12rem; }
+/* ---------- Modul B: hlasování mimo zasedání (protokol, hlasovací lístky) ---------- */
+.rollam-doc .rollam-meta th { text-align: left; width: 32%; }
+.rollam-sign { margin-top: 2rem; }
+.rollam-boxes span { display: inline-block; margin-right: 1.5rem; font-weight: 600; }
+.rollam-ballot-items li { margin-bottom: 1rem; }
+.rollam-ballot + .rollam-ballot { margin-top: 3rem; border-top: 1px dashed var(--line, #ccc); padding-top: 2rem; }
+.rollam-records code, .rollam-doc code { word-break: break-all; }
+@media print {
+  .rollam-ballot { break-after: page; page-break-after: always; }
+  .rollam-ballot + .rollam-ballot { margin-top: 0; border-top: 0; padding-top: 0; }
+  .rollam-records { font-size: 9pt; }
+}
