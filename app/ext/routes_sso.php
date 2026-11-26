@@ -27,8 +27,7 @@ $route('POST', '/muj-ucet/sso/(google|microsoft|apple|facebook)/propojit', funct
         flash('Tento účet se přihlašuje přes partnerský portál, propojení s dalším účtem tu není k dispozici.', 'error');
         redirect('/muj-ucet');
     }
-    header('Location: ' . sso_start($p, 'site', ['tenant' => TENANT, 'mode' => 'link', 'uid' => (int) $u['id'], 'after' => '/muj-ucet#sso']), true, 303);
-    exit;
+    redirect_external(sso_start($p, 'site', ['tenant' => TENANT, 'mode' => 'link', 'uid' => (int) $u['id'], 'after' => '/muj-ucet#sso']), 'Pokračovat na ' . SSO_PROVIDERS[$p]);   // po odeslání formuláře (CSP form-action)
 });
 $route('POST', '/muj-ucet/sso/(google|microsoft|apple|facebook)/odpojit', function (string $p) {
     $u = require_login();

@@ -1003,8 +1003,7 @@ function sso_platform_routes(string $ctx, string $path, string $method, ?array $
         redirect('/');
     }
     if ($action === 'propojit') {
-        header('Location: ' . sso_start($p, $ctx, ['mode' => 'link', 'uid' => (int) $me['id']]), true, 303);
-        exit;
+        redirect_external(sso_start($p, $ctx, ['mode' => 'link', 'uid' => (int) $me['id']]), 'Pokračovat na ' . SSO_PROVIDERS[$p]);   // po odeslání formuláře (CSP form-action)
     }
     if (sso_platform_unlink($kind, (int) $me['id'], $p)) {
         sso_platform_log($ctx, $me['email'], 'zrušení propojení účtu ' . SSO_PROVIDERS[$p]);

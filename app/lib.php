@@ -667,6 +667,35 @@ function redirect(string $path): never
     header('Location: ' . url($path), true, 303);
     exit;
 }
+/**
+ * Přechod na cizí web (banka, přihlášení u Googlu…) po odeslání formuláře. Přesměrování hlavičkou Location by prohlížeč
+ * zablokoval: zásada CSP form-action 'self' platí i pro přesměrování odeslaného formuláře (Chrome, Firefox). Proto krátká
+ * stránka s odkazem a automatickým přechodem (meta refresh – běžná navigace, ne odeslání formuláře).
+ */
+function redirect_external(string $target, string $label = 'Pokračovat'): never
+{
+    admin_audit_flush();
+    $html = external_redirect_page($target, $label);
+    if ($html === null) {
+        redirect('/');
+    }
+    header('Cache-Control: no-store');
+    header('Referrer-Policy: no-referrer');
+    header('Content-Type: text/html; charset=utf-8');
+    echo $html;
+    exit;
+}
+/** Stránka pro redirect_external(): odkaz a meta refresh; jen adresy https (jinak null). */
+function external_redirect_page(string $target, string $label = 'Pokračovat'): ?string
+{
+    if (!preg_match('~^https://[^\s"<>]+$~i', $target)) {
+        return null;
+    }
+    $t = e($target);
+    return '<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<meta http-equiv="refresh" content="0;url=' . $t . '"><title>' . e($label) . '</title></head>'
+        . '<body><p><a href="' . $t . '">' . e($label) . '</a></p></body></html>';
+}
 function not_found(): never
 {
     http_response_code(404);

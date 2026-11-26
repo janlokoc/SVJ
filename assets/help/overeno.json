@@ -53,6 +53,101 @@
     ],
     "note": "Postup v internetovém bankovnictví (stažení výpisu, vytvoření tokenu Fio) nešlo ověřit – je na webu banky. Ověřeno je načtení výpisu ve formátu GPC, spárování podle VS a ruční přiřazení."
   },
+  "sms-zpravy": {
+    "date": "2026-11-26",
+    "checks": 12,
+    "steps": [
+      "V části Kredit je zůstatek (5 SMS, připsal provozovatel) a cena jedné SMS bez DPH.",
+      "Tlačítko Objednat kredit poslalo objednávku e-mailem provozovateli služby.",
+      "Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.",
+      "S diakritikou má zpráva (106 znaků) 2 SMS na příjemce, celkem 8 SMS – kredit 5 nestačí, web odeslání nenabídne.",
+      "Bez diakritiky se zpráva vejde do 1 SMS; náhled ukázal text, počet příjemců a celkovou cenu bez DPH.",
+      "Odesláno 3 vlastníkům; zprávu, kterou brána odmítla, web vrátil do kreditu (5 − 4 + 1 = 2 SMS). Přehled odeslaných zpráv je dole na stránce."
+    ],
+    "note": "Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: kredit a jeho objednání, náhled a cena, výběr příjemců, odeslání bráně a vrácení kreditu za zprávu, kterou brána odmítla."
+  },
+  "hlasovani-per-rollam": {
+    "date": "2026-11-26",
+    "checks": 24,
+    "steps": [
+      "Pole Ověření hlasu nabízí žádné / kód z e-mailu (výchozí) / kód z SMS; Bank iD bez nastavení u provozovatele web nenabídne.",
+      "Při lhůtě 9 dní web upozornil na 15 dní podle § 1211, při hranici 40 % na většinu všech hlasů podle § 1214; lhůta pak vrácena na 15 dní.",
+      "Vlastník odeslal hlas, přišel mu e-mail s kódem; bez kódu se hlas neuložil, kód platí 10 minut, špatný kód ubral pokus (zbývají 4 z 5), správný hlas uložil.",
+      "S ověřením „kód z SMS“ přišel druhému vlastníkovi kód v SMS a po jeho zadání se hlas uložil.",
+      "S volbou „žádné“ se hlas uložil hned po odeslání, bez kódu.",
+      "Hlasovací lístky: 12 lístků (za každou jednotku) s plným zněním návrhu, podílem, lhůtou a místem pro datum a vlastnoruční podpis.",
+      "Listinný hlas jednotky A/4 se skenem lístku je zapsaný; hlas za jednotku, která už hlasovala, web bez volby „Nahradit dosavadní hlas“ nepřijme.",
+      "Výbor opravil hlas jednotky A/2 v přehledu hlasů po jednotkách; v protokolu přibyl nový záznam a původní zůstal.",
+      "Protokol: návrh, výsledek každého bodu, potřebná většina „více než 50 % všech hlasů“ i při nastavených 40 %, 5 záznamů s časem, ověřením, adresou a zařízením, sken lístku a kontrola „V pořádku“.",
+      "Když se záznam nebo hlas změnil přímo v databázi, protokol to ukázal (porušený řetěz otisků, hlas neodpovídá protokolu).",
+      "Hlas bez záznamu v protokolu (jako z doby před jeho zavedením) se u výsledků ukázal jako „hlasy bez záznamu“.",
+      "Lístek doručený po skončení lhůty web nepřijal."
+    ],
+    "note": "Právní výklad (zákon, odborný článek, vzor stanov) ověřovací běh neověřuje – je to text, ne funkce webu. Ověření hlasu přes Bank iD jsme ověřit nemohli: potřebuje smlouvu s Bankovní identitou a přihlášení do skutečné banky; ověřeno je jen, že web Bank iD bez nastavení nenabídne. SMS s kódem přijala místo telefonu zkušební SMS brána."
+  },
+  "shromazdeni-online": {
+    "date": "2026-11-26",
+    "checks": 23,
+    "steps": [
+      "Administrace → Shromáždění online: povoleno pro dům i ověření kódem z e-mailu; stránka nabízí vzorové ustanovení stanov.",
+      "U termínu: forma Hybridní, „Vytvořit místnost Jitsi“ doplnilo adresu meet.jit.si s náhodným názvem; bez potvrzení stanov termín uložit nešel, s ním ano.",
+      "Vlastník v den konání klikl na „Připojit se online“, zadal kód z e-mailu; web ho zapsal do prezence za jednotku 12A/2 a videohovor otevřel v nové kartě.",
+      "V Prezenci na místě se online přítomnost a součet podílů obnovily samy (bez načtení stránky); seznam připojení ukazuje kdo, kdy, ověření a IP adresu.",
+      "Návrh puštěný k hlasování online se vlastníkovi objevil sám; hlasoval „proti“. U návrhu se průběžně ukázalo „Online pro 0, proti 1, zdrželo se 1“ – druhý online přítomný nehlasoval, počítá se jako zdržel se.",
+      "Druhý vlastník klikl „Odcházím“ – přestal se počítat do přítomných; tlačítkem „Připojit se online“ se vrátil.",
+      "Po „Uzavřít hlasování“ návrh z obrazovky vlastníka zmizel – online už hlasovat nejde.",
+      "Zápis uvádí formu (hybridní), službu (Jitsi Meet), ověření kódem z e-mailu, online účastníky s časy připojení a odchodu a u návrhu hlasy online a na místě.",
+      "Prezenční listina má u online jednotek „online“ a v příloze seznam připojení a hlasů odevzdaných online."
+    ],
+    "note": "Videohovor samotný (Jitsi Meet, Microsoft Teams, Zoom, Google Meet) jsme neověřovali – jde o cizí služby; ověřovací běh místo nich otevřel prázdnou zkušební stránku. Ověřeno je vše na webu: zapnutí pro dům, forma u termínu, připojení vlastníků s kódem z e-mailu, prezence, hlasování online, odchod a zápis."
+  },
+  "vyuctovani-sluzeb": {
+    "date": "2026-11-26",
+    "checks": 18,
+    "steps": [
+      "Vyúčtování za rok 2025 je založené; web ukazuje zákonnou lhůtu pro doručení 30. 4. 2026 (4 měsíce od konce období).",
+      "Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12A/5 je označená „bez účtu vlastníka“.",
+      "Po „Zveřejnit“ dostali vlastníci e-mail (nájemník ne); námitky lze podat do 26. 12. 2026 a vyúčtování už nejde smazat.",
+      "Vlastník přes Můj účet → Moje vyúčtování otevřel PDF, potvrdil převzetí a podal námitku; správcům přišel e-mail.",
+      "Stav po jednotkách ukázal potvrzení převzetí, lhůtu pro námitky a lhůtu k vyřízení; „Odeslat odpověď a uzavřít“ poslalo vlastníkovi odpověď e-mailem.",
+      "Denní úloha webu připomněla správcům námitku, které za 5 dní končí lhůta k vyřízení, a vyúčtování, které je třeba doručit do 10 dnů."
+    ],
+    "note": "Jak soubory vyúčtování pojmenovává odečtová nebo správcovská firma, jsme ověřit nemohli – běh použil názvy podle návodu (A-1.pdf, vyuctovani_A_2.pdf …) a jeden soubor s názvem bez jednotky."
+  },
+  "plan-oprav": {
+    "date": "2026-11-26",
+    "checks": 9,
+    "steps": [
+      "Nastaven fond 450 000 Kč k 31. 10. 2026, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.",
+      "Web zvýraznil roky v mínusu a nad grafem uvedl nejnižší potřebný příspěvek 57 678 Kč měsíčně (i průměrně na jednotku); Příspěvky jednotek ukazují rozpočet podle podílů.",
+      "S navrženým příspěvkem web hlásí, že fond vystačí – žádný rok v mínusu.",
+      "Po „Zveřejnit přehled obyvatelům“ vidí vlastník přes Můj účet stránku Plán oprav: stav fondu, plánované opravy, výhled a svůj měsíční příspěvek – bez možnosti cokoli měnit."
+    ],
+    "note": "Stav fondu oprav z účetnictví si správce přináší zvenku – běh použil smyšlenou částku."
+  },
+  "ucetnictvi": {
+    "date": "2026-11-26",
+    "checks": 19,
+    "steps": [
+      "Bez IČ v Nastavení web upozorní; v Nastavení exportu uložena zkratka účtu KB a splatnost 15. dne.",
+      "Export do POHODY (XML Windows-1250: adresář, ostatní pohledávky, banka), Money S3 (MoneyData), ABRA Flexi (winstrom) i CSV (4 soubory včetně stavů účtů) se stáhl a obsahuje předpisy s variabilním symbolem, IČ, zkratku účtu a splatnost.",
+      "Import CSV (Windows-1250, středník): web poznal kódování, oddělovač i sloupce (jednotka, VS, předpis, zůstatek); po změně přiřazení a „Zkontrolovat znovu“ náhled ukázal 2 řádky k uložení a 1 s neznámou jednotkou, která se vynechala. Částka „-1 200,50 Kč“ se uložila jako nedoplatek.",
+      "Při dalším souboru se stejnými sloupci web použil přiřazení z minulého importu.",
+      "Import jednotek z XLSX: jednotka B/7 se založila nově, podíl „1,5 %“ přijat; účty obyvatel import nezaložil.",
+      "Správcovská firma v partnerském portálu stáhla export všech domů v ZIP a nahrála jeden soubor se sloupcem Dům; řádek nepoznaného domu se vynechal."
+    ],
+    "note": "Import souborů do skutečné POHODY, Money S3 a ABRA Flexi jsme neověřili – tyto programy nemáme; ověřeno je, že web soubory vytvoří ve tvaru podle zveřejněných schémat výrobců. Předvolby programů správy domů (DOMSYS, IDES, MECOM, INTEGRI) jsou jen odhad názvů sloupců – soubory z těchto programů jsme neměli."
+  },
+  "data-a-smlouva": {
+    "date": "2026-11-26",
+    "checks": 9,
+    "steps": [
+      "Data a smlouva (Správa webu, odkaz i nahoře v Nastavení): se špatným heslem export nejde, se správným se stáhl ZIP s data.json a složkou uploads; stažení je v Záznamech.",
+      "Smlouva o zpracování je předvyplněná názvem, IČO a adresou společenství z Nastavení a má tlačítko Vytisknout / uložit jako PDF.",
+      "V edici Zdarma web po stažení napíše, kdy bude možný další export (jednou za 30 dní)."
+    ],
+    "note": ""
+  },
   "import-z-katastru": {
     "date": "2026-11-26",
     "checks": 3,
