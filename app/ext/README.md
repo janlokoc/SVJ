@@ -11,5 +11,5 @@ Funkce, které stojí peníze nebo potřebují smlouvu s třetí stranou, se zap
 - `app/ext/partner_*.php` – stránky partnerského portálu (`$pu`, `$partner`, `$plog`),
 - `app/ext/site_*.php` – veřejné stránky hlavního webu služby.
 
-Položku v menu administrace domu přidá modul v `*_lib.php`: `$GLOBALS['EXT_ADMIN_NAV']['/admin/neco'] = ['Název', 'Provoz domu'];`
-(skupiny: Obsah webu, Komunikace, Dům a lidé, Provoz domu, Správa webu). Funkci jen pro betu skryjte podmínkou `beta_visible('klic')` při zobrazení.
+Položku v menu administrace domu přidá modul v `*_lib.php`: `$GLOBALS['EXT_ADMIN_NAV']['/admin/neco'] = ['Název', 'Provoz domu', fn() => beta_visible('klic')];`
+(skupiny: Obsah webu, Komunikace, Dům a lidé, Provoz domu, Správa webu; třetí prvek je nepovinný – vyhodnotí se až při vykreslení stránky).

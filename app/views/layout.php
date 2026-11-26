@@ -43,8 +43,10 @@ if (function_exists('beta_visible') && beta_visible('insolvence')) {
     $adminNav['/admin/insolvence'] = 'Insolvence vlastníků' . (beta_is('insolvence') ? ' · beta' : '');
 }
 // Rozšíření: položky menu administrace z modulů ($GLOBALS['EXT_ADMIN_NAV'][adresa] = [název, skupina]).
-foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => [$extLabel]) {
-    $adminNav[$extHref] = $extLabel;
+foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => $extItem) {
+    if (!isset($extItem[2]) || ($extItem[2])()) {   // [název, skupina, nepovinně funkce „ukázat?“ – např. fn() => beta_visible('klic')]
+        $adminNav[$extHref] = $extItem[0];
+    }
 }
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
     $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
