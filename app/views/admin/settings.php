@@ -1,5 +1,5 @@
 <div class="wrap page narrow">
-  <header class="page-head"><h1>Nastavení webu</h1></header>
+  <header class="page-head"><h1>Nastavení webu</h1><p class="lead"><a href="<?= url('/admin/data-domu') ?>">Export všech dat domu a smlouva o zpracování osobních údajů</a> · <a href="<?= url('/admin/plakat') ?>">Plakát do vchodu</a></p></header>
   <?php if (plan_managed()): $stUsed = plan_used('storage'); $stLimit = plan_limit('storage'); $stPct = $stLimit ? min(100, (int) round(100 * $stUsed / $stLimit)) : 0;
     $stFiles = (int) val('SELECT COUNT(*) FROM documents WHERE filename IS NOT NULL') + (int) val('SELECT COUNT(*) FROM ticket_files'); $hasBilling = ($GLOBALS['BILLING']['mode'] ?? 'free') !== 'free'; ?>
   <section class="card storage-card<?= $stLimit && $stPct >= 100 ? ' is-full' : ($stLimit && $stPct >= 80 ? ' is-near' : '') ?>" id="uloziste">

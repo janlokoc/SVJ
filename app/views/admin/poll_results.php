@@ -5,6 +5,7 @@
   <?php if (!$results['units']): ?><p class="empty">Nejdřív založte jednotky – hlasuje se po jednotkách.</p><?php else: ?>
   <?php if (!$results['byShare']): ?><div class="flash flash-info">Některé jednotky nemají vyplněný podíl, proto má zatím každá jednotka jeden hlas.</div><?php endif ?>
   <?php require __DIR__ . '/../_poll_results.php'; ?>
+  <?php require __DIR__ . '/../ext/moda/_poll_help.php'; ?>
   <h2>Hlasy po jednotkách</h2>
   <p class="hint">Zde zapíšete hlas vlastníka, který hlasoval na papíře nebo na shromáždění, případně hlas opravíte. Každý zápis se ukládá do záznamů.</p>
   <table class="table">

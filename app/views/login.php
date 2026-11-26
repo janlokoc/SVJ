@@ -10,6 +10,7 @@
       <button class="btn btn-big" type="submit">Přihlásit se</button>
     </form>
     <p class="hint"><a href="<?= url('/zapomenute-heslo') ?>">Zapomněli jste heslo?</a></p>
+    <?php if (function_exists('magic_link_request')): ?><p class="hint"><a href="<?= url('/prihlaseni/odkaz') ?>">Poslat odkaz pro přihlášení</a> – bez hesla, na e-mail</p><?php endif ?>
     <p class="hint">Nemáte účet? Přístup Vám založí výbor SVJ – viz <a href="<?= url('/kontakty') ?>">Kontakty</a>.</p>
   </div>
 </div>

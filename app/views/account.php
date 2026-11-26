@@ -45,6 +45,7 @@
       <?php endif ?>
     </div>
   </section>
+  <?php require __DIR__ . '/ext/moda/_digest_box.php'; ?>
   <section class="household" id="overeni">
     <h2>Dvoufázové ověření</h2>
     <div class="card form">
