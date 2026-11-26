@@ -13,7 +13,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
     <p class="quorum-num"><span data-p="percent"><?= $s['percent'] ?></span> <small><?= $p['byShare'] ? 'všech hlasů podle podílů' : 'jednotek' ?></small></p>
     <div class="meter" role="img" aria-label="Přítomno, potřeba více než <?= $p['threshold'] ?> %"><span class="meter-fill" data-width="<?= $s['width'] ?>"></span><span class="meter-mark" data-left="<?= $p['threshold'] ?>"></span></div>
     <p><strong data-p="verdict"><?= e($s['verdict']) ?></strong> Hranice: více než <?= $p['threshold'] ?> %.</p>
-    <p class="quorum-counts">Osobně <strong data-p="self"><?= $s['self'] ?></strong> · zmocněnci <strong data-p="proxy"><?= $s['proxy'] ?></strong> · nepřítomno <strong data-p="absent"><?= $s['absent'] ?></strong> z <?= $p['units'] ?> jednotek<span data-p="missing-wrap"<?= $s['missingDocs'] ? '' : ' hidden' ?>> · <span class="warn">zmocněnci bez předložené plné moci: <strong data-p="missingDocs"><?= $s['missingDocs'] ?></strong></span></span></p>
+    <p class="quorum-counts">Osobně <strong data-p="self"><?= $s['self'] ?></strong> · zmocněnci <strong data-p="proxy"><?= $s['proxy'] ?></strong><?php if ($s['online'] || function_exists('hybrid_remote') && hybrid_remote((int) $ev['id'])): ?> · online <strong data-p="online"><?= $s['online'] ?></strong><?php endif ?> · nepřítomno <strong data-p="absent"><?= $s['absent'] ?></strong> z <?= $p['units'] ?> jednotek<span data-p="missing-wrap"<?= $s['missingDocs'] ? '' : ' hidden' ?>> · <span class="warn">zmocněnci bez předložené plné moci: <strong data-p="missingDocs"><?= $s['missingDocs'] ?></strong></span></span></p>
   </div>
   <?php if (!$p['byShare']): ?><div class="flash flash-info">Některé jednotky nemají vyplněný spoluvlastnický podíl, proto se počítá každá jednotka jako jeden hlas. Podíly doplníte v sekci <a href="<?= url('/admin/jednotky') ?>">Jednotky</a>.</div><?php endif ?>
 
@@ -37,7 +37,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
               <?php if (!$r['file_id']): ?><label class="check"><input type="checkbox" name="proxy_ok" value="1"<?= $r['proxy_ok'] ? ' checked' : '' ?>> plná moc předložena</label><?php endif ?>
             </div>
             <button class="btn btn-small btn-ghost presence-save" type="submit">Uložit</button>
-            <span class="presence-state" aria-live="polite"></span>
+            <span class="presence-state" aria-live="polite"></span><span class="tag hybrid-online-tag" data-online-badge<?= $mode === 'online' ? '' : ' hidden' ?>>online</span>
           </form>
         </td>
         <td data-label="Plná moc předem">
@@ -50,6 +50,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
     <?php endforeach ?>
     </tbody>
   </table>
+  <?php if (function_exists('hybrid_presence_panel')) { hybrid_presence_panel($ev, $p, $motions); } ?>
   <section class="motions" id="navrhy">
     <h2>Hlasování o návrzích</h2>
     <p class="hint">Přečtěte návrh, zeptejte se „Kdo je proti? Kdo se zdržel?“ a u těch jednotek to klikněte. Ostatní přítomní se počítají jako pro. Procenta jsou z hlasů přítomných podle podílů. Po skončení hlasování návrh uzavřete – výsledek se zafixuje a pozdější odchody ho nezmění.</p>
@@ -62,6 +63,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
         </div>
         <p class="motion-counts">Pro <strong data-m="yes"><?= $ms['yes'] ?></strong> (<span data-m="cyes"><?= $ms['cyes'] ?></span>) · proti <strong data-m="no"><?= $ms['no'] ?></strong> (<span data-m="cno"><?= $ms['cno'] ?></span>) · zdrželo se <strong data-m="abstain"><?= $ms['abstain'] ?></strong> (<span data-m="cabstain"><?= $ms['cabstain'] ?></span>) <small class="muted">– procenta z přítomných, v závorce počet jednotek</small></p>
         <p class="motion-verdict"><strong data-m="verdict"><?= e($ms['verdict']) ?></strong></p>
+        <?php if (function_exists('hybrid_motion_split')): ?><p class="hint" data-m="online"><?= e(hybrid_motion_split($r)) ?></p><?php endif ?>
         <?php if (!$closed): ?>
         <details class="motion-votes"<?= $i === count($motions) - 1 ? ' open' : '' ?>><summary>Kdo je proti a kdo se zdržel</summary>
           <ul class="vote-list">
@@ -76,7 +78,7 @@ $s = presence_summary($p); $base = '/admin/terminy/' . $ev['id'] . '/prezence-na
               </form></li>
           <?php endforeach ?>
           </ul>
-          <p class="hint" data-none-present<?= $p['counts']['yes'] + $p['counts']['proxy'] ? ' hidden' : '' ?>>Zatím není nikdo přítomen – nejdřív vyplňte prezenci výše.</p>
+          <p class="hint" data-none-present<?= $p['counts']['yes'] + $p['counts']['proxy'] + ($p['counts']['online'] ?? 0) ? ' hidden' : '' ?>>Zatím není nikdo přítomen – nejdřív vyplňte prezenci výše.</p>
         </details>
         <?php endif ?>
         <div class="actions">

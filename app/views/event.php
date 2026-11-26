@@ -10,6 +10,7 @@
       <a class="btn btn-small btn-ghost" href="<?= e(outlook_calendar_url($ev, 'outlook.live.com')) ?>" target="_blank" rel="noopener noreferrer" title="Osobní účty Outlook.com a Hotmail">Outlook.com</a>
     <a class="more" href="<?= url('/terminy') ?>">Všechny termíny <?= icon('arrow') ?></a></p>
 
+  <?php if (function_exists('hybrid_event_box')) { hybrid_event_box($ev); } ?>
   <?php if ($ev['rsvp']): ?>
     <section class="rsvp">
       <?php if ($att['units']): ?>

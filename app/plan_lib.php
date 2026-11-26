@@ -232,6 +232,7 @@ const BETA_FEATURES = [
     'insolvence' => ['Hlídání insolvencí vlastníků', '/admin/insolvence', 'isir_enabled'],
     'sms' => ['SMS zprávy vlastníkům', '/admin/sms', ''],   // Modul C: placené SMS přes bránu (GoSMS/BulkGate), kredit v konzoli /sms
     'bank-psd2' => ['Propojení s účty u dalších bank (PSD2)', '/admin/platby/banky', ''],   // Modul C: GoCardless Bank Account Data
+    'shromazdeni-online' => ['Shromáždění online a hybridně', '/admin/shromazdeni-online', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 

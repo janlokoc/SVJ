@@ -1860,3 +1860,16 @@ a.dash-tile:hover { border-color: var(--primary); }
 .sms-preview { white-space: pre-wrap; max-width: 22rem; padding: .7rem .9rem; border-radius: 14px 14px 14px 4px; background: var(--surface-2); color: var(--ink); }
 .sms-balance { font-size: 1.6rem; margin: .2rem 0 .6rem; }
 .psd2-panel { margin: 1rem 0 0; padding: .7rem 1rem; border-radius: 10px; background: var(--soft); }
+/* ---------- Modul H: shromáždění online a hybridně (app/ext/hybrid_lib.php) ---------- */
+.hybrid-fields { display: grid; gap: .5rem; }
+.hybrid-remote { display: grid; gap: .6rem; padding: .75rem 1rem; border-left: 4px solid var(--accent); background: var(--surface-2); border-radius: 0 var(--radius) var(--radius) 0; }
+.hybrid-remote[hidden] { display: none; }
+.hybrid-box { margin: 1.25rem 0; border-left: 4px solid var(--primary); }
+.hybrid-box h2, .hybrid-panel h2, .hybrid-motion h3 { margin-top: 0; }
+.hybrid-motion .actions .btn[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+.hybrid-panel { margin: 1.5rem 0; }
+.hybrid-live-list { list-style: none; padding: 0; margin: .5rem 0 1rem; display: grid; gap: .5rem; }
+.hybrid-live-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem 0; border-bottom: 1px solid var(--surface-2); }
+.hybrid-online-tag { margin-left: .4rem; background: var(--soft); color: var(--primary); }
+.hybrid-online-tag[hidden] { display: none; }
+.hybrid-protocol { margin-top: 1.5rem; }

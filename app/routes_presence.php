@@ -26,14 +26,14 @@ function presence(int $eventId): array
         $byShare = $byShare && share_value($r['share']) > 0;
     }
     $total = $present = 0.0;
-    $counts = ['yes' => 0, 'proxy' => 0, 'no' => 0, 'none' => 0];
+    $counts = ['yes' => 0, 'proxy' => 0, 'online' => 0, 'no' => 0, 'none' => 0];
     $missingDocs = 0;
     foreach ($rows as &$r) {
         $r['weight'] = $byShare ? share_value($r['share']) : 1.0;
         $total += $r['weight'];
-        if ($r['mode'] === 'self' || $r['mode'] === 'proxy') {
+        if ($r['mode'] === 'self' || $r['mode'] === 'proxy' || $r['mode'] === 'online') {   // online = modul H (app/ext/hybrid_lib.php)
             $present += $r['weight'];
-            $counts[$r['mode'] === 'self' ? 'yes' : 'proxy']++;
+            $counts[$r['mode'] === 'self' ? 'yes' : $r['mode']]++;
             $missingDocs += $r['mode'] === 'proxy' && !$r['proxy_ok'] && !$r['file_id'] ? 1 : 0;
         } else {
             $counts['no']++;
@@ -75,13 +75,16 @@ function motion_result(array $m, array $p): array
     }
     $sum = ['yes' => 0.0, 'no' => 0.0, 'abstain' => 0.0];
     $count = ['yes' => 0, 'no' => 0, 'abstain' => 0];
+    $byMode = ['site' => $count, 'online' => $count];
     $present = $all = 0.0;
     foreach ($p['rows'] as $r) {
         $all += $r['weight'];
-        if ($r['mode'] === 'self' || $r['mode'] === 'proxy') {
-            $c = $votes[(int) $r['id']] ?? 'yes';
+        if ($r['mode'] === 'self' || $r['mode'] === 'proxy' || $r['mode'] === 'online') {
+            // Online přítomný, který nehlasoval, se zdržel (mlčení online může být jen výpadek spojení).
+            $c = $votes[(int) $r['id']] ?? ($r['mode'] === 'online' ? 'abstain' : 'yes');
             $sum[$c] += $r['weight'];
             $count[$c]++;
+            $byMode[$r['mode'] === 'online' ? 'online' : 'site'][$c]++;
             $present += $r['weight'];
         }
     }
@@ -93,7 +96,7 @@ function motion_result(array $m, array $p): array
     $pct = fn(float $x) => $present > 0 ? $x / $present * 100 : 0.0;
     return ['yes' => $pct($sum['yes']), 'no' => $pct($sum['no']), 'abstain' => $pct($sum['abstain']), 'count' => $count,
         'yesOfAll' => $all > 0 ? $sum['yes'] / $all * 100 : 0.0, 'basis' => $basis, 'label' => $label, 'quorate' => $p['quorate'],
-        'passed' => $p['quorate'] && $enough && $base > 0, 'presentPct' => $p['percent'], 'closed' => false, 'votes' => $votes];
+        'passed' => $p['quorate'] && $enough && $base > 0, 'presentPct' => $p['percent'], 'closed' => false, 'votes' => $votes, 'byMode' => $byMode];
 }
 function motion_verdict(array $r): string
 {
@@ -149,7 +152,7 @@ function meeting_motions(int $eventId, array $p): array
 /** Souhrn pro průběžnou aktualizaci stránky (JSON). */
 function presence_summary(array $p): array
 {
-    return ['percent' => percent_cz($p['percent']), 'width' => round(min(100, $p['percent']), 1), 'quorate' => $p['quorate'], 'self' => $p['counts']['yes'], 'proxy' => $p['counts']['proxy'],
+    return ['percent' => percent_cz($p['percent']), 'width' => round(min(100, $p['percent']), 1), 'quorate' => $p['quorate'], 'self' => $p['counts']['yes'], 'proxy' => $p['counts']['proxy'], 'online' => $p['counts']['online'] ?? 0,
         'absent' => $p['counts']['no'], 'units' => $p['units'], 'missingDocs' => $p['missingDocs'],
         'verdict' => $p['quorate'] ? 'Shromáždění je usnášeníschopné.' : 'Shromáždění zatím není usnášeníschopné – chybí ' . percent_cz(max(0, $p['threshold'] - $p['percent'])) . ' a alespoň jeden další hlas.'];
 }
@@ -254,7 +257,8 @@ $route('POST', '/admin/terminy/(\d+)/prezence-na-miste', function (int $id) {
         } elseif ($do === 'vote' && $m['status'] !== 'closed') {
             $choice = post('choice');
             $unit = (int) post('unit_id');
-            if ($choice === 'no' || $choice === 'abstain') {
+            // Online přítomnému se hlas „pro“ ukládá výslovně (bez záznamu by se počítal jako „zdržel se“).
+            if ($choice === 'no' || $choice === 'abstain' || ($choice === 'yes' && val("SELECT 1 FROM event_presence WHERE event_id = ? AND unit_id = ? AND mode = 'online'", [$id, $unit]))) {
                 q('INSERT INTO meeting_votes (motion_id, unit_id, choice) VALUES (?,?,?) ON CONFLICT(motion_id, unit_id) DO UPDATE SET choice = excluded.choice', [$m['id'], $unit, $choice]);
             } else {
                 q('DELETE FROM meeting_votes WHERE motion_id = ? AND unit_id = ?', [$m['id'], $unit]);
