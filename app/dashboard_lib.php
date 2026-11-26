@@ -135,6 +135,7 @@ function house_dashboard(PDO $pdo, int $days, bool $full = true, array $staffIds
     foreach ($st->fetchAll() as $r) {
         $upcoming[] = ['date' => $r['due_date'], 'title' => 'Termín hlášení: ' . $r['subject'], 'late' => $r['due_date'] < $today];
     }
+    $upcoming = function_exists('modf_upcoming') ? [...$upcoming, ...modf_upcoming($pdo, $today)] : $upcoming;   // smlouvy, vyúčtování
     usort($upcoming, fn($a, $b) => strcmp($a['date'], $b['date']));
     $d['upcoming'] = array_slice($upcoming, 0, 6);
     return $d;

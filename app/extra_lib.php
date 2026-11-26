@@ -198,6 +198,9 @@ function daily_tasks(): void
         }
     }
     if (function_exists('digest_daily')) digest_daily();   // týdenní přehled pro obyvatele (app/ext/moda_lib.php)
+    if (function_exists('modf_daily')) {
+        modf_daily();   // provoz domu: smlouvy, vyúčtování (chyby zachytí sama)
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }

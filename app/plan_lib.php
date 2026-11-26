@@ -45,6 +45,9 @@ const PLAN_FEATURES = [
     'ai-pomocnik' => ['standard', 'AI pomocník pro výbor', 'Z poznámek napíše oznámení, e-mail, pozvánku, program nebo návrhy usnesení, text uhladí či zkrátí a navrhne odpověď na závadu.', null],
     'ai-asistent' => ['premium', 'AI asistent', 'Obyvatelé i výbor se ptají běžnou řečí a dostanou odpověď podle stanov, domovního řádu, dokumentů a oznámení domu – s odkazy na zdroje.', '~^/asistent(/|$)~'],
     'ai-zapis' => ['premium', 'AI zápis z poznámek a přepisu', 'Pomocník napíše průběh jednání z poznámek nebo nahraného přepisu schůze.', '~^/admin/prepis$~'],
+    'vyuctovani' => ['standard', 'Vyúčtování služeb', 'Vyúčtování jednotek na webu: vlastníci potvrdí převzetí, podávají námitky, výbor hlídá zákonné lhůty.', '~^/(admin/)?vyuctovani(/|$)~'],
+    'smlouvy' => ['standard', 'Smlouvy a pojištění', 'Evidence smluv a pojištění s připomínkou výpovědní lhůty a konce smlouvy.', '~^/admin/smlouvy(/|$)~'],
+    'plan-oprav' => ['premium', 'Plán oprav a fond oprav', 'Plánované opravy a výhled fondu oprav na 10–20 let s návrhem, o kolik zvýšit příspěvky.', '~^/(admin/)?plan-oprav(/|$)~'],
 ];
 
 function plan_managed(): bool

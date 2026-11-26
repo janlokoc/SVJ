@@ -1904,3 +1904,30 @@ a.dash-tile:hover { border-color: var(--primary); }
   .poster-lead, .poster-steps { font-size: 14pt; }
   .dpa-doc .prose { font-size: 10.5pt; }
 }
+/* ---------- Modul F: provoz domu (vyúčtování služeb, plán oprav a fond oprav, smlouvy a pojištění) ---------- */
+.modf-links { margin-top: -.4rem; }
+.modf-alert p { margin: 0 0 .4rem; }
+.modf-objection { border-top: 1px solid var(--line); padding: .8rem 0; }
+.modf-objection:first-of-type { border-top: 0; }
+.modf-answer { margin-top: .5rem; padding: .6rem .9rem; border-left: 3px solid var(--primary); background: var(--soft); border-radius: 0 8px 8px 0; }
+.modf-my form { margin: .4rem 0; }
+.modf-objection-form summary, .modf-add summary { cursor: pointer; color: var(--primary); font-weight: 600; margin-top: .6rem; }
+.modf-feed { width: min(100%, 36rem); font-family: ui-monospace, monospace; font-size: .85rem; }
+.modf-chart { position: relative; height: 220px; margin: .8rem 0 2.2rem; }
+.modf-cols { position: absolute; inset: 0; display: flex; gap: 3px; }
+.modf-col { flex: 1; position: relative; border-radius: 4px; outline-offset: 2px; }
+.modf-col.is-neg { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.modf-col:hover, .modf-col:focus { background: var(--surface-2); }
+.modf-bar { position: absolute; bottom: 0; height: 0; width: 40%; border-radius: 3px; }
+.modf-bar-cost { left: 8%; background: var(--warn); opacity: .75; }
+.modf-bar-bal { right: 8%; background: var(--primary); }
+.modf-col.is-neg .modf-bar-bal { background: var(--accent); }
+.modf-zero { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-top: 2px solid var(--muted); z-index: 1; pointer-events: none; }
+.modf-x { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: .3rem; font-size: .72rem; color: var(--muted); white-space: nowrap; }
+.modf-cols:has(.modf-col:nth-child(13)) .modf-col:nth-child(even) .modf-x { visibility: hidden; }
+.modf-legend { display: flex; flex-wrap: wrap; gap: .3rem .9rem; align-items: center; font-size: .88rem; color: var(--muted); }
+.modf-key { display: inline-block; width: .9rem; height: .9rem; border-radius: 3px; vertical-align: -.1rem; }
+.modf-key-bal { background: var(--primary); }
+.modf-key-neg { background: var(--accent); }
+.modf-key-cost { background: var(--warn); opacity: .75; }
+tr.is-neg td { color: var(--accent); }

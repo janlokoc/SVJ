@@ -750,3 +750,5 @@ document.querySelectorAll('[data-hybrid-admin-poll]').forEach((panel) => {
     } catch (e) { if (tick) tick.textContent = '(spojení se nepodařilo – zkouším znovu)'; }
   }, 4000);
 });
+// Modul F – výhled fondu oprav: poloha a výška sloupců z data-b/data-h (styl z dat, ne vložený do stránky – CSP).
+document.querySelectorAll('.modf-chart [data-b]').forEach((el) => { el.style.bottom = el.dataset.b + '%'; if (el.dataset.h !== undefined) el.style.height = el.dataset.h + '%'; });
