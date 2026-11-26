@@ -560,7 +560,7 @@ document.querySelectorAll('[data-ares]').forEach((box) => {
     const text = q.value.trim(); if (!text) { q.focus(); return; }
     go.disabled = true; say('Hledám v ARES…');
     try {
-      const r = await fetch(box.dataset.ares + '?q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+      const r = await fetch(box.dataset.ares + (box.dataset.ares.includes('?') ? '&' : '?') + 'q=' + encodeURIComponent(text), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
       const d = await r.json();
       if (!d.ok) { list.hidden = true; say(d.error || 'Nepodařilo se načíst údaje z ARES.', true); return; }
       if (d.subject) { fill(d.subject, d.warning); return; }
@@ -572,7 +572,8 @@ document.querySelectorAll('[data-ares]').forEach((box) => {
         const m = document.createElement('small'); m.textContent = 'IČO ' + s.ico + (s.address ? ' · ' + s.address : '');
         b.append(n, m); b.addEventListener('click', () => fill(s)); li.append(b); list.append(li);
       });
-      say(d.total > d.results.length ? `Nalezeno ${d.total} SVJ, ukazujeme prvních ${d.results.length}. Vyberte své, nebo hledání upřesněte (třeba i číslem domu či obcí).` : 'Vyberte své společenství:');
+      const firm = 'aresFirm' in box.dataset;
+      say(d.total > d.results.length ? (firm ? `Nalezeno ${d.total} firem, ukazujeme prvních ${d.results.length}. Vyberte, nebo hledání upřesněte.` : `Nalezeno ${d.total} SVJ, ukazujeme prvních ${d.results.length}. Vyberte své, nebo hledání upřesněte (třeba i číslem domu či obcí).`) : (firm ? 'Vyberte firmu:' : 'Vyberte své společenství:'));
     } catch (e) { say('ARES se teď nepodařilo zastihnout. Údaje můžete vyplnit ručně.', true); }
     finally { go.disabled = false; }
   };

@@ -92,6 +92,7 @@ return [
     'Uložit nové heslo' => 'Lưu mật khẩu mới',
     'Ověření přihlášení' => 'Xác minh đăng nhập',
     'Zadejte šestimístný kód z ověřovací aplikace v telefonu.' => 'Nhập mã sáu chữ số từ ứng dụng xác thực trên điện thoại.',
+    'Heslo je v pořádku. Teď opište šestimístný kód z ověřovací aplikace v telefonu (Microsoft Authenticator, Google Authenticator…). Kód se mění každých 30 sekund.' => 'Mật khẩu đúng. Bây giờ hãy nhập mã sáu chữ số từ ứng dụng xác thực trên điện thoại (Microsoft Authenticator, Google Authenticator…). Mã thay đổi sau mỗi 30 giây.',
     'Kód' => 'Mã',
     'Nemáte telefon po ruce nebo jste o aplikaci přišli? Ověření Vám může vypnout jiný správce webu.' => 'Không có điện thoại hoặc mất ứng dụng? Quản trị viên khác có thể tắt xác minh cho bạn.',
     'Vítejte, {}' => 'Chào mừng, {}',

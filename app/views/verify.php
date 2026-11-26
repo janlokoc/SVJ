@@ -1,7 +1,7 @@
 <div class="wrap page auth">
   <div class="card auth-card">
-    <h1>Ověření přihlášení</h1>
-    <p>Zadejte šestimístný kód z ověřovací aplikace v telefonu.</p>
+    <h1>Dvoufázové ověření</h1>
+    <p>Heslo je v pořádku. Teď opište šestimístný kód z ověřovací aplikace v telefonu (Microsoft Authenticator, Google Authenticator…). Kód se mění každých 30 sekund.</p>
     <?php if ($error): ?><div class="flash flash-error" role="alert"><?= e($error) ?></div><?php endif ?>
     <form method="post" action="<?= url('/prihlaseni/overeni') ?>" class="form">
       <?= csrf_field() ?>

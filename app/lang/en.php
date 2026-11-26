@@ -92,6 +92,7 @@ return [
     'Uložit nové heslo' => 'Save new password',
     'Ověření přihlášení' => 'Sign-in verification',
     'Zadejte šestimístný kód z ověřovací aplikace v telefonu.' => 'Enter the six-digit code from the authenticator app on your phone.',
+    'Heslo je v pořádku. Teď opište šestimístný kód z ověřovací aplikace v telefonu (Microsoft Authenticator, Google Authenticator…). Kód se mění každých 30 sekund.' => 'Your password is correct. Now enter the six-digit code from the authenticator app on your phone (Microsoft Authenticator, Google Authenticator…). The code changes every 30 seconds.',
     'Kód' => 'Code',
     'Nemáte telefon po ruce nebo jste o aplikaci přišli? Ověření Vám může vypnout jiný správce webu.' => 'No phone at hand or lost the app? Another website administrator can turn verification off for you.',
     'Vítejte, {}' => 'Welcome, {}',

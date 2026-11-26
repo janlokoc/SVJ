@@ -1,6 +1,6 @@
 {
   "shromazdeni": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "checks": 11,
     "steps": [
       "Termín s programem a přihlašováním se uložil.",
@@ -15,7 +15,7 @@
     "note": ""
   },
   "odecty-api": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "checks": 13,
     "steps": [
       "Správce zapnul automatický příjem a získal adresu.",
@@ -27,7 +27,7 @@
     "note": ""
   },
   "upozorneni-do-telefonu": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "checks": 10,
     "steps": [
       "V „Můj účet“ je část Upozornění do telefonu s tlačítkem „Zapnout upozornění na tomto zařízení“.",
@@ -42,7 +42,7 @@
     "note": "Přidání webu na plochu na skutečném iPhonu a telefonu s Androidem jsme ověřit nemohli – ověřovací běh nemá skutečný telefon. Ověřeno je zapnutí na webu, šifrování a doručení zprávy přes zkušební push službu a zobrazení upozornění v prohlížeči."
   },
   "parovani-plateb": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "checks": 5,
     "steps": [
       "Stav dvou jednotek z účetnictví s variabilními symboly 4801 a 4803 nahrán k 1. 11.",
@@ -54,7 +54,7 @@
     "note": "Postup v internetovém bankovnictví (stažení výpisu, vytvoření tokenu Fio) nešlo ověřit – je na webu banky. Ověřeno je načtení výpisu ve formátu GPC, spárování podle VS a ruční přiřazení."
   },
   "import-z-katastru": {
-    "date": "2026-11-25",
+    "date": "2026-11-26",
     "checks": 3,
     "steps": [
       "Náhled našel 6 jednotek a součet podílů 100 %.",

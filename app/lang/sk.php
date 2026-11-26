@@ -92,6 +92,7 @@ return [
     'Uložit nové heslo' => 'Uložiť nové heslo',
     'Ověření přihlášení' => 'Overenie prihlásenia',
     'Zadejte šestimístný kód z ověřovací aplikace v telefonu.' => 'Zadajte šesťmiestny kód z overovacej aplikácie v telefóne.',
+    'Heslo je v pořádku. Teď opište šestimístný kód z ověřovací aplikace v telefonu (Microsoft Authenticator, Google Authenticator…). Kód se mění každých 30 sekund.' => 'Heslo je v poriadku. Teraz opíšte šesťmiestny kód z overovacej aplikácie v telefóne (Microsoft Authenticator, Google Authenticator…). Kód sa mení každých 30 sekúnd.',
     'Kód' => 'Kód',
     'Nemáte telefon po ruce nebo jste o aplikaci přišli? Ověření Vám může vypnout jiný správce webu.' => 'Nemáte telefón poruke alebo ste o aplikáciu prišli? Overenie Vám môže vypnúť iný správca webu.',
     'Vítejte, {}' => 'Vitajte, {}',

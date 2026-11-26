@@ -92,6 +92,7 @@ return [
     'Uložit nové heslo' => 'Зберегти новий пароль',
     'Ověření přihlášení' => 'Підтвердження входу',
     'Zadejte šestimístný kód z ověřovací aplikace v telefonu.' => 'Введіть шестизначний код із застосунку для автентифікації у телефоні.',
+    'Heslo je v pořádku. Teď opište šestimístný kód z ověřovací aplikace v telefonu (Microsoft Authenticator, Google Authenticator…). Kód se mění každých 30 sekund.' => 'Пароль правильний. Тепер введіть шестизначний код із застосунку автентифікації в телефоні (Microsoft Authenticator, Google Authenticator…). Код змінюється кожні 30 секунд.',
     'Kód' => 'Код',
     'Nemáte telefon po ruce nebo jste o aplikaci přišli? Ověření Vám může vypnout jiný správce webu.' => 'Немає телефона під рукою або втратили застосунок? Підтвердження може вимкнути інший адміністратор сайту.',
     'Vítejte, {}' => 'Вітаємо, {}',

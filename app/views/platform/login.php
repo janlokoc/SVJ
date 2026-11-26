@@ -1,9 +1,10 @@
 <div class="wrap page auth"><div class="card auth-card">
-  <h1><?= $verify ? 'Ověření přihlášení' : 'Správa platformy' ?></h1>
+  <h1><?= $verify ? 'Dvoufázové ověření' : 'Správa platformy' ?></h1>
+  <?php if ($verify): ?><p>Heslo je v pořádku. Teď otevřete v telefonu ověřovací aplikaci (Microsoft Authenticator, Google Authenticator…) a opište šestimístný kód u účtu <strong><?= e((pset('service_name') !== '' ? pset('service_name') : platform_main_domain()) . ' – správa') ?></strong>. Kód se mění každých 30 sekund.</p><?php endif ?>
   <?php if ($error): ?><div class="flash flash-error" role="alert"><?= e($error) ?></div><?php endif ?>
   <?php if ($verify): ?>
     <form method="post" action="<?= url('/overeni') ?>" class="form"><?= csrf_field() ?>
-      <label>Kód z ověřovací aplikace <input type="text" name="code" id="totp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus></label>
+      <label>Šestimístný kód <input type="text" name="code" id="totp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus></label>
       <button class="btn btn-big" type="submit">Přihlásit se</button></form>
     <?php if (!empty($recovery)): ?>
     <div class="card-soft"><h2>Obnova bez ověřovací aplikace</h2>

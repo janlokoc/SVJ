@@ -11,7 +11,8 @@
       <label>Heslo znovu <input type="password" name="password2" minlength="10" autocomplete="new-password" required></label>
       <button class="btn btn-big" type="submit">Uložit heslo a přihlásit se</button></form>
   <?php elseif ($mode === 'verify'): ?>
-    <h1>Ověření přihlášení</h1>
+    <h1>Dvoufázové ověření</h1>
+    <p>Heslo je v pořádku. Teď otevřete v telefonu ověřovací aplikaci (Microsoft Authenticator, Google Authenticator…) a opište šestimístný kód u účtu partnerského portálu. Kód se mění každých 30 sekund.</p>
     <?php if ($error): ?><div class="flash flash-error" role="alert"><?= e($error) ?></div><?php endif ?>
     <form method="post" action="<?= url('/overeni') ?>" class="form"><?= csrf_field() ?>
       <label>Kód z ověřovací aplikace <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus></label>

@@ -222,7 +222,7 @@ if ($PATH === '/') {
     exit;
 }
 if ($PATH === '/ares' && $METHOD === 'GET') {
-    ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
+    ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120), ($_GET['firma'] ?? '') === '1');
     exit;
 }
 if ($PATH === '/svj/nove') {

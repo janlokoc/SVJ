@@ -78,6 +78,7 @@ function ares_subject(array $s): array
     $short = ares_short_name($name);
     return [
         'ico' => (string) ($s['ico'] ?? ''),
+        'dic' => (string) ($s['dic'] ?? ''),
         'name' => $name,
         'short' => $short,
         'site_name' => 'SVJ ' . $short,
@@ -89,7 +90,7 @@ function ares_subject(array $s): array
 }
 
 /** Podle IČO. Vrací ['ok' => true, 'subject' => …] nebo ['ok' => false, 'error' => text pro člověka]. */
-function ares_by_ico(string $raw): array
+function ares_by_ico(string $raw, bool $firm = false): array
 {
     $ico = ares_ico($raw);
     if ($ico === null) {
@@ -103,37 +104,37 @@ function ares_by_ico(string $raw): array
         return ['ok' => false, 'error' => 'V ARES není žádný subjekt s IČO ' . $ico . '.'];
     }
     $subject = ares_subject($data);
-    return ['ok' => true, 'subject' => $subject, 'warning' => $subject['closed'] ? 'Podle ARES tento subjekt zanikl.' : (!$subject['svj'] ? 'Podle ARES to není společenství vlastníků jednotek – zkontrolujte IČO.' : '')];
+    return ['ok' => true, 'subject' => $subject, 'warning' => $subject['closed'] ? 'Podle ARES tento subjekt zanikl.' : (!$firm && !$subject['svj'] ? 'Podle ARES to není společenství vlastníků jednotek – zkontrolujte IČO.' : '')];
 }
 
-/** Podle části názvu nebo ulice, jen mezi SVJ. Vrací až $limit nalezených. */
-function ares_search(string $query, int $limit = 8): array
+/** Podle části názvu nebo ulice, jen mezi SVJ ($firm = mezi všemi firmami, např. správcovskými). Vrací až $limit nalezených. */
+function ares_search(string $query, int $limit = 8, bool $firm = false): array
 {
     $query = trim(preg_replace('/\s+/u', ' ', $query));
     // obecná slova by našla tisíce SVJ – hledá se podle toho, co je za nimi
-    $needle = trim(ares_short_name($query));
+    $needle = $firm ? $query : trim(ares_short_name($query));
     if (mb_strlen($needle) < 3) {
-        return ['ok' => false, 'error' => 'Napište IČO, nebo aspoň tři písmena z názvu či ulice.'];
+        return ['ok' => false, 'error' => 'Napište IČO, nebo aspoň tři písmena z názvu' . ($firm ? '.' : ' či ulice.')];
     }
-    $data = ares_request('/ekonomicke-subjekty/vyhledat', ['obchodniJmeno' => $needle, 'pravniForma' => [ARES_SVJ_FORM], 'start' => 0, 'pocet' => $limit]);
+    $data = ares_request('/ekonomicke-subjekty/vyhledat', ['obchodniJmeno' => $needle, 'start' => 0, 'pocet' => $limit] + ($firm ? [] : ['pravniForma' => [ARES_SVJ_FORM]]));
     if ($data === null) {
         return ['ok' => false, 'error' => 'ARES teď neodpovídá. Zkuste to za chvíli, nebo údaje vyplňte ručně.'];
     }
     $list = array_map('ares_subject', $data['ekonomickeSubjekty'] ?? []);
     $list = array_values(array_filter($list, fn($s) => !$s['closed']));
     if (!$list) {
-        return ['ok' => false, 'error' => 'V ARES jsme nenašli žádné SVJ s „' . $needle . '“ v názvu. Zkuste IČO nebo jinou část názvu.'];
+        return ['ok' => false, 'error' => 'V ARES jsme nenašli ' . ($firm ? 'žádnou firmu' : 'žádné SVJ') . ' s „' . $needle . '“ v názvu. Zkuste IČO nebo jinou část názvu.'];
     }
     return ['ok' => true, 'results' => $list, 'total' => (int) ($data['pocetCelkem'] ?? count($list))];
 }
 
 /** Dotaz z formuláře: IČO, nebo text k hledání. Výsledek jako JSON pro skript ve formuláři. */
-function ares_lookup_json(string $q): void
+function ares_lookup_json(string $q, bool $firm = false): void
 {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     $digits = preg_replace('/\s+/', '', $q);
-    $res = preg_match('/^\d{6,8}$/', $digits) ? ares_by_ico($digits) : ares_search($q);
+    $res = preg_match('/^\d{6,8}$/', $digits) ? ares_by_ico($digits, $firm) : ares_search($q, 8, $firm);
     echo json_encode($res, JSON_UNESCAPED_UNICODE);
 }
 

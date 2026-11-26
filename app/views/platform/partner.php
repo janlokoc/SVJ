@@ -23,9 +23,10 @@
   <?php else: ?><p class="empty">Zatím žádné faktury.</p><?php endif ?>
   <div class="two-col">
     <form method="post" class="card form"><h2>Údaje firmy</h2><?= csrf_field() ?><input type="hidden" name="action" value="save">
-      <label>Název <input type="text" name="name" value="<?= e($pa['name']) ?>" required></label>
-      <div class="form-row"><label>IČO <input type="text" name="ico" value="<?= e($pa['ico']) ?>"></label><label>DIČ <input type="text" name="dic" value="<?= e($pa['dic']) ?>"></label></div>
-      <label>Sídlo <input type="text" name="address" value="<?= e($pa['address']) ?>"></label>
+      <?php $aresUrl = url('/ares'); $aresFirm = true; require __DIR__ . '/_ares.php'; ?>
+      <label>Název <input type="text" name="name" value="<?= e($pa['name']) ?>" data-ares-field="name" required></label>
+      <div class="form-row"><label>IČO <input type="text" name="ico" data-ares-field="ico" value="<?= e($pa['ico']) ?>"></label><label>DIČ <input type="text" name="dic" data-ares-field="dic" value="<?= e($pa['dic']) ?>"></label></div>
+      <label>Sídlo <input type="text" name="address" data-ares-field="address" value="<?= e($pa['address']) ?>"></label>
       <div class="form-row"><label>Fakturační e-mail <input type="email" name="email" value="<?= e($pa['email']) ?>"></label><label>Telefon <input type="text" name="phone" value="<?= e($pa['phone']) ?>"></label></div>
       <label>Poznámka (vidíte jen Vy) <textarea name="note" rows="2"><?= e($pa['note']) ?></textarea></label>
       <button class="btn" type="submit">Uložit</button></form>

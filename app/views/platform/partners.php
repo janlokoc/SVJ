@@ -12,8 +12,9 @@
   <?php else: ?><p class="empty">Zatím tu není žádný partner.</p><?php endif ?>
   <form method="post" class="card form">
     <h2>Přidat partnera</h2><?= csrf_field() ?>
-    <div class="form-row"><label>Název firmy <input type="text" name="name" value="<?= e($in['name']) ?>" required></label><label>IČO <input type="text" name="ico" value="<?= e($in['ico']) ?>" inputmode="numeric" maxlength="8"></label><label>DIČ <input type="text" name="dic" value="<?= e($in['dic']) ?>" maxlength="14"></label></div>
-    <label>Sídlo (na faktury) <input type="text" name="address" value="<?= e($in['address']) ?>"></label>
+      <?php $aresUrl = url('/ares'); $aresFirm = true; require __DIR__ . '/_ares.php'; ?>
+    <div class="form-row"><label>Název firmy <input type="text" name="name" value="<?= e($in['name']) ?>" data-ares-field="name" required></label><label>IČO <input type="text" name="ico" data-ares-field="ico" value="<?= e($in['ico']) ?>" inputmode="numeric" maxlength="8"></label><label>DIČ <input type="text" name="dic" data-ares-field="dic" value="<?= e($in['dic']) ?>" maxlength="14"></label></div>
+    <label>Sídlo (na faktury) <input type="text" name="address" data-ares-field="address" value="<?= e($in['address']) ?>"></label>
     <div class="form-row"><label>Fakturační e-mail <input type="email" name="email" value="<?= e($in['email']) ?>" required></label><label>Telefon <input type="text" name="phone" value="<?= e($in['phone']) ?>"></label></div>
     <fieldset><legend>První pracovník (správce účtu firmy)</legend>
       <div class="form-row"><label>Jméno a příjmení <input type="text" name="user_name" value="<?= e($in['user_name']) ?>" required></label><label>E-mail <input type="email" name="user_email" value="<?= e($in['user_email']) ?>" required></label></div>
