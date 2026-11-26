@@ -8,7 +8,6 @@
 
   <h3 class="lp-sub">Doplňky a služby <small class="vat-tag">ceny bez DPH</small></h3>
   <table class="table price-table"><tbody>
-    <tr><td><strong>Vlastní doména</strong><br><small class="muted">Web na adrese jako tabor48.cz; doménu zaregistrujeme, nebo připojíme Vaši. Doplněk k edici Standard nebo Premium.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_domain', 0, 1000000)) ?> / rok</strong></td></tr>
     <?php if (pset_int('price_storage', 0, 1000000)): ?><tr><td><strong>Úložiště navíc</strong><br><small class="muted">Když dokumentům přestane stačit místo edice. V kterékoli edici, objednává se v administraci.</small></td><td class="t-actions"><strong><?= pset_int('storage_pack_mb', 1, 100000) ?> MB za <?= money_czk(pset_int('price_storage', 0, 1000000)) ?> / rok</strong></td></tr><?php endif ?>
     <?php if (pset_int('price_ai_pack', 0, 1000000)): ?><tr><td><strong>AI kredity</strong><br><small class="muted">Další dotazy na AI asistenta a AI pomocníka, když se vyčerpá měsíční limit edice. Kredity nepropadají; objednávají se v administraci.</small></td><td class="t-actions"><strong><?= number_format(pset_int('ai_pack', 1, 100000), 0, ',', "\u{a0}") ?> dotazů za <?= money_czk(pset_int('price_ai_pack', 0, 1000000)) ?></strong></td></tr><?php endif ?>
     <?php if (pset_int('referral_reward', 0, 100000)): ?><tr><td><strong>Sleva za doporučení</strong><br><small class="muted">Doporučte web jinému společenství. Když si zaplatí edici, odečteme Vám slevu z příští roční platby<?= pset_int('referral_welcome', 0, 100000) ? ' a jim ' . money_czk(pset_int('referral_welcome', 0, 100000)) . ' z první' : '' ?>. Odkaz najdete v administraci.</small></td><td class="t-actions"><strong>− <?= money_czk(pset_int('referral_reward', 0, 100000)) ?> za každé</strong></td></tr><?php endif ?>
@@ -38,6 +37,5 @@
   <details class="lp-faq"><summary>Kdo uvidí data našeho společenství?</summary><p>Každé společenství má vlastní oddělenou databázi, soubory i přihlašování. Co je veřejné a co jen pro přihlášené obyvatele, určuje Váš výbor.</p></details>
   <?php if (pset('hosting_note') !== ''): ?><details class="lp-faq"><summary>Kde jsou data uložena?</summary><p><?= e(pset('hosting_note')) ?></p></details><?php endif ?>
   <details class="lp-faq"><summary>Můžeme web přestat používat a data si odnést?</summary><p>Ano. V placené edici si správce stáhne úplnou zálohu webu včetně dokumentů; v edici Zdarma si zálohu může jednou na 30 dní zdarma zapnout. Každý uživatel si své vlastní údaje stáhne kdykoli a web lze v administraci zrušit.</p></details>
-  <details class="lp-faq"><summary>Můžeme mít vlastní doménu?</summary><p>Ano, web může běžet i na Vaší doméně. Nastavení je v ceníku jako samostatná položka.</p></details>
   <div class="actions lp-final"><?= $cta() ?></div>
 </section>

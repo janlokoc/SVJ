@@ -221,6 +221,7 @@
   <?php endif ?>
 
 
+  <?php if ($t['domain_status'] !== ''): // Vlastní doménu už nenabízíme; sekce zůstává jen webům, které ji mají nebo o ni požádaly. ?>
   <div class="card" id="domena">
     <h2>Vlastní doména</h2>
     <?php if ($t['domain_status'] === 'active'): ?>
@@ -269,6 +270,7 @@
       </div>
     <?php endif ?>
   </div>
+  <?php endif ?>
 
   <?php if ($aiPayment): $ap = $aiPayment; ?>
   <div class="card" id="ai">

@@ -502,7 +502,7 @@ Poskytovatel se zákazníkem komunikuje elektronicky – e-mailem na adresy spr�
 ## 2. Edice, doplňky a cena
 Služba se poskytuje v edicích uvedených v ceníku na webu poskytovatele. Edice Zdarma je bezplatná a časově neomezená; má limity uvedené v ceníku a web v ní může obsahovat odkaz na službu.
 Funkce vyšších edic si zákazník může jednou na dobu uvedenou v administraci bezplatně vyzkoušet. Zkoušením nevzniká povinnost placenou edici objednat.
-Placená edice se objednává v administraci na jeden rok. K edici lze objednat doplňky na rok (například vlastní doménu, úložiště navíc nebo AI kredity) a jednorázové služby (například převod obsahu ze staršího webu). Rozsah a cenu každé z nich uvádí ceník a objednávka.
+Placená edice se objednává v administraci na jeden rok. K edici lze objednat doplňky na rok (například úložiště navíc nebo AI kredity) a jednorázové služby (například převod obsahu ze staršího webu). Rozsah a cenu každé z nich uvádí ceník a objednávka.
 Ceny jsou uvedeny bez daně z přidané hodnoty; je-li poskytovatel jejím plátcem, připočte ji v zákonné výši. Platí se předem bankovním převodem na základě zálohové faktury (výzvy k platbě) se splatností na ní uvedenou. Po připsání platby vystaví poskytovatel fakturu – daňový doklad a zpřístupní ji v administraci. Placená edice nebo doplněk se zapne po připsání platby.
 Kredit získaný za doporučení služby se odečte od ceny další roční edice. Nelze ho vyplatit v penězích ani převést na jiného zákazníka.
 
@@ -595,7 +595,7 @@ const PLATFORM_DEFAULTS = [
     'invoice_note' => 'Dodavatel není plátcem DPH.', 'invoice_due_days' => '14', 'vat_payer' => '0', 'vat_rate' => '21', 'legal_checked' => '0',
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'partner_discounts' => "5:10\n20:15\n50:20",
-    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nVlastní doména (např. www.svj-vasdum.cz) | 999 Kč / rok\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
+    'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];
 

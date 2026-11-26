@@ -3,7 +3,7 @@ $cta = fn(string $class = 'btn btn-big') => $open ? '<a class="' . $class . '" h
 $ai = ai_configured();
 // Čím se web liší: věci, které výbor jinde skládá z několika nástrojů.
 $unique = [
-    ['Skutečný web domu, ne jen přihlašovací portál', 'Veřejná část s aktualitami, dokumenty a kontakty, kterou najde i vyhledávač. Až deset šablon a deset barevných variant, vlastní logo a na přání vlastní doména.'],
+    ['Skutečný web domu, ne jen přihlašovací portál', 'Veřejná část s aktualitami, dokumenty a kontakty, kterou najde i vyhledávač. Až deset šablon a deset barevných variant a vlastní logo.'],
     ['Shromáždění bez počítání na papíře', 'Vlastníci potvrdí účast na webu a Vy předem vidíte, zda bude shromáždění usnášeníschopné. Plná moc a prezenční listina k tisku, po schůzi se zápis sestaví sám z účasti a hlasování.'],
     ['E-maily, u kterých víte, kdo je četl', 'Pozvánku rozešlete jedním kliknutím a u každého vlastníka vidíte, zda ji otevřel a zda se proklikl na web.'],
     ['Platby s QR kódem', 'Výbor nahraje z účetnictví zálohy a stav účtu. Každý vlastník vidí jen svou jednotku a nedoplatek uhradí načtením QR kódu; dlužníkům pošlete upomínku jedním tlačítkem.'],

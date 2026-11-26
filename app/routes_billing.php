@@ -129,6 +129,9 @@ $route('POST', '/admin/predplatne/domena', function () {
         redirect('/admin/predplatne#domena');
     }
     if ($action === 'request' && $t['domain_status'] === '') {
+        // Vlastní domény se nově nenabízejí (každý web běží na adrese platformy s certifikátem).
+        flash('Vlastní doménu nenabízíme – web běží na adrese ' . tenant_address(TENANT) . ' se zabezpečeným spojením.', 'info');
+        redirect('/admin/predplatne');
         if (plan_edition() === 'free') {
             flash('Vlastní doménu lze objednat od edice Standard.', 'error');
             redirect('/admin/predplatne#edice');
