@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Vzorový výpis LV budovy podle VypisZKatastruNemovitosti.xsd (WSDP 3.1). Smyšlená data pro unit testy modulu E. -->
+<VypisZKatastruNemovitosti>
+  <LIST_TEXT>
+    <TEXTY>
+      <ZAHLAVI_LV>
+        <OKRES><nuts4>CZ0642</nuts4><nazev>Brno-město</nazev></OKRES>
+        <OBEC><kod>582786</kod><nazev>Brno</nazev></OBEC>
+        <KATASTR_UZEMI><kod>610372</kod><nazev>Veveří</nazev></KATASTR_UZEMI>
+        <CIS_RADA>0</CIS_RADA>
+        <TEL_ID>900001</TEL_ID>
+        <CISLO_LV>4321</CISLO_LV>
+      </ZAHLAVI_LV>
+      <STAVBY>
+        <BUDOVA>
+          <ID>700001</ID>
+          <PLOMBA_BUDOVY/>
+          <KOD>1</KOD>
+          <CISLO_DOMOVNI><stavba><id>700001</id><caobce>Veveří</caobce><cp_ident>č.p. 1234</cp_ident></stavba></CISLO_DOMOVNI>
+          <ZP_VYUZITI>bytový dům</ZP_VYUZITI>
+          <ZP_OCHRANY/>
+          <PARCELY/>
+          <JEDNOTKY>
+            <JEDNOTKA>
+              <JED_ZP_VYUZITI>byt</JED_ZP_VYUZITI>
+              <CISLO_JEDNOTKY><jednotka><id>800001</id><cp_ident>1234</cp_ident><jed_ident>1234/1</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>812</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900101</TEL_ID>
+              <NA_LV>5001</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>1</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>1</id><prijmeni>Výborová</prijmeni><jmeno>Jana</jmeno></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800002</id><cp_ident>1234</cp_ident><jed_ident>1234/2</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>954</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900102</TEL_ID>
+              <NA_LV>5002</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>2</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>2</id><bsm1_prijmeni>Novák</bsm1_prijmeni><bsm1_jmeno>Petr</bsm1_jmeno><bsm2_prijmeni>Nováková</bsm2_prijmeni><bsm2_jmeno>Marie</bsm2_jmeno></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800003</id><cp_ident>1234</cp_ident><jed_ident>1234/3</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>640</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900103</TEL_ID>
+              <NA_LV>5003</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>3</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>3</id><prijmeni>Malý</prijmeni><jmeno>Ondřej</jmeno><titul_pred>Ing.</titul_pred></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800004</id><cp_ident>1234</cp_ident><jed_ident>1234/4</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>812</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900104</TEL_ID>
+              <NA_LV>5004</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>4</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>4</id><nazev>Stavby Novák s.r.o.</nazev></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+          </JEDNOTKY>
+        </BUDOVA>
+        <BUDOVA>
+          <ID>700002</ID>
+          <PLOMBA_BUDOVY>Z-777/2026-701</PLOMBA_BUDOVY>
+          <KOD>1</KOD>
+          <CISLO_DOMOVNI><stavba><id>700002</id><caobce>Veveří</caobce><cp_ident>č.p. 1235</cp_ident></stavba></CISLO_DOMOVNI>
+          <ZP_OCHRANY/>
+          <PARCELY/>
+          <JEDNOTKY>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800011</id><cp_ident>1235</cp_ident><jed_ident>1235/1</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>445</citatel><jmenovatel>5000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900111</TEL_ID>
+              <NA_LV>5011</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>11</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>11</id><prijmeni>Kučera</prijmeni><jmeno>Martin</jmeno></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800012</id><cp_ident>1235</cp_ident><jed_ident>1235/2</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>1000</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900112</TEL_ID>
+              <NA_LV>5012</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>12</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>12</id><prijmeni>Veselá</prijmeni><jmeno>Alena</jmeno></OPSUB_NAZEV>
+                <PODIL/>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+            <JEDNOTKA>
+              <CISLO_JEDNOTKY><jednotka><id>800013</id><cp_ident>1235</cp_ident><jed_ident>1235/3</jed_ident></jednotka></CISLO_JEDNOTKY>
+              <TYP_JEDNOTKY>jednotka vymezená podle zákona o vlastnictví bytů</TYP_JEDNOTKY>
+              <PODIL_BA><citatel>705</citatel><jmenovatel>10000</jmenovatel></PODIL_BA>
+              <POPIS/>
+              <TEL_ID>900113</TEL_ID>
+              <NA_LV>5013</NA_LV>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>13</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>13</id><prijmeni>Marek</prijmeni><jmeno>Pavel</jmeno></OPSUB_NAZEV>
+                <PODIL><citatel>1</citatel><jmenovatel>2</jmenovatel></PODIL>
+              </VLASTNICTVI>
+              <VLASTNICTVI>
+                <VLA_IDENT><oprav_subjekt><id>14</id></oprav_subjekt></VLA_IDENT>
+                <OPSUB_NAZEV><id>14</id><prijmeni>Marková</prijmeni><jmeno>Jitka</jmeno></OPSUB_NAZEV>
+                <PODIL><citatel>2</citatel><jmenovatel>4</jmenovatel></PODIL>
+              </VLASTNICTVI>
+            </JEDNOTKA>
+          </JEDNOTKY>
+        </BUDOVA>
+      </STAVBY>
+      <ZMENY_PV>
+        <ZMENA_PV><PLOMBA><typriz_kod>V</typriz_kod><poradove_cislo>5678</poradove_cislo><rok>2026</rok><prares_kod>701</prares_kod></PLOMBA></ZMENA_PV>
+      </ZMENY_PV>
+    </TEXTY>
+  </LIST_TEXT>
+</VypisZKatastruNemovitosti>

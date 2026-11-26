@@ -201,6 +201,13 @@ function daily_tasks(): void
     if (function_exists('modf_daily')) {
         modf_daily();   // provoz domu: smlouvy, vyúčtování (chyby zachytí sama)
     }
+    foreach ((array) ($GLOBALS['EXT_DAILY'] ?? []) as $extDaily) {   // rozšíření (app/ext): $GLOBALS['EXT_DAILY'][] = 'funkce'
+        try {
+            $extDaily();
+        } catch (Throwable $e) {
+            error_log('SVJ web, rozšíření ' . (is_string($extDaily) ? $extDaily : '') . ': ' . $e->getMessage());
+        }
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }
