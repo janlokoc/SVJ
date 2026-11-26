@@ -75,13 +75,16 @@
       <label>Adresa webu <input type="url" name="site_url" value="<?= e(setting('site_url')) ?>" placeholder="https://www.vase-domena.cz"></label>
       <p class="hint">Používá se pro odkazy v e-mailech a pozvánkách. Po přestěhování webu na jinou adresu ji zde změňte.</p>
       <label>Úvodní text na hlavní stránce <textarea name="intro" rows="4"><?= e(setting('intro')) ?></textarea></label>
+      <?php $aiTarget = 'textarea[name=intro]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/_ai.php'; ?>
       <label>Adresa domu <input type="text" name="address" value="<?= e(setting('address')) ?>"></label>
       <div class="form-row">
         <label>IČ <input type="text" name="ico" value="<?= e(setting('ico')) ?>"></label>
         <label>Číslo účtu <input type="text" name="account" value="<?= e(setting('account')) ?>"></label>
       </div>
       <label>Pravidla havarijního servisu (stránka Kontakty) <textarea name="emergency_note" rows="5"><?= e(setting('emergency_note')) ?></textarea></label>
+      <?php $aiTarget = 'textarea[name=emergency_note]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/_ai.php'; ?>
       <label>Úvodní text diskuze <textarea name="forum_note" rows="3"><?= e(setting('forum_note')) ?></textarea></label>
+      <?php $aiTarget = 'textarea[name=forum_note]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/_ai.php'; ?>
       <label>E-mail správce webu (zobrazí se v patičce, nepovinné) <input type="email" name="webmaster_email" value="<?= e(setting('webmaster_email')) ?>"></label>
       <?= $saveBtn('udaje') ?>
     </fieldset>
@@ -100,7 +103,8 @@
     <fieldset id="pozvanky">
       <legend>Pozvánky členů domácnosti</legend>
       <label class="check"><input type="checkbox" name="invite_enabled"<?= setting_on('invite_enabled') ? ' checked' : '' ?>> Vlastníci mohou sami pozvat manžela, manželku nebo spoluvlastníka</label>
-      <?php if (ai_configured()): ?><label class="check"><input type="checkbox" name="ai_enabled"<?= setting_on('ai_enabled', true) ? ' checked' : '' ?>> <span>AI pomocník pro výbor <small>Pomáhá psát oznámení, e-maily a odpovědi na závady. Je v ceně. Text, který mu správce zadá, se odesílá ke zpracování společnosti Anthropic; po vypnutí se tlačítka pomocníka nezobrazují.</small></span></label><?php endif ?>
+      <?php if (ai_configured()): ?><label class="check"><input type="checkbox" name="ai_enabled"<?= setting_on('ai_enabled', true) ? ' checked' : '' ?>> <span>AI pomocník pro výbor <small>Pomáhá psát oznámení, e-maily a odpovědi na závady. Je v ceně. Text, který mu správce zadá, se odesílá ke zpracování společnosti Anthropic; po vypnutí se tlačítka pomocníka nezobrazují.</small></span></label>
+      <label class="check"><input type="checkbox" name="ai_residents"<?= setting_on('ai_residents', true) ? ' checked' : '' ?>> <span>AI pomocník i pro obyvatele <small>U hlášení závad, diskuse a zpráv výboru mohou obyvatelé nechat svůj text uhladit nebo zkrátit (nejvýše <?= AI_RESIDENT_DAILY ?>× denně na osobu, počítá se do měsíčního limitu webu).</small></span></label><?php endif ?>
       <label class="check"><input type="checkbox" name="invite_by_tenants"<?= setting_on('invite_by_tenants', false) ? ' checked' : '' ?>> <span>Zvát mohou i nájemníci <small>Člověk pozvaný nájemníkem je vždy veden jako nájemník.</small></span></label>
       <div class="form-row">
         <label>Pozvaný vlastníkem je veden jako

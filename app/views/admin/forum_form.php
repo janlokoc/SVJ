@@ -7,6 +7,7 @@
     <?= csrf_field() ?>
     <?php if (!$p['parent_id']): ?><label>Název tématu <input type="text" name="title" value="<?= e($p['title']) ?>" maxlength="150" required></label><?php endif ?>
     <label>Text <textarea name="body" rows="8" maxlength="5000" required><?= e($p['body']) ?></textarea></label>
+    <?php $aiTarget = 'textarea[name=body]'; $aiTasks = ['draft', 'polish', 'shorten']; $aiContext = ''; $aiFields = ['title' => 'Nadpis']; $aiOutput = null; require __DIR__ . '/_ai.php'; ?>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit úpravu</button><a class="btn btn-ghost" href="<?= url('/diskuze/' . ($p['parent_id'] ?: $p['id'])) ?>">Zrušit</a></div>
   </form>
 </div>

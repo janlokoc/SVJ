@@ -821,10 +821,11 @@ function icon(string $name): string
 
 // ---------- Přihlášení a oprávnění ----------
 
-function user(): ?array
+/** Přihlášený uživatel (v rámci požadavku se načte jednou). $reload = načíst znovu (testy, změna přihlášení v témže běhu). */
+function user(bool $reload = false): ?array
 {
     static $u = false;
-    if ($u === false) {
+    if ($u === false || $reload) {
         $u = empty($_SESSION['uid']) ? null : one('SELECT * FROM users WHERE id = ? AND active = 1', [$_SESSION['uid']]);
         // Po změně hesla (i správcem) přestávají platit všechna dřívější přihlášení.
         if ($u && !hash_equals(pw_fingerprint($u['password_hash']), (string) ($_SESSION['pv'] ?? ''))) {

@@ -23,6 +23,7 @@ $item = function (array $p) use ($me) { ?>
     <h2>Odpovědět</h2>
     <?= csrf_field() ?>
     <label>Vaše odpověď <textarea name="body" rows="4" maxlength="5000" required></textarea></label>
+    <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai_mini.php'; ?>
     <button class="btn" type="submit">Odeslat odpověď</button>
   </form>
 </div>

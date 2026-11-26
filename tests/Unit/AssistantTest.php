@@ -18,6 +18,7 @@ final class AssistantTest extends TestCase
         $u = one('SELECT * FROM users WHERE id = ?', [$id]);
         $_SESSION['uid'] = (int) $u['id'];
         $_SESSION['pv'] = pw_fingerprint($u['password_hash']);
+        user(true);
     }
 
     private static function fakeSdk(): void

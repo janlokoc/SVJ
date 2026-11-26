@@ -303,6 +303,16 @@ $route('POST', '/admin/ai', function () {
     exit;
 });
 
+// AI pomocník pro obyvatele: uhlazení a zkrácení vlastního textu (hlášení, diskuse, zprávy).
+$route('POST', '/ai-text', function () {
+    $u = require_login();
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    @set_time_limit(120);
+    echo json_encode(ai_run_resident($u, post('task'), mb_substr((string) ($_POST['text'] ?? ''), 0, 20001)), JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
 // ---------- Hlídání insolvencí vlastníků-firem ----------
 $route('GET', '/admin/insolvence', function () {
     require_admin();

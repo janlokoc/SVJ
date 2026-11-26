@@ -7,6 +7,7 @@
     <label>Co se stalo <input type="text" name="subject" maxlength="150" placeholder="Např. nesvítí světlo na chodbě, žádost o klíč od kolárny" required></label>
     <label>Kde <input type="text" name="location" maxlength="150" placeholder="Např. vchod C, 3. patro"></label>
     <label>Popis <textarea name="body" rows="4" maxlength="5000" required></textarea></label>
+    <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai_mini.php'; ?>
     <label>Fotografie nebo dokument <small class="muted">(nepovinné, nejvýše 4 soubory)</small> <input type="file" name="files[]" multiple accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" data-shrink></label>
     <p class="hint">Fotka závady výboru hodně pomůže. Z telefonu ji můžete rovnou vyfotit; velké fotografie se před odesláním samy zmenší. Přílohy vidíte jen Vy a výbor.</p>
     <button class="btn" type="submit">Odeslat výboru</button>
@@ -25,6 +26,7 @@
         <details class="ticket-reply"<?= $history && end($history)['kind'] === 'msg_admin' ? ' open' : '' ?>><summary><?= $t['status'] === 'done' ? 'Není vyřešeno? Napište výboru' : 'Doplnit nebo odpovědět' ?></summary>
           <form method="post" action="<?= url('/zavady/' . $t['id'] . '/odpoved') ?>" class="form"><?= csrf_field() ?>
             <label>Zpráva <textarea name="message" rows="3" maxlength="5000" required></textarea></label>
+            <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=message]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai_mini.php'; ?>
             <button class="btn btn-small" type="submit">Odeslat</button></form></details>
       </article>
     <?php endforeach ?>

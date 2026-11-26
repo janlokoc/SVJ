@@ -23,6 +23,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $this->mailStart = is_file($f) ? count(file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)) : 0;
         $_SESSION = [];
         $_POST = $_GET = [];
+        user(true);   // přihlášení z předchozího testu nesmí přetrvat
     }
     /** Přihlásí uživatele (bez hesla) jako v požadavku webu. */
     protected function loginAs(string $role = 'admin'): array
@@ -30,6 +31,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $u = one('SELECT * FROM users WHERE role = ? AND active = 1 ORDER BY id LIMIT 1', [$role]);
         $_SESSION['uid'] = (int) $u['id'];
         $_SESSION['pv'] = pw_fingerprint($u['password_hash']);   // jinak ho user() odhlásí
+        user(true);
         return $u;
     }
 }

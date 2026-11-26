@@ -15,6 +15,7 @@ $priceCzk = $price / 100;
       <p>Příjemci: <strong><?= count($recipients) ?></strong> vlastníků s mobilem na webu.<?= $bad ? ' <span class="muted">Neplatné nebo pevné číslo má ' . count($bad) . ' – opravte ho v části Uživatelé.</span>' : '' ?></p>
       <form method="post" class="form"><?= csrf_field() ?>
         <label>Text zprávy <textarea name="text" rows="5" maxlength="2000" required><?= e($preview['text'] ?? $text) ?></textarea></label>
+        <?php $aiTarget = 'textarea[name=text]'; $aiTasks = ['sms', 'polish']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/../../admin/_ai.php'; ?>
         <label class="check"><input type="checkbox" name="plain" value="1"<?= $plain ? ' checked' : '' ?>> Odstranit diakritiku (do jedné SMS se vejde 160 znaků místo 70)</label>
         <p class="hint">Na konec zprávy připište, kdo ji posílá (např. „Výbor SVJ Zahradní 12“). Odpověď na SMS nepřijde na web.</p>
         <button class="btn btn-ghost" type="submit" name="action" value="preview">Náhled a cena</button>

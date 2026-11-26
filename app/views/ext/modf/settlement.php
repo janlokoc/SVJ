@@ -95,6 +95,7 @@ $act = fn(string $a) => csrf_field() . '<input type="hidden" name="action" value
         <?php else: ?>
           <form method="post" class="form"><?= $act('answer') ?><input type="hidden" name="objection_id" value="<?= (int) $o['id'] ?>">
             <label>Jak byla námitka vyřízena <textarea name="answer" rows="4" required minlength="5" maxlength="5000" placeholder="Např. Námitce vyhovujeme, opravené vyúčtování nahrajeme do … / Námitku zamítáme, protože …"></textarea></label>
+            <?php $aiTarget = 'textarea[name=answer]'; $aiTasks = ['objection', 'polish']; $aiContext = 'Námitka vlastníka (' . $o['unit_label'] . '): ' . $o['text'] . "\nVyúčtování: " . ($s['title'] ?? ''); $aiFields = []; $aiOutput = null; require __DIR__ . '/../../admin/_ai.php'; ?>
             <div class="actions"><button class="btn btn-small" type="submit">Odeslat odpověď a uzavřít</button></div></form>
         <?php endif ?>
       </article>
@@ -111,6 +112,7 @@ $act = fn(string $a) => csrf_field() . '<input type="hidden" name="action" value
         <label>do <input type="date" name="period_to" value="<?= e($s['period_to']) ?>" required></label>
       </div><?php else: ?><p class="hint">Po zveřejnění nelze měnit období ani den doručení – podle nich běží zákonné lhůty.</p><?php endif ?>
       <label>Poznámka pro vlastníky <textarea name="note" rows="2" maxlength="2000"><?= e($s['note']) ?></textarea></label>
+      <?php $aiTarget = 'textarea[name=note]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/../../admin/_ai.php'; ?>
       <div class="actions"><button class="btn btn-small" type="submit">Uložit</button></div>
     </form>
     <?php if (!$published): ?><form method="post" data-confirm="Smazat celé vyúčtování včetně nahraných souborů?"><?= $act('delete') ?><button class="link-danger" type="submit">Smazat vyúčtování</button></form><?php endif ?>

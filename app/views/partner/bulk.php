@@ -8,6 +8,7 @@
     <?php $tplList = $templates; $tplTitle = '[name=title]'; $tplBody = '[name=body]'; require __DIR__ . '/_tpl_pick.php'; ?>
     <label>Nadpis <input type="text" name="title" value="<?= e($in['title']) ?>" maxlength="200" required></label>
     <label>Text <textarea name="body" rows="8" required><?= e($in['body']) ?></textarea></label>
+    <?php $aiShow = ai_partner_available(); $aiUrl = url('/ai'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['draft', 'polish', 'shorten']; $aiContext = ''; require __DIR__ . '/../_ai_mini.php'; ?>
     <label>Příloha <small class="muted">(nepovinné – PDF, dokument nebo obrázek do 10 MB)</small> <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.jpg,.jpeg,.png"></label>
     <fieldset class="check-list"><legend>Kdo ho uvidí</legend>
       <label class="check"><input type="radio" name="visibility" value="residents"<?= $in['visibility'] === 'residents' ? ' checked' : '' ?>> Jen přihlášení obyvatelé</label>

@@ -27,6 +27,7 @@ $today = date('Y-m-d'); ?>
           <form method="post" action="<?= url('/vyuctovani/' . $it['id'] . '/namitka') ?>" enctype="multipart/form-data" class="form">
             <?= csrf_field() ?>
             <label>S čím nesouhlasíte <textarea name="text" rows="5" required minlength="10" maxlength="5000" placeholder="Např. odečet vodoměru v kuchyni neodpovídá – fotografie je v příloze."></textarea></label>
+            <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=text]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/../../_ai_mini.php'; ?>
             <label>Příloha (nepovinné) <input type="file" name="file" accept=".<?= implode(',.', ALLOWED_EXT) ?>"></label>
             <div class="actions"><button class="btn btn-small" type="submit">Podat námitku</button></div>
           </form></details>

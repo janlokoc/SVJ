@@ -35,6 +35,7 @@ $ins = $c['kind'] === 'insurance'; ?>
     <?php if ($c['filename'] !== ''): ?><p class="hint">Uloženo: <a href="<?= url('/admin/smlouvy/' . $id . '/soubor') ?>" target="_blank" rel="noopener"><?= e($c['original_name']) ?></a>. Nový soubor ho nahradí.
       <label class="check"><input type="checkbox" name="remove_file" value="1"> odstranit dokument</label></p><?php endif ?>
     <label>Poznámka <textarea name="note" rows="3" maxlength="3000"><?= e($c['note']) ?></textarea></label>
+    <?php $aiTarget = 'textarea[name=note]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = []; $aiOutput = null; require __DIR__ . '/../../admin/_ai.php'; ?>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button><a class="btn btn-ghost" href="<?= url('/admin/smlouvy') ?>">Zrušit</a></div>
   </form>
   <?php if ($id): ?><form method="post" action="<?= url('/admin/smlouvy/' . $id . '/smazat') ?>" data-confirm="Smazat smlouvu i s dokumentem?"><?= csrf_field() ?><button class="link-danger" type="submit">Smazat smlouvu</button></form><?php endif ?>

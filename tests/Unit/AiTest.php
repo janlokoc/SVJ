@@ -61,7 +61,9 @@ final class AiTest extends TestCase
 
     public function testTaskDefinitions(): void
     {
-        $this->assertSame(['draft', 'polish', 'shorten', 'minutes', 'program', 'resolution', 'rationale', 'invite', 'reply'], array_keys(AI_TASKS));
+        $this->assertSame(['draft', 'polish', 'shorten', 'sms', 'objection', 'minutes', 'program', 'resolution', 'rationale', 'invite', 'reply'], array_keys(AI_TASKS));
+        $this->assertStringContainsString('nejvýše 160 znaků', AI_TASKS['sms'][1]);
+        $this->assertStringContainsString('[doplnit: …]', AI_TASKS['objection'][1]);
         foreach (AI_TASKS as $key => $t) {
             $this->assertCount(2, $t, $key);
             $this->assertNotSame('', trim($t[0]), "$key has a label");

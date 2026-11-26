@@ -15,6 +15,7 @@
   <form method="post" action="<?= url('/zpravy/' . $other['id']) ?>" class="card form chat-form">
     <?= csrf_field() ?>
     <label>Zpráva pro: <?= e($other['name']) ?> <textarea name="body" rows="3" maxlength="<?= CHAT_MAX_LENGTH ?>" required placeholder="Napište zprávu…"></textarea></label>
+    <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai_mini.php'; ?>
     <div class="actions"><button class="btn" type="submit">Odeslat</button></div>
   </form>
   <?php else: ?>

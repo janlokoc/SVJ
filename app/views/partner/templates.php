@@ -15,6 +15,7 @@
       <label>Použití <select name="kind"><?php foreach (PARTNER_TPL_KINDS as $k => $l): ?><option value="<?= $k ?>"<?= ($edit['kind'] ?? 'post') === $k ? ' selected' : '' ?>><?= e($l) ?></option><?php endforeach ?></select></label>
       <label>Nadpis / předmět <input type="text" name="title" value="<?= e($edit['title'] ?? '') ?>" maxlength="200"></label>
       <label>Text <textarea name="body" rows="10" required><?= e($edit['body'] ?? '') ?></textarea></label>
+      <?php $aiShow = ai_partner_available(); $aiUrl = url('/ai'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['draft', 'polish', 'shorten']; $aiContext = ''; require __DIR__ . '/../_ai_mini.php'; ?>
       <div class="actions"><button class="btn" type="submit">Uložit šablonu</button><?php if ($edit): ?><a class="btn btn-ghost" href="<?= url('/sablony') ?>">Zrušit</a><?php endif ?></div>
     </form>
   </div>

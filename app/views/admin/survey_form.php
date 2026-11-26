@@ -6,6 +6,7 @@
     <?= csrf_field() ?>
     <label>Otázka <input type="text" name="title" value="<?= e($s['title']) ?>" required maxlength="250" placeholder="Chcete před dům stojan na kola?"></label>
     <label>Upřesnění (nepovinné) <textarea name="body" rows="3"><?= e((string) $s['body']) ?></textarea></label>
+    <?php $aiTarget = 'textarea[name=body]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; $aiFields = ['title' => 'Otázka']; $aiOutput = null; require __DIR__ . '/_ai.php'; ?>
     <label>Možnosti (každá na samostatný řádek) <textarea name="options" rows="5"<?= $s['total'] ? ' disabled' : ' required' ?> placeholder="Ano&#10;Ne&#10;Je mi to jedno"><?= e($optionsText) ?></textarea></label>
     <?php if ($s['total']): ?><p class="hint">Už přišly odpovědi (<?= (int) $s['total'] ?>), možnosti proto nejdou měnit.</p><?php endif ?>
     <label>Odpovídat lze do <input type="date" name="closes_at" value="<?= e($s['closes_at']) ?>"></label>

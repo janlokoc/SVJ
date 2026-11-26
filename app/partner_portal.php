@@ -465,6 +465,14 @@ if ($PATH === '/fakturace/svj') {
         'missing' => partner_svj_missing($partner)]);
     exit;
 }
+// AI pomocník pro texty firmy (hromadná oznámení, šablony).
+if ($PATH === '/ai' && $METHOD === 'POST') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    @set_time_limit(120);
+    echo json_encode(ai_run_partner($partner, post('task'), (string) ($_POST['text'] ?? ''), mb_substr((string) ($_POST['context'] ?? ''), 0, 8000)), JSON_UNESCAPED_UNICODE);
+    exit;
+}
 // Hromadné oznámení: aktualita (s přílohou) do vybraných domů najednou.
 if ($PATH === '/hromadne') {
     $houses = partner_tenants((int) $partner['id']);

@@ -9,6 +9,8 @@ const AI_TASKS = [
     'draft' => ['Napsat z poznámek', 'Z poznámek níže napiš oznámení výboru pro obyvatele domu.'],
     'polish' => ['Uhladit text', 'Uprav text níže: oprav pravopis a překlepy, zjednoduš kostrbaté věty a sjednoť tón. Význam, fakta, čísla ani data neměň a nic nepřidávej – ani úvodní řádek, datum, čas či místo; zachovej členění textu (odstavce, odrážky).'],
     'shorten' => ['Zkrátit', 'Zkrať text níže zhruba na polovinu. Zachovej všechna data, časy, místa, částky a to, co mají lidé udělat.'],
+    'sms' => ['Zkrátit na SMS', 'Přepiš text níže na SMS pro vlastníky: nejvýše 160 znaků, bez oslovení a podpisu, jen to nejdůležitější (co, kdy, kde, co mají udělat). Data, časy a částky zachovej přesně. Vrať jen text SMS.'],
+    'objection' => ['Navrhnout vyřízení', 'Na námitku vlastníka k vyúčtování služeb níže (je v kontextu) napiš návrh odpovědi výboru: věcně, zdvořile, krátce. Uveď, zda se námitce vyhovuje, nebo proč ne – ale co v podkladech není, nedomýšlej: místo chybějících údajů napiš [doplnit: …]. Pokud je v poli už rozepsaná odpověď, uhlaď ji.'],
     'minutes' => ['Napsat zápis z poznámek', 'Z poznámek (nebo přepisu) ze shromáždění vlastníků níže napiš část zápisu „Průběh jednání“. Je to úřední záznam, ne oznámení: piš ve třetí osobě, minulým časem, věcně a úplně. '
         . 'Postupuj podle bodů programu z kontextu; u každého bodu shrň, co zaznělo, kdo co přednesl nebo navrhl (jména jen tak, jak jsou v poznámkách) a k čemu se dospělo. '
         . 'Výsledky hlasování a účast neopisuj – jsou v zápisu uvedeny zvlášť; jen na příslušném místě napiš, že se hlasovalo. Diskuzi shrň, nepřepisuj doslova. '
@@ -182,7 +184,19 @@ function ai_run(string $task, string $input, string $context = ''): array
     if (in_array($task, ['polish', 'shorten'], true)) {
         $context = '';
     }
-    $prompt = AI_TASKS[$task][1] . "\n\nSpolečenství: " . site('full') . ($context !== '' ? "\n\n<kontext>\n$context\n</kontext>" : '') . "\n\n<text>\n$input\n</text>";
+    $result = ai_text_call(AI_TASKS[$task][1] . "\n\nSpolečenství: " . site('full'), $task, $input, $context);
+    if (isset($result['message'])) {
+        ai_count_use();
+        ai_track_tokens($result['message']);
+        unset($result['message']);
+    }
+    return $result;
+}
+/** Volání modelu bez kontroly limitů: vrací ['text' => …, 'truncated' => bool, 'message' => odpověď] nebo ['error' => …]. */
+function ai_text_call(string $instruction, string $task, string $input, string $context = ''): array
+{
+    $cfg = ai_settings();
+    $prompt = $instruction . ($context !== '' ? "\n\n<kontext>\n$context\n</kontext>" : '') . "\n\n<text>\n$input\n</text>";
     try {
         $client = new \Anthropic\Client(apiKey: $cfg['key'], baseUrl: $cfg['base_url'] !== '' ? $cfg['base_url'] : null);
         // Když model žádost z bezpečnostních důvodů odmítne, zkusí ji služba sama na náhradním modelu.
@@ -219,9 +233,68 @@ function ai_run(string $task, string $input, string $context = ''): array
     if ($text === '') {
         return ['error' => 'Pomocník nevrátil žádný text. Zkuste to znovu.'];
     }
-    ai_count_use();
-    ai_track_tokens($message);
-    return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens'];
+    return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens', 'message' => $message];
+}
+/** Úkoly AI pomocníka, které smí použít i obyvatel (úprava vlastního textu). */
+const AI_RESIDENT_TASKS = ['polish', 'shorten'];
+const AI_RESIDENT_DAILY = 20;
+/** AI pomocník pro přihlášeného obyvatele: jen úprava vlastního textu, nejvýš 20× denně; počítá se do limitu webu. */
+function ai_resident_available(): bool
+{
+    return ai_available() && setting_on('ai_residents', true) && (!function_exists('plan_has') || plan_has('ai-pomocnik'));
+}
+function ai_run_resident(array $user, string $task, string $input): array
+{
+    if (!ai_resident_available()) {
+        return ['error' => 'AI pomocník tu není zapnutý.'];
+    }
+    if (!in_array($task, AI_RESIDENT_TASKS, true)) {
+        return ['error' => 'Tento úkol pomocníka je jen pro správce.'];
+    }
+    $key = 'ai_res_' . (int) $user['id'] . '_' . date('Y-m-d');
+    if ((int) setting($key, '0') >= AI_RESIDENT_DAILY) {
+        return ['error' => 'Dnes jste pomocníka použili už ' . AI_RESIDENT_DAILY . '×. Zkuste to prosím zítra.'];
+    }
+    $r = ai_run($task, $input);
+    if (isset($r['text'])) {
+        q("INSERT INTO settings (`key`, value) VALUES (?, '1') ON CONFLICT(`key`) DO UPDATE SET value = value + 1", [$key]);
+        setting('__reset');
+    }
+    return $r;
+}
+function ai_partner_available(): bool
+{
+    return ai_settings()['key'] !== '' && ai_sdk_ready();
+}
+/** Denní limit AI pomocníka v partnerském portálu (na firmu). */
+const AI_PARTNER_DAILY = 50;
+/** AI pomocník v partnerském portálu: texty firmy pro více domů (šablony, hromadná oznámení). Náklady nese platforma. */
+function ai_run_partner(array $partner, string $task, string $input, string $context = ''): array
+{
+    if (!in_array($task, ['draft', 'polish', 'shorten'], true)) {
+        return ['error' => 'Neznámý úkol.'];
+    }
+    if (!ai_partner_available()) {
+        return ['error' => 'AI pomocník není zapnutý.'];
+    }
+    $input = trim($input);
+    if ($input === '') {
+        return ['error' => 'Nejdřív napište text nebo aspoň pár poznámek.'];
+    }
+    if (mb_strlen($input) + mb_strlen($context) > 20000) {
+        return ['error' => 'Text je na pomocníka příliš dlouhý (nejvýše 20 000 znaků).'];
+    }
+    $key = 'pai_' . (int) $partner['id'] . '_' . date('Y-m-d');
+    if ((int) pset($key) >= AI_PARTNER_DAILY) {
+        return ['error' => 'Dnešní limit AI pomocníka (' . AI_PARTNER_DAILY . ' použití) je vyčerpán. Zkuste to prosím zítra.'];
+    }
+    $instruction = str_replace('oznámení výboru pro obyvatele domu', 'oznámení správcovské firmy pro obyvatele spravovaných domů', AI_TASKS[$task][1]) . "\n\nSprávcovská firma: " . $partner['name'];
+    $r = ai_text_call($instruction, $task, $input, $task === 'draft' ? $context : '');
+    if (isset($r['message'])) {
+        pset_save($key, (string) ((int) pset($key) + 1));
+        unset($r['message']);
+    }
+    return $r;
 }
 
 /**

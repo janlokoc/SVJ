@@ -15,6 +15,7 @@
     <?= csrf_field() ?>
     <label>Název tématu <input type="text" name="title" maxlength="150" required></label>
     <label>Text příspěvku <textarea name="body" rows="5" maxlength="5000" required></textarea></label>
+    <?php $aiShow = user() && ai_resident_available(); $aiUrl = url('/ai-text'); $aiTarget = 'textarea[name=body]'; $aiTasks = ['polish', 'shorten']; $aiContext = ''; require __DIR__ . '/_ai_mini.php'; ?>
     <button class="btn" type="submit">Založit téma</button>
   </form>
 </div>
