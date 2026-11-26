@@ -257,6 +257,12 @@ SQL);
             CREATE INDEX IF NOT EXISTS psi_tenant ON partner_svj_invoices (tenant);
             PRAGMA user_version = 26;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 27) {
+        // Nižší ceny (11/2026): Standard 1 990 Kč, Premium 4 490 Kč ročně – jen pokud provozovatel ceny neměnil.
+        // Zaplacená období platí dál; nová cena se použije u další objednávky a prodloužení.
+        platform_prices_2026_11($pdo);
+        $pdo->exec('PRAGMA user_version = 27;');
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -335,6 +341,13 @@ function tenant_usage(string $slug): array
     }
     return $out;
 }
+/** Ceny edic od 11/2026 (Standard 1 990 Kč, Premium 4 490 Kč) – přepíše jen dosavadní výchozí ceny, vlastní ceny provozovatele nechá. */
+function platform_prices_2026_11(PDO $pdo): void
+{
+    $pdo->exec("UPDATE platform_settings SET value = '1990' WHERE key = 'price_standard' AND value = '2990'");
+    $pdo->exec("UPDATE platform_settings SET value = '4490' WHERE key = 'price_premium' AND value = '5990'");
+}
+
 // ---------- Vyhledávače (SEO) hlavního webu služby ----------
 
 /** Veřejné stránky služby pro vyhledávače: cesta => [priorita, popis stránky do výsledků hledání]. */
@@ -672,7 +685,7 @@ Po skončení služby zpracovatel umožní správci stáhnout zálohu dat a pot�
 TXT;
 const PLATFORM_DEFAULTS = [
     'service_name' => 'Web pro SVJ', 'signup_open' => '1', 'demo_auto' => '1', 'delete_days' => '365', 'price_domain' => '999', 'domain_dns' => '', 'ai_model' => '', 'hosting_note' => '', 'grace_days' => '14',
-    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'ai_pack' => '200', 'price_ai_pack' => '190', 'ai_price_in' => '0', 'ai_price_out' => '0', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '2990', 'price_premium' => '5990',
+    'period' => 'year', 'referral_reward' => '300', 'referral_welcome' => '150', 'storage_pack_mb' => '500', 'price_storage' => '290', 'ai_pack' => '200', 'price_ai_pack' => '190', 'ai_price_in' => '0', 'ai_price_out' => '0', 'demo_refresh_days' => '7', 'price_migration' => '1500', 'price_standard' => '1990', 'price_premium' => '4490',
     'lim_free_admins' => '1', 'lim_free_users' => '20', 'lim_free_mails' => '30', 'lim_free_storage' => '5', 'lim_free_ai' => '5', 'lim_free_polls' => '1',
     'lim_standard_admins' => '3', 'lim_standard_users' => '150', 'lim_standard_mails' => '500', 'lim_standard_storage' => '100', 'lim_standard_ai' => '30', 'lim_standard_polls' => '5',
     'lim_premium_admins' => '0', 'lim_premium_users' => '0', 'lim_premium_mails' => '0', 'lim_premium_storage' => '500', 'lim_premium_ai' => '300', 'lim_premium_polls' => '0',
