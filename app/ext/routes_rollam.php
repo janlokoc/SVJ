@@ -57,8 +57,7 @@ $route('GET', '/hlasovani/bankid/(\d+)', function (int $pid) {
         flash($r[0], 'error');
         redirect($p && (int) $p['user_id'] === (int) $u['id'] ? '/hlasovani/' . $p['poll_id'] : '/hlasovani');
     }
-    header('Location: ' . $r, true, 303);
-    exit;
+    redirect_external($r, 'Pokračovat do banky (Bank iD)');   // sem vede přesměrování po odeslání hlasu – Location na cizí web by prohlížeč zablokoval (CSP form-action)
 });
 $route('GET', '/bankid/navrat', function () {
     $u = require_login();

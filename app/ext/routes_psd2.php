@@ -30,9 +30,7 @@ $route('POST', '/admin/platby/banky', function () use ($psd2Guard) {
             redirect('/admin/platby/banky');
         }
         audit('Platby na jednotku: propojení s bankou', post('institution'));
-        admin_audit_flush();
-        header('Location: ' . $r['link'], true, 303);   // přihlášení do bankovnictví (adresa od agregátoru, https)
-        exit;
+        redirect_external($r['link'], 'Pokračovat do banky');   // přihlášení do bankovnictví (adresa od agregátoru, https); po odeslání formuláře ne hlavičkou Location (CSP form-action)
     }
     $id = (int) post('link');
     $link = one('SELECT * FROM psd2_links WHERE id = ?', [$id]);

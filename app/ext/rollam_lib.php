@@ -64,7 +64,8 @@ function rollam_method(int $pollId): string
 function rollam_methods_available(): array
 {
     $out = ['none' => ROLLAM_VERIFY['none'], 'email' => ROLLAM_VERIFY['email']];
-    if (function_exists('sms_send')) {
+    // SMS jen tam, kde má dům SMS zprávy zapnuté (funkce beta programu) – jinak by kód nikdy neodešel a hlas by nešlo potvrdit.
+    if (function_exists('sms_send') && (!function_exists('beta_visible') || beta_visible('sms'))) {
         $out['sms'] = ROLLAM_VERIFY['sms'];
     }
     if (function_exists('bankid_available') && bankid_available()) {

@@ -7,7 +7,8 @@
   <li>Otevře se přihlášení do internetového bankovnictví. Přihlaste se jako osoba s přístupem k účtu společenství, vyberte účet a potvrďte souhlas se sdílením pohybů.</li>
   <li>Banka Vás vrátí zpět na web. Web načte účet a hned stáhne příchozí platby za poslední dny (podle banky až 90 dní) a spáruje je s jednotkami podle variabilního symbolu.</li>
 </ol>
-<p class="callout">Obrazovky přihlášení a souhlasu jsou na webu banky a poskytovatele dat; vypadají u každé banky jinak a ověřit jsme je nemohli.</p>
+<?= help_fig('banka-psd2-1-propojeno.jpg', 'Propojený účet: platnost souhlasu, stažení plateb a zrušení propojení.') ?>
+<p class="callout">Obrazovky přihlášení a souhlasu jsou na webu banky a poskytovatele dat; vypadají u každé banky jinak a ověřit jsme je nemohli. Postup na webu jsme ověřili se zkušební službou, která odpovídá podle zveřejněné dokumentace poskytovatele (GoCardless) – se skutečným účtem u banky zatím ne.</p>
 
 <h2>2. Každý den samo</h2>
 <p>Dál se platby stahují samy jednou denně. Tlačítkem <strong>Stáhnout teď</strong> je můžete stáhnout i hned – banky to ale dovolují nejvýš <strong>4× denně</strong> na účet (včetně automatického stažení).</p>
