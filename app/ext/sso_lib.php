@@ -869,7 +869,7 @@ function sso_account_box(string $ctx, int $uid): string
     }
     $links = $ctx === 'site' ? sso_links($uid) : sso_platform_links($ctx === 'partner' ? 'partner' : 'super', $uid);
     $base = $ctx === 'site' ? '/muj-ucet/sso/' : '/sso/';
-    $out = '<section class="household" id="sso"><h2>Přihlášení přes další účty</h2><div class="card form">'
+    $out = '<section class="household" id="sso"><h2>Přihlášení přes další účty' . (function_exists('beta_is') && beta_is('sso') ? ' <span class="tag tag-beta">Beta</span>' : '') . '</h2><div class="card form">'
         . '<p>Propojte si účet Google, Microsoft, Apple nebo Facebook a přihlašujte se jedním kliknutím. Propojení se hodí hlavně tehdy, když '
         . 'u poskytovatele používáte jiný e-mail než tady (nebo u Apple skrytý e-mail). Heslo ani dvoufázové ověření se tím nemění.'
         . ($ctx === 'site' && defined('HELP') && isset(HELP['prihlaseni-sso']) ? ' <a href="' . e(url('/napoveda/prihlaseni-sso')) . '">Jak propojení funguje</a>' : '') . '</p><ul class="sso-links">';

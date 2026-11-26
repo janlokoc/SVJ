@@ -45,7 +45,7 @@ if (function_exists('beta_visible') && beta_visible('insolvence')) {
 // Rozšíření: položky menu administrace z modulů ($GLOBALS['EXT_ADMIN_NAV'][adresa] = [název, skupina]).
 foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => $extItem) {
     if (!isset($extItem[2]) || ($extItem[2])()) {   // [název, skupina, nepovinně funkce „ukázat?“ – např. fn() => beta_visible('klic')]
-        $adminNav[$extHref] = $extItem[0];
+        $adminNav[$extHref] = $extItem[0] . (function_exists('beta_menu_tag') ? beta_menu_tag((string) $extHref) : '');
     }
 }
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {

@@ -7,7 +7,8 @@ $priceCzk = $price / 100;
     <p class="lead">Naléhavé oznámení (havárie, odstávka vody, uzavřený vchod) pošlete vlastníkům i jako SMS. Běžná sdělení posílejte e-mailem – SMS se platí za každou zprávu.</p>
     <p><?= function_exists('help_link') ? help_link('sms-zpravy') : '' ?></p></header>
   <?php $betaKey = 'sms'; require __DIR__ . '/../../admin/_beta.php'; ?>
-  <?php if ($staging): ?><p class="callout">Zkušební režim: zprávy se jen zaznamenají, žádná SMS skutečně neodejde.</p><?php endif ?>
+  <?php if (!sms_gateway_ready()): ?><p class="callout">SMS brána zatím není nastavená, takže zprávy teď nejde odeslat. Provozovatel ji připravuje – kredit se do té doby nečerpá.</p>
+  <?php elseif ($staging): ?><p class="callout">Zkušební režim: zprávy se jen zaznamenají, žádná SMS skutečně neodejde.</p><?php endif ?>
 
   <div class="two-col">
     <section class="card">

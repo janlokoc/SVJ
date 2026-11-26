@@ -271,3 +271,14 @@ function beta_is(string $key): bool
 {
     return beta_stage($key) === 'beta';
 }
+/** Štítek „ · beta“ k položce menu modulu: když pod její adresou běží funkce v betě, kterou tento web vidí. */
+function beta_menu_tag(string $href): string
+{
+    foreach (BETA_FEATURES as $key => $f) {
+        $path = explode('#', (string) $f[1])[0];
+        if (($path === $href || str_starts_with($path, $href . '/')) && beta_is($key) && beta_visible($key)) {
+            return ' · beta';
+        }
+    }
+    return '';
+}

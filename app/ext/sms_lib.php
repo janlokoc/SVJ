@@ -376,6 +376,18 @@ function sms_provider_name(): string
     $configured = function_exists('pset') && function_exists('platform_enabled') && platform_enabled() ? pset('sms_provider') : (string) (app_config()['sms']['provider'] ?? '');
     return sms_provider_for($configured !== '' ? $configured : SMS_DEFAULTS['sms_provider'], is_staging());
 }
+/**
+ * Lze SMS skutečně odeslat? Na ostrém webu jen přes nastavenou bránu: když ji provozovatel v konzoli nezvolil, výchozí „jen záznam“
+ * by zprávu neodeslal a přesto by strhl kredit. Zkušební prostředí a výslovně zvolený záznam v konzoli (zkouška) projdou.
+ */
+function sms_gateway_ready(): bool
+{
+    if (is_staging() || sms_provider_name() !== 'log') {
+        return true;
+    }
+    $configured = function_exists('pset') && function_exists('platform_enabled') && platform_enabled() ? pset('sms_provider') : (string) (app_config()['sms']['provider'] ?? '');
+    return $configured === 'log';
+}
 /** Chybějící klíče v config.php pro bránu (prázdné pole = vše vyplněno). */
 function sms_config_missing(string $provider): array
 {
@@ -423,6 +435,9 @@ function sms_send_ex(string $phone, string $text, string $source = 'modul', int 
     }
     if ($seg['segments'] > SMS_MAX_SEGMENTS) {
         return $fail('Zpráva je příliš dlouhá (nejvýš ' . SMS_MAX_SEGMENTS . ' SMS).');
+    }
+    if (!sms_gateway_ready()) {
+        return $fail('SMS brána zatím není nastavená – zprávy se nedají odeslat. Provozovatel ji připravuje.');
     }
     sms_ready();
     $log = function (string $status, string $provider, string $pid, string $err) use ($e164, $userId, $seg, $source, $text): void {
