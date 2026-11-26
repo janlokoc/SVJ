@@ -231,6 +231,19 @@ SQL);
         // Pracovníci partnera: upozornění na nová hlášení z domů (dá se vypnout v portálu).
         $pdo->exec('ALTER TABLE partner_users ADD COLUMN notify_tickets INTEGER NOT NULL DEFAULT 1; PRAGMA user_version = 24;');
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 25) {
+        // Partner: odkaz na odběr kalendáře, značka na webech domů, registrační odkaz, šablony a cena pro SVJ.
+        $pdo->exec("ALTER TABLE partner_users ADD COLUMN cal_token TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN web TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN logo TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN brand INTEGER NOT NULL DEFAULT 1;
+            ALTER TABLE partners ADD COLUMN ref_code TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN resale TEXT NOT NULL DEFAULT '';
+            ALTER TABLE tenants ADD COLUMN partner_resale INTEGER NOT NULL DEFAULT 0;
+            CREATE TABLE IF NOT EXISTS partner_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'post', name TEXT NOT NULL,
+                title TEXT NOT NULL DEFAULT '', body TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');
+            PRAGMA user_version = 25;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement

@@ -264,7 +264,8 @@ if ($GLOBALS['DEMO'] && $METHOD === 'GET' && $PATH === '/demo-vstup') {
             $_SESSION['demo_edition'] = $edition;
         }
     }
-    redirect(ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '/admin');
+    $next = (string) ($_GET['k'] ?? '');
+    redirect(partner_next_ok($next) ? $next : (ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '/admin'));
 }
 if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/zapomenute-heslo'], true) || str_starts_with($PATH, '/obnova-hesla/'))) {
     if (user()) {

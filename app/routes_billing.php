@@ -49,7 +49,7 @@ $route('GET', '/spravce-vstup/([a-f0-9]{64})', function (string $token) {
     q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$u['id']]);
     audit('partner_login', (string) ($d['by'] ?? $u['name']));
     $next = (string) ($d['next'] ?? '');
-    redirect(preg_match('~^/admin/zavady(\?f=vse)?(#z\d+)?$~', $next) ? $next : '/admin');
+    redirect(partner_next_ok($next) ? $next : '/admin');
 });
 // Správce domu (správcovská firma): výbor schvaluje přístup, vidí, kdo dům spravuje, a může přístup odebrat.
 $route('GET', '/admin/spravce-domu', function () {

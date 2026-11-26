@@ -655,3 +655,34 @@ document.addEventListener('click', (e) => {
 
 // Výběr, který rovnou odešle svůj formulář (filtr seznamu).
 document.querySelectorAll('select[data-autosubmit]').forEach((s) => s.addEventListener('change', () => s.form.requestSubmit ? s.form.requestSubmit() : s.form.submit()));
+
+// Přehled správy: výška sloupců grafu (styl z dat, ne vložený do stránky – CSP), popisek při najetí a filtr časové osy.
+document.querySelectorAll('.dash-bar[data-h]').forEach((el) => { el.style.height = el.dataset.h + '%'; });
+(() => {
+  const cols = document.querySelectorAll('[data-tip]');
+  if (!cols.length) return;
+  const tip = document.createElement('div'); tip.className = 'dash-tip'; tip.setAttribute('role', 'tooltip'); tip.hidden = true; document.body.append(tip);
+  const show = (el) => {
+    tip.textContent = el.dataset.tip; tip.hidden = false;
+    const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - t.width - 8, r.left + r.width / 2 - t.width / 2)) + 'px';
+    tip.style.top = (r.top + window.scrollY - t.height - 8) + 'px';
+  };
+  cols.forEach((el) => {
+    el.addEventListener('mouseenter', () => show(el)); el.addEventListener('focus', () => show(el));
+    el.addEventListener('mouseleave', () => { tip.hidden = true; }); el.addEventListener('blur', () => { tip.hidden = true; });
+  });
+})();
+document.querySelectorAll('[data-only-staff]').forEach((cb) => cb.addEventListener('change', () => {
+  document.querySelectorAll('.dash-timeline li:not(.is-staff)').forEach((li) => { li.hidden = cb.checked; });
+}));
+
+// Šablona textu (správcovská firma): vybraná šablona vyplní nadpis a text formuláře.
+document.querySelectorAll('select[data-template-fill]').forEach((sel) => sel.addEventListener('change', () => {
+  const o = sel.selectedOptions[0]; if (!o || !o.value) return;
+  const form = sel.closest('form') || document;
+  const t = form.querySelector(sel.dataset.titleTarget), b = form.querySelector(sel.dataset.bodyTarget);
+  if (b && b.value.trim() !== '' && !confirm('Nahradit současný text šablonou?')) { sel.value = ''; return; }
+  if (t && o.dataset.title) { t.value = o.dataset.title; t.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (b) { b.value = o.dataset.body; b.dispatchEvent(new Event('input', { bubbles: true })); }
+}));

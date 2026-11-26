@@ -418,6 +418,11 @@ function ics_calendar(array $events): string
         array_push($lines, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' . ics_text($ev['title']), 'TRIGGER:-P1D', 'END:VALARM', 'END:VEVENT');
     }
     $lines[] = 'END:VCALENDAR';
+    return ics_fold($lines);
+}
+/** Řádky kalendáře podle normy: zalomení po 75 bajtech, konce CRLF. */
+function ics_fold(array $lines): string
+{
     $out = '';
     foreach ($lines as $line) {
         while (strlen($line) > 73) {

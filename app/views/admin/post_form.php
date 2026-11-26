@@ -4,6 +4,7 @@
   <?php require __DIR__ . '/../_errors.php'; ?>
   <form method="post" enctype="multipart/form-data" class="card form">
     <?= csrf_field() ?>
+    <?php if (function_exists('partner_house_templates')) { $tplList = partner_house_templates('post'); $tplTitle = '[name=title]'; $tplBody = 'textarea[name=body]'; require __DIR__ . '/../partner/_tpl_pick.php'; } ?>
     <label>Nadpis <input type="text" name="title" value="<?= e($post['title']) ?>" maxlength="200" required></label>
     <label>Text
       <textarea name="body" rows="10"><?= e($post['body']) ?></textarea>

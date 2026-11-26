@@ -23,7 +23,7 @@ $nav = array_diff_key($nav, array_flip($hiddenPaths));
 $more = array_diff_key($more, array_flip($hiddenPaths), array_flip($planHidden));
 $chatUnread = $u && isset($more['/zpravy']) ? (int) val('SELECT COUNT(*) FROM messages WHERE to_id = ? AND read_at IS NULL', [$u['id']]) : 0;
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
-$adminNav = ['/admin' => 'Přehled', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
+$adminNav = ['/admin' => 'Přehled', '/admin/prehled-spravy' => 'Přehled správy', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
     '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
     '/admin/vyveska' => 'Vývěska', '/admin/kontakty' => 'Kontakty', '/admin/jednotky' => 'Jednotky', '/admin/uzivatele' => 'Uživatelé', '/admin/zavady' => 'Závady a požadavky',
     '/admin/odecty' => 'Odečty', '/admin/revize' => 'Revize', '/admin/rezervace' => 'Prostory a rezervace', '/admin/klice' => 'Klíče a čipy',
@@ -123,7 +123,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     $adminGroups = ['Obsah webu' => ['/admin/aktuality', '/admin/dokumenty', '/admin/kontakty', '/admin/terminy', '/admin/vyveska'],
         'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/ankety', '/admin/zavady'],
         'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/insolvence', '/admin/klice'],
-        'Provoz domu' => ['/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace'],
+        'Provoz domu' => ['/admin/prehled-spravy', '/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace'],
         'Správa webu' => ['/admin/pruvodce', '/admin/napoveda', '/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/spravce-domu', '/admin/hlaseni']];
     $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory')));
     $adminCurrent = 'Přehled';
@@ -168,6 +168,10 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <div>
       <strong class="footer-title"><?= e(site('full')) ?></strong>
       <p><?= e(setting('address')) ?><br>IČ <?= e(setting('ico')) ?> · účet <?= e(setting('account')) ?></p>
+      <?php if (function_exists('partner_brand') && ($pb = partner_brand())): ?>
+      <p class="partner-brand" translate="no"><?php if ($pb['logo'] !== ''): ?><img src="<?= e($pb['logo']) ?>" alt="" class="partner-brand-logo"><?php endif ?>
+        <span>Dům spravuje <strong><?= $pb['web'] !== '' ? '<a href="' . e($pb['web']) . '" rel="noopener" target="_blank">' . e($pb['name']) . '</a>' : e($pb['name']) ?></strong><?= $pb['phone'] !== '' ? '<br><a href="' . e(tel_href($pb['phone'])) . '">' . e($pb['phone']) . '</a>' : '' ?><?= $pb['email'] !== '' ? ($pb['phone'] !== '' ? ' · ' : '<br>') . '<a href="mailto:' . e($pb['email']) . '">' . e($pb['email']) . '</a>' : '' ?></span></p>
+      <?php endif ?>
     </div>
     <ul class="footer-links">
       <li><a href="<?= url('/aktuality') ?>">Aktuality</a></li>

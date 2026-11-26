@@ -329,6 +329,25 @@ function partner_house_stats(string $slug): array
     }
 }
 
+/** Kam po vstupu do domu (z odkazu v portálu): k hlášení, nebo na přehled správy. */
+function partner_next(): string
+{
+    if (ctype_digit((string) ($_GET['zavada'] ?? ''))) {
+        return '/admin/zavady?f=vse#z' . (int) $_GET['zavada'];
+    }
+    return match ((string) ($_GET['k'] ?? '')) {
+        'prehled' => '/admin/prehled-spravy',
+        'zavady' => '/admin/zavady',
+        'revize' => '/admin/revize',
+        default => '',
+    };
+}
+/** Je adresa po vstupu povolená (jen vybrané stránky administrace)? */
+function partner_next_ok(string $next): bool
+{
+    return (bool) preg_match('~^/admin(/zavady(\?f=vse)?(#z\d+)?|/prehled-spravy|/revize)?$~', $next);
+}
+
 // ---------- Ukázka partnerského portálu ----------
 
 const PARTNER_DEMO_HOUSES = [
@@ -354,6 +373,26 @@ function partner_demo_ensure(): ?array
         pset_save('demo_partner', (string) $pid);
         pq("INSERT INTO partner_users (partner_id, name, email, password_hash, role, notify_tickets, created_at) VALUES (?,?,?,?,'owner',0,?)",
             [$pid, 'Petra Dvořáková', 'ukazka-partner@example.invalid', password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), date('Y-m-d H:i:s')]);
+    }
+    // Novější obsah ukázky (víc funkcí portálu): domy ukázky založit znovu.
+    if (pset('demo_partner_v') !== '3') {
+        foreach (array_keys(PARTNER_DEMO_HOUSES) as $slug) {
+            if (($old = tenant_row($slug)) && !empty($old['demo'])) {
+                tenant_delete_storage($slug);
+                pq('DELETE FROM tenants WHERE slug = ?', [$slug]);
+            }
+        }
+        pq("UPDATE partners SET web = 'https://www.example.com', phone = '+420 500 600 700', email = 'sprava@example.invalid', resale = '4500', brand = 1 WHERE id = ?", [$pid]);
+        if (!pq('SELECT 1 FROM partner_templates WHERE partner_id = ?', [$pid])->fetchColumn()) {
+            foreach ([
+                ['post', 'Odečty vodoměrů', 'Odečty vodoměrů a měřičů tepla', "Dobrý den,\n\nv úterý příští týden od 16 do 19 hodin proběhnou odečty vodoměrů a měřičů tepla. Prosíme o zpřístupnění bytů; kdo nebude doma, nechte prosím stav měřidel s číslem bytu ve schránce.\n\nDěkujeme, Ukázková správa domů"],
+                ['post', 'Odstávka vody', 'Plánovaná odstávka vody', "Dobrý den,\n\nz důvodu opravy rozvodů bude ve čtvrtek od 8 do 12 hodin přerušena dodávka teplé i studené vody. Připravte si prosím zásobu.\n\nDěkujeme za pochopení."],
+                ['mailing', 'Pozvánka na shromáždění', 'Pozvánka na shromáždění vlastníků', "Vážení vlastníci,\n\nvýbor Vás zve na shromáždění vlastníků jednotek. Program, místo a čas najdete v pozvánce na webu domu. Pokud se nemůžete zúčastnit, můžete se nechat zastoupit na základě plné moci (formulář je na webu).\n\nS pozdravem\nUkázková správa domů s.r.o."],
+            ] as [$k, $n, $ti, $b]) {
+                pq('INSERT INTO partner_templates (partner_id, kind, name, title, body, updated_at) VALUES (?,?,?,?,?,?)', [$pid, $k, $n, $ti, $b, date('Y-m-d H:i:s')]);
+            }
+        }
+        pset_save('demo_partner_v', '3');
     }
     foreach (PARTNER_DEMO_HOUSES as $slug => [$name, $title, $address, $look]) {
         if (!tenant_row($slug)) {
@@ -381,6 +420,9 @@ function partner_demo_seed(string $slug): void
     $now = time();
     $at = fn(int $days) => date('Y-m-d H:i:s', $now - $days * 86400);
     $spravce = $ins("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)", ['Petra Dvořáková (Ukázková správa domů s.r.o.)', 'ukazka-partner@example.invalid', NO_PASSWORD]);
+    tenant_set($slug, 'partner_users', json_encode(['ukazka-partner@example.invalid' => $spravce]));
+    tenant_set($slug, 'ico', '00000000');
+    tenant_set($slug, 'account', '000000-0000000000/0000');
     $vybor = $ins("INSERT INTO users (name, email, role, kind, password_hash, position) VALUES (?,?,'admin','owner',?,?)", ['Tomáš Malý', 'predseda@' . $slug . '.example.invalid', NO_PASSWORD, 'predseda']);
     $people = [];
     foreach (['Eva Horáková', 'Martin Kučera', 'Lenka Pokorná', 'Jiří Navrátil', 'Hana Veselá'] as $i => $n) {
@@ -389,6 +431,11 @@ function partner_demo_seed(string $slug): void
         $pdo->prepare('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)')->execute([$people[$i], $unit]);
     }
     $ins('INSERT INTO posts (title, body, published_at) VALUES (?,?,?)', ['Odečty vodoměrů', 'Odečty proběhnou příští týden ve středu od 16 hodin. Prosíme o zpřístupnění bytů.', $at(3)]);
+    $lip = $slug === 'ukazka-lipova';
+    $day = fn(int $d) => date('Y-m-d', $now + $d * 86400);
+    $ins('INSERT INTO events (title, event_date, event_time, place) VALUES (?,?,?,?)', [$lip ? 'Shromáždění vlastníků' : 'Odečet vodoměrů', $day($lip ? 24 : 9), $lip ? '18:00' : '16:00', $lip ? 'kočárkárna, přízemí' : '']);
+    $ins('INSERT INTO maintenance (title, contractor, last_date, interval_months, next_date) VALUES (?,?,?,?,?)', [$lip ? 'Revize elektroinstalace' : 'Revize výtahu', 'Revize Brno s.r.o.', $day(-370), 12, $day($lip ? -5 : 18)]);
+    $ins('INSERT INTO maintenance (title, contractor, last_date, interval_months, next_date) VALUES (?,?,?,?,?)', ['Kontrola hasicích přístrojů', 'Požární servis', $day(-340), 12, $day($lip ? 25 : 40)]);
     $tickets = $slug === 'ukazka-lipova' ? [
         [0, 'Nefunguje zvonek u vchodu', 'vchod A', 'Zvonek k bytu 3 nezvoní, displej nesvítí.', 'new', 1, 0, ''],
         [1, 'Zatéká do sklepa po dešti', 'sklep, kóje 4', 'Po včerejším dešti je na podlaze voda, teče od okénka.', 'in_progress', 9, $spravce, date('Y-m-d', $now - 2 * 86400)],
@@ -408,4 +455,199 @@ function partner_demo_seed(string $slug): void
                 $status === 'done' ? 'Zámek je vyměněný, nové klíče jsou u předsedy.' : 'Dobrý den, objednali jsme technika, ozve se Vám s termínem.']);
         }
     }
+}
+
+// ---------- Společný kalendář domů ----------
+
+const PARTNER_CAL_KINDS = ['termin' => 'Termín', 'revize' => 'Revize', 'zavada' => 'Termín hlášení', 'hlasovani' => 'Konec hlasování'];
+
+/** Termíny všech domů partnera od $from do $to (revize a hlášení po termínu i dřív): [['date','time','kind','title','house','slug','late','k'], …]. */
+function partner_calendar(array $houses, string $from, string $to): array
+{
+    $today = date('Y-m-d');
+    $items = [];
+    foreach ($houses as $h) {
+        try {
+            $pdo = tenant_pdo($h['slug']);
+            ticket_ready($pdo);
+            $q = function (string $sql, array $p) use ($pdo) {
+                $st = $pdo->prepare($sql);
+                $st->execute($p);
+                return $st->fetchAll();
+            };
+            $add = function (string $date, string $time, string $kind, string $title, string $k) use (&$items, $h, $today): void {
+                $items[] = ['date' => $date, 'time' => $time, 'kind' => $kind, 'title' => $title, 'house' => $h['name'], 'slug' => $h['slug'], 'late' => $date < $today && $kind !== 'termin', 'k' => $k];
+            };
+            foreach ($q('SELECT title, event_date, event_time FROM events WHERE event_date >= ? AND event_date <= ?', [$from, $to]) as $r) {
+                $add($r['event_date'], (string) $r['event_time'], 'termin', $r['title'], '');
+            }
+            foreach ($q("SELECT title, next_date FROM maintenance WHERE next_date IS NOT NULL AND next_date <> '' AND next_date <= ?", [$to]) as $r) {
+                $add($r['next_date'], '', 'revize', $r['title'], 'revize');
+            }
+            foreach ($q("SELECT id, subject, due_date FROM tickets WHERE status <> 'done' AND due_date <> '' AND due_date <= ?", [$to]) as $r) {
+                $add($r['due_date'], '', 'zavada', $r['subject'], 'zavada=' . (int) $r['id']);
+            }
+            foreach ($q('SELECT title, closes_at FROM polls WHERE published = 1 AND closes_at >= ? AND closes_at <= ?', [$from, $to]) as $r) {
+                $add($r['closes_at'], '', 'hlasovani', $r['title'], '');
+            }
+        } catch (Throwable $e) {
+            error_log('SVJ partner, kalendář domu ' . $h['slug'] . ': ' . $e->getMessage());
+        }
+    }
+    usort($items, fn($a, $b) => [$a['date'], $a['time'], $a['house']] <=> [$b['date'], $b['time'], $b['house']]);
+    return $items;
+}
+/** Kalendář pro odběr (Google, Outlook, telefon): celodenní události s připomenutím den předem. */
+function partner_calendar_ics(array $partner, array $items): string
+{
+    $lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SVJ web//CS', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:' . ics_text($partner['name'] . ' – domy'), 'X-WR-TIMEZONE:Europe/Prague'];
+    foreach ($items as $i => $it) {
+        $d = strtotime($it['date']);
+        array_push($lines, 'BEGIN:VEVENT', 'UID:' . md5($it['slug'] . $it['kind'] . $it['title'] . $it['date']) . '@' . platform_domain(), 'DTSTAMP:' . gmdate('Ymd\THis\Z'),
+            'DTSTART;VALUE=DATE:' . date('Ymd', $d), 'DTEND;VALUE=DATE:' . date('Ymd', $d + 86400),
+            'SUMMARY:' . ics_text(PARTNER_CAL_KINDS[$it['kind']] . ': ' . $it['title'] . ' – ' . $it['house']),
+            'DESCRIPTION:' . ics_text(($it['time'] !== '' ? 'Začátek ' . $it['time'] . "\n" : '') . platform_url('/partner/kalendar')),
+            'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' . ics_text($it['title']), 'TRIGGER:-P1D', 'END:VALARM', 'END:VEVENT');
+    }
+    $lines[] = 'END:VCALENDAR';
+    return ics_fold($lines);
+}
+
+// ---------- Značka firmy na webech domů a registrační odkaz ----------
+
+function partner_logo_path(array $p): string
+{
+    return preg_match('/^logo-\d+-[a-f0-9]{16}\.(png|jpg)$/', (string) ($p['logo'] ?? '')) ? ROOT_STORAGE . '/partners/' . $p['logo'] : '';
+}
+/** Logo jako data: adresa (web domu běží na jiné adrese než platforma a cizí obrázky nenačítá). */
+function partner_logo_data(array $p): string
+{
+    $f = partner_logo_path($p);
+    if ($f === '' || !is_file($f) || filesize($f) > 200000) {
+        return '';
+    }
+    return 'data:image/' . (str_ends_with($f, '.png') ? 'png' : 'jpeg') . ';base64,' . base64_encode((string) file_get_contents($f));
+}
+/** Uloží logo firmy (PNG nebo JPG do 200 kB). Vrací chybu nebo null. */
+function partner_logo_save(array $p, array $file): ?string
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return 'Logo se nepodařilo nahrát.';
+    }
+    $info = @getimagesize((string) $file['tmp_name']);
+    $ext = match ($info[2] ?? 0) { IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg', default => '' };
+    if ($ext === '' || (int) $file['size'] > 200000) {
+        return 'Logo musí být obrázek PNG nebo JPG do 200 kB.';
+    }
+    $dir = ROOT_STORAGE . '/partners';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0700, true);
+    }
+    $name = 'logo-' . (int) $p['id'] . '-' . bin2hex(random_bytes(8)) . '.' . $ext;
+    if (!move_uploaded_file((string) $file['tmp_name'], $dir . '/' . $name) && !copy((string) $file['tmp_name'], $dir . '/' . $name)) {
+        return 'Logo se nepodařilo uložit.';
+    }
+    if (($old = partner_logo_path($p)) !== '') {
+        @unlink($old);
+    }
+    pq('UPDATE partners SET logo = ? WHERE id = ?', [$name, $p['id']]);
+    return null;
+}
+/** Kód pro registrační odkaz partnera (vytvoří se při prvním použití). */
+function partner_ref_code(array $p): string
+{
+    if ((string) ($p['ref_code'] ?? '') !== '') {
+        return $p['ref_code'];
+    }
+    $code = substr(preg_replace('/[^a-z0-9]/', '', strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $p['name']) ?: 'partner')), 0, 12) . '-' . bin2hex(random_bytes(3));
+    pq('UPDATE partners SET ref_code = ? WHERE id = ?', [$code, $p['id']]);
+    return $code;
+}
+function partner_by_code(string $code): ?array
+{
+    if (!preg_match('/^[a-z0-9-]{4,40}$/', $code)) {
+        return null;
+    }
+    $p = pq('SELECT * FROM partners WHERE ref_code = ? AND active = 1', [$code])->fetch();
+    return $p ?: null;
+}
+/** Správcovská firma domu pro zobrazení na webu (patička, kontakty), nebo null. Jen v kontextu webu domu. */
+function partner_brand(): ?array
+{
+    static $b = false;
+    if ($b !== false) {
+        return $b;
+    }
+    $b = null;
+    if (!defined('TENANT') || TENANT === '' || !function_exists('tenant_row') || !($t = tenant_row(TENANT)) || !(int) ($t['partner_id'] ?? 0) || $t['partner_status'] !== 'active') {
+        return $b;
+    }
+    $p = partner_row((int) $t['partner_id']);
+    if ($p && $p['active'] && (int) ($p['brand'] ?? 1)) {
+        $b = ['name' => $p['name'], 'phone' => $p['phone'], 'email' => $p['email'], 'web' => (string) ($p['web'] ?? ''), 'logo' => partner_logo_data($p)];
+    }
+    return $b;
+}
+
+// ---------- Hromadné akce a šablony firmy ----------
+
+const PARTNER_TPL_KINDS = ['post' => 'Aktualita', 'mailing' => 'E-mail obyvatelům'];
+
+function partner_templates(int $partnerId, string $kind = ''): array
+{
+    return pq('SELECT * FROM partner_templates WHERE partner_id = ?' . ($kind !== '' ? ' AND kind = ' . platform_db()->quote($kind) : '') . ' ORDER BY name', [$partnerId])->fetchAll();
+}
+/** Šablony firmy, která spravuje tento dům (pro formuláře v administraci domu). */
+function partner_house_templates(string $kind): array
+{
+    if (!defined('TENANT') || TENANT === '' || !($t = tenant_row(TENANT)) || !(int) ($t['partner_id'] ?? 0) || $t['partner_status'] !== 'active') {
+        return [];
+    }
+    return partner_templates((int) $t['partner_id'], $kind);
+}
+/**
+ * Aktualita (a případně příloha) do více domů najednou. $file = ['tmp' => cesta, 'name' => původní název] nebo null.
+ * Vrací [počet domů, chyby].
+ */
+function partner_bulk_post(array $pu, array $partner, array $slugs, string $title, string $body, string $visibility, ?array $file): array
+{
+    $done = 0;
+    $errors = [];
+    $display = $pu['name'] . ' (' . $partner['name'] . ')';
+    foreach ($slugs as $slug) {
+        $t = tenant_row((string) $slug);
+        if (!$t || (int) $t['partner_id'] !== (int) $partner['id'] || $t['partner_status'] !== 'active') {
+            continue;
+        }
+        try {
+            $pdo = tenant_pdo($t['slug']);
+            $map = (array) json_decode((string) (tenant_settings($t['slug'])['partner_users'] ?? ''), true);
+            $author = (int) ($map[strtolower($pu['email'])] ?? 0) ?: null;
+            $pdo->beginTransaction();
+            $pdo->prepare('INSERT INTO posts (title, body, visibility, pinned, published_at, author_id) VALUES (?,?,?,0,?,?)')->execute([$title, $body, $visibility, date('Y-m-d'), $author]);
+            $postId = (int) $pdo->lastInsertId();
+            if ($file) {
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $dir = tenant_storage($t['slug']) . '/uploads';
+                if (!is_dir($dir)) {
+                    mkdir($dir, 0700, true);
+                }
+                $name = bin2hex(random_bytes(16)) . '.' . $ext;
+                if (!copy($file['tmp'], $dir . '/' . $name)) {
+                    throw new RuntimeException('příloha se nepodařila uložit');
+                }
+                $pdo->prepare("INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?,'oznameni',?,?,?,?,?)")
+                    ->execute([pathinfo($file['name'], PATHINFO_FILENAME), $visibility, $name, basename($file['name']), (int) filesize($dir . '/' . $name), date('Y-m-d')]);
+                $pdo->prepare('INSERT INTO post_documents (post_id, document_id) VALUES (?,?)')->execute([$postId, (int) $pdo->lastInsertId()]);
+            }
+            $pdo->commit();
+            $done++;
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $errors[] = $t['name'] . ': ' . $e->getMessage();
+        }
+    }
+    return [$done, $errors];
 }

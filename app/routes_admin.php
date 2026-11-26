@@ -19,6 +19,15 @@ $route('GET', '/admin', function () {
     ]);
 });
 
+// Přehled správy domu: čísla za období, graf hlášení a časová osa práce správců (výboru i správcovské firmy).
+$route('GET', '/admin/prehled-spravy', function () {
+    require_admin();
+    $days = dash_period();
+    $t = function_exists('tenant_row') && TENANT !== '' ? tenant_row(TENANT) : null;
+    $partner = $t && (int) ($t['partner_id'] ?? 0) && $t['partner_status'] === 'active' ? partner_row((int) $t['partner_id']) : null;
+    render('admin/house_dashboard', ['title' => 'Přehled správy domu', 'd' => house_dashboard(db(), $days, true, $partner ? partner_tenant_user_ids() : []), 'partner' => $partner]);
+});
+
 $route('POST', '/admin/import', function () {
     require_admin();
     @set_time_limit(120);

@@ -11,6 +11,10 @@ $open = pset('signup_open') === '1';
 $signup = $_SESSION['signup'] ?? [];
 $steps = ['/registrace' => 'Společenství', '/registrace/vzhled' => 'Vzhled', '/registrace/spravce' => 'Účet správce'];
 
+// Registrační odkaz správcovské firmy (?partner=KÓD): web po založení spravuje firma, když s tím výbor souhlasí.
+if ($METHOD === 'GET' && isset($_GET['partner']) && ($sp = partner_by_code((string) $_GET['partner']))) {
+    $_SESSION['spartner'] = ['id' => (int) $sp['id'], 'name' => $sp['name']];
+}
 // Odkaz s doporučením (?ref=KÓD) si zapamatujeme do konce registrace.
 if ($METHOD === 'GET' && isset($_GET['ref']) && ($refOwner = referral_owner((string) $_GET['ref']))) {
     if (($_SESSION['ref']['code'] ?? '') !== $refOwner['ref_code'] && !preg_match('~bot|crawl|spider|preview~i', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''))) {
@@ -183,6 +187,14 @@ if (isset($steps[$PATH])) {
                 referral_register($_SESSION['ref']['code'], tenant_row($slug));
                 unset($_SESSION['ref']);
             }
+            if (!empty($_SESSION['spartner']['id']) && isset($_POST['partner_ok']) && ($sp = partner_row((int) $_SESSION['spartner']['id'])) && $sp['active']) {
+                pq("UPDATE tenants SET partner_id = ?, partner_status = 'active', partner_billing = 1, partner_since = ? WHERE slug = ?", [$sp['id'], date('Y-m-d H:i:s'), $slug]);
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $email, client_ip(), 'Registrace přes odkaz partnera', $sp['name'] . ' · ' . $slug]);
+                foreach (pq('SELECT email FROM partner_users WHERE partner_id = ? AND active = 1 AND role = \'owner\'', [$sp['id']])->fetchAll(PDO::FETCH_COLUMN) as $pe) {
+                    platform_mail($pe, 'Nový dům přes Váš odkaz: ' . $signup['name'], 'Dobrý den,' . "\n\nspolečenství " . $signup['name'] . ' si založilo web přes Váš registrační odkaz a souhlasilo se správou Vaší firmou.' . "\n\nDům najdete v partnerském portálu: " . platform_url('/partner'));
+                }
+            }
+            unset($_SESSION['spartner']);
             // Jiná šablona než základní je funkce edice Standard: nový web ji dostane rovnou na zkoušku.
             if (($signup['style'] ?? 'klasik') !== 'klasik') {
                 pq('INSERT INTO feature_trials (tenant, feature, started, ends) VALUES (?,?,?,?)', [$slug, 'sablony', date('Y-m-d'), date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day'))]);

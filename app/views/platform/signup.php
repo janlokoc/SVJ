@@ -5,6 +5,7 @@
       <li<?= $i === $step ? ' aria-current="step"' : '' ?> class="<?= $i < $step ? 'is-done' : '' ?>"><?php if ($i < $step): ?><a href="<?= url($href) ?>"><?= $i ?>. <?= e($label) ?></a><?php else: ?><?= $i ?>. <?= e($label) ?><?php endif ?></li>
     <?php endforeach ?>
   </ol>
+  <?php if (!empty($_SESSION['spartner']['name'])): ?><div class="flash flash-ok">Web zakládáte přes odkaz správcovské firmy <strong><?= e($_SESSION['spartner']['name']) ?></strong>. V posledním kroku můžete potvrdit, že bude Váš dům na webu spravovat.</div><?php endif ?>
   <?php if (!empty($_SESSION['ref']['name'])): ?><div class="flash flash-ok">Doporučilo Vás <strong><?= e($_SESSION['ref']['name']) ?></strong>.<?= pset_int('referral_welcome', 0, 100000) ? ' Na první roční platbu za edici dostanete slevu ' . money_czk(pset_int('referral_welcome', 0, 100000)) . '.' : '' ?> Web je i tak zdarma.</div><?php endif ?>
   <?php require __DIR__ . '/../_errors.php'; ?>
   <?php if ($step === 1): ?>
@@ -54,6 +55,7 @@
     <label>E-mail <input type="email" name="email" value="<?= e($s['email']) ?>" required autocomplete="username"></label>
     <label>Heslo (alespoň 10 znaků) <input type="password" name="password" minlength="10" required autocomplete="new-password"></label>
     <p class="hp" aria-hidden="true"><label>Web <input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <?php if (!empty($_SESSION['spartner']['name'])): ?><label class="check"><input type="checkbox" name="partner_ok" value="1"> <span>Souhlasíme, aby web domu spravovala firma <strong><?= e($_SESSION['spartner']['name']) ?></strong> <small>Její pracovníci budou mít přístup do administrace webu (včetně údajů o vlastnících) a budou se starat o hlášení, oznámení a termíny. Přístup jí výbor může kdykoli odebrat v administraci (Správce domu).</small></span></label><?php endif ?>
     <label class="check"><input type="checkbox" name="agree" required> <span>Souhlasím s <a href="<?= url('/podminky') ?>" target="_blank" rel="noopener">obchodními podmínkami</a> a se <a href="<?= url('/zpracovani-udaju') ?>" target="_blank" rel="noopener">smlouvou o zpracování osobních údajů</a> a beru na vědomí <a href="<?= url('/ochrana-udaju') ?>" target="_blank" rel="noopener">zásady ochrany osobních údajů</a> <small>Web běží v edici Zdarma bez časového omezení a nic neplatíte. Placenou edici si můžete objednat později v administraci.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Založit web zdarma</button><a class="btn btn-ghost" href="<?= url('/registrace/vzhled') ?>">Zpět</a></div>
   </form>

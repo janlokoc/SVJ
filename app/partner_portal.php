@@ -55,6 +55,17 @@ if ($PATH === '/ukazka' && $METHOD === 'GET') {
 }
 $GLOBALS['PARTNER_DEMO'] = $pu && !empty($_SESSION['pdemo']) && (int) $pu['partner_id'] === partner_demo_id();
 
+// Odběr kalendáře (Google, Outlook, telefon): tajný odkaz pracovníka, bez přihlášení.
+if ($PATH === '/kalendar.ics' && preg_match('/^[a-f0-9]{40}$/', (string) ($_GET['t'] ?? ''))) {
+    $cu = pq("SELECT u.* FROM partner_users u JOIN partners p ON p.id = u.partner_id WHERE u.cal_token = ? AND u.active = 1 AND p.active = 1", [$_GET['t']])->fetch();
+    if (!$cu) {
+        http_response_code(404);
+        exit;
+    }
+    $cp = partner_row((int) $cu['partner_id']);
+    send_ics(partner_calendar_ics($cp, partner_calendar(partner_tenants((int) $cp['id']), date('Y-m-d', strtotime('-30 days')), date('Y-m-d', strtotime('+365 days')))), 'domy.ics');
+}
+
 // ---------- Bez přihlášení: pozvánka, přihlášení, ověření ----------
 if (preg_match('~^/pozvanka/([a-f0-9]{64})$~', $PATH, $m)) {
     $u = pq('SELECT * FROM partner_users WHERE invite_hash = ? AND invite_expires > ? AND active = 1', [hash('sha256', $m[1]), date('Y-m-d H:i:s')])->fetch();
@@ -157,10 +168,10 @@ if (preg_match('~^/domy/([a-z0-9][a-z0-9-]{1,38})/vstoupit$~', $PATH, $m) && $ME
         if (!$t || (int) $t['partner_id'] !== (int) $partner['id'] || empty($t['demo'])) {
             redirect('/');
         }
-        header('Location: ' . tenant_url($t, '/demo-vstup' . (ctype_digit((string) ($_GET['zavada'] ?? '')) ? '?zavada=' . (int) $_GET['zavada'] : '')), true, 302);
+        header('Location: ' . tenant_url($t, '/demo-vstup' . (partner_next() !== '' ? '?k=' . rawurlencode(partner_next()) : '')), true, 302);
         exit;
     }
-    $r = $t ? partner_enter_link($pu, $partner, $t, ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '') : ['error' => 'Dům nenalezen.'];
+    $r = $t ? partner_enter_link($pu, $partner, $t, partner_next()) : ['error' => 'Dům nenalezen.'];
     if (isset($r['error'])) {
         $_SESSION['partner_enter_error'] = $r['error'];
         redirect('/');
@@ -308,6 +319,50 @@ if ($PATH === '/fakturace') {
         'history' => pq("SELECT * FROM payments WHERE partner_id = ? AND kind = 'partner' AND status IN ('paid','storno') ORDER BY id DESC LIMIT 50", [$partner['id']])->fetchAll()]);
     exit;
 }
+// Přehled správy: ukazatele všech domů v jedné tabulce (dům, který potřebuje pozornost, nahoře).
+if ($PATH === '/prehled') {
+    $days = dash_period();
+    $rows = [];
+    foreach (partner_tenants((int) $partner['id']) as $h) {
+        try {
+            $rows[] = ['h' => $h] + house_dashboard(tenant_pdo($h['slug']), $days, false);
+        } catch (Throwable $e) {
+            error_log('SVJ partner, přehled domu ' . $h['slug'] . ': ' . $e->getMessage());
+        }
+    }
+    $sorts = ['pozornost' => 'Potřebuje pozornost', 'otevrene' => 'Otevřená hlášení', 'reakce' => 'První reakce', 'nazev' => 'Název'];
+    $sort = isset($sorts[$_GET['razeni'] ?? '']) ? $_GET['razeni'] : 'pozornost';
+    $score = fn($r) => $r['late'] * 3 + $r['revize_late'] * 3 + $r['unassigned'] + $r['open'];
+    usort($rows, match ($sort) {
+        'otevrene' => fn($a, $b) => $b['open'] <=> $a['open'],
+        'reakce' => fn($a, $b) => ($b['react_hours'] ?? -1) <=> ($a['react_hours'] ?? -1),
+        'nazev' => fn($a, $b) => strcoll($a['h']['name'], $b['h']['name']),
+        default => fn($a, $b) => $score($b) <=> $score($a),
+    });
+    $sum = fn(string $k) => array_sum(array_column($rows, $k));
+    $react = array_filter(array_column($rows, 'react_hours'), fn($v) => $v !== null);
+    render('partner/overview', ['title' => 'Přehled správy', 'rows' => $rows, 'days' => $days, 'sort' => $sort, 'sorts' => $sorts, 'score' => $score,
+        'tot' => ['open' => $sum('open'), 'late' => $sum('late'), 'resolved' => $sum('resolved'), 'created' => $sum('created'), 'revize_late' => $sum('revize_late'), 'unassigned' => $sum('unassigned'),
+            'react' => $react ? round(array_sum($react) / count($react), 1) : null]]);
+    exit;
+}
+// Společný kalendář: termíny, revize, termíny hlášení a konce hlasování ve všech domech.
+if ($PATH === '/kalendar') {
+    if ($METHOD === 'POST' && post('action') === 'token') {
+        pq('UPDATE partner_users SET cal_token = ? WHERE id = ?', [bin2hex(random_bytes(20)), $pu['id']]);
+        $plog('nový odkaz na kalendář');
+        flash('Odkaz pro odběr kalendáře je připravený.');
+        redirect('/kalendar#odber');
+    }
+    $houses = partner_tenants((int) $partner['id']);
+    $house = (string) ($_GET['dum'] ?? '');
+    $kind = isset(PARTNER_CAL_KINDS[$_GET['druh'] ?? '']) ? $_GET['druh'] : '';
+    $items = array_values(array_filter(partner_calendar($houses, date('Y-m-d'), date('Y-m-d', strtotime('+120 days'))),
+        fn($it) => ($house === '' || $it['slug'] === $house) && ($kind === '' || $it['kind'] === $kind)));
+    render('partner/calendar', ['title' => 'Kalendář domů', 'items' => $items, 'houses' => $houses, 'house' => $house, 'kind' => $kind,
+        'icsUrl' => $pu['cal_token'] !== '' ? platform_url('/partner/kalendar.ics?t=' . $pu['cal_token']) : '']);
+    exit;
+}
 // Hlášení závad a požadavků ze všech domů firmy (jen čtení – vyřizuje se ve webu domu).
 if ($PATH === '/hlaseni') {
     $houses = partner_tenants((int) $partner['id']);
@@ -342,6 +397,118 @@ if ($PATH === '/hlaseni') {
     }
     usort($rows, fn($a, $b) => [$a['status'] === 'done', !$a['late'], $a['due_date'] === '' ? '9999' : $a['due_date'], $b['created_at']] <=> [$b['status'] === 'done', !$b['late'], $b['due_date'] === '' ? '9999' : $b['due_date'], $a['created_at']]);
     render('partner/tickets', ['title' => 'Hlášení', 'rows' => $rows, 'houses' => $houses, 'filter' => $filter, 'house' => $house, 'counts' => $counts]);
+    exit;
+}
+// Hromadné oznámení: aktualita (s přílohou) do vybraných domů najednou.
+if ($PATH === '/hromadne') {
+    $houses = partner_tenants((int) $partner['id']);
+    $errors = [];
+    $in = ['title' => '', 'body' => '', 'visibility' => 'residents', 'houses' => array_column($houses, 'slug')];
+    if ($METHOD === 'POST') {
+        $in = ['title' => mb_substr(post('title'), 0, 200), 'body' => mb_substr(post('body'), 0, 20000), 'visibility' => post('visibility') === 'public' ? 'public' : 'residents',
+            'houses' => array_values(array_intersect(array_map('strval', (array) ($_POST['houses'] ?? [])), array_column($houses, 'slug')))];
+        $file = null;
+        if (($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $f = $_FILES['file'];
+            $ext = strtolower(pathinfo((string) $f['name'], PATHINFO_EXTENSION));
+            $mime = $f['error'] === UPLOAD_ERR_OK ? (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']) : '';
+            if ($f['error'] !== UPLOAD_ERR_OK || !in_array($ext, ALLOWED_EXT, true) || (int) $f['size'] > 10485760
+                || (in_array($ext, ['pdf', 'jpg', 'jpeg', 'png'], true) && !in_array($mime, ['application/pdf', 'image/jpeg', 'image/png'], true))) {
+                $errors[] = 'Příloha musí být PDF, dokument Office nebo obrázek do 10 MB.';
+            } else {
+                $file = ['tmp' => $f['tmp_name'], 'name' => basename((string) $f['name'])];
+            }
+        }
+        if ($in['title'] === '' || $in['body'] === '') {
+            $errors[] = 'Vyplňte nadpis i text oznámení.';
+        }
+        if (!$in['houses']) {
+            $errors[] = 'Vyberte aspoň jeden dům.';
+        }
+        if (!$errors) {
+            [$done, $failed] = partner_bulk_post($pu, $partner, $in['houses'], $in['title'], $in['body'], $in['visibility'], $file);
+            $plog('hromadné oznámení', $in['title'] . ' · domů ' . $done);
+            flash('Oznámení je zveřejněné – počet domů: ' . $done . '.' . ($failed ? ' Nepodařilo se: ' . implode('; ', $failed) : ''), $failed ? 'error' : 'ok');
+            redirect('/hromadne');
+        }
+        http_response_code(422);
+    }
+    render('partner/bulk', ['title' => 'Hromadné oznámení', 'houses' => $houses, 'in' => $in, 'errors' => $errors, 'templates' => partner_templates((int) $partner['id'], 'post')]);
+    exit;
+}
+// Šablony textů firmy: použijí se v hromadném oznámení i ve formulářích aktualit a e-mailů v každém domě.
+if ($PATH === '/sablony') {
+    $errors = [];
+    $edit = ctype_digit((string) ($_GET['id'] ?? '')) ? pq('SELECT * FROM partner_templates WHERE id = ? AND partner_id = ?', [(int) $_GET['id'], $partner['id']])->fetch() : null;
+    if ($METHOD === 'POST') {
+        if (post('action') === 'delete') {
+            pq('DELETE FROM partner_templates WHERE id = ? AND partner_id = ?', [(int) post('id'), $partner['id']]);
+            flash('Šablona je smazaná.', 'info');
+            redirect('/sablony');
+        }
+        $kind = isset(PARTNER_TPL_KINDS[post('kind')]) ? post('kind') : 'post';
+        if (post('name') === '' || post('body') === '') {
+            $errors[] = 'Vyplňte název šablony a text.';
+        } else {
+            $args = [$kind, mb_substr(post('name'), 0, 120), mb_substr(post('title'), 0, 200), mb_substr(post('body'), 0, 20000), date('Y-m-d H:i:s')];
+            if ((int) post('id') && pq('SELECT 1 FROM partner_templates WHERE id = ? AND partner_id = ?', [(int) post('id'), $partner['id']])->fetchColumn()) {
+                pq('UPDATE partner_templates SET kind = ?, name = ?, title = ?, body = ?, updated_at = ? WHERE id = ?', [...$args, (int) post('id')]);
+            } else {
+                pq('INSERT INTO partner_templates (kind, name, title, body, updated_at, partner_id) VALUES (?,?,?,?,?,?)', [...$args, $partner['id']]);
+            }
+            $plog('šablona', post('name'));
+            flash('Šablona je uložená.');
+            redirect('/sablony');
+        }
+        http_response_code(422);
+    }
+    render('partner/templates', ['title' => 'Šablony textů', 'list' => partner_templates((int) $partner['id']), 'edit' => $edit, 'errors' => $errors]);
+    exit;
+}
+// Firma: značka na webech domů, registrační odkaz, cena pro SVJ.
+if ($PATH === '/firma') {
+    $errors = [];
+    if ($METHOD === 'POST' && $owner) {
+        $action = post('action');
+        if ($action === 'brand') {
+            $web = trim(post('web'));
+            if ($web !== '' && !preg_match('~^https?://~i', $web)) {
+                $web = 'https://' . $web;
+            }
+            if ($web !== '' && !filter_var($web, FILTER_VALIDATE_URL)) {
+                $errors[] = 'Adresa webu firmy nemá správný tvar.';
+            } elseif (post('email') !== '' && !filter_var(post('email'), FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'E-mail nemá správný tvar.';
+            } else {
+                pq('UPDATE partners SET web = ?, phone = ?, email = ?, brand = ? WHERE id = ?', [$web, mb_substr(post('phone'), 0, 40), post('email'), isset($_POST['brand']) ? 1 : 0, $partner['id']]);
+                if (($_FILES['logo']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE && ($err = partner_logo_save($partner, $_FILES['logo']))) {
+                    $errors[] = $err;
+                } elseif (isset($_POST['logo_remove']) && ($old = partner_logo_path($partner)) !== '') {
+                    @unlink($old);
+                    pq("UPDATE partners SET logo = '' WHERE id = ?", [$partner['id']]);
+                }
+                if (!$errors) {
+                    $plog('úprava údajů firmy');
+                    flash('Uloženo.');
+                    redirect('/firma');
+                }
+            }
+        } elseif ($action === 'resale') {
+            $price = post('resale') === '' ? 0 : (int) preg_replace('/\D/', '', post('resale'));
+            pq('UPDATE partners SET resale = ? WHERE id = ?', [$price ? (string) $price : '', $partner['id']]);
+            foreach ((array) ($_POST['house'] ?? []) as $slug => $v) {
+                $v = trim((string) $v);
+                pq('UPDATE tenants SET partner_resale = ? WHERE slug = ? AND partner_id = ?', [$v === '' ? 0 : (int) preg_replace('/\D/', '', $v), (string) $slug, $partner['id']]);
+            }
+            $plog('cena pro SVJ', (string) $price);
+            flash('Ceny pro SVJ jsou uložené.');
+            redirect('/firma#cena');
+        }
+        http_response_code(422);
+    }
+    $partner = partner_row((int) $partner['id']);
+    render('partner/company', ['title' => 'Firma', 'partner' => $partner, 'owner' => $owner, 'errors' => $errors, 'logo' => partner_logo_data($partner),
+        'refUrl' => platform_url('/registrace?partner=' . partner_ref_code($partner)), 'houses' => partner_tenants((int) $partner['id'])]);
     exit;
 }
 if ($PATH === '/tym') {

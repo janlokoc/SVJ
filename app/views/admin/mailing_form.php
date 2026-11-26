@@ -14,6 +14,7 @@
       </select>
     </label>
     <p class="hint">Zpráva jde jen lidem s aktivním účtem na webu.<?= $optedOut ? ' Vypnuté zasílání má ' . $optedOut . ' z nich – ti zprávu nedostanou.' : '' ?> Každý dostane vlastní e-mail, adresy ostatních nevidí.</p>
+    <?php if (function_exists('partner_house_templates')) { $tplList = partner_house_templates('mailing'); $tplTitle = '[name=subject]'; $tplBody = 'textarea[name=body]'; require __DIR__ . '/../partner/_tpl_pick.php'; } ?>
     <label>Předmět <input type="text" name="subject" value="<?= e($m['subject']) ?>" maxlength="150" required></label>
     <label>Text zprávy <textarea name="body" rows="12" required><?= e($m['body']) ?></textarea></label>
     <?php $aiTarget = 'textarea[name=body]'; $aiTasks = !empty($aiInvite) ? ['invite', 'polish', 'shorten'] : ['draft', 'polish', 'shorten']; $aiContext = $aiInvite ?? ''; require __DIR__ . '/_ai.php'; ?>
