@@ -18,6 +18,7 @@
       <label>Přijato při více než (% všech hlasů) <input type="number" name="threshold" min="1" max="99" value="<?= (int) $poll['threshold'] ?>"></label>
     </div>
     <label class="check"><input type="checkbox" name="online"<?= $poll['online'] ? ' checked' : '' ?>> <span>Vlastníci hlasují sami přes web <small>Když volbu vypnete, hlasy zapisuje jen výbor – hodí se pro hlasování na shromáždění nebo na papírových lístcích.</small></span></label>
+    <?php if (function_exists('rollam_method')) { require __DIR__ . '/../ext/rollam/_form_fields.php'; } ?>
     <label class="check"><input type="checkbox" name="published"<?= $poll['published'] ? ' checked' : '' ?>> Po ukončení zveřejnit výsledky přihlášeným obyvatelům</label>
     <label>Patří ke shromáždění (nepovinné)
       <select name="event_id"><option value="">—</option><?php foreach ($events as $ev): ?><option value="<?= $ev['id'] ?>"<?= (int) $poll['event_id'] === (int) $ev['id'] ? ' selected' : '' ?>><?= e($ev['title']) ?> <?= cz_date($ev['event_date']) ?></option><?php endforeach ?></select></label>

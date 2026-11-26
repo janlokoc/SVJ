@@ -1829,3 +1829,16 @@ a.dash-tile:hover { border-color: var(--primary); }
 .mgr-grid h3 { margin-top: 0; }
 .lpx-partner-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); }
 .lpx-hero-plain { padding-bottom: 2rem; }
+
+/* ---------- Modul B: hlasování mimo zasedání (protokol, hlasovací lístky) ---------- */
+.rollam-doc .rollam-meta th { text-align: left; width: 32%; }
+.rollam-sign { margin-top: 2rem; }
+.rollam-boxes span { display: inline-block; margin-right: 1.5rem; font-weight: 600; }
+.rollam-ballot-items li { margin-bottom: 1rem; }
+.rollam-ballot + .rollam-ballot { margin-top: 3rem; border-top: 1px dashed var(--line, #ccc); padding-top: 2rem; }
+.rollam-records code, .rollam-doc code { word-break: break-all; }
+@media print {
+  .rollam-ballot { break-after: page; page-break-after: always; }
+  .rollam-ballot + .rollam-ballot { margin-top: 0; border-top: 0; padding-top: 0; }
+  .rollam-records { font-size: 9pt; }
+}

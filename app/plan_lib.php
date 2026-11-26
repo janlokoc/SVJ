@@ -227,6 +227,7 @@ function edition_price(string $edition): int
  */
 const BETA_FEATURES = [
     'insolvence' => ['Hlídání insolvencí vlastníků', '/admin/insolvence', 'isir_enabled'],
+    'bankid' => ['Ověření hlasu přes Bank iD (hlasování mimo zasedání)', '/admin/hlasovani', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 

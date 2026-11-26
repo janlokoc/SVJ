@@ -44,6 +44,7 @@ $pollPage = function (int $id) {
             }
         }
         if (!$errors) {
+            function_exists('rollam_web_vote') && rollam_web_vote($poll, $u, $unitId, array_intersect_key($choices, array_flip(array_column($items, 'id'))));   // modul B: ověření hlasu a záznam (přesměruje)
             foreach ($items as $it) {
                 q('INSERT INTO poll_votes (item_id, unit_id, user_id, choice) VALUES (?,?,?,?)', [$it['id'], $unitId, $u['id'], $choices[$it['id']]]);
             }
@@ -384,6 +385,7 @@ $pollForm = function (int $id = 0) {
                 }
             }
             flash('Hlasování bylo uloženo.');
+            function_exists('rollam_poll_saved') && rollam_poll_saved($id);   // modul B: ověření hlasu
             redirect('/admin/hlasovani');
         }
         http_response_code(422);
@@ -423,6 +425,7 @@ $route('POST', '/admin/hlasovani/(\d+)/vysledky', function (int $id) {
             $written[] = ($n + 1) . '. bez hlasu';
         }
     }
+    function_exists('rollam_record_unit') && rollam_record_unit($id, (int) $unit['id']);   // modul B: záznam do protokolu
     audit('Zápis hlasu správcem', $poll['title'] . ' · ' . unit_name($unit) . ' · ' . implode(', ', $written));
     redirect('/admin/hlasovani/' . $id . '/vysledky#j' . $unit['id']);
 });
