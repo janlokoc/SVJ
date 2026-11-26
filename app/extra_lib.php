@@ -197,6 +197,9 @@ function daily_tasks(): void
             error_log('SVJ web, banka: ' . $e->getMessage());
         }
     }
+    if (function_exists('modf_daily')) {
+        modf_daily();   // provoz domu: smlouvy, vyúčtování (chyby zachytí sama)
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }

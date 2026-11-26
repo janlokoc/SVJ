@@ -686,3 +686,6 @@ document.querySelectorAll('select[data-template-fill]').forEach((sel) => sel.add
   if (t && o.dataset.title) { t.value = o.dataset.title; t.dispatchEvent(new Event('input', { bubbles: true })); }
   if (b) { b.value = o.dataset.body; b.dispatchEvent(new Event('input', { bubbles: true })); }
 }));
+
+// Modul F – výhled fondu oprav: poloha a výška sloupců z data-b/data-h (styl z dat, ne vložený do stránky – CSP).
+document.querySelectorAll('.modf-chart [data-b]').forEach((el) => { el.style.bottom = el.dataset.b + '%'; if (el.dataset.h !== undefined) el.style.height = el.dataset.h + '%'; });
