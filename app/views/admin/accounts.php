@@ -41,6 +41,7 @@ $with = array_filter($rows, fn($r) => $r['as_of'] !== null); $debtors = array_fi
         <p class="hint">Token vytvoříte v internetovém bankovnictví Fio (Nastavení → API) s oprávněním <strong>jen pro čtení</strong> – web s ním nemůže nic zaplatit. Služba je zdarma.</p>
         <button class="btn btn-ghost" type="submit"><?= $fioToken ? 'Uložit' : 'Zapnout' ?></button></form>
     </div>
+    <?php if (is_file(__DIR__ . '/../ext/bank/_panel.php')) { require __DIR__ . '/../ext/bank/_panel.php'; } ?>
     <?php if ($bankTx): ?>
     <h3>Poslední příchozí platby</h3>
     <table class="table bank-tx"><thead><tr><th>Datum</th><th>Částka</th><th>VS</th><th>Od</th><th>Jednotka</th></tr></thead><tbody>

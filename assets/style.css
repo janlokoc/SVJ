@@ -1829,3 +1829,8 @@ a.dash-tile:hover { border-color: var(--primary); }
 .mgr-grid h3 { margin-top: 0; }
 .lpx-partner-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); }
 .lpx-hero-plain { padding-bottom: 2rem; }
+
+/* ---------- Modul C: SMS zprávy a propojení s bankou (app/ext/sms_lib.php, app/ext/psd2_lib.php) ---------- */
+.sms-preview { white-space: pre-wrap; max-width: 22rem; padding: .7rem .9rem; border-radius: 14px 14px 14px 4px; background: var(--surface-2); color: var(--ink); }
+.sms-balance { font-size: 1.6rem; margin: .2rem 0 .6rem; }
+.psd2-panel { margin: 1rem 0 0; padding: .7rem 1rem; border-radius: 10px; background: var(--soft); }
