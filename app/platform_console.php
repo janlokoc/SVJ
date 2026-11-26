@@ -129,7 +129,7 @@ if (!$super) {
         if ($blocked()) {
             $error = 'Příliš mnoho neúspěšných pokusů. Zkuste to znovu za 15 minut.';
         } else {
-            $a = pq('SELECT * FROM super_admins WHERE email = ?', [post('email')])->fetch();
+            $a = pq('SELECT * FROM super_admins WHERE lower(email) = lower(?)', [trim(post('email'))])->fetch();
             if (!password_verify((string) ($_POST['password'] ?? ''), $a['password_hash'] ?? '$2y$10$5iGzRBULwQkdHVH7LcQeruy9PLnpzCeVdDqlNNyrbTAr6ZReT.NXy') || !$a) {
                 $failed();
                 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Neúspěšné přihlášení', post('email')]);
@@ -143,6 +143,51 @@ if (!$super) {
             }
         }
         http_response_code(422);
+    }
+    // Obnova přístupu (zapomenuté heslo nebo ztracená ověřovací aplikace): jednorázový kód v souboru storage/obnova-pristupu-*.txt
+    // přečte jen ten, kdo má přístup na hosting (FTP). Nastaví nové heslo a vypne dvoufázové ověření.
+    if ($PATH === '/obnova') {
+        if (isset($_GET['znovu'])) {
+            unset($_SESSION['srecover']);
+        }
+        $rec = $_SESSION['srecover'] ?? null;
+        $rec = $rec && time() - $rec['at'] < 1800 ? $rec : null;
+        $errors = [];
+        if ($METHOD === 'POST' && post('action') === 'start') {
+            array_map('unlink', glob(ROOT_STORAGE . '/obnova-pristupu-*.txt') ?: []);
+            $a = pq('SELECT * FROM super_admins WHERE lower(email) = lower(?)', [trim(post('email'))])->fetch();
+            if ($a) {
+                file_put_contents(ROOT_STORAGE . '/obnova-pristupu-' . bin2hex(random_bytes(8)) . '.txt', strtoupper(bin2hex(random_bytes(6))) . "\n");
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova přístupu: vytvořen kód na serveru', '']);
+            }
+            $_SESSION['srecover'] = ['id' => $a ? (int) $a['id'] : 0, 'at' => time()];
+            redirect('/obnova');
+        }
+        if ($METHOD === 'POST' && post('action') === 'finish' && $rec) {
+            $file = glob(ROOT_STORAGE . '/obnova-pristupu-*.txt')[0] ?? '';
+            $want = $file !== '' ? trim((string) file_get_contents($file)) : '';
+            $a = $rec['id'] ? pq('SELECT * FROM super_admins WHERE id = ?', [$rec['id']])->fetch() : null;
+            $pass = (string) ($_POST['new_password'] ?? '');
+            if ($blocked()) {
+                $errors[] = 'Příliš mnoho neúspěšných pokusů. Zkuste to znovu za 15 minut.';
+            } elseif (!$a || $want === '' || !hash_equals($want, strtoupper(preg_replace('/\s+/', '', post('code'))))) {
+                $failed();
+                $errors[] = 'Kód ze souboru nesouhlasí.';
+            } elseif ($pass !== (string) ($_POST['new_password2'] ?? '')) {
+                $errors[] = 'Hesla se neshodují.';
+            } elseif ($problem = password_problem($pass, $a['email'], $a['name'])) {
+                $errors[] = $problem;
+            } else {
+                unlink($file);
+                pq('UPDATE super_admins SET password_hash = ?, totp_secret = NULL, totp_enabled = 0, totp_last = 0 WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $a['id']]);
+                pq('DELETE FROM attempts WHERE ip = ?', [client_ip()]);
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova přístupu: nové heslo, dvoufázové ověření vypnuto', '']);
+                $signIn(pq('SELECT * FROM super_admins WHERE id = ?', [$a['id']])->fetch());
+            }
+            http_response_code(422);
+        }
+        render('platform/recover', ['title' => 'Obnova přístupu', 'errors' => $errors, 'started' => (bool) $rec]);
+        exit;
     }
     if ($PATH !== '/' && $PATH !== '/prihlaseni') {
         redirect('/');

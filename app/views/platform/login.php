@@ -22,5 +22,6 @@
       <label>E-mail <input type="email" name="email" value="<?= e(post('email')) ?>" autocomplete="username" required autofocus></label>
       <label>Heslo <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn btn-big" type="submit">Přihlásit se</button></form>
+    <p class="hint"><a href="<?= url('/obnova') ?>">Zapomenuté heslo nebo ztracená ověřovací aplikace</a></p>
   <?php endif ?>
 </div></div>
