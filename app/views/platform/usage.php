@@ -9,12 +9,14 @@
     <?php endforeach ?>
   </div>
   <h2>Po společenstvích</h2>
-  <div class="table-scroll"><table class="table usage-table"><thead><tr><th>Společenství</th><th>Edice</th><th>Využito</th>
+  <div class="table-scroll"><table class="table usage-table"><thead><tr><th>Společenství</th><th>Edice</th><th>Využito</th><th class="usage-mobile"></th>
     <?php foreach (USAGE_FEATURES as $k => [$label]): ?><th title="<?= e($label) ?>"><span class="usage-th"><?= e($label) ?></span></th><?php endforeach ?></tr></thead><tbody>
     <?php usort($rows, fn($a, $b) => array_sum($a['use']) <=> array_sum($b['use'])); foreach ($rows as $r): ?><tr>
       <td><a href="<?= url('/svj/' . $r['t']['slug']) ?>"><?= e($r['t']['name']) ?></a></td>
-      <td><?= e(EDITIONS[$r['edition']] ?? $r['edition']) ?></td>
-      <td><strong><?= array_sum($r['use']) ?></strong>/<?= count(USAGE_FEATURES) ?></td>
+      <td data-label="Edice"><?= e(EDITIONS[$r['edition']] ?? $r['edition']) ?></td>
+      <td data-label="Využito"><strong><?= array_sum($r['use']) ?></strong>/<?= count(USAGE_FEATURES) ?></td>
+      <?php $usedL = $unusedL = []; foreach (USAGE_FEATURES as $k => [$label]) { if ($r['use'][$k]) { $usedL[] = $label; } else { $unusedL[] = $label; } } ?>
+      <td class="usage-mobile"><?php if ($usedL): ?><p><span class="muted">Používá:</span> <?= e(implode(', ', $usedL)) ?></p><?php endif ?><?php if ($unusedL): ?><p><span class="muted">Nepoužívá:</span> <?= e(implode(', ', $unusedL)) ?></p><?php endif ?></td>
       <?php foreach (USAGE_FEATURES as $k => [$label]): ?><td class="usage-cell"><?= $r['use'][$k] ? '<span class="usage-yes" title="' . e($label) . ': ano">✓</span>' : '<span class="muted" title="' . e($label) . ': ne">·</span>' ?></td><?php endforeach ?>
     </tr><?php endforeach ?>
   </tbody></table></div>

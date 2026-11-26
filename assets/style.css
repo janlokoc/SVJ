@@ -1751,6 +1751,13 @@ details.storno form { margin-top: .5rem; min-width: 16rem; }
 .table-scroll { overflow-x: auto; }
 .usage-table th .usage-th { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; font-size: .8rem; }
 .usage-cell { text-align: center; }
+/* Na telefonu: místo 15 sloupců s fajfkami seznam používaných a nepoužívaných funkcí */
+.usage-table .usage-mobile { display: none; }
+@media (max-width: 760px) {
+  .usage-table td.usage-cell { display: none; }
+  .usage-table td.usage-mobile { display: block; }
+  .usage-table td.usage-mobile p { margin: .3rem 0 0; }
+}
 .usage-yes { color: var(--primary); font-weight: 700; }
 @media (max-width: 600px) { .usage-bar { grid-template-columns: 1fr 4rem; } .usage-bar progress { grid-column: 1 / -1; grid-row: 2; } }
 .demo-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
