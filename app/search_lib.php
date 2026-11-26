@@ -301,7 +301,7 @@ function site_search(string $q): array
     if (feature_on('dokumenty')) {
         search_index_pending(10, 3.0);
         $rows = [];
-        foreach (all('SELECT id, title, category, original_name, doc_date, content FROM documents WHERE ' . doc_scope_sql()) as $r) {
+        foreach (all('SELECT id, title, category, original_name, doc_date, content FROM documents WHERE ' . doc_scope_sql('', true)) as $r) {
             if (($s = $hit([$r['title'], $r['original_name'] . ' ' . (CATEGORIES[$r['category']] ?? ''), (string) $r['content']])) !== null) {
                 $rows[] = [$r['title'], '/soubor/' . $r['id'], search_snippet((string) $r['content'] !== '' ? (string) $r['content'] : $r['original_name'], $terms),
                     trim((CATEGORIES[$r['category']] ?? '') . ($r['doc_date'] ? ' · ' . cz_date($r['doc_date']) : '')), $s];

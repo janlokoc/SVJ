@@ -23,9 +23,16 @@ function unit_options(): array
     return $out;
 }
 /** SQL podmínka: které dokumenty smí aktuální návštěvník vidět v seznamech (dokument jednotky jen její lidé). */
-function doc_scope_sql(string $alias = ''): string
+/**
+ * Které dokumenty uživatel vidí. $openable = vše, co smí otevřít (hledání, AI asistent): správce i dokumenty
+ * jednotlivých jednotek. Bez něj jako veřejný seznam dokumentů (dokument cizí jednotky se nevypisuje ani správci).
+ */
+function doc_scope_sql(string $alias = '', bool $openable = false): string
 {
     $a = $alias ? "$alias." : '';
+    if ($openable && user() && is_admin()) {
+        return '1 = 1';
+    }
     if (!user()) {
         return "{$a}visibility = 'public' AND {$a}unit_id IS NULL";
     }

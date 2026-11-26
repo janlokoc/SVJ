@@ -225,8 +225,8 @@ final class SearchTest extends TestCase
         self::signIn(1);
         $this->assertTrue(is_admin());
         $g = site_search('zrzavka');
-        // Hledání ukazuje dokumenty jako veřejný seznam /dokumenty (doc_scope_sql): dokument cizí jednotky ani správci ne.
-        $this->assertNotContains('Vyúčtování zrzavka', self::titles($g, 'dokumenty'));
+        // Správce najde i dokument jednotky – může ho otevřít (can_open_document).
+        $this->assertContains('Vyúčtování zrzavka', self::titles($g, 'dokumenty'));
         $this->assertContains('Zrzavka řád', self::titles($g, 'dokumenty'));
         $this->assertSame('Závady a požadavky', $g['zavady'][0]);
         $this->assertStringStartsWith('/admin/zavady#t', $g['zavady'][1][0][1]);

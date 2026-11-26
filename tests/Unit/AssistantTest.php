@@ -170,6 +170,16 @@ final class AssistantTest extends TestCase
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
+    public function testAdminSourcesIncludeUnitDocuments(): void
+    {
+        self::seed();
+        self::signIn(1);
+        $this->assertTrue(is_admin());
+        $this->assertContains('Jednotka 2 kočárky', self::titles(assistant_sources('Kam s kočárky?', 10)), 'správce může dokument jednotky otevřít, tak ho asistent použije');
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function testAdminGetsExtraExample(): void
     {
         self::signIn(1);

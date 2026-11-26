@@ -76,7 +76,7 @@ function assistant_sources(string $q, int $max = 6): array
     };
     $u = user();
     if (feature_on('dokumenty')) {
-        foreach (all('SELECT id, title, content FROM documents WHERE ' . doc_scope_sql() . " AND content IS NOT NULL AND content <> ''") as $d) {
+        foreach (all('SELECT id, title, content FROM documents WHERE ' . doc_scope_sql('', true) . " AND content IS NOT NULL AND content <> ''") as $d) {
             $chunk($d['title'], '/soubor/' . $d['id'], $d['title'] . "\n" . $d['content'], $score($d['title']) * 2);
         }
     }
