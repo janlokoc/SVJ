@@ -1761,3 +1761,5 @@ details.storno form { margin-top: .5rem; min-width: 16rem; }
 .demo-path .btn { align-self: flex-start; margin-top: .4rem; }
 .demo-path-kicker { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
 .demo-svj-h { scroll-margin-top: 140px; }
+.tag-beta { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); color: var(--accent); text-transform: uppercase; letter-spacing: .04em; }
+.beta-note { margin-bottom: 1rem; }

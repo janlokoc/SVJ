@@ -10,7 +10,7 @@
     Závadu v domě (topení, výtah, světlo, úklid) sem prosím nepište: <a href="<?= url($toFaults ? '/zavady' : '/kontakty') ?>"><?= $toFaults ? 'nahlaste ji výboru v části Závady a požadavky' : 'kontakty na výbor a havarijní čísla najdete zde' ?></a>.</div>
   <?php endif ?>
   <div class="report-types" role="radiogroup" aria-label="Druh hlášení">
-    <?php foreach (REPORT_TYPES as $k => $label): ?><label class="check"><input type="radio" name="type" value="<?= $k ?>"<?= post('type', 'bug') === $k ? ' checked' : '' ?>> <span><?= e($label) ?></span></label><?php endforeach ?>
+    <?php foreach (REPORT_TYPES as $k => $label): ?><label class="check"><input type="radio" name="type" value="<?= $k ?>"<?= post('type', isset(REPORT_TYPES[$_GET['type'] ?? '']) ? $_GET['type'] : 'bug') === $k ? ' checked' : '' ?>> <span><?= e($label) ?></span></label><?php endforeach ?>
   </div>
   <label>Co na webu nefunguje nebo co navrhujete? <textarea name="body" rows="5" required minlength="5" maxlength="5000"><?= e(post('body')) ?></textarea></label>
   <?php if ($anon): ?><label>Váš e-mail (pro odpověď) <input type="email" name="email" value="<?= e(post('email')) ?>" required autocomplete="email"></label><?php endif ?>

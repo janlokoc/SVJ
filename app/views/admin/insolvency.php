@@ -1,6 +1,7 @@
 <div class="wrap page">
   <header class="page-head"><h1>Insolvence vlastníků</h1>
     <p class="lead">Web jednou týdně ověří v insolvenčním rejstříku vlastníky jednotek, kteří jsou firmy, a když se u některého objeví řízení, pošle správcům e-mail. Na přihlášení pohledávky (dlužných záloh) má společenství zpravidla jen dva měsíce od rozhodnutí o úpadku.</p></header>
+  <?php $betaKey = 'insolvence'; require __DIR__ . '/_beta.php'; ?>
   <?php if (!$premium): ?>
   <div class="card"><p>Hlídání insolvencí je součástí edice Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
   <?php else: ?>

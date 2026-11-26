@@ -218,3 +218,42 @@ function edition_price(string $edition): int
 {
     return $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
 }
+
+// ---------- Beta program: nové funkce nejdřív pro edici Premium ----------
+
+/**
+ * Funkce, které provozovatel spouští postupně: klíč => [název, adresa v administraci, starý přepínač (zapnuto = spuštěno)].
+ * Stav nastavuje konzole (Nastavení služby → Nové funkce): off = vypnuto, beta = jen edice Premium se štítkem Beta, on = spuštěno.
+ */
+const BETA_FEATURES = [
+    'insolvence' => ['Hlídání insolvencí vlastníků', '/admin/insolvence', 'isir_enabled'],
+];
+const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
+
+function beta_stage(string $key): string
+{
+    if (!isset(BETA_FEATURES[$key]) || !function_exists('pset') || !function_exists('platform_enabled') || !platform_enabled()) {
+        return 'on';   // samostatná instalace bez platformy: vše zapnuté
+    }
+    $s = pset('beta_' . $key);
+    if (isset(BETA_STAGES[$s])) {
+        return $s;
+    }
+    $legacy = BETA_FEATURES[$key][2];
+    return $legacy !== '' && pset($legacy) === '1' ? 'on' : 'off';
+}
+/** Edice Premium (nebo web mimo předplatné). */
+function beta_premium(): bool
+{
+    return !function_exists('plan_managed') || !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['premium'];
+}
+/** Vidí toto společenství funkci? Spuštěnou ano (o edici rozhoduje funkce sama), v betě jen Premium. */
+function beta_visible(string $key): bool
+{
+    $s = beta_stage($key);
+    return $s === 'on' || ($s === 'beta' && beta_premium());
+}
+function beta_is(string $key): bool
+{
+    return beta_stage($key) === 'beta';
+}

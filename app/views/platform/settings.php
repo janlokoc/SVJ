@@ -139,7 +139,7 @@
   <section class="card" id="isir">
     <h2>Insolvenční rejstřík</h2>
     <p>Hlídání insolvencí vlastníků-firem (podle IČO) přes veřejnou webovou službu insolvenčního rejstříku. Je zdarma. Zapněte ho, až zkouška níže z tohoto serveru projde – ukáže, co rejstřík skutečně vrátil.</p>
-    <p>Stav: <?= pset('isir_enabled') === '1' ? '<span class="status status-done">zapnuto</span>' : '<span class="status">vypnuto</span>' ?></p>
+    <p>Stav: <strong><?= e(BETA_STAGES[beta_stage('insolvence')]) ?></strong> – mění se v části <a href="#beta">Nové funkce (beta program)</a> níže.</p>
     <?php $it = $_SESSION['isir_test'] ?? null; unset($_SESSION['isir_test']); if ($it): ?>
     <div class="callout">
       <strong><?= $it['ok'] ? 'Spojení funguje' : 'Zkouška se nepovedla' ?></strong> (IČO <?= e($it['ico']) ?>)<?= $it['error'] !== '' ? ': ' . e($it['error']) : '' ?><br>
@@ -152,7 +152,16 @@
         <label>Řízení <select name="scope"><option value="active">jen probíhající</option><option value="all">i ukončená</option></select></label></div>
       <p class="hint">Pro průkaznou zkoušku zadejte IČO firmy, o které víte, že v rejstříku je (najdete ji na isir.justice.cz) – a pro srovnání i IČO bez řízení.</p>
       <button class="btn btn-ghost" type="submit">Vyzkoušet spojení</button></form>
-    <form method="post" action="<?= url('/nastaveni/isir') ?>"><?= csrf_field() ?><button class="btn" type="submit" name="action" value="<?= pset('isir_enabled') === '1' ? 'disable' : 'enable' ?>"><?= pset('isir_enabled') === '1' ? 'Vypnout hlídání' : 'Zapnout hlídání' ?></button></form>
+  </section>
+  <section class="card" id="beta">
+    <h2>Nové funkce (beta program)</h2>
+    <p>Novou funkci můžete nejdřív pustit jen edici Premium (slib „přístup k novým funkcím ještě před spuštěním“ v ceníku). Premium domy ji uvidí se štítkem <span class="tag tag-beta">Beta</span>, výzvou k ohlasu a v kartě „Vyzkoušejte“. Až je vyladěná, přepněte ji na <em>spuštěno</em> – pak ji dostanou edice, pro které je určená.</p>
+    <form method="post" action="<?= url('/nastaveni/beta') ?>" class="form"><?= csrf_field() ?>
+      <table class="table"><thead><tr><th>Funkce</th><th>Stav</th></tr></thead><tbody>
+        <?php foreach (BETA_FEATURES as $bk => [$bn]): ?><tr><td data-label="Funkce"><?= e($bn) ?></td>
+          <td data-label="Stav"><select name="stage[<?= e($bk) ?>]" aria-label="Stav: <?= e($bn) ?>"><?php foreach (BETA_STAGES as $sk => $sl): ?><option value="<?= $sk ?>"<?= beta_stage($bk) === $sk ? ' selected' : '' ?>><?= e($sl) ?></option><?php endforeach ?></select></td></tr><?php endforeach ?>
+      </tbody></table>
+      <div class="actions"><button class="btn" type="submit">Uložit</button></div></form>
   </section>
   <section class="card" id="prenos">
     <h2>Přenos nastavení na jiný web služby</h2>

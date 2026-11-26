@@ -27,7 +27,7 @@
       <form method="post" action="<?= url('/admin/tipy') ?>"><?= csrf_field() ?><input type="hidden" name="key" value="*"><button class="link" type="submit">Skrýt vše</button></form></div>
     <ul class="tips">
       <?php foreach ($tips as $tip): ?><li>
-        <div><strong><?= e($tip['title']) ?></strong><?= $tip['new'] ? ' <span class="tag tag-pin">Novinka</span>' : '' ?><p class="muted"><?= e($tip['why']) ?></p></div>
+        <div><strong><?= e($tip['title']) ?></strong><?= !empty($tip['beta']) ? ' <span class="tag tag-beta">Beta</span>' : ($tip['new'] ? ' <span class="tag tag-pin">Novinka</span>' : '') ?><p class="muted"><?= e($tip['why']) ?></p></div>
         <div class="tips-actions"><a class="btn btn-small" href="<?= url($tip['href']) ?>">Vyzkoušet</a>
           <form method="post" action="<?= url('/admin/tipy') ?>"><?= csrf_field() ?><input type="hidden" name="key" value="<?= e($tip['key']) ?>"><button class="link" type="submit">Nezajímá nás</button></form></div>
       </li><?php endforeach ?>

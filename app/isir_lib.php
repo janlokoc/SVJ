@@ -17,7 +17,7 @@ const ISIR_COMPANY = '/(?<!\p{L})(s\.\s?r\.\s?o\.|spol\.\s?s\s?r\.\s?o\.|a\.\s?s
 
 function isir_enabled(): bool
 {
-    return function_exists('platform_enabled') && (!platform_enabled() || pset('isir_enabled') === '1');
+    return function_exists('beta_stage') && beta_stage('insolvence') !== 'off';
 }
 /** Dotaz do insolvenčního rejstříku podle IČO: ['ok' => bool, 'found' => [řízení], 'error' => string, 'raw' => začátek odpovědi]. */
 function isir_check_ico(string $ico, bool $activeOnly = true): array

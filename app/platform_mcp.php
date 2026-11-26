@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // ---------- Nástroje ----------
 $tools = [
     ['name' => 'list_reports', 'title' => 'Seznam hlášení',
-        'description' => 'Vypíše hlášení (nejnovější změny první). Výchozí jsou otevřená (new, in_progress, planned).',
+        'description' => 'Vypíše hlášení: nová první, mezi otevřenými hlášení z edice Premium (přednostní podpora – řešte je jako první), jinak nejnovější změny první. Výchozí jsou otevřená (new, in_progress, planned).',
         'inputSchema' => ['type' => 'object', 'properties' => [
             'status' => ['type' => 'string', 'enum' => ['open', 'new', 'in_progress', 'planned', 'done', 'rejected', 'all'], 'description' => 'Stav; open = new + in_progress + planned.'],
             'type' => ['type' => 'string', 'enum' => ['bug', 'idea', 'auto'], 'description' => 'bug = něco nefunguje, idea = nápad, auto = chyba zachycená webem.'],
@@ -97,11 +97,11 @@ $call = function (string $name, array $a) use ($text, $find): array {
             }
             $limit = max(1, min(100, (int) ($a['limit'] ?? 30)));
             report_messages_ready();
-            $rows = rq('SELECT id, tenant, type, status, body, url, created_at, updated_at, hits, screenshot, (SELECT author FROM report_messages m WHERE m.report_id = reports.id ORDER BY m.id DESC LIMIT 1) AS last_author FROM reports WHERE ' . implode(' AND ', $where) . " ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT $limit", $p)->fetchAll();
+            $rows = report_priority_sort(rq('SELECT id, tenant, type, status, body, url, created_at, updated_at, hits, screenshot, (SELECT author FROM report_messages m WHERE m.report_id = reports.id ORDER BY m.id DESC LIMIT 1) AS last_author FROM reports WHERE ' . implode(' AND ', $where) . " ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT $limit", $p)->fetchAll());
             if (!$rows) {
                 return $text('Žádná hlášení v tomto výběru.');
             }
-            $out = array_map(fn($r) => '#' . $r['id'] . ' [' . $r['status'] . ', ' . $r['type'] . ($r['hits'] > 1 ? ', ' . $r['hits'] . '×' : '') . ($r['screenshot'] !== '' ? ', se snímkem' : '') . ($r['last_author'] === 'user' ? ', autor doplnil' : ($r['last_author'] === 'staff' ? ', odpovězeno' : '')) . '] '
+            $out = array_map(fn($r) => '#' . $r['id'] . ' [' . $r['status'] . ', ' . $r['type'] . ($r['hits'] > 1 ? ', ' . $r['hits'] . '×' : '') . ($r['screenshot'] !== '' ? ', se snímkem' : '') . ($r['last_author'] === 'user' ? ', autor doplnil' : ($r['last_author'] === 'staff' ? ', odpovězeno' : '')) . ($r['premium'] ? ', PREMIUM – přednostně' : '') . '] '
                 . ($r['tenant'] !== '' ? 'web ' . $r['tenant'] . ' · ' : '') . substr($r['created_at'], 0, 16) . "\n  " . mb_strimwidth(preg_replace('/\s+/', ' ', $r['body']), 0, 200, '…') . "\n  " . $r['url'], $rows);
             return $text(implode("\n", $out));
         case 'get_report':
@@ -112,7 +112,7 @@ $call = function (string $name, array $a) use ($text, $find): array {
             $thread = report_messages((int) $r['id']);
             $content = [['type' => 'text', 'text' => implode("\n", [
                 'Hlášení #' . $r['id'] . ' – ' . (REPORT_TYPES[$r['type']] ?? 'chyba zachycená webem') . ' – stav ' . $r['status'],
-                'Web: ' . ($r['tenant'] !== '' ? $r['tenant'] : 'stránky služby') . ' · autor: ' . ($r['user_role'] !== '' ? $r['user_role'] : ($r['type'] === 'auto' ? 'web sám' : 'neuvedeno')),
+                'Web: ' . ($r['tenant'] !== '' ? $r['tenant'] . (isset(report_premium_tenants()[$r['tenant']]) ? ' (edice Premium – přednostní podpora, řešit přednostně)' : '') : 'stránky služby') . ' · autor: ' . ($r['user_role'] !== '' ? $r['user_role'] : ($r['type'] === 'auto' ? 'web sám' : 'neuvedeno')),
                 'Vytvořeno: ' . $r['created_at'] . ' · změněno: ' . $r['updated_at'] . ($r['hits'] > 1 ? ' · opakováno ' . $r['hits'] . '×' : ''),
                 'Stránka: ' . $r['url'] . ($r['page_title'] !== '' ? ' („' . $r['page_title'] . '“)' : ''),
                 'Prohlížeč: ' . $r['agent'] . ($r['viewport'] !== '' ? ' · okno ' . $r['viewport'] : ''),

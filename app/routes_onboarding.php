@@ -150,7 +150,14 @@ function feature_tips(): array
         $new = $added !== '' && $added >= date('Y-m-d', time() - 60 * 86400);
         $out[$key] = ['key' => $key, 'title' => $title, 'why' => $why, 'href' => $href, 'new' => $new];
     }
-    uasort($out, fn($a, $b) => (int) $b['new'] <=> (int) $a['new']);
+    // Funkce v betě (jen Premium): nabídnout jako první, dokud je dům nepoužil.
+    $betaUsed = ['insolvence' => fn() => setting('isir_last') !== '' || setting('isir_ico') !== ''];
+    foreach (BETA_FEATURES as $bk => [$bn, $bhref]) {
+        if (beta_is($bk) && beta_visible($bk) && !in_array('beta-' . $bk, $hidden, true) && !(($betaUsed[$bk] ?? fn() => false)())) {
+            $out = ['beta-' . $bk => ['key' => 'beta-' . $bk, 'title' => $bn, 'why' => 'Nová funkce v betě – v edici Premium ji máte dřív než ostatní. Vyzkoušejte ji a napište nám, co jí chybí.', 'href' => $bhref, 'new' => true, 'beta' => true]] + $out;
+        }
+    }
+    uasort($out, fn($a, $b) => [(int) !empty($b['beta']), (int) $b['new']] <=> [(int) !empty($a['beta']), (int) $a['new']]);
     return $out;
 }
 

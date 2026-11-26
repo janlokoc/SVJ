@@ -306,7 +306,7 @@ $route('POST', '/admin/ai', function () {
 // ---------- Hlídání insolvencí vlastníků-firem ----------
 $route('GET', '/admin/insolvence', function () {
     require_admin();
-    if (!isir_enabled()) {
+    if (!beta_visible('insolvence')) {
         not_found();
     }
     $premium = !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['premium'];
@@ -315,7 +315,7 @@ $route('GET', '/admin/insolvence', function () {
 });
 $route('POST', '/admin/insolvence', function () {
     require_admin();
-    if (!isir_enabled() || (plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'])) {
+    if (!beta_visible('insolvence') || (plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'])) {
         redirect('/admin/insolvence');
     }
     if (post('action') === 'save') {

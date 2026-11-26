@@ -322,8 +322,39 @@ function report_admin_page(string $base, string $rest, string $method, string $b
     };
     report_messages_ready();
     render('reports/admin_list', ['title' => 'Hlášení', 'base' => $base, 'filter' => $filter,
-        'rows' => rq("SELECT *, (SELECT author FROM report_messages m WHERE m.report_id = reports.id ORDER BY m.id DESC LIMIT 1) AS last_author FROM reports WHERE $where ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT 500")->fetchAll(),
+        'rows' => report_priority_sort(rq("SELECT *, (SELECT author FROM report_messages m WHERE m.report_id = reports.id ORDER BY m.id DESC LIMIT 1) AS last_author FROM reports WHERE $where ORDER BY CASE status WHEN 'new' THEN 0 ELSE 1 END, updated_at DESC LIMIT 500")->fetchAll()),
         'counts' => array_column(rq('SELECT status, COUNT(*) AS n FROM reports GROUP BY status')->fetchAll(), 'n', 'status')]);
+}
+/** Společenství v edici Premium (přednostní podpora): [slug => true]. Mimo platformu prázdné. */
+function report_premium_tenants(): array
+{
+    static $out = null;
+    if ($out !== null) {
+        return $out;
+    }
+    $out = [];
+    if (!function_exists('platform_enabled') || !platform_enabled()) {
+        return $out;
+    }
+    foreach (pq('SELECT * FROM tenants WHERE active = 1 AND demo = 0')->fetchAll() as $t) {
+        if (billing_state($t)['edition'] === 'premium') {
+            $out[$t['slug']] = true;
+        }
+    }
+    return $out;
+}
+/** Přednostní podpora: mezi otevřenými hlášeními jdou ta z edice Premium dopředu (jinak zůstává pořadí z dotazu). */
+function report_priority_sort(array $rows): array
+{
+    $prem = report_premium_tenants();
+    $open = ['new' => 0, 'in_progress' => 0, 'planned' => 0];
+    foreach ($rows as $i => &$r) {
+        $r['premium'] = isset($prem[$r['tenant'] ?? '']);
+        $r['_k'] = [isset($open[$r['status']]) ? 0 : 1, $r['status'] === 'new' ? 0 : 1, $r['premium'] && isset($open[$r['status']]) ? 0 : 1, $i];
+    }
+    unset($r);
+    usort($rows, fn($a, $b) => $a['_k'] <=> $b['_k']);
+    return $rows;
 }
 function report_page_url(string $path): string
 {

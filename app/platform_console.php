@@ -771,12 +771,19 @@ if ($PATH === '/nastaveni/isir' && $METHOD === 'POST') {
         $r = isir_check_ico(post('ico'), post('scope') !== 'all');
         $_SESSION['isir_test'] = ['ico' => preg_replace('/\D/', '', post('ico'))] + $r;
         platform_log('Zkouška insolvenčního rejstříku', post('ico') . ' · ' . ($r['ok'] ? 'v pořádku, řízení ' . count($r['found']) : 'chyba'));
-    } elseif (post('action') === 'enable' || post('action') === 'disable') {
-        pset_save('isir_enabled', post('action') === 'enable' ? '1' : '0');
-        platform_log(post('action') === 'enable' ? 'Zapnutí hlídání insolvencí' : 'Vypnutí hlídání insolvencí');
-        flash(post('action') === 'enable' ? 'Hlídání insolvencí je zapnuté – společenstvím v edici Premium se ukáže v administraci.' : 'Hlídání insolvencí je vypnuté.', 'info');
     }
     redirect('/nastaveni#isir');
+}
+if ($PATH === '/nastaveni/beta' && $METHOD === 'POST') {
+    foreach (BETA_FEATURES as $bk => [$bn]) {
+        $to = (string) ($_POST['stage'][$bk] ?? '');
+        if (isset(BETA_STAGES[$to]) && $to !== beta_stage($bk)) {
+            pset_save('beta_' . $bk, $to);
+            platform_log('Nová funkce: ' . $bn, BETA_STAGES[$to]);
+        }
+    }
+    flash('Uloženo.');
+    redirect('/nastaveni#beta');
 }
 if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
     // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.

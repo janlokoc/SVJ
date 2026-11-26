@@ -10,7 +10,7 @@
         <td data-label="Č."><a href="<?= url($base . '/' . $r['id']) ?>"><?= (int) $r['id'] ?></a></td>
         <td data-label="Druh"><?= $r['type'] === 'auto' ? '<span class="tag tag-pin">chyba webu' . ((int) $r['hits'] > 1 ? ' ×' . (int) $r['hits'] : '') . '</span>' : e($r['type'] === 'idea' ? 'nápad' : 'problém') ?><?= $r['screenshot'] !== '' ? ' <span class="tag tag-lock">snímek</span>' : '' ?></td>
         <td data-label="Hlášení"><a href="<?= url($base . '/' . $r['id']) ?>"><?= e(mb_strimwidth(preg_replace('/\s+/u', ' ', $r['body']), 0, 110, '…')) ?></a></td>
-        <td data-label="Kdo"><?= e($r['user_name'] !== '' ? $r['user_name'] : ($r['user_email'] !== '' ? $r['user_email'] : '—')) ?><?= $r['tenant'] !== '' ? '<br><small class="muted">' . e($r['tenant']) . '</small>' : '' ?></td>
+        <td data-label="Kdo"><?= e($r['user_name'] !== '' ? $r['user_name'] : ($r['user_email'] !== '' ? $r['user_email'] : '—')) ?><?= $r['tenant'] !== '' ? '<br><small class="muted">' . e($r['tenant']) . '</small>' : '' ?><?= !empty($r['premium']) ? ' <span class="tag tag-pin" title="Edice Premium – přednostní podpora">Premium</span>' : '' ?></td>
         <td data-label="Stránka"><small><?= e(mb_strimwidth($path !== '' ? $path : '—', 0, 40, '…')) ?></small></td>
         <td data-label="Přijato"><?= cz_datetime($r['created_at']) ?></td>
         <td data-label="Stav"><span class="status status-<?= REPORT_STATUS_CLASS[$r['status']] ?>"><?= e(REPORT_STATUS[$r['status']]) ?></span><?= ($r['last_author'] ?? '') === 'user' ? '<br><small class="tag tag-pin">doplnil autor</small>' : ((string) $r['reply'] !== '' ? '<br><small class="muted">odpovězeno</small>' : '') ?></td>

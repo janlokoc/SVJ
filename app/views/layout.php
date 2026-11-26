@@ -39,8 +39,8 @@ if ($billing['mode'] !== 'free') {
 if (function_exists('plan_managed') && plan_managed()) {
     $adminNav['/admin/spravce-domu'] = 'Správce domu';
 }
-if (function_exists('isir_enabled') && isir_enabled()) {
-    $adminNav['/admin/insolvence'] = 'Insolvence vlastníků';
+if (function_exists('beta_visible') && beta_visible('insolvence')) {
+    $adminNav['/admin/insolvence'] = 'Insolvence vlastníků' . (beta_is('insolvence') ? ' · beta' : '');
 }
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
     $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
@@ -145,7 +145,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <?php endforeach ?>
     <?php if (plan_managed()): ?>
       <div class="admin-group admin-planned"><span class="admin-label">Připravujeme</span>
-        <ul><?php foreach (array_diff_key(PLANNED_FEATURES, function_exists('isir_enabled') && isir_enabled() ? ['insolvence' => 1] : []) as $pk => $pf): $ph = '/admin/predplatne/funkce/' . $pk; ?><li><a href="<?= url($ph) ?>"<?= $path === $ph ? ' aria-current="page"' : '' ?> title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?></a></li><?php endforeach ?></ul>
+        <ul><?php foreach (array_diff_key(PLANNED_FEATURES, function_exists('beta_visible') && beta_visible('insolvence') ? ['insolvence' => 1] : []) as $pk => $pf): $ph = '/admin/predplatne/funkce/' . $pk; ?><li><a href="<?= url($ph) ?>"<?= $path === $ph ? ' aria-current="page"' : '' ?> title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?></a></li><?php endforeach ?></ul>
       </div>
     <?php endif ?>
   </div>
