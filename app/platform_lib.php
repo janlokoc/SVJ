@@ -263,6 +263,16 @@ SQL);
         platform_prices_2026_11($pdo);
         $pdo->exec('PRAGMA user_version = 27;');
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 28) {
+        // Kredit služeb (app/ext/credit_lib.php): jeden předplacený kredit v Kč na dům, doplňky k ročnímu předplatnému,
+        // převod zbývajícího SMS kreditu na Kč a nové ceny služeb – jen pokud je provozovatel neměnil.
+        credit_schema($pdo);
+        addons_schema($pdo);
+        credit_migrate_sms($pdo);
+        $pdo->exec("UPDATE platform_settings SET value = '30' WHERE key = 'rej_katastr_days' AND value = '7';
+            UPDATE platform_settings SET value = '99' WHERE key = 'rej_price_exekuce' AND value = '90';
+            PRAGMA user_version = 28;");
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -879,19 +889,22 @@ function billing_order(array $t, string $edition): ?array
     if (billing_order_problem($t, $edition)) {
         return null;
     }
-    $amount = max(0, edition_price($edition, $t) - billing_credit($t, $edition));
+    // Doplňky k předplatnému (např. sledování katastru) jsou na téže faktuře jako další řádky.
+    $addons = addon_year_lines($t);
+    $amount = max(0, edition_price($edition, $t) - billing_credit($t, $edition)) + array_sum(array_column($addons, 'price'));
     // Kredit za doporučení se strhne až při potvrzení platby.
     $discount = min($amount, max(0, (int) ($t['credit'] ?? 0)));
     $amount -= $discount;
+    $addonsJson = $addons ? json_encode($addons, JSON_UNESCAPED_UNICODE) : '';
     $p = billing_open($t);
     if ($p && $p['status'] === 'claimed') {
         return $p;
     }
     if ($p) {
-        pq('UPDATE payments SET amount = ?, months = ?, item = ?, discount = ? WHERE id = ?', [$amount, $months, $edition, $discount, $p['id']]);
+        pq('UPDATE payments SET amount = ?, months = ?, item = ?, discount = ?, addons = ? WHERE id = ?', [$amount, $months, $edition, $discount, $addonsJson, $p['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$p['id']])->fetch();
     }
-    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, discount) VALUES (" . vat_rate_now() . ",?,?,?,?,'service',?,?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition, $discount]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, discount, addons) VALUES (" . vat_rate_now() . ",?,?,?,?,'service',?,?,?)", [$t['slug'], $amount, $months, date('Y-m-d H:i:s'), $edition, $discount, $addonsJson]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
@@ -904,6 +917,12 @@ function billing_confirm(array $p, string $by): ?array
     }
     if (($p['kind'] ?? '') === 'vote') {
         return vote_confirm($p, $by);   // jednorázové hlasování (app/ext/pricing_lib.php)
+    }
+    if (($p['kind'] ?? '') === 'credit') {
+        return credit_topup_confirm($p, $by);   // dobití kreditu služeb (app/ext/credit_lib.php)
+    }
+    if (($p['kind'] ?? '') === 'addon') {
+        return addon_confirm($p, $by);   // doplněk k předplatnému za zbytek období
     }
     $t = tenant_row($p['tenant']);
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
@@ -987,6 +1006,7 @@ function billing_confirm(array $p, string $by): ?array
         return ['from' => $from, 'to' => $to];
     }
     pq("UPDATE tenants SET paid_until = ?, plan = ?, period = 'year', billing = 1, auto_renew = 1, reminded = '', credit = MAX(0, credit - ?) WHERE slug = ?", [$to, $edition, (int) ($p['discount'] ?? 0), $t['slug']]);
+    addons_mark_paid($t['slug'], payment_addons($p), $to);
     referral_reward($t, $p);
     if ($t['owner_email'] !== '') {
         platform_mail($t['owner_email'], 'Platba přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " (variabilní symbol " . $p['vs'] . ").\nWeb " . $t['name']
@@ -1081,6 +1101,9 @@ function platform_daily(): void
     platform_cleanup();
     domain_renewals();
     cert_reminders();
+    if (function_exists('credit_daily')) {
+        credit_daily();   // propadnutí kreditu po době platnosti (app/ext/credit_lib.php)
+    }
 }
 
 // ---------- Provozovatel, doklady, ukázkový web ----------
@@ -1187,7 +1210,8 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', 'vote' => vote_invoice_item($p), default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    $lines = invoice_addon_lines($p);
+    return ['lines' => $lines, 'item' => match ($p['kind'] ?? 'service') { 'credit' => credit_invoice_item($p), 'addon' => 'Doplňky k předplatnému', 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', 'vote' => vote_invoice_item($p), default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'storno' => $p['status'] === 'storno', 'credit' => false,
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient'), true), 'QR kód pro okamžitou platbu') : ''];
@@ -1978,6 +2002,12 @@ function billing_storno(array $p, string $by, string $reason): ?array
                 pq('UPDATE tenants SET ai_credits = MAX(0, ai_credits - ?) WHERE slug = ?', [(int) $p['item'], $t['slug']]);
                 $notes[] = 'Odebráno ' . (int) $p['item'] . ' AI kreditů (nejvýš tolik, kolik jich zbývalo).';
                 break;
+            case 'credit':
+                $notes[] = credit_storno_take($t['slug'], (int) $p['amount'] * 100, 'storno faktury ' . $p['invoice_no'], $by);
+                break;
+            case 'addon':
+                $notes = [...$notes, ...addons_storno($t['slug'], payment_addons($p))];
+                break;
             case 'storage':
                 if ($t['storage_until'] === $p['period_to']) {
                     pq("UPDATE tenants SET storage_extra = 0, storage_until = '' WHERE slug = ?", [$t['slug']]);
@@ -2013,6 +2043,7 @@ function billing_storno(array $p, string $by, string $reason): ?array
                 if ((int) ($p['discount'] ?? 0) > 0) {
                     $notes[] = 'Platba čerpala slevu ' . money_czk((int) $p['discount']) . ' – kredit se nevrací automaticky.';
                 }
+                $notes = [...$notes, ...addons_storno($t['slug'], payment_addons($p))];
         }
         if ($t['owner_email'] !== '') {
             platform_mail($t['owner_email'], 'Opravný doklad k faktuře ' . $p['invoice_no'] . ' – ' . $t['name'], "Dobrý den,\n\nfakturu č. " . $p['invoice_no'] . " (" . pay_money($p) . ") jsme stornovali opravným dokladem č. $no."
@@ -2036,4 +2067,243 @@ function credit_view(array $p): ?array
     $d['issued'] = substr((string) $p['storno_at'], 0, 10);
     $d['qr'] = '';
     return $d;
+}
+
+// ---------- Doplňky k ročnímu předplatnému (opakované, např. sledování katastru) ----------
+
+/*
+ * Modul doplněk zaregistruje: $GLOBALS['BILLING_ADDONS']['klic'] = ['name' => 'Název na faktuře', 'price' => fn(int $qty): int (Kč za rok bez DPH),
+ *   'qty' => fn(int $qty): string (popis množství, nepovinné)].
+ * Zapnutí: addon_set() – v zaplaceném období vystaví výzvu k platbě za zbytek období (poměrně do paid_until domu),
+ * při dalším ročním prodloužení je doplněk řádkem faktury za edici (billing_order, u partnera partner_order). Vypnutí: addon_stop()
+ * – zaplacené se nevrací. Domy bez předplatného (billing = 0) a ukázka se fakturou neúčtují (addon_billable).
+ */
+
+function addons_schema(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tenant_addons (tenant TEXT NOT NULL, addon TEXT NOT NULL, qty INTEGER NOT NULL DEFAULT 1, active INTEGER NOT NULL DEFAULT 1,
+        since TEXT NOT NULL DEFAULT '', paid_until TEXT NOT NULL DEFAULT '', paid_qty INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (tenant, addon))");
+    $cols = array_column($pdo->query('PRAGMA table_info(payments)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+    if (!in_array('addons', $cols, true)) {
+        $pdo->exec("ALTER TABLE payments ADD COLUMN addons TEXT NOT NULL DEFAULT ''");
+    }
+}
+function addon_def(string $key): ?array
+{
+    $d = $GLOBALS['BILLING_ADDONS'][$key] ?? null;
+    return is_array($d) && isset($d['name'], $d['price']) ? $d : null;
+}
+/** Roční cena doplňku pro dané množství (Kč bez DPH). */
+function addon_price(string $key, int $qty): int
+{
+    $d = addon_def($key);
+    return $d && $qty > 0 ? max(0, (int) ($d['price'])($qty)) : 0;
+}
+/** Popis doplňku na faktuře: „Sledování změn v katastru (2 LV)“. */
+function addon_label(string $key, int $qty): string
+{
+    $d = addon_def($key);
+    if (!$d) {
+        return $key;
+    }
+    return $d['name'] . (isset($d['qty']) ? ' (' . ($d['qty'])($qty) . ')' : '');
+}
+function addon_row(string $slug, string $key): ?array
+{
+    $r = pq('SELECT * FROM tenant_addons WHERE tenant = ? AND addon = ?', [$slug, $key])->fetch();
+    return $r ?: null;
+}
+/** Zapnuté doplňky domu. */
+function addons_active(string $slug): array
+{
+    return pq('SELECT * FROM tenant_addons WHERE tenant = ? AND active = 1 ORDER BY addon', [$slug])->fetchAll();
+}
+/** Účtuje se domu doplněk fakturou? Jen dům s předplatným (billing = 1), ne ukázka. */
+function addon_billable(?array $t): bool
+{
+    return $t && !empty($t['billing']) && empty($t['demo']);
+}
+/** Poměrná část roční ceny od $today do $until (obojí včetně); rok = 365/366 dní končících dnem $until. */
+function addon_prorate(int $yearPrice, string $until, ?string $today = null): int
+{
+    $today ??= date('Y-m-d');
+    if ($yearPrice <= 0 || $until === '' || $until < $today) {
+        return 0;
+    }
+    $total = (int) round((strtotime($until) - strtotime($until . ' -1 year')) / 86400);
+    $left = (int) round((strtotime($until) - strtotime($today)) / 86400) + 1;
+    return (int) round($yearPrice * min($left, $total) / max(1, $total));
+}
+/** Řádky doplňků na roční fakturu za předplatné: [['addon', 'qty', 'name', 'price', 'year' => true]]. */
+function addon_year_lines(array $t): array
+{
+    if (!addon_billable($t)) {
+        return [];
+    }
+    $out = [];
+    foreach (addons_active($t['slug']) as $a) {
+        if (addon_def($a['addon']) && ($price = addon_price($a['addon'], (int) $a['qty'])) > 0) {
+            $out[] = ['addon' => $a['addon'], 'qty' => (int) $a['qty'], 'name' => addon_label($a['addon'], (int) $a['qty']), 'price' => $price, 'year' => true];
+        }
+    }
+    return $out;
+}
+/** Řádky doplňků uložené u platby. */
+function payment_addons(array $p): array
+{
+    return array_values(array_filter((array) json_decode((string) ($p['addons'] ?? ''), true), 'is_array'));
+}
+/** Otevřená výzva k platbě za doplněk (zbytek období), nebo null. */
+function addon_payment(array $t, string $key): ?array
+{
+    $p = pq("SELECT * FROM payments WHERE tenant = ? AND kind = 'addon' AND item = ? AND status IN ('pending','claimed') ORDER BY id DESC LIMIT 1", [$t['slug'], $key])->fetch();
+    return $p ?: null;
+}
+/**
+ * Zapne doplněk nebo změní jeho množství. U domu s předplatným vystaví výzvu k platbě za zbytek zaplaceného období
+ * (jen za to, co ještě zaplacené není); dům, za který platí partner, ji dostane na fakturu partnera. Připravenou
+ * (nezaplacenou) fakturu za další rok přepočítá. Vrací vystavenou platbu (nebo null, když se teď nic neplatí).
+ */
+function addon_set(array $t, string $key, int $qty): ?array
+{
+    if (!addon_def($key)) {
+        return null;
+    }
+    $qty = max(1, $qty);
+    $today = date('Y-m-d');
+    if (addon_row($t['slug'], $key)) {
+        pq('UPDATE tenant_addons SET qty = ?, since = CASE WHEN active = 1 THEN since ELSE ? END, active = 1 WHERE tenant = ? AND addon = ?', [$qty, $today, $t['slug'], $key]);
+    } else {
+        pq('INSERT INTO tenant_addons (tenant, addon, qty, active, since) VALUES (?,?,?,1,?)', [$t['slug'], $key, $qty, $today]);
+    }
+    $t = tenant_row($t['slug']) ?? $t;
+    if (!addon_billable($t)) {
+        return null;
+    }
+    // Připravená roční faktura (nezaplacená) se přepočítá, ať doplněk obsahuje.
+    if (($open = billing_open($t)) && $open['status'] === 'pending' && isset(EDITIONS[$open['item']]) && $open['item'] !== 'free') {
+        billing_order($t, $open['item']);
+    }
+    $until = (string) $t['paid_until'];
+    if ($until < $today) {
+        return null;   // bez zaplaceného období: doplněk bude na příští faktuře za předplatné
+    }
+    $row = addon_row($t['slug'], $key);
+    $paidQty = $row['paid_until'] >= $today ? (int) $row['paid_qty'] : 0;
+    $pending = addon_payment($t, $key);
+    if ($pending && $pending['status'] === 'claimed') {
+        $paidQty = max($paidQty, (int) (payment_addons($pending)[0]['qty'] ?? 0));   // nahlášenou platbu už neměníme
+        $pending = null;
+    }
+    $amount = addon_prorate(addon_price($key, $qty) - addon_price($key, $paidQty), $until);
+    $qtyText = addon_def($key)['qty'] ?? fn(int $q) => (string) $q;
+    $line = ['addon' => $key, 'qty' => $qty, 'name' => addon_label($key, $qty) . ($paidQty ? ' – navýšení z ' . $qtyText($paidQty) : ''),
+        'price' => $amount, 'from' => $today, 'to' => $until];
+    if ((int) ($t['partner_billing'] ?? 0) && ($t['partner_status'] ?? '') === 'active') {
+        $r = $amount > 0 ? partner_extra_line($t, ['kind' => 'addon', 'label' => $line['name']] + $line) : null;
+        return is_array($r) ? $r : null;
+    }
+    if ($amount <= 0) {
+        if ($pending) {
+            pq("UPDATE payments SET status = 'cancelled', note = 'doplněk změněn – není co doplácet' WHERE id = ?", [$pending['id']]);
+        }
+        return null;
+    }
+    $json = json_encode([$line], JSON_UNESCAPED_UNICODE);
+    if ($pending) {
+        pq('UPDATE payments SET amount = ?, addons = ?, vat_rate = ? WHERE id = ?', [$amount, $json, vat_rate_now(), $pending['id']]);
+        return pq('SELECT * FROM payments WHERE id = ?', [$pending['id']])->fetch();
+    }
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item, addons) VALUES (" . vat_rate_now() . ",?,?,0,?,'addon',?,?)", [$t['slug'], $amount, date('Y-m-d H:i:s'), $key, $json]);
+    $id = (int) platform_db()->lastInsertId();
+    pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
+    return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
+}
+/** Vypne doplněk: další roční faktura ho už nebude obsahovat. Zaplacené období se nevrací, nezaplacená výzva se zruší. */
+function addon_stop(array $t, string $key): void
+{
+    pq('UPDATE tenant_addons SET active = 0 WHERE tenant = ? AND addon = ?', [$t['slug'], $key]);
+    if (($p = addon_payment($t, $key)) && $p['status'] === 'pending') {
+        pq("UPDATE payments SET status = 'cancelled', note = 'doplněk vypnut' WHERE id = ?", [$p['id']]);
+    }
+    $t = tenant_row($t['slug']) ?? $t;
+    if (($open = billing_open($t)) && $open['status'] === 'pending' && isset(EDITIONS[$open['item']]) && $open['item'] !== 'free') {
+        billing_order($t, $open['item']);
+    }
+}
+/** Po zaplacení: doplňky z řádků platby jsou zaplacené do $to (roční řádky) nebo do svého 'to' (zbytek období). */
+function addons_mark_paid(string $slug, array $lines, string $to): void
+{
+    foreach ($lines as $l) {
+        $row = addon_row($slug, (string) ($l['addon'] ?? ''));
+        if (!$row) {
+            continue;
+        }
+        $until = !empty($l['year']) ? $to : (string) ($l['to'] ?? $to);
+        $qty = (int) $l['qty'];
+        if (empty($l['year']) && $row['paid_until'] >= date('Y-m-d')) {
+            $qty = max($qty, (int) $row['paid_qty']);
+        }
+        pq('UPDATE tenant_addons SET paid_until = ?, paid_qty = ? WHERE tenant = ? AND addon = ?', [max($until, (string) $row['paid_until']), $qty, $slug, $l['addon']]);
+    }
+}
+/** Potvrzení platby za doplněk (zbytek období). */
+function addon_confirm(array $p, string $by): ?array
+{
+    $t = tenant_row((string) $p['tenant']);
+    if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
+        return null;
+    }
+    $lines = payment_addons($p);
+    $today = date('Y-m-d');
+    $to = (string) ($lines[0]['to'] ?? $today);
+    $year = date('Y');
+    $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+    pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ? WHERE id = ?",
+        [date('Y-m-d H:i:s'), $today, $to, $by, $no, json_encode(invoice_parties($t), JSON_UNESCAPED_UNICODE), $p['id']]);
+    addons_mark_paid($t['slug'], $lines, $to);
+    if ($t['owner_email'] !== '') {
+        platform_mail($t['owner_email'], 'Platba za doplněk přijata – ' . $t['name'], "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . ' za ' . implode(', ', array_column($lines, 'name'))
+            . ' do ' . cz_date($to) . ".\nDál se doplněk platí spolu s ročním předplatným.\nFakturu č. $no si můžete stáhnout po přihlášení do administrace: " . tenant_url($t, '/admin/predplatne/doklad/' . $p['id']) . "\n\nDěkujeme.");
+    }
+    return ['from' => $today, 'to' => $to];
+}
+/** Storno platby s doplňky: doplněk zaplacený touto platbou se vede jako nezaplacený (když ho mezitím neprodloužila jiná). */
+function addons_storno(string $slug, array $lines): array
+{
+    $notes = [];
+    foreach ($lines as $l) {
+        $row = addon_row($slug, (string) ($l['addon'] ?? ''));
+        if (!$row) {
+            continue;
+        }
+        $until = !empty($l['year']) ? '' : (string) ($l['to'] ?? '');
+        if ($until === '' || $row['paid_until'] === $until) {
+            pq("UPDATE tenant_addons SET paid_until = '', paid_qty = 0 WHERE tenant = ? AND addon = ?", [$slug, $l['addon']]);
+            $notes[] = 'Doplněk „' . $l['name'] . '“ je veden jako nezaplacený – zkontrolujte, zda ho dům má dál používat.';
+        }
+    }
+    return $notes;
+}
+/** Řádky faktury, když platba obsahuje doplňky: předplatné, doplňky, sleva. Bez doplňků [] (faktura má jeden řádek). */
+function invoice_addon_lines(array $p): array
+{
+    $addons = payment_addons($p);
+    if (!$addons) {
+        return [];
+    }
+    $paid = in_array($p['status'], ['paid', 'storno'], true);
+    $period = $paid && (string) $p['period_from'] !== '' ? ' v období ' . cz_date($p['period_from']) . ' – ' . cz_date($p['period_to']) : ' na 1 rok';
+    $lines = [];
+    $sum = array_sum(array_map(fn($a) => (int) $a['price'], $addons));
+    if (($p['kind'] ?? 'service') === 'service') {
+        $lines[] = ['Web společenství – edice ' . (EDITIONS[$p['item']] ?? $p['item']) . $period, (int) $p['amount'] + (int) ($p['discount'] ?? 0) - $sum];
+    }
+    foreach ($addons as $a) {
+        $lines[] = [(string) $a['name'] . (!empty($a['year']) ? $period : ' – zbytek období ' . cz_date((string) $a['from']) . ' – ' . cz_date((string) $a['to'])), (int) $a['price']];
+    }
+    if ((int) ($p['discount'] ?? 0) > 0) {
+        $lines[] = ['Sleva (kredit za doporučení)', -(int) $p['discount']];
+    }
+    return $lines;
 }

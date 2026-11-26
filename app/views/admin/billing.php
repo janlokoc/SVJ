@@ -67,8 +67,10 @@
     <div class="actions"><?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/zaplaceno') ?>"><?= csrf_field() ?><button class="btn" type="submit">Platbu jsem odeslal(a)</button></form><?php endif ?>
       <a class="btn btn-ghost" href="<?= url('/admin/predplatne/doklad/' . $payment['id']) ?>">Zálohová faktura k tisku</a>
       <?php if ($payment['status'] === 'pending'): ?><form method="post" action="<?= url('/admin/predplatne/edice') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="cancel"><button class="btn btn-ghost" type="submit">Zrušit objednávku</button></form><?php endif ?></div>
+    <?php if ($payAddons = payment_addons($payment)): ?><p class="hint">Faktura obsahuje i doplňky k předplatnému: <?= e(implode(', ', array_map(fn($a) => $a['name'] . ' ' . money_czk((int) $a['price']), $payAddons))) ?> (ceny bez DPH).</p><?php endif ?>
   </div>
   <?php endif ?>
+  <?php require __DIR__ . '/../ext/credit/addons_card.php'; /* doplňky k předplatnému (sledování katastru…) */ ?>
 
   <div class="card" id="edice">
     <h2>Edice</h2>
@@ -340,7 +342,7 @@
   <?php if ($history): ?>
   <h2>Přijaté platby</h2>
   <table class="table"><thead><tr><th>Zaplaceno</th><th>Částka</th><th>Období</th><th>Var. symbol</th><th>Doklad</th></tr></thead><tbody>
-    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= pay_money($p) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'storage' ? '<br><small class="muted">úložiště +' . (int) $p['item'] . ' MB</small>' : (($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : ''))) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a><?= $p['status'] === 'storno' ? '<br><a href="' . url('/admin/predplatne/opravny-doklad/' . $p['id']) . '">Opravný doklad ' . e($p['storno_no']) . '</a> <small class="muted">(stornováno)</small>' : '' ?></td></tr><?php endforeach ?>
+    <?php foreach ($history as $p): ?><tr><td data-label="Zaplaceno"><?= cz_date($p['paid_at']) ?></td><td data-label="Částka"><?= pay_money($p) ?></td><td data-label="Období"><?= cz_date($p['period_from']) ?> – <?= cz_date($p['period_to']) ?></td><td data-label="Var. symbol"><?= e($p['vs']) ?><?= ($p['kind'] ?? 'service') === 'service' && isset(EDITIONS[$p['item'] ?? '']) ? '<br><small class="muted">edice ' . EDITIONS[$p['item']] . '</small>' : '' ?><?= ($p['kind'] ?? '') === 'storage' ? '<br><small class="muted">úložiště +' . (int) $p['item'] . ' MB</small>' : (($p['kind'] ?? '') === 'migration' ? '<br><small class="muted">převod obsahu</small>' : (($p['kind'] ?? '') === 'domain' ? '<br><small class="muted">doména ' . e($p['item']) . '</small>' : (($p['kind'] ?? '') === 'ai' ? '<br><small class="muted">AI Plus</small>' : (($p['kind'] ?? '') === 'credit' ? '<br><small class="muted">kredit služeb</small>' : (($p['kind'] ?? '') === 'addon' ? '<br><small class="muted">doplněk</small>' : ''))))) ?></td><td data-label="Doklad"><a href="<?= url('/admin/predplatne/doklad/' . $p['id']) ?>">Faktura <?= e($p['invoice_no']) ?></a><?= $p['status'] === 'storno' ? '<br><a href="' . url('/admin/predplatne/opravny-doklad/' . $p['id']) . '">Opravný doklad ' . e($p['storno_no']) . '</a> <small class="muted">(stornováno)</small>' : '' ?></td></tr><?php endforeach ?>
   </tbody></table>
   <?php endif ?>
   <?php endif ?>

@@ -49,6 +49,27 @@ return [
     // potřebuje i ID workspace (Console → Workspaces, sloupec ID); klíč vytvořený pro jeden workspace ho nepotřebuje.
     // 'ai' => ['api_key' => 'sk-ant-…', 'workspace_id' => 'wrkspc_…', 'model' => 'claude-opus-5-5', 'monthly_limit' => 30],
 
+    // ---------- Placené a smluvní služby (beta program; v konzoli /sprava zapnete beta_<funkce>) ----------
+    // SMS zprávy vlastníkům: brána GoSMS (gosms.eu) nebo BulkGate (bulkgate.com). Bránu zvolíte v konzoli → SMS.
+    // 'sms' => ['gosms_client_id' => '…', 'gosms_client_secret' => '…', 'gosms_channel' => 123,
+    //           'bulkgate_app_id' => '…', 'bulkgate_token' => '…', 'bulkgate_sender' => 'gText', 'bulkgate_sender_value' => 'SVJ'],
+    // Propojení s účty u dalších bank (PSD2) přes GoCardless Bank Account Data – Secret ID a Secret Key z jejich portálu.
+    // 'bank' => ['gocardless_id' => '…', 'gocardless_key' => '…'],
+    // Sledování změn v katastru – účet do Webové služby dálkového přístupu ČÚZK (WSDP).
+    // 'katastr' => ['user' => '…', 'password' => '…'],
+    // Lustrace v Centrální evidenci exekucí – API klíč od Exekutorské komory (ceecr.cz). Nejdřív testovací klíč a 'url' testovacího prostředí.
+    // 'exekuce' => ['api_key' => '…', 'api_secret' => '…'],
+    // Ověření hlasu přes Bank iD (developer.bankid.cz); 'issuer' => 'sandbox' nebo 'production'.
+    // 'bankid' => ['client_id' => '…', 'client_secret' => '…', 'issuer' => 'sandbox'],
+    // Přihlášení přes Google, Microsoft, Apple a Facebook. Adresa pro návrat u každého poskytovatele:
+    // https://<doména služby>/sso/callback/<google|microsoft|apple|facebook>
+    // 'sso' => [
+    //     'google' => ['client_id' => '….apps.googleusercontent.com', 'client_secret' => '…'],
+    //     'microsoft' => ['client_id' => '…', 'client_secret' => '…'],
+    //     'facebook' => ['app_id' => '…', 'app_secret' => '…'],
+    //     'apple' => ['client_id' => 'cz.spolecnyweb.login', 'team_id' => '…', 'key_id' => '…', 'private_key_path' => '/cesta/mimo/web/AuthKey.p8'],
+    // ],
+
     'db' => [
         'driver' => 'mysql',
         'host' => 'localhost',   // adresu serveru uvádí hosting; někdy to není localhost

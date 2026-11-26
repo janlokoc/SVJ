@@ -46,6 +46,11 @@ $route('POST', '/admin/ucetnictvi', function () use ($acctPlatby) {
 });
 $route('GET', '/admin/ucetnictvi/export', function () use ($acctPlatby) {
     require_admin();
+    if (function_exists('plan_has') && !plan_has('ucetnictvi-export')) {
+        // Export patří k edici Standard (i po skončené zkoušce – data zůstávají na webu, jen se nestahují).
+        flash('Export do účetnictví je součástí edice ' . EDITIONS[PLAN_FEATURES['ucetnictvi-export'][0]] . '.', 'error');
+        redirect('/admin/predplatne#funkce');
+    }
     $params = acct_export_params($_GET);
     if (!$acctPlatby()) {
         $params['parts'] = ['addressbook'];   // předpisy a platby z banky jen s funkcí Platby na jednotku

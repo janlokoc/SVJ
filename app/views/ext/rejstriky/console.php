@@ -34,11 +34,11 @@
       <thead><tr><th>Společenství</th><th>Služba</th><th>Počet</th><th>Fakturovat</th><th>Náklad</th></tr></thead>
       <tbody><?php foreach ($report as $slug => $kinds): foreach ($kinds as $kind => $r): $sumPrice += $r['price']; $sumCost += $r['cost']; ?>
         <tr><td data-label="Společenství"><a href="<?= url('/svj/' . $slug) ?>"><?= e($names[$slug] ?? $slug) ?></a></td><td data-label="Služba"><?= e(REJ_USAGE_KINDS[$kind] ?? $kind) ?></td>
-          <td data-label="Počet"><?= (int) $r['n'] ?><?= $kind === 'katastr_year' ? ' (' . (int) $r['qty'] . ' jednotek)' : '' ?></td><td data-label="Fakturovat"><?= e(money_czk($r['price'])) ?></td><td data-label="Náklad"><?= e(money_czk($r['cost'])) ?></td></tr>
+          <td data-label="Počet"><?= (int) $r['n'] ?><?= $kind === 'katastr_year' ? ' (' . (int) $r['qty'] . ' LV)' : '' ?></td><td data-label="Fakturovat"><?= e(money_czk($r['price'])) ?></td><td data-label="Náklad"><?= e(money_czk($r['cost'])) ?></td></tr>
       <?php endforeach; endforeach ?></tbody>
       <tfoot><tr><th colspan="3">Celkem</th><th><?= e(money_czk($sumPrice)) ?></th><th><?= e(money_czk($sumCost)) ?></th></tr></tfoot>
     </table>
-    <p class="hint">„Fakturovat“ = cena pro společenství podle ceníku v době dotazu; „Náklad“ = co účtuje ČÚZK nebo CEE (podle odpovědi služby, jinak podle nastavení vpravo nahoře). Faktury se zatím vystavují ručně v Platbách.</p>
+    <p class="hint">„Fakturovat“ = cena pro společenství podle ceníku v době dotazu; „Náklad“ = co účtuje ČÚZK nebo CEE (podle odpovědi služby, jinak podle nastavení vpravo nahoře). Lustrace se strhává z kreditu služeb (Kredit), sledování katastru je doplněk na faktuře za předplatné; „Fakturovat“ u katastru zbývá jen u domů bez předplatného.</p>
     <?php endif ?>
   </section>
 </div>

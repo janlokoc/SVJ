@@ -8,8 +8,10 @@ declare(strict_types=1);
  *   Podrobný výsledek vrací sms_send_ex().
  * - Brány (rozhraní SmsProvider): GoSMS.cz, BulkGate a 'log' (jen zápis do souboru – zkušební prostředí a vývoj).
  *   Zkušební prostředí (is_staging()) posílá VŽDY přes 'log' – skutečná SMS z něj nikdy neodejde.
- * - Kredit společenství = počet SMS (částí zprávy). Vede se v databázi platformy (sms_ledger); provozovatel ho
- *   připisuje v konzoli (/sprava/sms) po zaplacení balíčku. Každá odeslaná část zprávy strhne 1 SMS; bez kreditu se neposílá.
+ * - Placení: z kreditu služeb domu (app/ext/credit_lib.php) – každá odeslaná část zprávy stojí sms_price_h haléřů (výchozí 1,50 Kč)
+ *   bez DPH. Edice Premium má sms_free_premium SMS za kalendářní rok v ceně (výchozí 100), čerpají se před kreditem.
+ *   Neodeslaná zpráva se do kreditu (i do volných SMS) vrací. Bez kreditu se neposílá. Dřívější kredit v počtu SMS
+ *   (sms_ledger) převedla migrace platformy na Kč; tabulka zůstává jako historie.
  *   Web mimo platformu (bez předplatného) kredit nemá – posílá se na účet provozovatele brány bez omezení.
  *
  * Přístupové údaje k bráně jsou jen v storage/config.php (nikdy v databázi ani v repozitáři):
@@ -17,11 +19,11 @@ declare(strict_types=1);
  *       'gosms_client_id' => '…', 'gosms_client_secret' => '…', 'gosms_channel' => 123,   // GoSMS.cz (selfservice → API)
  *       'bulkgate_app_id' => '…', 'bulkgate_token' => '…', 'bulkgate_sender' => 'gSystem', 'bulkgate_sender_value' => '',   // BulkGate
  *   ],
- * Brána a cena pro zákazníky se volí v konzoli (nastavení platformy sms_provider, sms_price_h, sms_pack).
+ * Brána a cena pro zákazníky se volí v konzoli (nastavení platformy sms_provider, sms_price_h).
  */
 
 /** Výchozí hodnoty nastavení provozovatele (pset). Cena je v haléřích za 1 SMS bez DPH. */
-const SMS_DEFAULTS = ['sms_provider' => 'log', 'sms_price_h' => '150', 'sms_pack' => '200'];
+const SMS_DEFAULTS = ['sms_provider' => 'log', 'sms_price_h' => '150'];
 const SMS_PROVIDERS = ['log' => 'Jen záznam (nic neodesílá)', 'gosms' => 'GoSMS.cz', 'bulkgate' => 'BulkGate'];
 /** Nejdelší zpráva v částech (SMS). Delší text se odmítne – zprávu je lepší poslat e-mailem. */
 const SMS_MAX_SEGMENTS = 6;
@@ -131,12 +133,6 @@ function sms_price_h(): int
     $v = function_exists('pset') && function_exists('platform_enabled') && platform_enabled() ? pset('sms_price_h') : '';
     return ctype_digit($v) ? min(100000, (int) $v) : (int) SMS_DEFAULTS['sms_price_h'];
 }
-/** Kolik SMS má balíček, který si společenství objednává. */
-function sms_pack(): int
-{
-    $v = function_exists('pset') && function_exists('platform_enabled') && platform_enabled() ? pset('sms_pack') : '';
-    return ctype_digit($v) && (int) $v > 0 ? min(100000, (int) $v) : (int) SMS_DEFAULTS['sms_pack'];
-}
 /** Odhad ceny: [částí na zprávu, částí celkem, Kč celkem (float)] pro $recipients příjemců. */
 function sms_cost(string $text, int $recipients = 1): array
 {
@@ -149,13 +145,14 @@ function sms_money(float $czk): string
     return number_format($czk, fmod($czk, 1.0) === 0.0 ? 0 : 2, ',', "\u{a0}") . "\u{a0}Kč";
 }
 
-// ---------- Kredit (databáze platformy) ----------
+// ---------- Placení z kreditu služeb (databáze platformy) ----------
 
-/** Vedou se kredity? Jen u webů na platformě s předplatným. */
+/** Platí se SMS z kreditu? Jen u webů na platformě. */
 function sms_credit_managed(): bool
 {
-    return function_exists('plan_managed') && plan_managed();
+    return function_exists('credit_managed') && credit_managed();
 }
+/** Dřívější kredit v počtu SMS – jen historie (převedeno na kredit služeb, app/ext/credit_lib.php). */
 function sms_ledger_ready(): void
 {
     static $done = false;
@@ -167,56 +164,48 @@ function sms_ledger_ready(): void
         kind TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', by_whom TEXT NOT NULL DEFAULT '');
         CREATE INDEX IF NOT EXISTS sms_ledger_tenant ON sms_ledger (tenant, id);");
 }
-/** Zůstatek kreditu (počet SMS) společenství. */
+/** Kolik SMS má edice v ceně za kalendářní rok (Premium sms_free_premium, jinak 0). */
+function sms_free_allowance(string $tenant): int
+{
+    $t = function_exists('tenant_row') ? tenant_row($tenant) : null;
+    return $t && tenant_edition($t) === 'premium' ? credit_setting('sms_free_premium') : 0;
+}
+/** Volné SMS, které letos zbývají. */
+function sms_free_left(string $tenant): int
+{
+    $allow = sms_free_allowance($tenant);
+    if ($allow <= 0) {
+        return 0;
+    }
+    $used = (int) pq("SELECT COALESCE(SUM(qty), 0) FROM credit_ledger WHERE tenant = ? AND kind = 'sms' AND delta_h = 0 AND at >= ?", [$tenant, date('Y-01-01')])->fetchColumn();
+    return max(0, $allow - $used);
+}
+/** Kolik SMS jde teď poslat: volné SMS edice + kredit / cena SMS. */
 function sms_balance(?string $tenant = null): int
 {
-    sms_ledger_ready();
-    return (int) pq('SELECT COALESCE(SUM(delta), 0) FROM sms_ledger WHERE tenant = ?', [$tenant ?? TENANT])->fetchColumn();
+    $tenant ??= TENANT;
+    $price = sms_price_h();
+    return sms_free_left($tenant) + ($price > 0 ? intdiv(max(0, credit_balance_h($tenant)), $price) : 1000000);
 }
-/** Pohyb kreditu: kind = credit (připsáno), send (odesláno), refund (vráceno po neúspěchu), fix (oprava). */
-function sms_ledger_add(string $tenant, int $delta, string $kind, string $note = '', string $by = ''): void
+/**
+ * Zaplatí $n částí zprávy: nejdřív volné SMS edice, zbytek z kreditu (atomicky). Vrací ref pohybů (pro vrácení),
+ * nebo null, když na to nestačí.
+ */
+function sms_charge(string $tenant, int $n, string $note): ?string
 {
-    sms_ledger_ready();
-    pq('INSERT INTO sms_ledger (tenant, at, delta, kind, note, by_whom) VALUES (?,?,?,?,?,?)', [$tenant, date('Y-m-d H:i:s'), $delta, $kind, mb_substr($note, 0, 200), mb_substr($by, 0, 120)]);
-}
-/** Strhne $n SMS, jen pokud na ně kredit stačí (atomicky). */
-function sms_reserve(string $tenant, int $n, string $note): bool
-{
-    sms_ledger_ready();
-    $pdo = platform_db();
-    $pdo->exec('BEGIN IMMEDIATE');
-    try {
-        if (sms_balance($tenant) < $n) {
-            $pdo->exec('ROLLBACK');
+    $ref = 'sms:' . bin2hex(random_bytes(6));
+    $ok = credit_tx(function () use ($tenant, $n, $note, $ref): bool {
+        $free = min($n, sms_free_left($tenant));
+        $paid = $n - $free;
+        if ($paid > 0 && !credit_charge($tenant, $paid * sms_price_h(), 'sms', $note, $ref, $paid)) {
             return false;
         }
-        sms_ledger_add($tenant, -$n, 'send', $note);
-        $pdo->exec('COMMIT');
+        if ($free > 0) {
+            credit_row_add($tenant, 0, 'sms', $note . ' (v ceně edice)', '', 0, '', $ref, $free);
+        }
         return true;
-    } catch (Throwable $e) {
-        $pdo->exec('ROLLBACK');
-        throw $e;
-    }
-}
-function sms_ledger(string $tenant, int $limit = 50): array
-{
-    sms_ledger_ready();
-    return pq('SELECT * FROM sms_ledger WHERE tenant = ? ORDER BY id DESC LIMIT ' . max(1, $limit), [$tenant])->fetchAll();
-}
-/** Připíše kredit (konzole). Vrací chybu, nebo null. */
-function sms_credit_add(string $tenant, int $n, string $note, string $by): ?string
-{
-    if (!tenant_row($tenant)) {
-        return 'Společenství neexistuje.';
-    }
-    if ($n === 0 || abs($n) > 1000000) {
-        return 'Zadejte počet SMS (kladný pro připsání, záporný pro opravu).';
-    }
-    if ($n < 0 && sms_balance($tenant) + $n < 0) {
-        return 'Opravou by kredit klesl pod nulu.';
-    }
-    sms_ledger_add($tenant, $n, $n > 0 ? 'credit' : 'fix', $note, $by);
-    return null;
+    });
+    return $ok ? $ref : null;
 }
 
 // ---------- Záznam odeslaných zpráv (databáze domu) ----------
@@ -441,10 +430,11 @@ function sms_send_ex(string $phone, string $text, string $source = 'modul', int 
             [date('Y-m-d H:i:s'), $e164, $userId, $seg['segments'], $status, $provider, mb_substr($pid, 0, 80), mb_substr($err, 0, 255), mb_substr($source, 0, 40), mb_substr($text, 0, 1000)]);
     };
     $managed = sms_credit_managed();
-    $note = $source . ' → ' . substr($e164, 0, -3) . '***';
-    if ($managed && !sms_reserve(TENANT, $seg['segments'], $note)) {
+    $note = 'SMS ' . $source . ' → ' . substr($e164, 0, -3) . '***';
+    $ref = $managed ? sms_charge(TENANT, $seg['segments'], $note) : '';
+    if ($ref === null) {
         $log('refused', '', '', 'nedostatek kreditu');
-        return $fail('Došel kredit na SMS. Dobijte ho v části SMS zprávy.');
+        return $fail('Došel kredit služeb. Dobijte ho v administraci v části Kredit služeb.');
     }
     $name = sms_provider_name();
     try {
@@ -453,7 +443,7 @@ function sms_send_ex(string $phone, string $text, string $source = 'modul', int 
         $r = ['ok' => false, 'id' => '', 'error' => 'Chyba brány: ' . $e->getMessage()];
     }
     if (!$r['ok'] && $managed) {
-        sms_ledger_add(TENANT, $seg['segments'], 'refund', 'neodesláno: ' . $note);
+        credit_reverse(TENANT, $ref, 'vráceno, neodesláno: ' . $note);
     }
     $log($r['ok'] ? 'sent' : 'failed', $name, (string) $r['id'], (string) $r['error']);
     return ['ok' => (bool) $r['ok'], 'error' => (string) $r['error'], 'segments' => $seg['segments'], 'phone' => $e164];
@@ -491,7 +481,7 @@ function sms_send_owners(string $text): array
     }
     [, $total] = sms_cost($text, count($rcpt));
     if (sms_credit_managed() && sms_balance() < $total) {
-        return [0, 0, 'Kredit nestačí: zpráva pro ' . count($rcpt) . ' vlastníků potřebuje ' . $total . ' SMS, zbývá ' . sms_balance() . '.'];
+        return [0, 0, 'Kredit služeb nestačí: zpráva pro ' . count($rcpt) . ' vlastníků potřebuje ' . $total . ' SMS, kredit vystačí na ' . sms_balance() . '.'];
     }
     $sent = $failed = 0;
     $err = null;
@@ -503,17 +493,4 @@ function sms_send_owners(string $text): array
         }
     }
     return [$sent, $failed, $failed ? $err : null];
-}
-/** Objednávka balíčku: e-mail provozovateli. Kredit připíše provozovatel v konzoli po zaplacení. */
-function sms_order(int $packs, array $by): bool
-{
-    $packs = max(1, min(50, $packs));
-    $to = function_exists('pset') ? pset('contact_email') : '';
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-        return false;
-    }
-    $n = $packs * sms_pack();
-    return send_mail($to, 'Objednávka SMS kreditu – ' . site('name'), "Společenství " . site('name') . ' (' . (defined('TENANT') ? TENANT : '') . ") objednává $n SMS ($packs × " . sms_pack() . ") za "
-        . sms_money($n * sms_price_h() / 100) . " bez DPH.\nObjednal(a): " . $by['name'] . ' <' . $by['email'] . ">\n\nPo zaplacení připište kredit v konzoli: " . (function_exists('platform_url') ? platform_url('/sms') : '/sms') . "\n",
-        null, null, null, $by['email']);
 }

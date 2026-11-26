@@ -351,16 +351,106 @@ final class ModEKatastrTest extends TestCase
 
     // ---------- zapnutí, roční poplatek, denní úloha ----------
 
-    public function testActivateRecordsYearlyFee(): void
+    public function testActivateWithoutSubscriptionRecordsYearlyFee(): void
     {
-        $this->pset('rej_price_katastr_unit', '25');
-        $units = (int) val('SELECT COUNT(*) FROM units');
-        $this->assertSame(25 * $units, rej_katastr_activate());
+        // „dum“ nemá předplatné (bez placení): jako dosud jen záznam spotřeby, žádná faktura.
+        $this->assertFalse(rej_katastr_billed());
+        $this->pset('rej_price_katastr_house', '1200');
+        $this->pset('rej_price_katastr_lv_extra', '800');
+        rej_set('rej_katastr_lv', '11, 12');
+        $this->assertSame(2000, rej_katastr_activate(), 'dům + 1 LV navíc');
         $this->assertSame(date('Y-m-d'), setting('rej_katastr_on'));
         $u = pq("SELECT * FROM rej_usage WHERE kind = 'katastr_year'")->fetch();
-        $this->assertSame([$units, 25 * $units, 'dum'], [(int) $u['qty'], (int) $u['price'], $u['tenant']]);
+        $this->assertSame([2, 2000, 'dum'], [(int) $u['qty'], (int) $u['price'], $u['tenant']]);
+        $this->assertNull(addon_row(TENANT, 'katastr'), 'bez předplatného žádný doplněk');
+        $this->assertSame(0, (int) pq("SELECT COUNT(*) FROM payments WHERE tenant = ? AND kind = 'addon'", [TENANT])->fetchColumn());
         rej_katastr_deactivate();
         $this->assertSame('', setting('rej_katastr_on'));
+    }
+
+    public function testActivateWithSubscriptionBillsProratedAddon(): void
+    {
+        plan_tenant();   // edice „dum“ zůstane v procesu Premium; fakturace čte řádek domu znovu
+        $saved = pq('SELECT billing, plan, paid_until, trial_ends FROM tenants WHERE slug = ?', [TENANT])->fetch();
+        $until = date('Y-m-d', strtotime('+182 day'));
+        $total = (int) round((strtotime($until) - strtotime($until . ' -1 year')) / 86400);
+        $share = fn(int $price) => (int) round($price * 183 / $total);
+        try {
+            pq("UPDATE tenants SET billing = 1, plan = 'premium', paid_until = ?, trial_ends = '' WHERE slug = ?", [$until, TENANT]);
+            $this->assertTrue(rej_katastr_billed());
+            rej_set('rej_katastr_lv', '11');
+            $this->assertSame(1490, rej_katastr_activate());
+            $this->assertSame(0, (int) pq("SELECT COUNT(*) FROM rej_usage WHERE kind = 'katastr_year'")->fetchColumn(), 'účtuje se fakturou, ne spotřebou');
+            $a = addon_row(TENANT, 'katastr');
+            $this->assertSame([1, 1, ''], [(int) $a['qty'], (int) $a['active'], $a['paid_until']]);
+            $p = rej_katastr_payment();
+            $this->assertSame(['addon', 'katastr', $share(1490)], [$p['kind'], $p['item'], (int) $p['amount']], 'poměrná část do konce zaplaceného období');
+            $line = payment_addons($p)[0];
+            $this->assertSame([date('Y-m-d'), $until, 1], [$line['from'], $line['to'], $line['qty']]);
+            $this->assertSame([['Sledování změn v katastru (1 LV) – zbytek období ' . cz_date(date('Y-m-d')) . ' – ' . cz_date($until), $share(1490)]], invoice_view($p)['lines']);
+
+            // Druhý LV před zaplacením: nezaplacená výzva se přepočítá.
+            rej_set('rej_katastr_lv', '11,12');
+            rej_katastr_target_changed();
+            $p2 = rej_katastr_payment();
+            $this->assertSame($p['id'], $p2['id']);
+            $this->assertSame($share(2480), (int) $p2['amount']);
+
+            // Zaplaceno → doplněk zaplacený do konce období domu; faktura.
+            $this->assertSame(['from' => date('Y-m-d'), 'to' => $until], billing_confirm($p2, 'test'));
+            $a = addon_row(TENANT, 'katastr');
+            $this->assertSame([$until, 2], [$a['paid_until'], (int) $a['paid_qty']]);
+            $this->assertNull(rej_katastr_payment());
+
+            // Třetí LV v zaplaceném období: doplácí se jen navýšení (990 Kč ročně, poměrně).
+            rej_set('rej_katastr_lv', '11,12,13');
+            rej_katastr_target_changed();
+            $p3 = rej_katastr_payment();
+            $this->assertSame($share(990), (int) $p3['amount']);
+            $this->assertStringContainsString('navýšení z 2 LV', payment_addons($p3)[0]['name']);
+
+            // Roční faktura za předplatné obsahuje doplněk jako řádek.
+            $order = billing_order(tenant_row(TENANT), 'premium');
+            $this->assertSame(edition_price('premium', tenant_row(TENANT)) + 3470, (int) $order['amount']);
+            $lines = invoice_view($order)['lines'];
+            $this->assertSame(['Sledování změn v katastru (3 LV) na 1 rok', 3470], $lines[1]);
+            $this->assertSame((int) $order['amount'], array_sum(array_column($lines, 1)), 'řádky dávají celkovou částku');
+
+            // Vypnutí: nezaplacená výzva za navýšení se zruší a roční faktura se přepočítá bez doplňku.
+            rej_katastr_deactivate();
+            $this->assertSame('cancelled', pq('SELECT status FROM payments WHERE id = ?', [$p3['id']])->fetchColumn());
+            $this->assertSame(0, (int) addon_row(TENANT, 'katastr')['active']);
+            $re = pq('SELECT * FROM payments WHERE id = ?', [$order['id']])->fetch();
+            $this->assertSame(edition_price('premium', tenant_row(TENANT)), (int) $re['amount']);
+            $this->assertSame([], payment_addons($re));
+
+            // Znovu zapnuto v zaplaceném období se stejnými 2 LV: nic se nedoplácí.
+            rej_set('rej_katastr_lv', '11,12');
+            rej_katastr_activate();
+            $this->assertNull(rej_katastr_payment(), '2 LV už jsou zaplacené do konce období');
+        } finally {
+            pq('UPDATE tenants SET billing = ?, plan = ?, paid_until = ?, trial_ends = ? WHERE slug = ?', [...array_values($saved), TENANT]);
+            pq("DELETE FROM payments WHERE tenant = ? AND kind IN ('addon', 'service')", [TENANT]);
+        }
+    }
+
+    public function testDailyDoesNotRecordFeeForBilledHouse(): void
+    {
+        plan_tenant();
+        $saved = pq('SELECT billing, plan, paid_until, trial_ends FROM tenants WHERE slug = ?', [TENANT])->fetch();
+        try {
+            pq("UPDATE tenants SET billing = 1, plan = 'premium', paid_until = ? WHERE slug = ?", [date('Y-m-d', strtotime('+30 day')), TENANT]);
+            $this->prepareTarget();
+            $this->pset('beta_katastr', 'on');
+            rej_set('rej_katastr_on', '2025-01-01');
+            rej_set('rej_katastr_year', date('Y-m-d', strtotime('-1 year -1 day')));
+            rej_set('rej_katastr_last', date('Y-m-d H:i') . '|ok|x');
+            rej_katastr_daily();
+            $this->assertSame(0, (int) pq("SELECT COUNT(*) FROM rej_usage WHERE kind = 'katastr_year'")->fetchColumn(), 'platí se s ročním předplatným');
+            $this->assertSame(date('Y-m-d'), setting('rej_katastr_year'));
+        } finally {
+            pq('UPDATE tenants SET billing = ?, plan = ?, paid_until = ?, trial_ends = ? WHERE slug = ?', [...array_values($saved), TENANT]);
+        }
     }
 
     public function testDailyRespectsBetaActivationAndInterval(): void
@@ -380,7 +470,7 @@ final class ModEKatastrTest extends TestCase
         rej_set('rej_katastr_year', date('Y-m-d'));
         rej_set('rej_katastr_last', date('Y-m-d H:i', time() - 2 * 86400) . '|ok|x');
         rej_katastr_daily();
-        $this->assertSame([], $this->calls, 'checked 2 days ago, interval 7 days');
+        $this->assertSame([], $this->calls, 'checked 2 days ago, interval 30 days');
 
         $this->pset('rej_katastr_days', '1');
         $this->fakeHttp(fn() => ['status' => 0, 'body' => '', 'error' => 'offline']);
@@ -402,5 +492,15 @@ final class ModEKatastrTest extends TestCase
         rej_katastr_daily();
         $this->assertSame(1, (int) pq("SELECT COUNT(*) FROM rej_usage WHERE kind = 'katastr_year'")->fetchColumn(), 'only once a year');
         $this->assertSame([], $this->calls);
+    }
+
+    /** Nezaplacený doplněk: po 30 dnech od výzvy se kontroly katastru pozastaví, nahlášená platba ne. */
+    public function testUnpaidAddonPausesAfterGracePeriod(): void
+    {
+        $old = date('Y-m-d H:i:s', time() - (REJ_KATASTR_GRACE_DAYS + 1) * 86400);
+        $fresh = date('Y-m-d H:i:s', time() - 5 * 86400);
+        $this->assertTrue(rej_katastr_unpaid(['status' => 'pending', 'created_at' => $old]));
+        $this->assertFalse(rej_katastr_unpaid(['status' => 'pending', 'created_at' => $fresh]), 'within grace period');
+        $this->assertFalse(rej_katastr_unpaid(['status' => 'claimed', 'created_at' => $old]), 'payment reported by the house');
     }
 }

@@ -21,14 +21,17 @@
     <div class="card">
       <h2>Sledování</h2>
       <?php if ($on === ''): ?>
-      <p>Cena: <strong><?= e(money_czk($price)) ?> za jednotku a rok</strong> (bez DPH). U Vašeho domu (<?= (int) $units ?> jednotek) <strong><?= e(money_czk($price * $units)) ?> ročně</strong>, účtuje se s předplatným.</p>
+      <p>Cena: <strong><?= e(money_czk(rej_price('rej_price_katastr_house'))) ?> za dům a rok</strong> včetně 1 listu vlastnictví, každý další LV <?= e(money_czk(rej_price('rej_price_katastr_lv_extra'))) ?> ročně (bez DPH).
+        <?= $lvCount > 1 ? 'U Vašeho domu (' . (int) $lvCount . ' LV) <strong>' . e(money_czk($price)) . ' ročně</strong>. ' : '' ?><?= $billed ? 'Platí se s ročním předplatným; když sledování zapnete v průběhu zaplaceného období, zaplatíte jen poměrnou část do jeho konce.' : '' ?></p>
       <form method="post" class="form">
         <?= csrf_field() ?><input type="hidden" name="action" value="activate">
-        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Souhlasím s cenou <?= e(money_czk($price * $units)) ?> ročně bez DPH.</span></label>
+        <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Souhlasím s cenou <?= e(money_czk($price)) ?> ročně bez DPH.</span></label>
         <button class="btn" type="submit"<?= $target['ku'] === '' ? ' disabled' : '' ?>>Zapnout sledování</button>
       </form>
       <?php else: ?>
-      <p><span class="status status-done">zapnuto</span> od <?= e(cz_date($on)) ?>.
+      <?php if ($payment && rej_katastr_unpaid($payment)): ?><p class="callout">Sledování je <strong>pozastavené</strong>: výzva k platbě (VS <?= e($payment['vs']) ?>) je nezaplacená déle než <?= REJ_KATASTR_GRACE_DAYS ?> dní. Po zaplacení se kontroly obnoví – <a href="<?= url('/admin/predplatne') ?>#doplnky">platební údaje</a>.</p>
+      <?php elseif ($payment): ?><p class="callout">Za zbytek zaplaceného období čeká platba <?= pay_money($payment) ?> (VS <?= e($payment['vs']) ?>) – <a href="<?= url('/admin/predplatne') ?>#doplnky">platební údaje</a>.</p><?php endif ?>
+      <p><span class="status status-done">zapnuto</span> od <?= e(cz_date($on)) ?> · <?= e(money_czk($price)) ?> ročně bez DPH.
         <?= ($last[0] ?? '') !== '' ? '<br>Poslední kontrola ' . e($last[0]) . ': ' . e($last[2] ?? '') . '.' : '<br>Zatím bez kontroly.' ?></p>
       <form method="post" class="actions">
         <?= csrf_field() ?>

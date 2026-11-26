@@ -19,6 +19,8 @@ const ROLLAM_SOURCES = ['web' => 'web (přihlášení)', 'email' => 'web + kód 
 const ROLLAM_CODE_TTL = 600;
 const ROLLAM_CODE_ATTEMPTS = 5;
 const ROLLAM_CODE_SENDS = 3;
+/** Hláška vlastníkovi, když kredit domu nestačí na ověření přes Bank iD. */
+const ROLLAM_BANKID_NO_CREDIT = 'Ověření hlasu přes Bank iD je dočasně nedostupné: společenství nemá předplacený kredit na tuto službu. Výbor jsme upozornili, aby kredit dobil – zkuste to prosím později, nebo se obraťte na výbor (můžete hlasovat i listinně).';
 
 function rollam_ready(?PDO $pdo = null): void
 {
@@ -293,6 +295,10 @@ function rollam_begin(array $poll, array $user, int $unitId, array $choices): ar
     if ($method === 'bankid' && !(function_exists('bankid_available') && bankid_available())) {
         return ['status' => 'error', 'error' => 'Ověření přes Bank iD teď není k dispozici. Obraťte se prosím na výbor.'];
     }
+    if ($method === 'bankid' && !bankid_credit_ok()) {
+        bankid_credit_alert();
+        return ['status' => 'error', 'error' => ROLLAM_BANKID_NO_CREDIT];
+    }
     // Ochrana před zahlcením: nejvýše 5 rozpracovaných hlasů jednoho člověka v jednom hlasování za hodinu.
     if ((int) val('SELECT COUNT(*) FROM rollam_pending WHERE poll_id = ? AND user_id = ? AND created_at > ?', [$poll['id'], $user['id'], date('Y-m-d H:i:s', time() - 3600)]) >= 5) {
         return ['status' => 'error', 'error' => 'Příliš mnoho pokusů. Zkuste to prosím za hodinu.'];
@@ -439,6 +445,10 @@ function rollam_bankid_start(int $pid, int $userId): string|array
     if (!bankid_available()) {
         return ['Ověření přes Bank iD teď není k dispozici.'];
     }
+    if (!bankid_credit_ok()) {
+        bankid_credit_alert();
+        return [ROLLAM_BANKID_NO_CREDIT];
+    }
     $cfg = bankid_config();
     $disc = bankid_discovery($cfg);
     if (is_string($disc)) {
@@ -502,6 +512,10 @@ function rollam_bankid_finish(string $state, string $code, string $error, int $u
     }
     $r = rollam_finish($p, 'bankid', 'Bank iD' . ($cfg['sandbox'] ? ' (sandbox)' : '') . ': ' . $person['given_name'] . ' ' . $person['family_name']
         . ($person['birthdate'] !== '' ? ', nar. ' . $person['birthdate'] : ''));
+    if ($r['ok']) {
+        // Platí se jen ověřený a uložený hlas (z kreditu služeb domu).
+        bankid_charge((int) $p['poll_id'], (int) $p['unit_id'], unit_name($r['unit']) . ' · hlasování č. ' . (int) $p['poll_id']);
+    }
     return $r + ['poll' => (int) $p['poll_id']];
 }
 
