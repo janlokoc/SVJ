@@ -190,6 +190,7 @@ final class LibSecurityTest extends TestCase
     public function testAuditChainCheckDetectsTampering(): void
     {
         $tag = 'unit-chain-' . bin2hex(random_bytes(4));
+        audit('test_0', $tag . '-0', null);   // tag-1 nesmí být první záznam s otiskem (ten smí navazovat na starší bez otisku)
         audit('test_a', $tag . '-1', null);
         audit('test_b', $tag . '-2', null);
         audit('test_c', $tag . '-3', null);

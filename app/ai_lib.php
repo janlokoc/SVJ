@@ -257,7 +257,7 @@ function transcript_text(string $path, string $name): array
             $text = mb_convert_encoding($text, 'UTF-8', 'UTF-16');
         }
         if (!mb_check_encoding($text, 'UTF-8')) {
-            $text = mb_convert_encoding($text, 'UTF-8', 'Windows-1250');
+            $text = bank_utf8($text);   // Windows-1250 (mbstring ho neumí, převede iconv)
         }
         if ($ext === 'vtt' || $ext === 'srt') {
             $lines = [];

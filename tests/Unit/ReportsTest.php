@@ -180,6 +180,7 @@ final class ReportsTest extends TestCase
 
     public function testFollowupRateLimit(): void
     {
+        report_messages_ready();   // tabulka vláken nesmí záviset na pořadí testů
         $r = $this->createReport();
         for ($i = 0; $i < 10; $i++) {
             rq("INSERT INTO report_messages (report_id, author, by_name, body, created_at) VALUES (?, 'user', 'x', 'y', ?)", [$r['id'], date('Y-m-d H:i:s')]);

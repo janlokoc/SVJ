@@ -50,10 +50,6 @@ function onboarding_steps(): array
     if (function_exists('plan_limit') && plan_limit('admins') === 1) {
         unset($steps['zastup']);
     }
-    // Druhého správce edice Zdarma neumožňuje – krok by jen mátl.
-    if (function_exists('plan_limit') && plan_managed() && plan_limit('admins') === 1) {
-        unset($steps['zastup']);
-    }
     $out = [];
     foreach ($steps as $key => [$group, $title, $why, $href, $label, $auto, $important]) {
         $manual = setting('onb_' . $key);

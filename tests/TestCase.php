@@ -29,6 +29,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     {
         $u = one('SELECT * FROM users WHERE role = ? AND active = 1 ORDER BY id LIMIT 1', [$role]);
         $_SESSION['uid'] = (int) $u['id'];
+        $_SESSION['pv'] = pw_fingerprint($u['password_hash']);   // jinak ho user() odhlásí
         return $u;
     }
 }
