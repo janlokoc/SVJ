@@ -383,25 +383,72 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
 // ---------- Závady ----------
 
 $route('GET', '/admin/zavady', function () {
-    require_admin();
-    render('admin/tickets', ['title' => 'Závady a požadavky', 'suppliers' => all('SELECT * FROM suppliers ORDER BY field, name'), 'files' => ticket_files(array_column(all('SELECT id FROM tickets'), 'id')), 'tickets' => all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email
-        FROM tickets t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.status = 'done', t.id DESC")]);
+    $me = require_admin();
+    ticket_ready();
+    $filter = in_array($_GET['f'] ?? '', ['moje', 'po-terminu', 'vse'], true) ? $_GET['f'] : 'otevrene';
+    $where = match ($filter) {
+        'moje' => "t.status <> 'done' AND t.assignee_id = " . (int) $me['id'],
+        'po-terminu' => "t.status <> 'done' AND t.due_date <> '' AND t.due_date < " . db()->quote(date('Y-m-d')),
+        'vse' => '1 = 1',
+        default => "t.status <> 'done'",
+    };
+    $tickets = all("SELECT t.*, u.name author_name, " . units_sql('u') . " author_units, u.phone author_phone, u.email author_email, a.name assignee_name
+        FROM tickets t LEFT JOIN users u ON u.id = t.user_id LEFT JOIN users a ON a.id = t.assignee_id WHERE $where
+        ORDER BY t.status = 'done', CASE WHEN t.due_date = '' THEN 1 ELSE 0 END, t.due_date, t.id DESC");
+    $counts = [
+        'otevrene' => (int) val("SELECT COUNT(*) FROM tickets WHERE status <> 'done'"),
+        'moje' => (int) val("SELECT COUNT(*) FROM tickets WHERE status <> 'done' AND assignee_id = ?", [$me['id']]),
+        'po-terminu' => (int) val("SELECT COUNT(*) FROM tickets WHERE status <> 'done' AND due_date <> '' AND due_date < ?", [date('Y-m-d')]),
+        'vse' => (int) val('SELECT COUNT(*) FROM tickets'),
+    ];
+    render('admin/tickets', ['title' => 'Závady a požadavky', 'suppliers' => all('SELECT * FROM suppliers ORDER BY field, name'), 'files' => ticket_files(array_column($tickets, 'id')),
+        'tickets' => $tickets, 'log' => ticket_log(array_column($tickets, 'id')), 'admins' => ticket_admins(), 'filter' => $filter, 'counts' => $counts]);
 });
 $route('POST', '/admin/zavady/(\d+)', function (int $id) {
     require_admin();
+    ticket_ready();
     $t = one('SELECT * FROM tickets WHERE id = ?', [$id]) ?? not_found();
     $status = isset(TICKET_STATUS[post('status')]) ? post('status') : 'new';
     // Správce může opravit i text hlášení; prázdná pole nechávají původní znění.
     $subject = post('subject') !== '' ? mb_substr(post('subject'), 0, 150) : $t['subject'];
     $body = post('body') !== '' ? mb_substr(post('body'), 0, 5000) : $t['body'];
+    $location = isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'];
     $supplier = ctype_digit(post('supplier_id')) && val('SELECT 1 FROM suppliers WHERE id = ?', [post('supplier_id')]) ? (int) post('supplier_id') : null;
-    q("UPDATE tickets SET status = ?, admin_note = ?, subject = ?, location = ?, body = ?, supplier_id = ?, updated_at = datetime('now','localtime') WHERE id = ?",
-        [$status, post('admin_note'), $subject, isset($_POST['location']) ? mb_substr(post('location'), 0, 150) : $t['location'], $body, $supplier, $id]);
-    if ($status !== $t['status'] && !empty($t['user_id'])) {
-        push_notify([(int) $t['user_id']], site('name'), 'Vaše hlášení „' . $subject . '“: ' . mb_strtolower(TICKET_STATUS[$status]), '/zavady');
+    $assignee = ctype_digit(post('assignee_id')) && val("SELECT 1 FROM users WHERE id = ? AND role = 'admin'", [post('assignee_id')]) ? (int) post('assignee_id') : 0;
+    $due = valid_date(post('due_date')) ? post('due_date') : '';
+    $message = trim(post('message'));
+    q("UPDATE tickets SET status = ?, subject = ?, location = ?, body = ?, supplier_id = ?, assignee_id = ?, due_date = ?, updated_at = datetime('now','localtime') WHERE id = ?",
+        [$status, $subject, $location, $body, $supplier, $assignee, $due, $id]);
+    if ($subject !== $t['subject'] || $body !== $t['body'] || $location !== $t['location']) {
+        ticket_log_add($id, 'edit', 'Upraven text hlášení.');
+    }
+    if ((int) $t['assignee_id'] !== $assignee) {
+        $name = $assignee ? (string) val('SELECT name FROM users WHERE id = ?', [$assignee]) : '';
+        ticket_log_add($id, 'assign', $assignee ? $name : 'bez řešitele');
+        $me = user();
+        if ($assignee && $assignee !== (int) $me['id'] && ($a = one('SELECT * FROM users WHERE id = ?', [$assignee])) && filter_var($a['email'], FILTER_VALIDATE_EMAIL)) {
+            send_mail($a['email'], 'Přiděleno Vám: ' . $subject . ' – ' . site('name'), "Dobrý den,\n\n" . $me['name'] . ' Vám přidělil(a) hlášení „' . $subject . '“' . ($due !== '' ? ' s termínem ' . cz_date($due) : '') . ".\n\nVyřídit: " . absolute_url('/admin/zavady#z' . $id));
+        }
+    }
+    if ((string) $t['due_date'] !== $due) {
+        ticket_log_add($id, 'due', $due !== '' ? cz_date($due) : 'bez termínu');
+    }
+    if ((int) $t['supplier_id'] !== (int) $supplier) {
+        ticket_log_add($id, 'supplier', $supplier ? (string) val('SELECT name FROM suppliers WHERE id = ?', [$supplier]) : 'bez dodavatele');
+    }
+    if ($status !== $t['status']) {
+        ticket_log_add($id, 'status', TICKET_STATUS[$status]);
+    }
+    $old = $t['status'];
+    $t = one('SELECT * FROM tickets WHERE id = ?', [$id]);
+    if ($message !== '') {
+        ticket_log_add($id, 'msg_admin', mb_substr($message, 0, 5000));
+        ticket_notify_author($t, $message);
+    } elseif ($status !== $old && !empty($t['user_id'])) {
+        push_notify([(int) $t['user_id']], site('name'), 'Vaše hlášení „' . $subject . '“: ' . mb_strtolower(TICKET_STATUS[$status]), '/zavady#z' . $id);
     }
     flash('Uloženo.');
-    redirect('/admin/zavady');
+    redirect('/admin/zavady' . (post('f') !== '' ? '?f=' . rawurlencode(post('f')) : '') . '#z' . $id);
 });
 $route('POST', '/admin/zavady/(\d+)/smazat', function (int $id) {
     require_admin();

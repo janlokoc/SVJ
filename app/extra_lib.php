@@ -176,6 +176,13 @@ function daily_tasks(): void
             error_log('SVJ web, insolvenční rejstřík: ' . $e->getMessage());
         }
     }
+    if (function_exists('ticket_daily')) {
+        try {
+            ticket_daily();   // připomínky hlášení po termínu
+        } catch (Throwable $e) {
+            error_log('SVJ web, hlášení: ' . $e->getMessage());
+        }
+    }
     if (function_exists('bank_daily')) {
         try {
             bank_daily();   // platby z banky (Fio API), je-li zadán token
@@ -205,10 +212,11 @@ function daily_tasks(): void
 
 /** Tabulky v pořadí, v jakém je lze obnovit (nejdřív ty, na které se ostatní odkazují). */
 const BACKUP_TABLES = ['users', 'units', 'user_units', 'posts', 'documents', 'post_documents', 'contacts', 'events', 'event_documents', 'forum_posts', 'tickets',
-    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log', 'surveys', 'survey_options', 'survey_answers', 'tasks', 'suppliers', 'unit_accounts', 'messages', 'ticket_files', 'event_presence', 'event_proxy_files', 'meeting_motions', 'meeting_votes', 'push_subs'];
+    'mailings', 'event_rsvp', 'mailing_recipients', 'settings', 'audit_log', 'polls', 'poll_items', 'poll_votes', 'maintenance', 'readings', 'resources', 'reservations', 'keys_log', 'surveys', 'survey_options', 'survey_answers', 'tasks', 'suppliers', 'unit_accounts', 'messages', 'ticket_files', 'event_presence', 'event_proxy_files', 'meeting_motions', 'meeting_votes', 'push_subs', 'ticket_log'];
 
 function backup_data(): array
 {
+    ticket_ready();
     $data = ['format' => 'svj-backup-1', 'created' => date('c'), 'tables' => []];
     foreach (BACKUP_TABLES as $t) {
         $data['tables'][$t] = all("SELECT * FROM $t");
@@ -222,6 +230,7 @@ function restore_data(array $data): array
         throw new RuntimeException('Soubor není záloha tohoto webu.');
     }
     $pdo = db();
+    ticket_ready($pdo);
     $mysql = db_driver() === 'mysql';
     $pdo->exec($mysql ? 'SET FOREIGN_KEY_CHECKS = 0' : 'PRAGMA foreign_keys = OFF');
     $counts = [];

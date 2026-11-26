@@ -1911,6 +1911,7 @@ require_once __DIR__ . '/mailq_lib.php';
 require_once __DIR__ . '/backup_lib.php';
 require_once __DIR__ . '/bank_lib.php';
 require_once __DIR__ . '/isir_lib.php';
+require_once __DIR__ . '/ticket_lib.php';
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string
 {

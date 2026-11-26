@@ -652,3 +652,6 @@ document.addEventListener('click', (e) => {
     update();
   });
 })();
+
+// Výběr, který rovnou odešle svůj formulář (filtr seznamu).
+document.querySelectorAll('select[data-autosubmit]').forEach((s) => s.addEventListener('change', () => s.form.requestSubmit ? s.form.requestSubmit() : s.form.submit()));

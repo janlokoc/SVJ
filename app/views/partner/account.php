@@ -1,6 +1,10 @@
 <div class="wrap page narrow">
   <header class="page-head"><h1>Můj účet</h1><p class="lead"><?= e($me['email']) ?> · <?= e($partner['name']) ?></p></header>
   <?php require __DIR__ . '/../_errors.php'; ?>
+  <form method="post" class="card form"><h2>Upozornění</h2><?= csrf_field() ?><input type="hidden" name="action" value="notify">
+    <label class="check"><input type="checkbox" name="notify_tickets" value="1"<?= (int) ($me['notify_tickets'] ?? 1) ? ' checked' : '' ?>> Posílat mi e-mailem nová hlášení závad a požadavků z domů, které firma spravuje</label>
+    <p class="hint">Hlášení přiřazené konkrétnímu řešiteli chodí už jen jemu.</p>
+    <button class="btn btn-small" type="submit">Uložit</button></form>
   <div class="two-col">
     <form method="post" class="card form"><h2>Změna hesla</h2><?= csrf_field() ?><input type="hidden" name="action" value="password">
       <label>Současné heslo <input type="password" name="current_password" autocomplete="current-password" required></label>

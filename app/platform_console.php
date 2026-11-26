@@ -823,6 +823,18 @@ if ($PATH === '/zaznamy') {
     exit;
 }
 // ---------- Partneři (správcovské firmy) ----------
+if ($PATH === '/vyuziti') {
+    $rows = [];
+    foreach (pq("SELECT * FROM tenants WHERE active = 1 AND demo = 0 ORDER BY name")->fetchAll() as $t) {
+        try {
+            $rows[] = ['t' => $t, 'use' => tenant_usage($t['slug']), 'edition' => billing_state($t)['edition']];
+        } catch (Throwable $e) {
+            error_log('SVJ konzole, využití ' . $t['slug'] . ': ' . $e->getMessage());
+        }
+    }
+    render('platform/usage', ['title' => 'Využití funkcí', 'rows' => $rows]);
+    exit;
+}
 if ($PATH === '/partneri') {
     $errors = [];
     $in = ['name' => '', 'ico' => '', 'dic' => '', 'address' => '', 'email' => '', 'phone' => '', 'user_name' => '', 'user_email' => ''];

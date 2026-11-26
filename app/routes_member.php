@@ -225,8 +225,29 @@ $route('POST', '/diskuze/(\d+)/smazat', function (int $id) {
 
 $route('GET', '/zavady', function () {
     $u = require_login();
+    ticket_ready();
     $tickets = all('SELECT t.*, s.name AS supplier_name FROM tickets t LEFT JOIN suppliers s ON s.id = t.supplier_id WHERE t.user_id = ? ORDER BY t.id DESC', [$u['id']]);
-    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => $tickets, 'files' => ticket_files(array_column($tickets, 'id'))]);
+    render('tickets', ['title' => 'Závady a požadavky', 'tickets' => $tickets, 'files' => ticket_files(array_column($tickets, 'id')), 'log' => ticket_log(array_column($tickets, 'id'), true)]);
+});
+// Odpověď obyvatele ve vlákně hlášení (doplnění, upřesnění na dotaz správce).
+$route('POST', '/zavady/(\d+)/odpoved', function (int $id) {
+    $u = require_login();
+    ticket_ready();
+    $t = one('SELECT * FROM tickets WHERE id = ? AND user_id = ?', [$id, $u['id']]) ?? not_found();
+    $text = trim(post('message'));
+    if ($text === '' || mb_strlen($text) > 5000) {
+        flash('Napište prosím zprávu (nejvýše 5000 znaků).', 'error');
+        redirect('/zavady#z' . $id);
+    }
+    if ($t['status'] === 'done') {
+        q("UPDATE tickets SET status = 'in_progress', updated_at = datetime('now','localtime') WHERE id = ?", [$id]);
+        ticket_log_add($id, 'status', TICKET_STATUS['in_progress'] . ' (znovu otevřeno odpovědí obyvatele)');
+        $t['status'] = 'in_progress';
+    }
+    ticket_log_add($id, 'msg_author', $text);
+    ticket_notify_admins($t, 'Odpověď obyvatele', $u['name'] . ":\n" . $text);
+    flash('Odpověď jsme předali.');
+    redirect('/zavady#z' . $id);
 });
 
 $route('POST', '/zavady', function () {
@@ -267,6 +288,8 @@ $route('POST', '/zavady', function () {
     foreach ($stored as [$file, $orig, $size]) {
         q('INSERT INTO ticket_files (ticket_id, filename, original_name, size) VALUES (?,?,?,?)', [$ticketId, $file, mb_substr($orig, 0, 250), $size]);
     }
+    ticket_log_add($ticketId, 'created', '');
+    ticket_notify_admins(one('SELECT * FROM tickets WHERE id = ?', [$ticketId]), 'Nové hlášení', $u['name'] . ":\n" . $body . ($stored ? "\n\nPřílohy: " . count($stored) : ''));
     flash('Děkujeme, výbor Vaši závadu nebo požadavek dostal' . ($stored ? ' i s přílohami (' . count($stored) . ')' : '') . '. Stav řešení uvidíte na této stránce.');
     redirect('/zavady');
 });

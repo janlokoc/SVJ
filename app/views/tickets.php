@@ -15,12 +15,17 @@
   <?php if (!$tickets): ?><p class="empty">Zatím jste nic neposlali.</p><?php endif ?>
   <div class="ticket-list">
     <?php foreach ($tickets as $t): ?>
-      <article class="ticket">
+      <article class="ticket" id="z<?= $t['id'] ?>">
         <header><h3><?= e($t['subject']) ?></h3><span class="status status-<?= e($t['status']) ?>"><?= TICKET_STATUS[$t['status']] ?></span></header>
         <p class="post-meta"><?= cz_datetime($t['created_at']) ?><?= $t['location'] ? ' · ' . e($t['location']) : '' ?><?= !empty($t['supplier_name']) ? ' · řeší: <span translate="no">' . e($t['supplier_name']) . '</span>' : '' ?></p>
         <div class="prose"><?= format_text($t['body']) ?></div>
         <?php $ticketFiles = $files[(int) $t['id']] ?? []; require __DIR__ . '/_ticket_files.php'; ?>
-        <?php if ($t['admin_note']): ?><div class="callout"><strong>Odpověď výboru:</strong> <?= format_text($t['admin_note']) ?></div><?php endif ?>
+        <?php $history = $log[(int) $t['id']] ?? []; $forStaff = false; require __DIR__ . '/_ticket_thread.php'; ?>
+        <?php if ($t['due_date'] !== '' && $t['status'] !== 'done'): ?><p class="hint">Předpokládané vyřešení do <?= cz_date($t['due_date']) ?>.</p><?php endif ?>
+        <details class="ticket-reply"<?= $history && end($history)['kind'] === 'msg_admin' ? ' open' : '' ?>><summary><?= $t['status'] === 'done' ? 'Není vyřešeno? Napište výboru' : 'Doplnit nebo odpovědět' ?></summary>
+          <form method="post" action="<?= url('/zavady/' . $t['id'] . '/odpoved') ?>" class="form"><?= csrf_field() ?>
+            <label>Zpráva <textarea name="message" rows="3" maxlength="5000" required></textarea></label>
+            <button class="btn btn-small" type="submit">Odeslat</button></form></details>
       </article>
     <?php endforeach ?>
   </div>

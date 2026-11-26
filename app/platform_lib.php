@@ -227,6 +227,10 @@ SQL);
         partner_schema($pdo);
         $pdo->exec('PRAGMA user_version = 23');
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 24) {
+        // Pracovníci partnera: upozornění na nová hlášení z domů (dá se vypnout v portálu).
+        $pdo->exec('ALTER TABLE partner_users ADD COLUMN notify_tickets INTEGER NOT NULL DEFAULT 1; PRAGMA user_version = 24;');
+    }
     return $pdo;
 }
 function pq(string $sql, array $params = []): PDOStatement
@@ -272,6 +276,38 @@ function tenant_pdo(string $slug): PDO
 {
     static $open = [];
     return $open[$slug] ??= open_database(tenant_storage($slug), $slug);
+}
+/** Které funkce společenství používá (pro přehled Využití v konzoli): klíč => [název, SQL vracející > 0, když se používá]. */
+const USAGE_FEATURES = [
+    'jednotky' => ['Jednotky s podíly', "SELECT COUNT(*) FROM units WHERE share <> ''"],
+    'obyvatele' => ['Obyvatelé (5+ účtů)', 'SELECT COUNT(*) >= 5 FROM users WHERE active = 1'],
+    'aktuality' => ['Aktualita za 90 dní', "SELECT COUNT(*) FROM posts WHERE created_at >= date('now','-90 days')"],
+    'dokumenty' => ['Dokumenty', 'SELECT COUNT(*) FROM documents'],
+    'emaily' => ['Hromadné e-maily', 'SELECT COUNT(*) FROM mailings'],
+    'zavady' => ['Závady', 'SELECT COUNT(*) FROM tickets'],
+    'hlasovani' => ['Hlasování', 'SELECT COUNT(*) FROM polls'],
+    'shromazdeni' => ['Prezence na shromáždění', 'SELECT COUNT(*) FROM event_presence'],
+    'ankety' => ['Ankety', 'SELECT COUNT(*) FROM surveys'],
+    'platby' => ['Platby na jednotku', 'SELECT COUNT(*) FROM unit_accounts'],
+    'banka' => ['Párování s bankou', 'SELECT COUNT(*) FROM bank_tx'],
+    'push' => ['Upozornění do telefonu', 'SELECT COUNT(*) FROM push_subs'],
+    'revize' => ['Revize', 'SELECT COUNT(*) FROM maintenance'],
+    'odecty' => ['Odečty', 'SELECT COUNT(*) FROM readings'],
+    'ai' => ['AI pomocník (měsíc)', "SELECT COUNT(*) FROM settings WHERE `key` LIKE 'ai_used_%' AND value <> '0' AND `key` >= 'ai_used_' || strftime('%Y-%m', 'now', '-1 month')"],
+];
+/** Využití funkcí jednoho společenství: [klíč => bool] (chybějící tabulka = nepoužívá). */
+function tenant_usage(string $slug): array
+{
+    $pdo = tenant_pdo($slug);
+    $out = [];
+    foreach (USAGE_FEATURES as $key => [, $sql]) {
+        try {
+            $out[$key] = (int) $pdo->query($sql)->fetchColumn() > 0;
+        } catch (Throwable $e) {
+            $out[$key] = false;
+        }
+    }
+    return $out;
 }
 function tenant_settings(string $slug): array
 {

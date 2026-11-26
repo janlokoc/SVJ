@@ -150,7 +150,7 @@ function partner_tenant_user_ids(): array
  * Připraví jednorázový odkaz (platí 2 minuty), kterým pracovník partnera vstoupí do administrace domu jako správce.
  * Ve webu domu mu případně založí účet správce bez hesla. Vrací adresu odkazu, nebo chybu jako ['error' => …].
  */
-function partner_enter_link(array $pu, array $partner, array $t): array
+function partner_enter_link(array $pu, array $partner, array $t, string $next = ''): array
 {
     if ((int) $t['partner_id'] !== (int) $partner['id'] || $t['partner_status'] !== 'active') {
         return ['error' => 'K tomuto domu nemáte přístup.'];
@@ -175,7 +175,7 @@ function partner_enter_link(array $pu, array $partner, array $t): array
         $pdo->prepare("UPDATE users SET name = ?, role = 'admin', active = 1 WHERE id = ?")->execute([$display, $uid]);
     }
     $token = bin2hex(random_bytes(32));
-    tenant_set($t['slug'], 'partner_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => $uid, 'by' => $display], JSON_UNESCAPED_UNICODE));
+    tenant_set($t['slug'], 'partner_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => $uid, 'by' => $display, 'next' => $next], JSON_UNESCAPED_UNICODE));
     return ['link' => tenant_url($t, '/spravce-vstup/' . $token)];
 }
 

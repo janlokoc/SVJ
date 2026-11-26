@@ -21,6 +21,7 @@ function gdpr_export(int $userId): array
         'jednotky' => array_map(fn($r) => ['jednotka' => unit_name($r), 'spoluvlastnický podíl' => $r['share'] ?? ''], all('SELECT un.* FROM units un JOIN user_units uu ON uu.unit_id = un.id WHERE uu.user_id = ?', [$userId])),
         'příspěvky v diskuzi' => all('SELECT title, body, created_at FROM forum_posts WHERE author_id = ? ORDER BY id', [$userId]),
         'závady a požadavky' => all('SELECT subject, location, body, status, created_at FROM tickets WHERE user_id = ? ORDER BY id', [$userId]),
+        'zprávy k hlášením' => (function () use ($userId) { ticket_ready(); return all("SELECT l.at, t.subject, l.text FROM ticket_log l JOIN tickets t ON t.id = l.ticket_id WHERE l.user_id = ? AND l.kind IN ('msg_author','msg_admin') ORDER BY l.id", [$userId]); })(),
         'odečty měřidel' => all('SELECT kind, meter_no, amount, read_date, note FROM readings WHERE user_id = ? ORDER BY id', [$userId]),
         'rezervace' => all('SELECT r.res_date, r.time_from, r.time_to, r.note, s.name AS prostor FROM reservations r JOIN resources s ON s.id = r.resource_id WHERE r.user_id = ? ORDER BY r.res_date', [$userId]),
         'potvrzení účasti' => all('SELECT e.title AS termin, e.event_date, r.status, r.proxy_name, r.updated_at FROM event_rsvp r JOIN events e ON e.id = r.event_id WHERE r.user_id = ?', [$userId]),

@@ -21,6 +21,19 @@
     <p><a class="btn btn-small" href="<?= url('/admin/pruvodce') ?>">Zobrazit všechny kroky</a><?= count($onb['waiting']) > 3 ? ' <small class="muted">a dalších ' . (count($onb['waiting']) - 3) . '</small>' : '' ?></p>
   </div>
   <?php endif ?>
+  <?php if (!$onb['waiting'] || $onb['hidden']): $tips = array_slice(feature_tips(), 0, 3); if ($tips): ?>
+  <section class="card tips-card" aria-labelledby="tips-h">
+    <div class="onb-card-head"><h2 id="tips-h">Vyzkoušejte</h2>
+      <form method="post" action="<?= url('/admin/tipy') ?>"><?= csrf_field() ?><input type="hidden" name="key" value="*"><button class="link" type="submit">Skrýt vše</button></form></div>
+    <ul class="tips">
+      <?php foreach ($tips as $tip): ?><li>
+        <div><strong><?= e($tip['title']) ?></strong><?= $tip['new'] ? ' <span class="tag tag-pin">Novinka</span>' : '' ?><p class="muted"><?= e($tip['why']) ?></p></div>
+        <div class="tips-actions"><a class="btn btn-small" href="<?= url($tip['href']) ?>">Vyzkoušet</a>
+          <form method="post" action="<?= url('/admin/tipy') ?>"><?= csrf_field() ?><input type="hidden" name="key" value="<?= e($tip['key']) ?>"><button class="link" type="submit">Nezajímá nás</button></form></div>
+      </li><?php endforeach ?>
+    </ul>
+  </section>
+  <?php endif; endif ?>
   <div class="stat-grid">
     <a class="stat" href="<?= url('/admin/aktuality') ?>"><span class="stat-num"><?= $stats['posts'] ?></span><span>aktualit</span></a>
     <a class="stat" href="<?= url('/admin/dokumenty') ?>"><span class="stat-num"><?= $stats['documents'] ?></span><span>dokumentů</span></a>

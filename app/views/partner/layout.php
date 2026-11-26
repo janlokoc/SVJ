@@ -20,6 +20,7 @@
     <nav class="site-nav" aria-label="Menu portálu">
       <ul>
         <li><a href="<?= url('/') ?>"<?= $path === '/' || str_starts_with($path, '/domy') ? ' aria-current="page"' : '' ?>>Domy</a></li>
+        <li><a href="<?= url('/hlaseni') ?>"<?= $path === '/hlaseni' ? ' aria-current="page"' : '' ?>>Hlášení</a></li>
         <li><a href="<?= url('/fakturace') ?>"<?= str_starts_with($path, '/fakturace') ? ' aria-current="page"' : '' ?>>Fakturace</a></li>
         <li><a href="<?= url('/tym') ?>"<?= $path === '/tym' ? ' aria-current="page"' : '' ?>>Tým</a></li>
       </ul>

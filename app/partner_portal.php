@@ -129,7 +129,7 @@ if ($PATH === '/') {
 // Vstup do administrace domu: jednorázový odkaz na web domu (běžný odkaz, ne formulář – prohlížeč by přesměrování formuláře na jinou adresu zablokoval).
 if (preg_match('~^/domy/([a-z0-9][a-z0-9-]{1,38})/vstoupit$~', $PATH, $m) && $METHOD === 'GET') {
     $t = tenant_row($m[1]);
-    $r = $t ? partner_enter_link($pu, $partner, $t) : ['error' => 'Dům nenalezen.'];
+    $r = $t ? partner_enter_link($pu, $partner, $t, ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '') : ['error' => 'Dům nenalezen.'];
     if (isset($r['error'])) {
         $_SESSION['partner_enter_error'] = $r['error'];
         redirect('/');
@@ -277,6 +277,42 @@ if ($PATH === '/fakturace') {
         'history' => pq("SELECT * FROM payments WHERE partner_id = ? AND kind = 'partner' AND status IN ('paid','storno') ORDER BY id DESC LIMIT 50", [$partner['id']])->fetchAll()]);
     exit;
 }
+// Hlášení závad a požadavků ze všech domů firmy (jen čtení – vyřizuje se ve webu domu).
+if ($PATH === '/hlaseni') {
+    $houses = partner_tenants((int) $partner['id']);
+    $filter = in_array($_GET['f'] ?? '', ['moje', 'po-terminu', 'vse'], true) ? $_GET['f'] : 'otevrene';
+    $house = (string) ($_GET['dum'] ?? '');
+    $rows = [];
+    $counts = ['otevrene' => 0, 'moje' => 0, 'po-terminu' => 0, 'vse' => 0];
+    $today = date('Y-m-d');
+    foreach ($houses as $h) {
+        try {
+            $pdo = tenant_pdo($h['slug']);
+            ticket_ready($pdo);
+            $map = (array) json_decode((string) (tenant_settings($h['slug'])['partner_users'] ?? ''), true);
+            $myUid = (int) ($map[strtolower($pu['email'])] ?? 0);
+            foreach ($pdo->query("SELECT t.id, t.subject, t.location, t.status, t.created_at, t.updated_at, t.due_date, t.assignee_id, u.name author_name, a.name assignee_name,
+                    (SELECT MAX(at) FROM ticket_log l WHERE l.ticket_id = t.id) last_at FROM tickets t LEFT JOIN users u ON u.id = t.user_id LEFT JOIN users a ON a.id = t.assignee_id")->fetchAll() as $r) {
+                $r += ['slug' => $h['slug'], 'house' => $h['name'], 'mine' => $myUid && (int) $r['assignee_id'] === $myUid, 'late' => $r['status'] !== 'done' && $r['due_date'] !== '' && $r['due_date'] < $today];
+                $open = $r['status'] !== 'done';
+                $in = ['otevrene' => $open, 'moje' => $open && $r['mine'], 'po-terminu' => $r['late'], 'vse' => true];
+                if ($house === '' || $house === $h['slug']) {
+                    foreach ($in as $k => $v) {
+                        $counts[$k] += $v ? 1 : 0;
+                    }
+                    if ($in[$filter]) {
+                        $rows[] = $r;
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('SVJ partner, hlášení domu ' . $h['slug'] . ': ' . $e->getMessage());
+        }
+    }
+    usort($rows, fn($a, $b) => [$a['status'] === 'done', !$a['late'], $a['due_date'] === '' ? '9999' : $a['due_date'], $b['created_at']] <=> [$b['status'] === 'done', !$b['late'], $b['due_date'] === '' ? '9999' : $b['due_date'], $a['created_at']]);
+    render('partner/tickets', ['title' => 'Hlášení', 'rows' => $rows, 'houses' => $houses, 'filter' => $filter, 'house' => $house, 'counts' => $counts]);
+    exit;
+}
 if ($PATH === '/tym') {
     $newLink = null;
     $errors = [];
@@ -325,6 +361,10 @@ if ($PATH === '/ucet') {
                 flash('Heslo bylo změněno.');
                 redirect('/ucet');
             }
+        } elseif ($action === 'notify') {
+            pq('UPDATE partner_users SET notify_tickets = ? WHERE id = ?', [isset($_POST['notify_tickets']) ? 1 : 0, $pu['id']]);
+            flash('Uloženo.');
+            redirect('/ucet');
         } elseif ($action === 'totp_start' && !$pu['totp_enabled']) {
             $_SESSION['ptotp_setup'] = totp_new_secret();
             redirect('/ucet');

@@ -104,3 +104,65 @@ $route('POST', '/admin/pruvodce/([a-z-]+)', function (string $key) {
     }
     redirect('/admin/pruvodce#krok-' . $key);
 });
+
+// ---------- Vyzkoušejte: novinky a funkce, které dům ještě nepoužívá ----------
+
+/**
+ * Tipy na přehledu administrace (až po průvodci nastavením): klíč => [název, k čemu je, odkaz, používá se?, funkce edice nebo '', přidáno (novinka 60 dní)].
+ * Novou funkci, o které mají správci vědět, stačí přidat sem s datem – ukáže se jako novinka těm, kdo ji ještě nepoužili.
+ */
+function feature_tips(): array
+{
+    $n = function (string $sql): int {
+        try {
+            return (int) val($sql);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    };
+    $tips = [
+        'zavady' => ['Závady s řešitelem a termínem', 'Hlášení přiřaďte řešiteli, dejte mu termín a pište si s obyvatelem přímo u hlášení. Po termínu web sám připomene.', '/admin/zavady',
+            function () use ($n) { ticket_ready(); return $n("SELECT COUNT(*) FROM tickets WHERE assignee_id <> 0 OR due_date <> ''") > 0; }, '', '2026-11-26'],
+        'banka' => ['Párování plateb s bankou', 'Nahrajte výpis z banky (nebo zapojte Fio) a zálohy jednotek se odškrtnou samy.', '/admin/platby#banka',
+            function () use ($n) { bank_ready(); return $n('SELECT COUNT(*) FROM bank_tx') > 0; }, 'platby', '2026-11-25'],
+        'hlasovani' => ['Hlasování přes web', 'Usnesení mimo shromáždění bez obíhání bytů – web sečte hlasy podle podílů a ohlídá většinu.', '/admin/hlasovani/nove',
+            fn() => $n('SELECT COUNT(*) FROM polls') > 0, '', ''],
+        'shromazdeni' => ['Prezence na shromáždění', 'Na tabletu odklikáte přítomné, web průběžně počítá usnášeníschopnost a výsledky hlasování připraví do zápisu.', '/admin/terminy',
+            fn() => $n('SELECT COUNT(*) FROM event_presence') > 0, '', ''],
+        'platby' => ['Zálohy a platby na jednotku', 'Vlastník vidí svůj předpis, stav plateb a QR kód pro platbu; dlužníkům web připomene.', '/admin/platby',
+            fn() => $n('SELECT COUNT(*) FROM unit_accounts') > 0, 'platby', ''],
+        'push' => ['Upozornění do telefonu', 'Důležité zprávy (havárie, odstávka vody) dorazí na displej telefonu jako z aplikace.', '/muj-ucet',
+            fn() => $n('SELECT COUNT(*) FROM push_subs') > 0, 'push', ''],
+        'ankety' => ['Ankety', 'Rychlý dotaz na sousedy – termín brigády, barva chodby. Bez právní váhy, výsledek hned.', '/admin/ankety/nova',
+            fn() => $n('SELECT COUNT(*) FROM surveys') > 0, 'ankety', ''],
+        'revize' => ['Hlídání revizí', 'Výtah, hasicí přístroje, plyn, hromosvod – web připomene termín měsíc předem.', '/admin/revize',
+            fn() => $n('SELECT COUNT(*) FROM maintenance') > 0, 'revize', ''],
+    ];
+    $hidden = array_filter(explode(',', setting('tips_hidden')));
+    $out = [];
+    foreach ($tips as $key => [$title, $why, $href, $used, $feature, $added]) {
+        if (in_array($key, $hidden, true) || ($feature !== '' && function_exists('plan_has') && !plan_has($feature)) || !feature_on(['shromazdeni' => 'hlasovani', 'banka' => 'platby'][$key] ?? $key)) {
+            continue;
+        }
+        if ($used()) {
+            continue;
+        }
+        $new = $added !== '' && $added >= date('Y-m-d', time() - 60 * 86400);
+        $out[$key] = ['key' => $key, 'title' => $title, 'why' => $why, 'href' => $href, 'new' => $new];
+    }
+    uasort($out, fn($a, $b) => (int) $b['new'] <=> (int) $a['new']);
+    return $out;
+}
+
+$route('POST', '/admin/tipy', function () {
+    require_admin();
+    $hidden = array_filter(explode(',', setting('tips_hidden')));
+    $key = post('key');
+    if ($key === '*') {
+        $hidden = array_merge($hidden, array_keys(feature_tips()));
+    } elseif (preg_match('/^[a-z-]+$/', $key)) {
+        $hidden[] = $key;
+    }
+    q("INSERT INTO settings (`key`, value) VALUES ('tips_hidden', ?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value", [implode(',', array_unique($hidden))]);
+    redirect('/admin');
+});
