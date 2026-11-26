@@ -9,7 +9,7 @@
       <?php foreach ($account as $k => $v): if ($v === null || $v === '') { continue; } ?><dt><?= e(mb_strtoupper(mb_substr($k, 0, 1)) . mb_substr($k, 1)) ?></dt><dd><?= is_bool($v) ? ($v ? 'ano' : 'ne') : e((string) $v) ?></dd><?php endforeach ?>
     </dl>
     <p class="muted">A dále, co jste na webu sami zapsali:
-      <?= e(implode(', ', array_map(fn($k, $n) => $k . ' (' . $n . ')', array_keys($counts), $counts))) ?>.</p>
+      <?= implode(', ', array_map(fn($k, $n) => '<span>' . e($k . ' (' . $n . ')') . '</span>', array_keys($counts), $counts)) ?>.</p>
     <div class="actions"><a class="btn" href="<?= url('/muj-ucet/moje-udaje.json') ?>" download>Stáhnout všechny moje údaje</a></div>
     <p class="hint">Soubor ve formátu JSON obsahuje vše výše včetně textů zpráv a příspěvků. Otevřete ho v libovolném textovém editoru nebo ho předáte jinému správci (právo na přístup a na přenositelnost údajů).</p>
   </section>

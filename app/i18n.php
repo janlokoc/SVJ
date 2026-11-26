@@ -58,10 +58,11 @@ function t(string $text, ?string $lang = null): string
         static $wild = [];
         if (!isset($wild[$lang])) {
             $wild[$lang] = [];
-            foreach ($dict as $k => $v) {
-                if (str_contains($k, '{}')) {
-                    $wild[$lang]['~^' . str_replace('\{\}', '(.+?)', preg_quote($k, '~')) . '$~u'] = $v;
-                }
+            // Delší (konkrétnější) vzory dřív: „Jednotka {}. Kód jsme poslali jako {}.“ musí vyhrát nad „Jednotka {}“.
+            $keys = array_filter(array_keys($dict), fn($k) => str_contains((string) $k, '{}'));
+            usort($keys, fn($a, $b) => mb_strlen(str_replace('{}', '', $b)) <=> mb_strlen(str_replace('{}', '', $a)));
+            foreach ($keys as $k) {
+                $wild[$lang]['~^' . str_replace('\{\}', '(.+?)', preg_quote($k, '~')) . '$~u'] = $dict[$k];
             }
         }
         foreach ($wild[$lang] as $regex => $v) {
@@ -87,7 +88,7 @@ function translate_html(string $html, string $lang): string
     if ($lang === 'cs' || !lang_dictionary($lang)) {
         return $html;
     }
-    $html = preg_replace_callback('~(\s(?:placeholder|aria-label|title|alt|data-confirm)=")([^"]*)(")~u',
+    $html = preg_replace_callback('~(\s(?:placeholder|aria-label|title|alt|data-confirm|data-label|data-tip)=")([^"]*)(")~u',
         fn($m) => $m[1] . htmlspecialchars(t(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'), $lang), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $m[3], $html);
     $html = preg_replace_callback('~(<title>)([^<]*)(</title>)~u', function ($m) use ($lang) {
         $parts = explode(' · ', html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'), 2);
