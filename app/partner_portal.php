@@ -5,7 +5,7 @@ declare(strict_types=1);
 
 $GLOBALS['LAYOUT'] = 'partner/layout';
 $logout = function (): void {
-    unset($_SESSION['pid'], $_SESSION['ppv'], $_SESSION['pseen'], $_SESSION['ppending']);
+    unset($_SESSION['pid'], $_SESSION['ppv'], $_SESSION['pseen'], $_SESSION['ppending'], $_SESSION['pdemo']);
 };
 $pu = empty($_SESSION['pid']) ? null : (pq('SELECT * FROM partner_users WHERE id = ? AND active = 1', [$_SESSION['pid']])->fetch() ?: null);
 $partner = $pu ? partner_row((int) $pu['partner_id']) : null;
@@ -37,6 +37,23 @@ $signIn = function (array $u) use ($logout): never {
     pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $u['email'], client_ip(), 'Partner: přihlášení', '']);
     redirect('/');
 };
+
+// ---------- Ukázka: vstup jedním kliknutím jako ukázková správcovská firma (jen pro čtení) ----------
+if ($PATH === '/ukazka' && $METHOD === 'GET') {
+    $du = partner_demo_ensure();
+    if (!$du) {
+        redirect('/');
+    }
+    session_regenerate_id(true);
+    $logout();
+    $_SESSION['t'] = '#platform';
+    $_SESSION['pid'] = (int) $du['id'];
+    $_SESSION['ppv'] = pw_fingerprint($du['password_hash']);
+    $_SESSION['pseen'] = time();
+    $_SESSION['pdemo'] = 1;
+    redirect('/');
+}
+$GLOBALS['PARTNER_DEMO'] = $pu && !empty($_SESSION['pdemo']) && (int) $pu['partner_id'] === partner_demo_id();
 
 // ---------- Bez přihlášení: pozvánka, přihlášení, ověření ----------
 if (preg_match('~^/pozvanka/([a-f0-9]{64})$~', $PATH, $m)) {
@@ -103,6 +120,12 @@ if (!$pu) {
 
 // ---------- Přihlášený pracovník partnera ----------
 $owner = $pu['role'] === 'owner';
+if ($METHOD === 'POST' && $GLOBALS['PARTNER_DEMO'] && $PATH !== '/odhlaseni') {
+    flash('V ukázce se změny neukládají. Ve Vašem portálu by se tato akce provedla.', 'info');
+    $ref = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    $ref = str_starts_with($ref, $BASE) ? (string) substr($ref, strlen($BASE)) : '/';
+    redirect(preg_match('~^/(?![/\\\\])~', $ref) ? $ref : '/');
+}
 if ($METHOD === 'POST' && $PATH === '/odhlaseni') {
     $plog('odhlášení');
     $logout();
@@ -129,6 +152,14 @@ if ($PATH === '/') {
 // Vstup do administrace domu: jednorázový odkaz na web domu (běžný odkaz, ne formulář – prohlížeč by přesměrování formuláře na jinou adresu zablokoval).
 if (preg_match('~^/domy/([a-z0-9][a-z0-9-]{1,38})/vstoupit$~', $PATH, $m) && $METHOD === 'GET') {
     $t = tenant_row($m[1]);
+    if ($GLOBALS['PARTNER_DEMO']) {
+        // Ukázka: domy jsou jen pro čtení – vstup jako ukázkový správce bez zápisu do databáze domu.
+        if (!$t || (int) $t['partner_id'] !== (int) $partner['id'] || empty($t['demo'])) {
+            redirect('/');
+        }
+        header('Location: ' . tenant_url($t, '/demo-vstup' . (ctype_digit((string) ($_GET['zavada'] ?? '')) ? '?zavada=' . (int) $_GET['zavada'] : '')), true, 302);
+        exit;
+    }
     $r = $t ? partner_enter_link($pu, $partner, $t, ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '') : ['error' => 'Dům nenalezen.'];
     if (isset($r['error'])) {
         $_SESSION['partner_enter_error'] = $r['error'];

@@ -328,3 +328,84 @@ function partner_house_stats(string $slug): array
         return ['tickets' => 0, 'event' => '', 'revisions' => 0, 'units' => 0, 'users' => 0, 'last_login' => ''];
     }
 }
+
+// ---------- Ukázka partnerského portálu ----------
+
+const PARTNER_DEMO_HOUSES = [
+    'ukazka-lipova' => ['SVJ Lipová 8', 'Lipová 8', 'Lipová 8, Brno', 'les'],
+    'ukazka-sady' => ['SVJ Sady 3', 'Sady 3', 'Sady 3, Brno', 'more'],
+];
+
+/**
+ * Ukázková správcovská firma se třemi domy (ukázkový web Zahradní 12 a dva menší domy s hlášeními).
+ * Založí se při prvním vstupu do ukázky; domy jsou jen pro čtení jako ukázkový web. Vrací pracovníka firmy, nebo null.
+ */
+function partner_demo_ensure(): ?array
+{
+    $demo = demo_tenant();
+    if (!$demo) {
+        return null;
+    }
+    $pid = (int) pset('demo_partner');
+    if (!$pid || !partner_row($pid)) {
+        pq('INSERT INTO partners (name, ico, address, email, phone, note, active, created_at) VALUES (?,?,?,?,?,?,1,?)',
+            ['Ukázková správa domů s.r.o.', '', 'Masarykova 1, Brno', 'ukazka@example.invalid', '', 'ukázka partnerského portálu – jen pro čtení', date('Y-m-d H:i:s')]);
+        $pid = (int) platform_db()->lastInsertId();
+        pset_save('demo_partner', (string) $pid);
+        pq("INSERT INTO partner_users (partner_id, name, email, password_hash, role, notify_tickets, created_at) VALUES (?,?,?,?,'owner',0,?)",
+            [$pid, 'Petra Dvořáková', 'ukazka-partner@example.invalid', password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), date('Y-m-d H:i:s')]);
+    }
+    foreach (PARTNER_DEMO_HOUSES as $slug => [$name, $title, $address, $look]) {
+        if (!tenant_row($slug)) {
+            tenant_create(['slug' => $slug, 'name' => $name, 'title' => $title, 'address' => $address, 'look' => $look, 'style' => 'modern', 'demo' => 2, 'note' => 'ukázka partnerského portálu, jen pro čtení']);
+            partner_demo_seed($slug);
+        }
+    }
+    $since = date('Y-m-d H:i:s', strtotime('-200 days'));
+    foreach (array_merge([$demo['slug']], array_keys(PARTNER_DEMO_HOUSES)) as $slug) {
+        pq("UPDATE tenants SET partner_id = ?, partner_status = 'active', partner_billing = 1, partner_since = CASE WHEN partner_since = '' THEN ? ELSE partner_since END WHERE slug = ?", [$pid, $since, $slug]);
+    }
+    $u = pq('SELECT * FROM partner_users WHERE partner_id = ? AND active = 1 ORDER BY id LIMIT 1', [$pid])->fetch();
+    return $u ?: null;
+}
+function partner_demo_id(): int
+{
+    return (int) pset('demo_partner');
+}
+/** Obsah malého ukázkového domu: správci, jednotky s vlastníky a několik hlášení v různém stavu. */
+function partner_demo_seed(string $slug): void
+{
+    $pdo = tenant_pdo($slug);
+    ticket_ready($pdo);
+    $ins = fn(string $sql, array $p) => $pdo->prepare($sql)->execute($p) ? (int) $pdo->lastInsertId() : 0;
+    $now = time();
+    $at = fn(int $days) => date('Y-m-d H:i:s', $now - $days * 86400);
+    $spravce = $ins("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'admin','owner',?)", ['Petra Dvořáková (Ukázková správa domů s.r.o.)', 'ukazka-partner@example.invalid', NO_PASSWORD]);
+    $vybor = $ins("INSERT INTO users (name, email, role, kind, password_hash, position) VALUES (?,?,'admin','owner',?,?)", ['Tomáš Malý', 'predseda@' . $slug . '.example.invalid', NO_PASSWORD, 'predseda']);
+    $people = [];
+    foreach (['Eva Horáková', 'Martin Kučera', 'Lenka Pokorná', 'Jiří Navrátil', 'Hana Veselá'] as $i => $n) {
+        $people[] = $ins("INSERT INTO users (name, email, role, kind, password_hash) VALUES (?,?,'resident','owner',?)", [$n, 'obyvatel' . ($i + 1) . '@' . $slug . '.example.invalid', NO_PASSWORD]);
+        $unit = $ins('INSERT INTO units (entrance, number, share, owner_note) VALUES (?,?,?,?)', ['A', (string) ($i + 1), (1500 + $i * 120) . '/10000', $n]);
+        $pdo->prepare('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)')->execute([$people[$i], $unit]);
+    }
+    $ins('INSERT INTO posts (title, body, published_at) VALUES (?,?,?)', ['Odečty vodoměrů', 'Odečty proběhnou příští týden ve středu od 16 hodin. Prosíme o zpřístupnění bytů.', $at(3)]);
+    $tickets = $slug === 'ukazka-lipova' ? [
+        [0, 'Nefunguje zvonek u vchodu', 'vchod A', 'Zvonek k bytu 3 nezvoní, displej nesvítí.', 'new', 1, 0, ''],
+        [1, 'Zatéká do sklepa po dešti', 'sklep, kóje 4', 'Po včerejším dešti je na podlaze voda, teče od okénka.', 'in_progress', 9, $spravce, date('Y-m-d', $now - 2 * 86400)],
+        [2, 'Výměna zámku u kočárkárny', 'přízemí', 'Zámek jde ztuha, klíč se zasekává.', 'done', 30, $vybor, ''],
+    ] : [
+        [3, 'Hluk z výtahu', 'výtah', 'Při jízdě do 3. patra výtah skřípe a cuká.', 'in_progress', 4, $spravce, date('Y-m-d', $now + 5 * 86400)],
+        [4, 'Prasklá dlaždice na chodbě', '2. patro', 'U schodů je prasklá dlaždice, hrozí zakopnutí.', 'new', 0, 0, ''],
+    ];
+    foreach ($tickets as [$who, $subject, $loc, $body, $status, $days, $assignee, $due]) {
+        $id = $ins('INSERT INTO tickets (user_id, subject, location, body, status, created_at, assignee_id, due_date) VALUES (?,?,?,?,?,?,?,?)', [$people[$who], $subject, $loc, $body, $status, $at($days), $assignee, $due]);
+        $ins("INSERT INTO ticket_log (ticket_id, at, user_id, user_name, kind, text) VALUES (?,?,?,?,'created','')", [$id, $at($days), $people[$who], '']);
+        if ($assignee) {
+            $ins("INSERT INTO ticket_log (ticket_id, at, user_id, user_name, kind, text) VALUES (?,?,?,?,'assign',?)", [$id, $at(max(0, $days - 1)), $vybor, 'Tomáš Malý', $assignee === $spravce ? 'Petra Dvořáková (Ukázková správa domů s.r.o.)' : 'Tomáš Malý']);
+        }
+        if ($status !== 'new') {
+            $ins("INSERT INTO ticket_log (ticket_id, at, user_id, user_name, kind, text) VALUES (?,?,?,?,'msg_admin',?)", [$id, $at(max(0, $days - 1)), $spravce, 'Petra Dvořáková (Ukázková správa domů s.r.o.)',
+                $status === 'done' ? 'Zámek je vyměněný, nové klíče jsou u předsedy.' : 'Dobrý den, objednali jsme technika, ozve se Vám s termínem.']);
+        }
+    }
+}

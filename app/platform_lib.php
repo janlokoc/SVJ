@@ -1094,8 +1094,8 @@ function demo_tenant(): ?array
 /** Znovu založí ukázkový web s čerstvými daty (termíny, zprávy a lhůty se počítají ode dneška). */
 function demo_refresh(): void
 {
-    $old = pq('SELECT * FROM tenants WHERE demo = 1 LIMIT 1')->fetch();
-    if ($old) {
+    // Ukázkový web i domy ukázky partnerského portálu (založí se znovu při dalším vstupu do ní).
+    foreach (pq('SELECT * FROM tenants WHERE demo IN (1, 2)')->fetchAll() as $old) {
         tenant_delete_storage($old['slug']);
         pq('DELETE FROM tenants WHERE slug = ?', [$old['slug']]);
     }

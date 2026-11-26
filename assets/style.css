@@ -1753,3 +1753,11 @@ details.storno form { margin-top: .5rem; min-width: 16rem; }
 .usage-cell { text-align: center; }
 .usage-yes { color: var(--primary); font-weight: 700; }
 @media (max-width: 600px) { .usage-bar { grid-template-columns: 1fr 4rem; } .usage-bar progress { grid-column: 1 / -1; grid-row: 2; } }
+.demo-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
+.demo-path { display: flex; flex-direction: column; gap: .45rem; margin: 0; color: var(--ink); text-decoration: none; border-width: 2px; }
+.demo-path:hover { border-color: var(--primary); }
+.demo-path strong { font: 700 1.5rem/1.2 var(--display); }
+.demo-path .muted { flex: 1; }
+.demo-path .btn { align-self: flex-start; margin-top: .4rem; }
+.demo-path-kicker { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
+.demo-svj-h { scroll-margin-top: 140px; }

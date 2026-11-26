@@ -253,6 +253,19 @@ if ($GLOBALS['DEMO'] && $METHOD === 'GET' && $PATH === '/vstup') {
     render('demo_login', ['title' => 'Vstup do ukázky']);
     exit;
 }
+// Vstup z ukázky partnerského portálu: rovnou jako správce (ukázkový dům je jen pro čtení).
+if ($GLOBALS['DEMO'] && $METHOD === 'GET' && $PATH === '/demo-vstup') {
+    $who = one("SELECT * FROM users WHERE role = 'admin' AND active = 1 AND email LIKE 'ukazka-partner@%'") ?? one("SELECT * FROM users WHERE role = 'admin' AND active = 1 ORDER BY id LIMIT 1");
+    if ($who) {
+        $edition = $_SESSION['demo_edition'] ?? null;
+        login_user($who);
+        $_SESSION['partner'] = 'Ukázková správa domů s.r.o.';
+        if ($edition) {
+            $_SESSION['demo_edition'] = $edition;
+        }
+    }
+    redirect(ctype_digit((string) ($_GET['zavada'] ?? '')) ? '/admin/zavady?f=vse#z' . (int) $_GET['zavada'] : '/admin');
+}
 if ($GLOBALS['DEMO'] && $METHOD === 'GET' && (in_array($PATH, ['/prihlaseni', '/prihlaseni/overeni', '/zapomenute-heslo'], true) || str_starts_with($PATH, '/obnova-hesla/'))) {
     if (user()) {
         redirect(is_admin() ? '/admin' : '/');

@@ -1,6 +1,14 @@
 <?php $u = user(); $now = !$u ? 'host' : ($u['role'] === 'admin' ? 'admin' : 'resident'); ?>
 <div class="wrap page">
-  <header class="page-head"><h1>Vstup do ukázky</h1><p class="lead">Tohle je ukázkový web smyšleného společenství. Není potřeba účet ani heslo – vyberte, jakýma očima se chcete podívat. Mezi pohledy můžete kdykoli přepnout v liště nahoře.</p></header>
+  <header class="page-head"><h1>Vstup do ukázky</h1><p class="lead">Vše je smyšlené a nic se neukládá – není potřeba účet ani heslo. Kdo jste?</p></header>
+  <div class="demo-paths">
+    <a class="card demo-path" href="#svj"><span class="demo-path-kicker">Jsem z výboru nebo bydlím v domě</span><strong>Web společenství</strong>
+      <span class="muted">Jak web vidí obyvatel, návštěvník a výbor, který ho spravuje: aktuality, dokumenty, hlasování, závady, platby.</span><span class="btn">Ukázka pro SVJ</span></a>
+    <a class="card demo-path" href="<?= e(platform_url('/partner/ukazka')) ?>"><span class="demo-path-kicker">Spravuji domy jako správcovská firma</span><strong>Partnerský portál</strong>
+      <span class="muted">Všechny spravované domy na jednom místě: hlášení závad ze všech domů, vstup do administrace každého domu a jedna faktura s množstevní slevou.</span><span class="btn btn-ghost">Ukázka pro správce</span></a>
+  </div>
+  <h2 id="svj" class="demo-svj-h">Ukázka pro SVJ: jakýma očima se chcete podívat?</h2>
+  <p class="muted">Mezi pohledy můžete kdykoli přepnout v liště nahoře.</p>
   <div class="demo-roles">
     <?php foreach ([
         'host' => ['Návštěvník bez účtu', 'Co uvidí kdokoli, kdo web otevře: úvodní stránka, veřejné aktuality a dokumenty, kontakty na výbor a havarijní čísla. Neveřejné věci zůstanou skryté.', 'Prohlédnout jako návštěvník'],

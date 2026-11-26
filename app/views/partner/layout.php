@@ -12,6 +12,12 @@
 </head>
 <body class="in-admin">
 <?= staging_bar() ?>
+<?php if (!empty($GLOBALS['PARTNER_DEMO'])): ?>
+<div class="demo-bar" translate="no"><div class="wrap">
+  <span class="demo-intro"><a class="demo-back" href="<?= e(($dt = demo_tenant()) ? tenant_url($dt, '/vstup') : platform_url('/')) ?>"><?= icon('arrow') ?> Zpět na rozcestník ukázky</a> <span><strong>Ukázka partnerského portálu.</strong> Smyšlená správcovská firma se třemi domy – vše si proklikejte, změny se neukládají.</span></span>
+  <?php if (filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL)): ?><span class="demo-actions"><a class="btn btn-small btn-accent" href="mailto:<?= e(pset('contact_email')) ?>?subject=<?= rawurlencode('Partnerský účet pro správcovskou firmu') ?>">Chci partnerský účet</a></span><?php endif ?>
+</div></div>
+<?php endif ?>
 <header class="site-header">
   <div class="wrap header-row">
     <a class="brand" href="<?= url('/') ?>"><svg class="brand-mark" viewBox="0 0 44 32" aria-hidden="true"><rect x="1" y="9" width="9" height="22" rx="1.5"/><rect x="12" y="3" width="9" height="28" rx="1.5"/><rect x="23" y="9" width="9" height="22" rx="1.5"/><rect x="34" y="3" width="9" height="28" rx="1.5"/></svg>
