@@ -109,7 +109,26 @@ final class ModBRollamTest extends TestCase
         $this->assertNotNull(rollam_set_method($this->poll, 'bankid'), 'unavailable method rejected');
         $this->assertSame('email', rollam_method($this->poll), 'previous setting kept');
         $this->assertNotNull(rollam_set_method($this->poll, 'bogus'));
-        $this->assertArrayHasKey('sms', rollam_methods_available(), 'sms offered when sms_send() exists');
+    }
+
+    /** Kód z SMS se nabízí jen domu, který má SMS zprávy zapnuté (beta) – jinak by kód nikdy neodešel (našel ověřovací běh nápovědy). */
+    public function testSmsOfferedOnlyWhenSmsFeatureIsVisible(): void
+    {
+        $saved = pq("SELECT value FROM platform_settings WHERE key = 'beta_sms'")->fetchColumn();
+        try {
+            pset_save('beta_sms', 'off');
+            $this->assertArrayNotHasKey('sms', rollam_methods_available(), 'SMS zprávy vypnuté – kód z SMS se nenabízí');
+            $this->assertNotNull(rollam_set_method($this->poll, 'sms'), 'nedostupná volba se neuloží');
+            pset_save('beta_sms', 'on');
+            $this->assertArrayHasKey('sms', rollam_methods_available(), 'SMS zprávy zapnuté – kód z SMS se nabízí');
+        } finally {
+            if ($saved === false) {
+                pq("DELETE FROM platform_settings WHERE key = 'beta_sms'");
+                pset('__reset');
+            } else {
+                pset_save('beta_sms', (string) $saved);
+            }
+        }
     }
 
     public function testPollSavedHookReadsPostAndFlashesOnError(): void

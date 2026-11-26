@@ -6,6 +6,7 @@
   <li>Na stránce poskytovatele vyberte svůj účet a potvrďte.</li>
   <li>Vrátíte se na web domu už přihlášení. Máte-li zapnuté <strong>dvoufázové ověření</strong>, web se ještě zeptá na kód z aplikace v telefonu – stejně jako po zadání hesla.</li>
 </ol>
+<?= help_fig('sso-1-prihlaseni.jpg', 'Přihlášení: tlačítka poskytovatelů pod formulářem.') ?>
 <p class="callout"><strong>Účet tím nevznikne.</strong> Přihlásit se tak může jen ten, komu už výbor účet založil (pozvánkou nebo odkazem pro přiřazení k jednotce) a kdo pozvánku přijal. Web Vás pozná podle e-mailu, který Vám poskytovatel potvrdil jako ověřený – musí to být stejný e-mail, na který máte účet zde.</p>
 
 <h2>Jiný e-mail nebo skrytý e-mail Apple: propojte si účet</h2>
@@ -15,6 +16,7 @@
   <li>Otevřete <strong>Můj účet</strong> a v části <strong>Přihlášení přes další účty</strong> klepněte u poskytovatele na <strong>Propojit účet</strong>.</li>
   <li>Přihlaste se u poskytovatele. Po návratu uvidíte u poskytovatele <span class="status status-done">Propojeno</span>.</li>
 </ol>
+<?= help_fig('sso-2-ucet.jpg', 'Můj účet: propojený účet Apple a tlačítka pro další poskytovatele.') ?>
 <p>Od té doby Vás web pozná podle stálého identifikátoru, který mu poskytovatel posílá – e-mail už nehraje roli. Propojení zrušíte tamtéž tlačítkem <strong>Zrušit propojení</strong>; heslo ani dvoufázové ověření se tím nemění.</p>
 
 <h2>Dobré vědět</h2>
@@ -28,4 +30,4 @@
 
 <h2>Pro výbor a správce webu</h2>
 <p>Ve webu domu nic nastavovat nemusíte. Tlačítka se objeví sama, jakmile provozovatel služby přihlášení přes daného poskytovatele zapne. Uživatele dál zakládáte jako dosud (pozvánkou); kdo účet nemá, přes Google ani jiného poskytovatele se nedostane.</p>
-<p class="hint">Stránky poskytovatelů (výběr účtu Google, Microsoft, Apple, Facebook) jsou cizí weby, jejich vzhled ani přesné texty tento návod neověřuje a mohou se měnit.</p>
+<p class="hint">Stránky poskytovatelů (výběr účtu Google, Microsoft, Apple, Facebook) jsou cizí weby, jejich vzhled ani přesné texty tento návod neověřuje a mohou se měnit. Celé přihlášení u poskytovatele ověřovací běh nezkouší (nemá u nich účty): vyhledání účtu podle ověřeného e-mailu, dotaz na kód dvoufázového ověření a dokončení propojení ověřují jen automatické testy webu se vzorovými odpověďmi poskytovatelů.</p>

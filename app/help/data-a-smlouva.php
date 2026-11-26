@@ -10,7 +10,7 @@
   <li>Soubor obsahuje <code>data.json</code> (všechna data webu v otevřeném formátu) a složku <code>uploads</code> s nahranými dokumenty.</li>
   <li>Uložte ho na bezpečné místo – obsahuje osobní údaje obyvatel. Stažení se zapíše do Záznamů.</li>
 </ol>
-<p class="callout">V edici Zdarma jde export stáhnout jednou za 30 dní. Edice Standard má navíc Zálohu dat bez omezení, kterou jde i obnovit.</p>
+<p class="callout">V edici Zdarma jde export stáhnout jednou za 30 dní – web po stažení napíše, kdy bude možný další.</p>
 
 <h2>3. Smlouva o zpracování osobních údajů</h2>
 <ol>

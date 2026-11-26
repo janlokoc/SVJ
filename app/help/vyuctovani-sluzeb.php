@@ -6,7 +6,7 @@
 </ul>
 
 <h2>1. Připravte soubory od firmy, která vyúčtování zpracovala</h2>
-<p>Odečtová nebo správcovská firma obvykle dodá vyúčtování jako jeden PDF soubor za každou jednotku. Web jednotku pozná z názvu souboru – například <code>A-5.pdf</code>, <code>B10.pdf</code> nebo <code>vyuctovani_A_3.pdf</code> (písmeno vchodu a číslo jednotky). U domu bez vchodů stačí číslo jednotky.</p>
+<p>Odečtová nebo správcovská firma obvykle dodá vyúčtování jako jeden PDF soubor za každou jednotku. Web jednotku pozná z názvu souboru – například <code>A-5.pdf</code>, <code>B10.pdf</code> nebo <code>vyuctovani_A_3.pdf</code> (písmeno vchodu a číslo jednotky).</p>
 <p class="callout">Jak soubory pojmenovává Vaše firma, jsme ověřit nemohli. Když dodá jeden velký PDF pro celý dům, požádejte ji o rozdělení po jednotkách.</p>
 
 <h2>2. Založte vyúčtování a nahrajte soubory</h2>
@@ -15,10 +15,10 @@
   <li>V části <strong>Nahrát soubory jednotek</strong> vyberte všechny soubory najednou a klikněte na <strong>Nahrát</strong>.</li>
   <li>Soubory, u kterých se jednotka z názvu nepoznala, jsou v části <strong>Soubory bez jednotky</strong> – otevřete je, vyberte jednotku a klikněte na <strong>Přiřadit</strong>.</li>
 </ol>
-<?= help_fig('vyuctovani-1-nahrano.jpg', 'Po nahrání: přehled jednotek a soubor, který je třeba přiřadit ručně.') ?>
+<?= help_fig('vyuctovani-1-nahrano.jpg', 'Po nahrání: soubor, u kterého se jednotka z názvu nepoznala, přiřadíte ručně.') ?>
 
 <h2>3. Zveřejněte</h2>
-<p>V části <strong>Zveřejnit a doručit</strong> zadejte den doručení (obvykle dnešní den) a klikněte na <strong>Zveřejnit</strong>. Vlastníci jednotek dostanou e-mail (a upozornění do telefonu, mají-li je zapnuté). Od dne doručení běží 30 dnů pro námitky. Zveřejněné vyúčtování už nejde smazat – slouží jako doklad o doručení.</p>
+<p>V části <strong>Zveřejnit a doručit</strong> zadejte den doručení (obvykle dnešní den) a klikněte na <strong>Zveřejnit</strong>. Vlastníci jednotek dostanou e-mail. Od dne doručení běží 30 dnů pro námitky. Zveřejněné vyúčtování už nejde smazat – slouží jako doklad o doručení.</p>
 <p class="callout">Vyúčtování vidí jen <strong>vlastníci</strong> jednotky s účtem na webu, ne nájemníci. Jednotkám bez účtu vlastníka (v přehledu označené „bez účtu vlastníka“) je třeba vyúčtování doručit jinak.</p>
 
 <h2>4. Sledujte stav po jednotkách</h2>

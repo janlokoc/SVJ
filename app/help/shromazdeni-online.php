@@ -3,6 +3,7 @@
 
 <h2>1. Zapnutí pro dům</h2>
 <p><strong>Administrace → Shromáždění online.</strong> Zaškrtněte <em>Povolit shromáždění online a hybridní</em>. Pokud stanovy vyžadují silnější ověření totožnosti, zaškrtněte i <em>ověřit vlastníka kódem z e-mailu</em> – vlastník pak při připojení dostane šestimístný kód (platí 10 minut).</p>
+<p>V edici Premium je shromáždění online v ceně. V edici Standard stojí online nebo hybridní forma <strong>490 Kč bez DPH za shromáždění</strong> a platí se z kreditu služeb – cenu web ukáže přímo u formy shromáždění v termínu.</p>
 <?= help_fig('shrom-online-1-nastaveni.jpg', 'Shromáždění online: zapnutí pro dům a vzorové ustanovení stanov.') ?>
 
 <h2>2. Forma u termínu a odkaz na videohovor</h2>

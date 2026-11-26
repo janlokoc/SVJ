@@ -25,7 +25,8 @@ const DOMAIN = 'spolecnyweb.cz';
 const TLS_PORT = PORT + 100;
 const BASE = `https://${DOMAIN}`;
 const T = `https://dum.${DOMAIN}`;
-const LAUNCH = { args: [`--host-resolver-rules=MAP ${DOMAIN} 127.0.0.1:${TLS_PORT}, MAP *.${DOMAIN} 127.0.0.1:${TLS_PORT}`, '--ignore-certificate-errors', '--proxy-server=direct://'] };
+// Jiné adresy než web služby prohlížeč nenajde (MAP * ~NOTFOUND) – ověřovací běh nikdy nevolá cizí weby.
+const LAUNCH = { args: [`--host-resolver-rules=MAP ${DOMAIN} 127.0.0.1:${TLS_PORT}, MAP *.${DOMAIN} 127.0.0.1:${TLS_PORT}, MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1`, '--ignore-certificate-errors', '--proxy-server=direct://'] };
 const results = {};
 const failures = [];
 let current = null;
@@ -440,43 +441,65 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const download = async (page, click) => { const [dl] = await Promise.all([page.waitForEvent('download'), click()]); const f = path.join(STORE, 'stazeno-' + dl.suggestedFilename()); await dl.saveAs(f); return f; };
     const zipFiles = (f) => JSON.parse(execFileSync('php', ['-r', '$z = new ZipArchive(); $z->open($argv[1]); $o = []; for ($i = 0; $i < $z->numFiles; $i++) { $s = (string) $z->getFromIndex($i); $o[$z->getNameIndex($i)] = mb_check_encoding($s, "UTF-8") ? $s : (string) iconv("CP1250", "UTF-8//IGNORE", $s); } echo json_encode($o, JSON_INVALID_UTF8_SUBSTITUTE);', f]).toString());
 
+    // Edice domu pro jednu kontrolu (předplatné v databázi služby); 'premium' = výchozí stav běhu (web bez placení).
+    const edition = (ed, paid = ed !== 'premium') => prun(!paid ? "UPDATE tenants SET billing = 0, plan = '', paid_until = '', trial_ends = '' WHERE slug = 'dum'"
+      : `UPDATE tenants SET billing = 1, plan = '${ed === 'free' ? '' : ed}', paid_until = '${ed === 'free' ? '' : plusDays(200)}', trial_ends = '' WHERE slug = 'dum'`);
+    // Kredit služeb: provozovatel připíše opravu (Kč, záporná = odečíst) v konzoli.
+    const creditFix = async (czk, note) => { await s.goto(BASE + '/sprava/kredit'); await s.selectOption('form:has([value=fix]) [name=tenant]', 'dum'); await s.fill('form:has([value=fix]) [name=amount]', String(czk)); await s.fill('form:has([value=fix]) [name=note]', note); await s.click('form:has([value=fix]) button[type=submit]'); };
+    const creditH = () => Number(psql("SELECT COALESCE(SUM(delta_h), 0) FROM credit_ledger WHERE tenant = 'dum'"));
+
     // ---------- SMS zprávy ----------
-    begin('sms-zpravy', 'Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: kredit a jeho objednání, náhled a cena, výběr příjemců, odeslání bráně a vrácení kreditu za zprávu, kterou brána odmítla.');
+    begin('sms-zpravy', 'Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: SMS v ceně edice Premium, kredit služeb a jeho dobití, náhled a cena, výběr příjemců, odeslání bráně a vrácení peněz za zprávu, kterou brána odmítla.');
     {
-    setCfg('sms', { gosms_client_id: 'zkouska', gosms_client_secret: 'zkouska', gosms_channel: 1, gosms_url: FAKE + '/gosms' });
-    // Provozovatel v konzoli: brána a kredit pro dům (po zaplacení balíčku).
-    await s.goto(BASE + '/sprava/sms');
-    await s.selectOption('form:has([value=settings]) [name=provider]', 'gosms'); await s.click('form:has([value=settings]) button[type=submit]');
-    await s.selectOption('#kredity [name=tenant]', 'dum'); await s.fill('#kredity [name=count]', '5'); await s.fill('#kredity [name=note]', 'balíček – ověření návodu'); await s.click('#kredity button[type=submit]');
-    check((await flash(s)).includes('Kredit je upravený'), 'provozovatel připsal kredit: ' + await flash(s));
-    run("UPDATE users SET phone = '541 123 456' WHERE email = 'eva.svobodova@example.cz'");
-    await admin.goto(T + '/admin/sms');
-    check(await navGroup(admin, '/admin/sms') === 'Komunikace', 'SMS zprávy v menu administrace');
-    const kr = await text(admin, '#kredit');
-    check(/\b5 SMS\b/.test(kr) && /Jedna SMS stojí [\d,]+\s*Kč bez DPH/.test(kr), 'kredit a cena jedné SMS: ' + kr.slice(0, 200)); step('V části Kredit je zůstatek (5 SMS, připsal provozovatel) a cena jedné SMS bez DPH.');
-    const before1 = mailLen();
-    await admin.fill('#kredit [name=packs]', '1'); await admin.click('#kredit button:has-text("Objednat kredit")');
-    check((await flash(admin)).includes('Objednávka je odeslaná provozovateli'), 'objednávka kreditu: ' + await flash(admin));
-    check(mailsSince(before1, 'provoz@example.cz').some((m) => m.subject.includes('Objednávka SMS kreditu')), 'objednávka přišla provozovateli e-mailem'); step('Tlačítko Objednat kredit poslalo objednávku e-mailem provozovateli služby.');
-    const rcpt = await text(admin, 'main .card');
-    check(/Příjemci: 4 vlastníků/.test(rcpt) && rcpt.includes('Neplatné nebo pevné číslo má 1'), 'příjemci: 4 mobily, 1 pevná linka vynechána: ' + rcpt.slice(0, 160)); step('Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.');
-    const smsText = 'Havárie vody ve sklepě: dnes od 14 do 18 hodin nepoteče voda. Děkujeme za pochopení. Výbor SVJ Zahradní 12';
-    await admin.fill('[name=text]', smsText); await admin.uncheck('[name=plain]'); await admin.click('button[value=preview]');
-    let pv = await text(admin, '#nahled');
-    check(pv.includes('s diakritikou') && /2 SMS \(zpráva se rozdělí\)/.test(pv) && pv.includes('Celkem 8 SMS') && pv.includes('Kredit nestačí') && !(await admin.$('#nahled button[value=send]')), 's diakritikou 2 SMS a kredit nestačí: ' + pv);
-    step('S diakritikou má zpráva (' + smsText.length + ' znaků) 2 SMS na příjemce, celkem 8 SMS – kredit 5 nestačí, web odeslání nenabídne.');
-    await admin.check('[name=plain]'); await admin.click('button[value=preview]');
-    pv = await text(admin, '#nahled');
-    check(pv.includes('Havarie vody ve sklepe') && pv.includes('bez diakritiky') && /\b1 SMS na příjemce/.test(pv) && pv.includes('Celkem 4 SMS pro 4 vlastníků') && /Kč bez DPH/.test(pv), 'bez diakritiky 1 SMS: ' + pv);
-    step('Bez diakritiky se zpráva vejde do 1 SMS; náhled ukázal text, počet příjemců a celkovou cenu bez DPH.');
-    await shot(admin.locator('#nahled'), 'sms-1-nahled.jpg');
-    await admin.click('#nahled button[value=send]');
-    const sf = await flash(admin);
-    check(sf.includes('SMS odeslána 3 vlastníkům') && sf.includes('neodesláno 1'), 'odesláno 3, brána 1 odmítla: ' + sf);
-    check(smsSent.length === 4 && smsSent.every((m) => m.message.startsWith('Havarie vody')), 'brána dostala 4 zprávy bez diakritiky');
-    check(/\b2 SMS\b/.test(await text(admin, '#kredit')) && (await text(admin, '#kredit')).includes('vráceno'), 'kredit 5 − 4 + 1 vráceno = 2');
-    check((await admin.locator('table:below(h2:has-text("Odeslané zprávy")) tbody tr').count()) >= 4, 'přehled odeslaných zpráv');
-    step('Odesláno 3 vlastníkům; zprávu, kterou brána odmítla, web vrátil do kreditu (5 − 4 + 1 = 2 SMS). Přehled odeslaných zpráv je dole na stránce.');
+      s.on('dialog', (d) => d.accept());
+      setCfg('sms', { gosms_client_id: 'zkouska', gosms_client_secret: 'zkouska', gosms_channel: 1, gosms_url: FAKE + '/gosms' });
+      await s.goto(BASE + '/sprava/sms');
+      await s.selectOption('form:has([value=settings]) [name=provider]', 'gosms'); await s.click('form:has([value=settings]) button[type=submit]');
+      run("UPDATE users SET phone = '541 123 456' WHERE email = 'eva.svobodova@example.cz'");
+      edition('premium', true);
+      await admin.goto(T + '/admin/sms');
+      check(await navGroup(admin, '/admin/sms') === 'Komunikace', 'SMS zprávy v menu administrace');
+      let kr = await text(admin, '#kredit');
+      check(kr.includes('100 z 100 SMS v ceně edice Premium') && /Jedna SMS stojí 1,50 Kč bez DPH a platí se z kreditu služeb/.test(kr), 'Premium: 100 SMS v ceně, cena 1,50 Kč: ' + kr);
+      const rcpt = await text(admin, 'main .card');
+      check(/Příjemci: 4 vlastníků/.test(rcpt) && rcpt.includes('Neplatné nebo pevné číslo má 1'), 'příjemci: 4 mobily, 1 pevná linka vynechána: ' + rcpt.slice(0, 160));
+      step('SMS zprávy (Komunikace): edice Premium má 100 SMS ročně v ceně, další SMS stojí 1,50 Kč bez DPH z kreditu služeb. Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.');
+      // Edice Standard: jen kredit služeb.
+      edition('standard'); await creditFix(5, 'ověření návodu');
+      await admin.goto(T + '/admin/sms');
+      const smsText = 'Havárie vody ve sklepě: dnes od 14 do 18 hodin nepoteče voda. Děkujeme za pochopení. Výbor SVJ Zahradní 12';
+      await admin.fill('[name=text]', smsText); await admin.uncheck('[name=plain]'); await admin.click('button[value=preview]');
+      let pv = await text(admin, '#nahled');
+      check(pv.includes('s diakritikou') && /2 SMS \(zpráva se rozdělí\)/.test(pv) && pv.includes('Celkem 8 SMS') && pv.includes('12 Kč bez DPH') && pv.includes('Kredit služeb nestačí (vystačí na 3 SMS)') && !(await admin.$('#nahled button[value=send]')), 's diakritikou 2 SMS, kredit nestačí: ' + pv);
+      step('S diakritikou má zpráva (' + smsText.length + ' znaků) 2 SMS na příjemce, celkem 8 SMS za 12 Kč – kredit 5 Kč nestačí (na 3 SMS), web odeslání nenabídne a nabídne dobití.');
+      await admin.click('#nahled a:has-text("Dobít kredit")');
+      const kp = await text(admin);
+      check(admin.url().includes('/admin/kredit') && kp.includes('Kredit platí 24 měsíců od dobití') && /SMS[^:]*: 1,50 Kč/.test(kp), 'stránka Kredit služeb: platnost 24 měsíců a ceny: ' + kp.slice(0, 500));
+      await admin.check('#dobit [name=amount][value="500"]'); await admin.click('#dobit button:has-text("Objednat dobití")');
+      check((await flash(admin)).includes('Dobití je objednané') && (await text(admin, '#platba')).includes('Variabilní symbol') && !!(await admin.$('#platba a:has-text("Zálohová faktura k tisku")')), 'zálohová faktura k dobití');
+      await admin.click('#platba button:has-text("Platbu jsem odeslal(a)")');
+      const vs = psql("SELECT vs FROM payments WHERE tenant = 'dum' AND kind = 'credit' ORDER BY id DESC LIMIT 1");
+      await s.goto(BASE + '/sprava/platby'); await s.locator('tr', { hasText: vs }).locator('button:has-text("Platba dorazila")').click();
+      check(creditH() === 50500, 'po potvrzení platby připsáno 500 Kč: ' + creditH());
+      step('Tlačítko „Dobít kredit“ vede na Kredit služeb (kredit platí 24 měsíců): objednáno dobití 500 Kč, zálohová faktura s variabilním symbolem; po potvrzení platby provozovatelem se kredit připsal.');
+      await admin.goto(T + '/admin/sms'); await admin.fill('[name=text]', smsText); await admin.check('[name=plain]'); await admin.click('button[value=preview]');
+      pv = await text(admin, '#nahled');
+      check(pv.includes('Havarie vody ve sklepe') && pv.includes('bez diakritiky') && /\b1 SMS na příjemce/.test(pv) && pv.includes('Celkem 4 SMS pro 4 vlastníků, tj. 6 Kč bez DPH'), 'bez diakritiky 1 SMS: ' + pv);
+      step('Bez diakritiky se zpráva vejde do 1 SMS; náhled ukázal text, počet SMS, příjemce a celkovou cenu 6 Kč bez DPH.');
+      await shot(admin.locator('#nahled'), 'sms-1-nahled.jpg');
+      await admin.click('#nahled button[value=send]');
+      const sf = await flash(admin);
+      check(sf.includes('SMS odeslána 3 vlastníkům') && sf.includes('neodesláno 1'), 'odesláno 3, brána 1 odmítla: ' + sf);
+      check(smsSent.length === 4 && smsSent.every((m) => m.message.startsWith('Havarie vody')), 'brána dostala 4 zprávy bez diakritiky');
+      check(creditH() === 50500 - 600 + 150, 'z kreditu 4 × 1,50 Kč, odmítnutá zpráva vrácena: ' + creditH());
+      check((await admin.locator('table:below(h2:has-text("Odeslané zprávy")) tbody tr').count()) >= 4, 'přehled odeslaných zpráv');
+      step('Odesláno 3 vlastníkům; z kreditu se strhlo 4 × 1,50 Kč a za zprávu, kterou brána odmítla, se 1,50 Kč vrátilo. Přehled odeslaných zpráv je dole na stránce.');
+      // Premium: nejdřív SMS v ceně edice.
+      edition('premium', true);
+      const c0 = creditH(); await admin.goto(T + '/admin/sms'); await admin.fill('[name=text]', 'Zkouska: voda uz tece. Vybor'); await admin.click('button[value=preview]'); await admin.click('#nahled button[value=send]');
+      kr = await text(admin, '#kredit');
+      check(creditH() === c0 && /\b9[67] z 100 SMS v ceně edice Premium/.test(kr), 'Premium: čerpají se SMS v ceně edice, kredit beze změny: ' + kr);
+      step('V edici Premium se nejdřív čerpají SMS v ceně edice – kredit služeb se nezměnil.');
     }
 
     // ---------- Hlasování mimo zasedání (per rollam) ----------
@@ -611,6 +634,12 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await admin.click('main form button[type=submit]');
       check((await flash(admin)).includes('U termínu shromáždění teď můžete zvolit hybridní nebo online formu'), 'shromáždění online povoleno');
       step('Administrace → Shromáždění online: povoleno pro dům i ověření kódem z e-mailu; stránka nabízí vzorové ustanovení stanov.');
+      edition('standard'); await admin.goto(T + '/admin/terminy/novy');
+      const std = await text(admin, 'fieldset.hybrid-fields');
+      check(std.includes('Online nebo hybridní forma stojí v edici Standard 490 Kč bez DPH za shromáždění a platí se z kreditu služeb') && std.includes('V edici Premium je v ceně'), 'cena v edici Standard: ' + std.slice(0, 300));
+      edition('premium', true); await admin.goto(T + '/admin/terminy/novy');
+      check(!(await text(admin, 'fieldset.hybrid-fields')).includes('490'), 'v edici Premium v ceně');
+      step('U termínu v edici Standard web uvádí cenu 490 Kč bez DPH za shromáždění z kreditu služeb; v edici Premium je v ceně (cenu neukazuje).');
       await admin.goto(T + '/admin/terminy/novy');
       await admin.fill('[name=title]', 'Mimořádné shromáždění vlastníků'); await admin.fill('[name=event_date]', today); await admin.fill('[name=event_time]', '18:00'); await admin.fill('[name=place]', 'Kočárkárna a online');
       await admin.fill('[name=program]', '- Zahájení shromáždění\n- Výměna vchodových dveří za nejvýše 180 000 Kč\n- Ukončení shromáždění');
@@ -714,7 +743,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await admin.click('button:has-text("Nahrát")');
       check((await flash(admin)).includes('Nahráno a přiřazeno k jednotkám: 5. U 1 souborů se jednotka z názvu nepoznala'), 'nahráno 5 + 1 bez jednotky: ' + await flash(admin));
       check((await text(admin)).includes('Soubory bez jednotky') && (await text(admin, '#j' + sql(`SELECT id FROM modf_settlement_items WHERE original_name = 'A-5.pdf'`))).includes('bez účtu vlastníka'), 'soubor bez jednotky a jednotka bez účtu vlastníka');
-      await shot(admin.locator('main'), 'vyuctovani-1-nahrano.jpg', 1100);
+      await shot(admin.locator('section:has(#modf-un-h)'), 'vyuctovani-1-nahrano.jpg', 1100);
       await admin.selectOption('section:has(#modf-un-h) select[name=unit_id]', unitId('A/4')); await admin.click('section:has(#modf-un-h) button:has-text("Přiřadit")');
       check((await flash(admin)).includes('Soubor je přiřazený k jednotce') && !(await admin.$('#modf-un-h')), 'ručně přiřazeno');
       step('Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12A/5 je označená „bez účtu vlastníka“.');
@@ -767,7 +796,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await admin.goto(T + '/admin/plan-oprav');
       check((await flash(admin)).includes('Začněte nastavením fondu'), 'výzva k nastavení fondu');
       const fund = async (monthly, mode = 'shares', publish = false) => {
-        await admin.fill('#fond [name=balance]', '450000'); await admin.fill('#fond [name=balance_date]', `${Y}-10-31`); await admin.check(`#fond [name=mode][value=${mode}]`);
+        await admin.fill('#fond [name=balance]', '650000'); await admin.fill('#fond [name=balance_date]', `${Y}-10-31`); await admin.check(`#fond [name=mode][value=${mode}]`);
         await admin.fill('#fond [name=monthly]', String(monthly)); await admin.selectOption('#fond [name=years]', '15'); await admin.fill('#fond [name=inflation]', '3');
         if (publish) await admin.check('#fond [name=published]'); await admin.click('#fond button[type=submit]');
       };
@@ -777,14 +806,14 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
         await admin.locator('details.modf-add summary').click(); await admin.fill('.modf-add [name=title]', title); await admin.fill('.modf-add [name=year]', String(year)); await admin.fill('.modf-add [name=cost]', String(cost));
         await admin.selectOption('.modf-add [name=priority]', priority); await admin.selectOption('.modf-add [name=status]', status); await admin.click('.modf-add button[type=submit]');
       };
-      await repair('Výměna střešní krytiny', Y + 2, 1800000, 'planned', '1');
-      await repair('Oprava stoupaček', Y + 5, 900000, 'approved');
+      await repair('Výměna střešní krytiny', Y + 3, 1800000, 'planned', '1');
+      await repair('Oprava stoupaček', Y + 8, 900000, 'approved');
       await repair('Výměna zvonků', Y - 1, 50000, 'done', '3');
       await repair('Nátěr zábradlí', Y - 1, 40000, 'planned', '3');
       check((await admin.locator('#opravy tbody tr').count()) === 4 && (await text(admin, '#opravy')).includes('po plánu'), '4 opravy, nehotová z loňska po plánu');
       const firstCost = await admin.locator('.modf-chart + .modf-legend + details tbody tr').first().locator('td').nth(3).textContent();
       check(firstCost.replace(/\D/g, '') === '40000', 'první rok výhledu: jen nehotová loňská oprava 40 000 Kč, hotová se nepočítá: ' + firstCost);
-      step(`Nastaven fond 450 000 Kč k 31. 10. ${Y}, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.`);
+      step(`Nastaven fond 650 000 Kč k 31. 10. ${Y}, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.`);
       const al = await text(admin, '.modf-alert');
       const needed = Number((/alespoň ([\d\s ]+)Kč/.exec(al) || [])[1]?.replace(/\D/g, '') || 0);
       check(/Fond by v roce \d{4} šel do mínusu/.test(al) && needed > 15000 && al.includes('průměrně o') && (await admin.locator('.modf-col.is-neg').count()) > 0, 'fond do mínusu, potřebný příspěvek, roky v mínusu v grafu: ' + al);
@@ -806,10 +835,6 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       check(pub.includes('měsíčně za jednotku 12A/2') && pub.includes('Výměna střešní krytiny') && !pub.includes('Výměna zvonků') && !(await owner.$('main form')), 'obyvatel vidí přehled jen pro čtení');
       step('Po „Zveřejnit přehled obyvatelům“ vidí vlastník přes Můj účet stránku Plán oprav: stav fondu, plánované opravy, výhled a svůj měsíční příspěvek – bez možnosti cokoli měnit.');
     }
-
-    // Edice domu pro jednu kontrolu (předplatné v databázi služby); 'premium' = výchozí stav běhu (web bez placení).
-    const edition = (ed) => prun(ed === 'premium' ? "UPDATE tenants SET billing = 0, plan = '', paid_until = '', trial_ends = '' WHERE slug = 'dum'"
-      : `UPDATE tenants SET billing = 1, plan = '${ed === 'free' ? '' : ed}', paid_until = '${ed === 'free' ? '' : plusDays(200)}', trial_ends = '' WHERE slug = 'dum'`);
 
     // ---------- Propojení s účetnictvím ----------
     begin('ucetnictvi', 'Import souborů do skutečné POHODY, Money S3 a ABRA Flexi jsme neověřili – tyto programy nemáme; ověřeno je, že web soubory vytvoří ve tvaru podle zveřejněných schémat výrobců. Předvolby programů správy domů (DOMSYS, IDES, MECOM, INTEGRI) jsou jen odhad názvů sloupců – soubory z těchto programů jsme neměli.');
@@ -839,7 +864,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const w1250 = (str) => Buffer.from([...str].map((ch) => ({ 'á': 0xE1, 'č': 0xE8, 'ř': 0xF8, 'í': 0xED, 'é': 0xE9, 'ý': 0xFD, 'ž': 0x9E, 'š': 0x9A, 'ů': 0xF9, 'ě': 0xEC, 'Č': 0xC8, 'Ř': 0xD8, 'Š': 0x8A, 'Ž': 0x8E, 'ú': 0xFA })[ch] ?? ch.charCodeAt(0)));
       const pre = sql("SELECT value FROM settings WHERE key = 'site_unit_prefix'") || '';
       const csvF = path.join(STORE, 'soubory', 'saldo.csv');
-      fs.writeFileSync(csvF, w1250(`Číslo jednotky;Variabilní symbol;Předpis záloh;Zůstatek Kč\n${pre}A/1;4801;4 250;-1 200,50 Kč\nA/3;4803;3 000;0\nZ/9;9999;1000;0\n`));
+      fs.writeFileSync(csvF, w1250(`Číslo jednotky;Variabilní symbol;Předpis záloh;Zůstatek Kč\n${pre}A/1;4801;4 250;-1 200,50 Kč\n;4803;3 000;0\nZ/9;9999;1000;0\n`));
       await admin.goto(T + '/admin/ucetnictvi'); await admin.check('[name=target][value=accounts]'); await admin.setInputFiles('#import [name=file]', csvF); await admin.click('button:has-text("Nahrát a zkontrolovat")');
       const head = await text(admin, '.page-head');
       check(head.includes('Windows-1250') && head.includes('oddělovač „;“') && head.includes('3 řádků'), 'kódování a oddělovač poznány: ' + head);
@@ -852,8 +877,8 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const pvw = await text(admin);
       check(pvw.includes('Uloží se 2') && pvw.includes('s chybou 1') && (await admin.locator('.acct-preview tr.is-unmatched').count()) === 1, 'náhled: 2 se uloží, neznámá jednotka s chybou: ' + pvw.slice(0, 300));
       await admin.click('button[value=save]');
-      check((await flash(admin)).includes('Import hotov: upraveno 2') && (await flash(admin)).includes('Řádky s chybou (1) se vynechaly') && sql(`SELECT balance FROM unit_accounts WHERE unit_id = ${unitId('A/1')}`) === '-1200.5', 'uloženo, záporný stav = nedoplatek: ' + await flash(admin));
-      step('Import CSV (Windows-1250, středník): web poznal kódování, oddělovač i sloupce (jednotka, VS, předpis, zůstatek); po změně přiřazení a „Zkontrolovat znovu“ náhled ukázal 2 řádky k uložení a 1 s neznámou jednotkou, která se vynechala. Částka „-1 200,50 Kč“ se uložila jako nedoplatek.');
+      check((await flash(admin)).includes('Import hotov: upraveno 2') && (await flash(admin)).includes('Řádky s chybou (1) se vynechaly') && sql(`SELECT balance FROM unit_accounts WHERE unit_id = ${unitId('A/1')}`) === '-1200.5' && Number(sql(`SELECT prescribed FROM unit_accounts WHERE unit_id = ${unitId('A/3')}`)) === 3000, 'uloženo, záporný stav = nedoplatek, jednotka bez označení podle VS: ' + await flash(admin));
+      step('Import CSV (Windows-1250, středník): web poznal kódování, oddělovač i sloupce (jednotka, VS, předpis, zůstatek); po změně přiřazení a „Zkontrolovat znovu“ náhled ukázal 2 řádky k uložení a 1 s neznámou jednotkou, která se vynechala. Částka „-1 200,50 Kč“ se uložila jako nedoplatek; řádek bez označení jednotky web přiřadil podle variabilního symbolu.');
       await admin.goto(T + '/admin/ucetnictvi'); await admin.check('[name=target][value=accounts]'); await admin.setInputFiles('#import [name=file]', csvF); await admin.click('button:has-text("Nahrát a zkontrolovat")');
       check((await flash(admin)).includes('Použili jsme přiřazení sloupců z minulého importu'), 'přiřazení si web pamatuje'); await admin.click('button[value=cancel]');
       step('Při dalším souboru se stejnými sloupci web použil přiřazení z minulého importu.');
@@ -980,18 +1005,21 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     {
       check(await navGroup(admin, '/admin/rejstriky') === 'Dům a lidé', 'Katastr a rejstříky v menu Dům a lidé');
       edition('standard'); await admin.goto(T + '/admin/rejstriky/katastr');
-      check((await text(admin)).includes('Sledování katastru je součástí edice Premium'), 'jen edice Premium'); edition('premium');
+      check((await text(admin)).includes('Sledování katastru je součástí edice Premium'), 'jen edice Premium'); edition('premium', true);
       await admin.reload();
       check((await text(admin)).includes('Propojení s katastrem (dálkový přístup ČÚZK) zatím provozovatel nenastavil'), 'bez nastavení u provozovatele');
       setCfg('katastr', { user: 'WSZKOUSKA', password: 'zkouska', endpoint: FAKE + '/wsdp' }); setCfg('exekuce', { api_key: 'KEY', api_secret: 'SECRET', url: FAKE + '/cee' }); setCfg('isir', { url: FAKE + '/isir' });
       await admin.reload();
-      check((await text(admin, '.page-head')).includes('každých 7 dní'), 'kontrola jednou týdně');
+      check((await text(admin, '.page-head')).includes('každých 30 dní'), 'kontrola každých 30 dní');
       await admin.fill('[name=ku]', '610372'); await admin.fill('[name=lv]', '4321'); await admin.click('form:has([value=target]) button');
+      await admin.fill('[name=lv]', '4321, 4322'); await admin.click('form:has([value=target]) button');
+      check((await text(admin, '.card:has(h2:has-text("Sledování"))')).includes('U Vašeho domu (2 LV) 2 480 Kč ročně'), 'dva LV: 1 490 + 990 Kč');
+      await admin.fill('[name=lv]', '4321'); await admin.click('form:has([value=target]) button');
       const priceTxt = await text(admin, '.card:has(h2:has-text("Sledování"))');
-      check(/Cena: 30\s*Kč za jednotku a rok \(bez DPH\)/.test(priceTxt) && /360\s*Kč ročně/.test(priceTxt), 'cena za jednotku a rok u tlačítka: ' + priceTxt);
+      check(priceTxt.includes('Cena: 1 490 Kč za dům a rok včetně 1 listu vlastnictví, každý další LV 990 Kč ročně (bez DPH)') && priceTxt.includes('Platí se s ročním předplatným') && priceTxt.includes('poměrnou část'), 'cena za dům a rok u tlačítka: ' + priceTxt);
       await admin.check('[name=confirm]'); await admin.click('button:has-text("Zapnout sledování")');
-      check((await flash(admin)).includes('Sledování je zapnuté'), 'sledování zapnuto');
-      step('Změny v katastru: kód k. ú. 610372 a LV 4321 uloženy, cena 30 Kč za jednotku a rok bez DPH (u 12 jednotek 360 Kč) je u tlačítka; po potvrzení ceny „Zapnout sledování“. Web kontroluje každých 7 dní. Bez nastavení u provozovatele web jen upozorní; funkce je jen v edici Premium.');
+      check((await flash(admin)).includes('Sledování je zapnuté') && (await flash(admin)).includes('Za zbytek zaplaceného období') && !!psql("SELECT id FROM payments WHERE tenant = 'dum' AND kind = 'addon' AND status = 'pending'"), 'sledování zapnuto, výzva k platbě za zbytek období: ' + await flash(admin));
+      step('Změny v katastru: kód k. ú. 610372 a LV uloženy; u tlačítka je cena 1 490 Kč za dům a rok bez DPH včetně 1 LV (se dvěma LV 2 480 Kč). Po potvrzení ceny „Zapnout sledování“ vznikla výzva k platbě za zbytek zaplaceného období (dál se platí s ročním předplatným). Web kontroluje každých 30 dní. Bez nastavení u provozovatele web jen upozorní; funkce je jen v edici Premium.');
       // Insolvence osob (před kontrolou katastru – převzetí nového vlastníka pak údaje smaže).
       await admin.goto(T + '/admin/insolvence#osoby');
       check(!(await admin.$('#osoby input[name*=rodne], #osoby input[name*=rc]')), 'rodné číslo se nezadává');
@@ -1007,16 +1035,20 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       run(`UPDATE units SET owner_note = 'Stavby Novák s.r.o.', owner_contact = 'IČO 27082440' WHERE id = ${unitId('B/6')}`);
       await admin.goto(T + '/admin/rejstriky/exekuce');
       const ex = await text(admin);
-      check(ex.includes('Tomáš Dvořák') && ex.includes('IČO 27082440') && /90\s*Kč za dotaz/.test(ex), 'lustrovat jde osobu s datem narození i firmu s IČO, cena za dotaz');
+      check(ex.includes('Tomáš Dvořák') && ex.includes('IČO 27082440') && /99\s*Kč za dotaz/.test(ex) && ex.includes('platí se z kreditu služeb jen za dotaz, který se povede'), 'lustrovat jde osobu s datem narození i firmu s IČO, cena za dotaz');
       const ceeBefore = fakeLog.filter((x) => x.path.startsWith('/cee')).length;
       check(ceeBefore === 0, 'lustrace se nespouští sama');
+      const keep = creditH(); await creditFix(-(keep - 5000) / 100, 'ověření: málo kreditu'); await admin.reload();
+      check((await text(admin, 'tr:has-text("Tomáš Dvořák")')).includes('Na lustraci (99 Kč) chybí kredit') && !(await admin.$('tr:has-text("Tomáš Dvořák") button:has-text("Lustrovat")')), 'bez kreditu lustraci nejde spustit');
+      await creditFix((keep - 5000) / 100, 'ověření: kredit zpět'); await admin.reload();
       const exRow = admin.locator('tr', { hasText: 'Tomáš Dvořák' });
       await exRow.locator('[name=confirm]').check(); await exRow.locator('button:has-text("Lustrovat")').click();
       check((await flash(admin)).includes('Nalezené exekuce: 1') && (await text(admin)).includes('999EX120/23'), 'lustrace: 1 exekuce');
       const search = fakeLog.find((x) => x.path === '/cee/search');
       check(search && decodeURIComponent(search.query).includes('name=Tomáš Dvořák') && search.query.includes('birth=1980-05-12'), 'dotaz podle jména a data narození');
       check(!sql("SELECT result FROM rej_exekuce ORDER BY id DESC LIMIT 1").includes('1980'), 'ukládá se jen číslo a stav kauzy');
-      step('Lustrace exekucí: na seznamu je osoba s datem narození i firma s IČO; po zaškrtnutí ceny (90 Kč bez DPH) a „Lustrovat“ web uložil nalezenou exekuci 999EX120/23 s datem. Sám se dotaz nespustil.');
+      check(creditH() === keep - 9900, 'lustrace stála 99 Kč z kreditu služeb: ' + (keep - creditH()));
+      step('Lustrace exekucí: na seznamu je osoba s datem narození i firma s IČO; cena 99 Kč bez DPH za dotaz se platí z kreditu služeb – když kredit nestačí, web lustraci vůbec nenabídne. Po zaškrtnutí ceny a „Lustrovat“ web uložil nalezenou exekuci 999EX120/23 s datem a z kreditu strhl 99 Kč. Sám se dotaz nespustil.');
       // Katastr: kontrola a převzetí.
       await admin.goto(T + '/admin/rejstriky/katastr');
       const m1 = mailLen();
@@ -1054,15 +1086,16 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const lp = await anon(); await lp.goto(T + '/prihlaseni');
       const btns = await lp.$$eval('.sso-btn', (x) => x.map((y) => y.textContent.trim()));
       check(btns.join('|') === 'Přihlásit přes Google|Přihlásit přes Microsoft|Přihlásit přes Apple|Přihlásit přes Facebook', 'tlačítka pod formulářem: ' + btns);
-      await shot(lp.locator('main form').first(), 'sso-1-prihlaseni.jpg', 1400);
-      await lp.click('.sso-google');
-      const au = new URL(lp.url());
-      check(au.host === 'accounts.google.com' && au.searchParams.get('code_challenge_method') === 'S256' && !!au.searchParams.get('state') && au.searchParams.get('redirect_uri') === BASE + '/sso/callback/google', 'přesměrování na Google se state a PKCE: ' + lp.url().slice(0, 120));
+      await shot(lp.locator('main form').first().locator('xpath=..'), 'sso-1-prihlaseni.jpg', 1600);
+      // Přesměrování k poskytovateli: adresu zachytíme z požadavku prohlížeče (cizí web se neotevře – prohlížeč ho nenajde).
+      const leave = async (page, re, click) => { const [r] = await Promise.all([page.waitForRequest(re), click()]); await page.waitForLoadState().catch(() => {}); return new URL(r.url()); };
+      const au = await leave(lp, /^https:\/\/accounts\.google\.com\//, () => lp.click('.sso-google'));
+      check(au.host === 'accounts.google.com' && au.searchParams.get('code_challenge_method') === 'S256' && !!au.searchParams.get('state') && au.searchParams.get('redirect_uri') === BASE + '/sso/callback/google', 'přesměrování na Google se state a PKCE: ' + au.href.slice(0, 120));
       step('Na stránce Přihlášení jsou pod formulářem tlačítka Google, Microsoft, Apple a Facebook; tlačítko vede na stránku poskytovatele s ochranou state a PKCE (S256).');
       await lp.goto(`${au.searchParams.get('redirect_uri')}?state=${encodeURIComponent(au.searchParams.get('state'))}&error=access_denied`);
       check((await flash(lp)).includes('Přihlášení přes Google jste zrušili') && lp.url().startsWith(T + '/prihlaseni'), 'zrušené přihlášení: zpráva na webu domu');
       // Cizí prohlížeč: odkaz pro dokončení přihlášení nikoho nepřihlásí.
-      await lp.click('.sso-microsoft'); const au2 = new URL(lp.url());
+      const au2 = await leave(lp, /^https:\/\/login\.microsoftonline\.com\//, () => lp.click('.sso-microsoft'));
       const other = await anon();
       await other.goto(`${au2.searchParams.get('redirect_uri')}?state=${encodeURIComponent(au2.searchParams.get('state'))}&code=x&error=access_denied`);
       check((await flash(other)).includes('platí 2 minuty a jen v prohlížeči, ve kterém jste přihlášení začali'), 'odkaz z cizího prohlížeče nikoho nepřihlásí: ' + await flash(other));
@@ -1072,8 +1105,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await owner.goto(T + '/muj-ucet#sso');
       const box = await text(owner, '#sso');
       check(box.includes('Přihlášení přes další účty') && (await owner.locator('#sso button:has-text("Propojit účet")').count()) === 4, 'Můj účet: 4× Propojit účet');
-      await owner.locator('#sso li', { hasText: 'Microsoft' }).locator('button:has-text("Propojit účet")').click();
-      const mu = new URL(owner.url());
+      const mu = await leave(owner, /^https:\/\/login\.microsoftonline\.com\//, () => owner.locator('#sso li', { hasText: 'Microsoft' }).locator('button:has-text("Propojit účet")').click());
       check(mu.host === 'login.microsoftonline.com' && mu.pathname.startsWith('/common/') && !!mu.searchParams.get('code_challenge'), 'Propojit účet vede k přihlášení u Microsoftu');
       // Dokončené propojení (vzniká až po přihlášení u poskytovatele – to běh nemá) zapíšeme přímo, ať jde ověřit zobrazení a zrušení.
       run(`INSERT INTO user_sso (user_id, provider, subject, email, linked_at) VALUES ((SELECT id FROM users WHERE email = '${who.owner}'), 'apple', '001234.zkouska', 'x7k2p@privaterelay.appleid.com', datetime('now'))`);

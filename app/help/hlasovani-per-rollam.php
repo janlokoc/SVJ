@@ -52,18 +52,22 @@
 <h2>4. Jak na to ve webu</h2>
 <ol>
   <li><strong>Hlasování → Nové hlasování.</strong> Napište odůvodnění a body jako návrhy usnesení, nastavte lhůtu (nejméně 15 dní) a zaškrtněte, že vlastníci hlasují přes web.</li>
-  <li>V poli <strong>Ověření hlasu</strong> zvolte, jak vlastník hlas potvrdí: <em>kód z e-mailu</em> (výchozí), <em>kód z SMS</em> (jen když má služba zapnuté SMS) nebo <em>Bank iD</em> (beta, jen když ho provozovatel zapnul). Volba <em>žádné</em> uloží hlas hned po odeslání – pro hlasování per rollam ji nedoporučujeme.</li>
-  <li>Vlastník na stránce hlasování zvolí u každého bodu pro / proti / zdržuji se a odešle. Hlas se <strong>uloží až po potvrzení</strong>: kód platí 10 minut a lze ho zadat nejvýše pětkrát. U Bank iD se vlastník přihlásí přes svou banku a web porovná jméno z banky s vlastníkem jednotky v evidenci.</li>
+  <li>V poli <strong>Ověření hlasu</strong> zvolte, jak vlastník hlas potvrdí: <em>kód z e-mailu</em> (výchozí), <em>kód z SMS</em> (jen když má dům zapnuté SMS zprávy) nebo <em>Bank iD</em> (beta, jen když ho provozovatel zapnul; každý ověřený hlas stojí 19 Kč bez DPH z kreditu služeb domu). Volba <em>žádné</em> uloží hlas hned po odeslání – pro hlasování per rollam ji nedoporučujeme.</li>
+  <li>Vlastník na stránce hlasování zvolí u každého bodu pro / proti / zdržuji se a odešle. Hlas se <strong>uloží až po potvrzení</strong>: kód platí 10 minut a lze ho zadat nejvýše pětkrát. U Bank iD se vlastník přihlásí přes svou banku a web porovná jméno z banky s vlastníkem jednotky v evidenci.
+    <?= help_fig('rollam-1-potvrzeni.jpg', 'Vlastník: volba k potvrzení a pole pro kód z e-mailu.') ?></li>
   <li><strong>Hlasovací lístky k tisku</strong> (u výsledků hlasování) vytisknou pro každou jednotku lístek s plným zněním návrhu, podílem, lhůtou a místem pro datum a podpis. Pošlete je vlastníkům, kteří na webu nehlasují.</li>
   <li>Vrácené lístky zapište v <strong>Zapsat listinný hlas</strong>: jednotka, volby, datum u podpisu, den doručení a nejlépe i sken podepsaného lístku. Lístek doručený po lhůtě web nepřijme. Originály uschovejte.</li>
-  <li>Po skončení otevřete <strong>Protokol o hlasování</strong> a vytiskněte ho nebo uložte jako PDF. Obsahuje návrh, výsledek každého bodu (přijato / nepřijato), všechny hlasy s podíly, časem, způsobem ověření, adresou a zařízením a kontrolu neporušenosti záznamů.</li>
+  <li>Po skončení otevřete <strong>Protokol o hlasování</strong> a vytiskněte ho nebo uložte jako PDF. Obsahuje návrh, výsledek každého bodu (přijato / nepřijato), všechny hlasy s podíly, časem, způsobem ověření, adresou a zařízením a kontrolu neporušenosti záznamů.
+    <?= help_fig('rollam-2-protokol.jpg', 'Protokol: výsledek bodů a záznamy hlasů s ověřením, adresou a zařízením.') ?></li>
   <li>Výsledek oznamte vlastníkům (§ 1213) – např. zprávou na webu a e-mailem s protokolem v příloze.</li>
 </ol>
+
+<p class="hint">Ověření přes Bank iD jsme v ověřovacím běhu nezkoušeli – potřebuje smlouvu s Bankovní identitou a přihlášení do skutečné banky. Ověřeno je, že ho web bez nastavení nenabídne. Kód z SMS v běhu přijala zkušební SMS brána místo skutečného telefonu.</p>
 
 <h2>Dobré vědět</h2>
 <ul>
   <li><strong>Neporušenost:</strong> každý zápis hlasu nese otisk navazující na předchozí zápis téhož hlasování. Kdyby někdo hlas změnil přímo v databázi, protokol to ukáže.</li>
   <li><strong>Opravy:</strong> hlas může opravit jen výbor (v přehledu hlasů po jednotkách nebo nahrazením listinným hlasem). Původní zápis v protokolu zůstane.</li>
-  <li><strong>Hlasy z doby před zavedením protokolu</strong> se v kontrole ukážou jako „bez záznamu“ – to neznamená zásah, jen chybějící stopu.</li>
+  <li><strong>Hlasy z doby před zavedením protokolu</strong> se u výsledků ukážou jako „hlasy bez záznamu“ – to neznamená zásah, jen chybějící stopu.</li>
   <li><strong>Spoluvlastnictví:</strong> za jednotku se hlasuje jednou, hlas platí za všechny spoluvlastníky.</li>
 </ul>

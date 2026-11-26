@@ -22,4 +22,5 @@ pq("INSERT INTO partners (name, ico, email, created_at) VALUES ('Správa domů B
 $partnerId = (int) platform_db()->lastInsertId();
 pq("INSERT INTO partner_users (partner_id, name, email, password_hash, role, created_at) VALUES (?, 'Karel Správce', 'karel@example.cz', ?, 'owner', ?)", [$partnerId, $hash, date('Y-m-d H:i:s')]);
 partner_attach_created(partner_row($partnerId), 'dum');
+pq("UPDATE tenants SET partner_billing = 0 WHERE slug = 'dum'");   // předplatné (a kredit služeb) si dům platí sám
 echo json_encode(['admin' => $admin, 'owner' => $owner, 'password' => 'Navod-overeni-2027', 'partner' => 'karel@example.cz']), "\n";

@@ -21,14 +21,15 @@
 <ol>
   <li>V účetním programu (nebo v programu správy domů) si vyexportujte tabulku do <strong>CSV</strong> nebo <strong>XLSX</strong>.</li>
   <li>V části Import vyberte, co soubor obsahuje: <strong>předpisy záloh a stavy účtů</strong>, nebo <strong>jednotky, podíly a vlastníky</strong>. Nahrajte soubor. Případně vyberte program, ze kterého soubor je (DOMSYS, IDES, MECOM, INTEGRI) – předvolby jsou jen <em>odhad</em> názvů sloupců.</li>
-  <li>Web pozná oddělovač i kódování a podle záhlaví odhadne, který sloupec je jednotka, vlastník, podíl, záloha, saldo nebo variabilní symbol. Na obrazovce <strong>Přiřazení sloupců</strong> to zkontrolujte, případně opravte a klikněte na <strong>Zkontrolovat znovu</strong>.</li>
+  <li>Web pozná oddělovač i kódování a podle záhlaví odhadne, který sloupec je jednotka, vlastník, podíl, záloha, saldo nebo variabilní symbol. Na obrazovce <strong>Přiřazení sloupců</strong> to zkontrolujte, případně opravte a klikněte na <strong>Zkontrolovat znovu</strong>.
+    <?= help_fig('ucetnictvi-1-prirazeni.jpg', 'Přiřazení sloupců: web poznal kódování, oddělovač i význam sloupců.') ?></li>
   <li>V náhledu vidíte každý řádek: co se uloží, co se založí nově a co má chybu (neznámá jednotka, částka, které nerozumíme…). Řádky s chybou se vynechají. Pak klikněte na <strong>Uložit</strong>.</li>
 </ol>
 <p>Přiřazení sloupců si web pamatuje – příští soubor ze stejného programu se přiřadí sám.</p>
 
 <h2>Dobré vědět</h2>
 <ul>
-  <li><strong>Jednotka</strong> se pozná podle označení (např. 12A/1), podle vchodu a čísla, podle samotného čísla (je-li v domě jen jedno) nebo podle variabilního symbolu.</li>
+  <li><strong>Jednotka</strong> se pozná podle označení (např. 12A/1), podle vchodu a čísla, nebo – když je sloupec jednotky prázdný – podle variabilního symbolu.</li>
   <li><strong>Záporný stav účtu</strong> je nedoplatek, kladný přeplatek. Částky mohou mít mezery, čárku i „Kč“.</li>
   <li>Sloupce, které nepřiřadíte, zůstanou na webu beze změny. Účty vlastníků na webu import nezakládá – ty vznikají pozvánkou.</li>
   <li>Správcovská firma v partnerském portálu stáhne export <strong>všech domů najednou</strong> a nahraje jeden soubor za více domů se sloupcem <strong>Dům</strong> (název domu, IČO nebo adresa webu).</li>

@@ -55,16 +55,16 @@
   },
   "sms-zpravy": {
     "date": "2026-11-26",
-    "checks": 12,
+    "checks": 13,
     "steps": [
-      "V části Kredit je zůstatek (5 SMS, připsal provozovatel) a cena jedné SMS bez DPH.",
-      "Tlačítko Objednat kredit poslalo objednávku e-mailem provozovateli služby.",
-      "Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.",
-      "S diakritikou má zpráva (106 znaků) 2 SMS na příjemce, celkem 8 SMS – kredit 5 nestačí, web odeslání nenabídne.",
-      "Bez diakritiky se zpráva vejde do 1 SMS; náhled ukázal text, počet příjemců a celkovou cenu bez DPH.",
-      "Odesláno 3 vlastníkům; zprávu, kterou brána odmítla, web vrátil do kreditu (5 − 4 + 1 = 2 SMS). Přehled odeslaných zpráv je dole na stránce."
+      "SMS zprávy (Komunikace): edice Premium má 100 SMS ročně v ceně, další SMS stojí 1,50 Kč bez DPH z kreditu služeb. Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.",
+      "S diakritikou má zpráva (106 znaků) 2 SMS na příjemce, celkem 8 SMS za 12 Kč – kredit 5 Kč nestačí (na 3 SMS), web odeslání nenabídne a nabídne dobití.",
+      "Tlačítko „Dobít kredit“ vede na Kredit služeb (kredit platí 24 měsíců): objednáno dobití 500 Kč, zálohová faktura s variabilním symbolem; po potvrzení platby provozovatelem se kredit připsal.",
+      "Bez diakritiky se zpráva vejde do 1 SMS; náhled ukázal text, počet SMS, příjemce a celkovou cenu 6 Kč bez DPH.",
+      "Odesláno 3 vlastníkům; z kreditu se strhlo 4 × 1,50 Kč a za zprávu, kterou brána odmítla, se 1,50 Kč vrátilo. Přehled odeslaných zpráv je dole na stránce.",
+      "V edici Premium se nejdřív čerpají SMS v ceně edice – kredit služeb se nezměnil."
     ],
-    "note": "Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: kredit a jeho objednání, náhled a cena, výběr příjemců, odeslání bráně a vrácení kreditu za zprávu, kterou brána odmítla."
+    "note": "Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: SMS v ceně edice Premium, kredit služeb a jeho dobití, náhled a cena, výběr příjemců, odeslání bráně a vrácení peněz za zprávu, kterou brána odmítla."
   },
   "hlasovani-per-rollam": {
     "date": "2026-11-26",
@@ -87,9 +87,10 @@
   },
   "shromazdeni-online": {
     "date": "2026-11-26",
-    "checks": 23,
+    "checks": 25,
     "steps": [
       "Administrace → Shromáždění online: povoleno pro dům i ověření kódem z e-mailu; stránka nabízí vzorové ustanovení stanov.",
+      "U termínu v edici Standard web uvádí cenu 490 Kč bez DPH za shromáždění z kreditu služeb; v edici Premium je v ceně (cenu neukazuje).",
       "U termínu: forma Hybridní, „Vytvořit místnost Jitsi“ doplnilo adresu meet.jit.si s náhodným názvem; bez potvrzení stanov termín uložit nešel, s ním ano.",
       "Vlastník v den konání klikl na „Připojit se online“, zadal kód z e-mailu; web ho zapsal do prezence za jednotku 12A/2 a videohovor otevřel v nové kartě.",
       "V Prezenci na místě se online přítomnost a součet podílů obnovily samy (bez načtení stránky); seznam připojení ukazuje kdo, kdy, ověření a IP adresu.",
@@ -118,8 +119,8 @@
     "date": "2026-11-26",
     "checks": 9,
     "steps": [
-      "Nastaven fond 450 000 Kč k 31. 10. 2026, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.",
-      "Web zvýraznil roky v mínusu a nad grafem uvedl nejnižší potřebný příspěvek 57 678 Kč měsíčně (i průměrně na jednotku); Příspěvky jednotek ukazují rozpočet podle podílů.",
+      "Nastaven fond 650 000 Kč k 31. 10. 2026, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.",
+      "Web zvýraznil roky v mínusu a nad grafem uvedl nejnižší potřebný příspěvek 35 709 Kč měsíčně (i průměrně na jednotku); Příspěvky jednotek ukazují rozpočet podle podílů.",
       "S navrženým příspěvkem web hlásí, že fond vystačí – žádný rok v mínusu.",
       "Po „Zveřejnit přehled obyvatelům“ vidí vlastník přes Můj účet stránku Plán oprav: stav fondu, plánované opravy, výhled a svůj měsíční příspěvek – bez možnosti cokoli měnit."
     ],
@@ -131,7 +132,7 @@
     "steps": [
       "Bez IČ v Nastavení web upozorní; v Nastavení exportu uložena zkratka účtu KB a splatnost 15. dne.",
       "Export do POHODY (XML Windows-1250: adresář, ostatní pohledávky, banka), Money S3 (MoneyData), ABRA Flexi (winstrom) i CSV (4 soubory včetně stavů účtů) se stáhl a obsahuje předpisy s variabilním symbolem, IČ, zkratku účtu a splatnost.",
-      "Import CSV (Windows-1250, středník): web poznal kódování, oddělovač i sloupce (jednotka, VS, předpis, zůstatek); po změně přiřazení a „Zkontrolovat znovu“ náhled ukázal 2 řádky k uložení a 1 s neznámou jednotkou, která se vynechala. Částka „-1 200,50 Kč“ se uložila jako nedoplatek.",
+      "Import CSV (Windows-1250, středník): web poznal kódování, oddělovač i sloupce (jednotka, VS, předpis, zůstatek); po změně přiřazení a „Zkontrolovat znovu“ náhled ukázal 2 řádky k uložení a 1 s neznámou jednotkou, která se vynechala. Částka „-1 200,50 Kč“ se uložila jako nedoplatek; řádek bez označení jednotky web přiřadil podle variabilního symbolu.",
       "Při dalším souboru se stejnými sloupci web použil přiřazení z minulého importu.",
       "Import jednotek z XLSX: jednotka B/7 se založila nově, podíl „1,5 %“ přijat; účty obyvatel import nezaložil.",
       "Správcovská firma v partnerském portálu stáhla export všech domů v ZIP a nahrála jeden soubor se sloupcem Dům; řádek nepoznaného domu se vynechal."
@@ -147,6 +148,41 @@
       "V edici Zdarma web po stažení napíše, kdy bude možný další export (jednou za 30 dní)."
     ],
     "note": ""
+  },
+  "propojeni-banky": {
+    "date": "2026-11-26",
+    "checks": 14,
+    "steps": [
+      "Platby na jednotku → „Propojit účet u ČS, KB, ČSOB a dalších bank“: bez nastavení u provozovatele web jen oznámí, že propojení není nastavené. S nastavením: výběr banky, „Pokračovat do banky“, návrat z banky – web načetl účet a hned stáhl 2 platby; platba s VS 4803 se spárovala, platba bez VS zůstala v Posledních příchozích platbách k ručnímu přiřazení. Souhlas je jen pro čtení (údaje o účtu a pohyby) na 90 dní.",
+      "„Stáhnout teď“ stáhlo platby znovu bez zdvojení; po 4 staženích za den (včetně prvního) web další stažení nepustí.",
+      "14 a 3 dny před koncem souhlasu přišel správcům e-mail „Obnovte propojení s bankou“.",
+      "Obnovení: banka připojená znovu – platby se nezapočítaly dvakrát; staré propojení „Zrušit propojení“ ukončilo přístup a stažené platby zůstaly."
+    ],
+    "note": "Přihlášení do internetového bankovnictví a souhlas na webu banky jsme ověřit nemohli – jde o cizí weby a skutečný účet. Místo poskytovatele bankovních dat (GoCardless) odpovídala zkušební služba podle jeho zveřejněné dokumentace a místo banky zkušební stránka, která rovnou vrátila zpět na web. Ověřeno je vše na straně webu."
+  },
+  "katastr-a-rejstriky": {
+    "date": "2026-11-26",
+    "checks": 25,
+    "steps": [
+      "Změny v katastru: kód k. ú. 610372 a LV uloženy; u tlačítka je cena 1 490 Kč za dům a rok bez DPH včetně 1 LV (se dvěma LV 2 480 Kč). Po potvrzení ceny „Zapnout sledování“ vznikla výzva k platbě za zbytek zaplaceného období (dál se platí s ročním předplatným). Web kontroluje každých 30 dní. Bez nastavení u provozovatele web jen upozorní; funkce je jen v edici Premium.",
+      "Insolvence vlastníků → Fyzické osoby: jednotka, příjmení, jméno a datum narození (rodné číslo se nezadává), „Hlídat“; kontrola našla řízení a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.",
+      "Lustrace exekucí: na seznamu je osoba s datem narození i firma s IČO; cena 99 Kč bez DPH za dotaz se platí z kreditu služeb – když kredit nestačí, web lustraci vůbec nenabídne. Po zaškrtnutí ceny a „Lustrovat“ web uložil nalezenou exekuci 999EX120/23 s datem a z kreditu strhl 99 Kč. Sám se dotaz nespustil.",
+      "„Zkontrolovat teď“: web stáhl výpis LV a napoprvé ho porovnal s evidencí jednotek – ukázal nového vlastníka jednotky 12A/3 a probíhající řízení (plombu); správcům přišel e-mail.",
+      "„Převzít do evidence“ přepsalo vlastníka jednotky 12A/3 a smazalo údaje bývalého vlastníka (hlídání insolvence i výsledek lustrace); plombu jsme „vzali na vědomí“.",
+      "Údaje vidí jen správci (obyvatel stránku neotevře); „Nehlídat a smazat“ osobu i její výsledky smazalo."
+    ],
+    "note": "Stránky Nahlížení do katastru nemovitostí jsme nemohli ověřit automaticky – web katastru strojové procházení blokuje. Dálkový přístup ČÚZK (WSDP), insolvenční rejstřík ani Centrální evidenci exekucí jsme se skutečnými účty nezkoušeli: místo nich odpovídaly zkušební služby podle zveřejněné dokumentace (vzorový výpis listu vlastnictví, vzorové odpovědi). Ověřeno je vše na straně webu."
+  },
+  "prihlaseni-sso": {
+    "date": "2026-11-26",
+    "checks": 9,
+    "steps": [
+      "Na stránce Přihlášení jsou pod formulářem tlačítka Google, Microsoft, Apple a Facebook; tlačítko vede na stránku poskytovatele s ochranou state a PKCE (S256).",
+      "Zrušené přihlášení u poskytovatele: web napsal proč („Přihlášení přes Google jste zrušili“). Dokončení otevřené v jiném prohlížeči nikoho nepřihlásilo – web vysvětlil, že platí 2 minuty a jen v prohlížeči, kde přihlášení začalo.",
+      "Můj účet → Přihlášení přes další účty: u každého poskytovatele „Propojit účet“ (vede na jeho přihlášení); propojený účet má „Propojeno“ s e-mailem od poskytovatele a „Zrušit propojení“ ho zrušilo.",
+      "V Záznamech správce vidí neúspěšné přihlášení přes Google i zrušení propojení (kdo, kdy, poskytovatel)."
+    ],
+    "note": "Přihlášení na stránkách Googlu, Microsoftu, Applu a Facebooku jsme ověřit nemohli – jsou to cizí weby a ověřovací běh u nich nemá účty; místo nich se otevřela prázdná zkušební stránka. Ověřena je strana webu: tlačítka, přesměrování k poskytovateli se zabezpečením (state, PKCE), zrušené přihlášení, odmítnutí odkazu z cizího prohlížeče, zrušení propojení a Záznamy. Výměnu kódu za identitu, vyhledání účtu podle ověřeného e-mailu a dokončení propojení pokrývají unit testy se vzorovými odpověďmi poskytovatelů."
   },
   "import-z-katastru": {
     "date": "2026-11-26",
