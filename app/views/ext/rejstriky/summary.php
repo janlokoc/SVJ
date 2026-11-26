@@ -9,7 +9,7 @@
     <section class="card">
       <h2>Změny v katastru<?= beta_is('katastr') ? ' <span class="tag tag-beta">Beta</span>' : '' ?></h2>
       <?php if (!$k['configured']): ?><p class="muted">Propojení s katastrem zatím provozovatel nenastavil.</p>
-      <?php elseif (!$k['on']): ?><p>Sledování je vypnuté. Cena: <?= e(money_czk($k['price'])) ?> za jednotku a rok (bez DPH), u Vašeho domu <?= e(money_czk($k['price'] * $k['units'])) ?> ročně.</p>
+      <?php elseif (!$k['on']): ?><p>Sledování je vypnuté. Cena: <?= e(money_czk(rej_price('rej_price_katastr_house'))) ?> za dům a rok včetně 1 listu vlastnictví, každý další LV <?= e(money_czk(rej_price('rej_price_katastr_lv_extra'))) ?> (bez DPH)<?= $k['lv'] > 1 ? '; u Vašeho domu (' . (int) $k['lv'] . ' LV) ' . e(money_czk($k['price'])) . ' ročně' : '' ?>.</p>
       <?php else: ?><p><?= $k['open'] ? '<strong>Změn k vyřízení: ' . (int) $k['open'] . '</strong>' : 'Žádné nevyřízené změny.' ?>
         <?= ($k['last'][0] ?? '') !== '' ? '<br><small class="muted">Poslední kontrola ' . e($k['last'][0]) . ': ' . e($k['last'][2] ?? '') . '</small>' : '' ?></p><?php endif ?>
       <p><a class="btn btn-small" href="<?= url('/admin/rejstriky/katastr') ?>">Otevřít</a></p>
@@ -29,7 +29,7 @@
     <section class="card">
       <h2>Exekuce<?= beta_is('exekuce') ? ' <span class="tag tag-beta">Beta</span>' : '' ?></h2>
       <?php if (!$x['configured']): ?><p class="muted">Propojení s evidencí exekucí zatím provozovatel nenastavil.</p><?php endif ?>
-      <p>Lustrace v Centrální evidenci exekucí na kliknutí, <?= e(money_czk($x['price'])) ?> za dotaz (bez DPH).<br>
+      <p>Lustrace v Centrální evidenci exekucí na kliknutí, <?= e(money_czk($x['price'])) ?> za dotaz (bez DPH) z kreditu služeb<?= $x['credit'] ? '' : ' – <strong>kredit nestačí</strong> ' . credit_topup_link() ?>.<br>
         Provedeno: <?= (int) $x['checks'] ?><?= $x['hits'] ? ', s nálezem: <strong>' . (int) $x['hits'] . '</strong>' : '' ?><?= $x['last'] !== '' ? ' · naposledy ' . e(cz_datetime($x['last'])) : '' ?></p>
       <p><a class="btn btn-small" href="<?= url('/admin/rejstriky/exekuce') ?>">Otevřít</a></p>
     </section>
@@ -41,11 +41,11 @@
     <table class="table">
       <thead><tr><th>Kdy</th><th>Co</th><th>Cena bez DPH</th></tr></thead>
       <tbody><?php foreach ($usage as $r): if ($r['kind'] === 'katastr_lv') continue; ?>
-        <tr><td data-label="Kdy"><?= e(cz_datetime($r['at'])) ?></td><td data-label="Co"><?= e(REJ_USAGE_KINDS[$r['kind']] ?? $r['kind']) ?><?= $r['kind'] === 'katastr_year' ? ' (' . (int) $r['qty'] . ' jednotek)' : '' ?></td>
+        <tr><td data-label="Kdy"><?= e(cz_datetime($r['at'])) ?></td><td data-label="Co"><?= e(REJ_USAGE_KINDS[$r['kind']] ?? $r['kind']) ?><?= $r['kind'] === 'katastr_year' ? ' (' . (int) $r['qty'] . ' LV)' : '' ?></td>
           <td data-label="Cena"><?= e(money_czk((int) $r['price'])) ?></td></tr>
       <?php endforeach ?></tbody>
     </table>
-    <p class="hint">Placené dotazy se účtují s předplatným.</p>
+    <p class="hint">Lustrace se platí z <a href="<?= url('/admin/kredit') ?>">kreditu služeb</a>, sledování katastru s ročním předplatným.</p>
   </section>
   <?php endif ?>
   <p class="hint"><?= help_link('katastr-a-rejstriky') ?></p>

@@ -88,14 +88,18 @@ final class ModERejstrikyTest extends TestCase
         foreach (array_keys(REJ_PRICES) as $k) {
             $this->pset($k, null);
         }
-        $this->assertSame(30, rej_price('rej_price_katastr_unit'));
-        $this->assertSame(90, rej_price('rej_price_exekuce'));
+        // Ceny od 12/2026: katastr 1 490 Kč za dům a rok vč. 1 LV + 990 Kč za další LV, kontrola po 30 dnech, lustrace 99 Kč.
+        $this->assertSame(1490, rej_price('rej_price_katastr_house'));
+        $this->assertSame(990, rej_price('rej_price_katastr_lv_extra'));
+        $this->assertSame(99, rej_price('rej_price_exekuce'));
         $this->assertSame(100, rej_price('rej_cost_katastr_lv'));
-        $this->assertSame(7, rej_price('rej_katastr_days'));
+        $this->assertSame(30, rej_price('rej_katastr_days'));
+        $this->assertSame(0, rej_price('rej_price_katastr_unit'), 'cena za jednotku se už nepoužívá');
+        $this->assertSame([0, 1490, 2480, 3470], array_map('rej_katastr_year_price', [0, 1, 2, 3]));
         $this->pset('rej_price_exekuce', '150');
         $this->assertSame(150, rej_price('rej_price_exekuce'));
         $this->pset('rej_price_exekuce', 'abc');
-        $this->assertSame(90, rej_price('rej_price_exekuce'), 'invalid value → default');
+        $this->assertSame(99, rej_price('rej_price_exekuce'), 'invalid value → default');
         $this->pset('rej_price_exekuce', '0');
         $this->assertSame(0, rej_price('rej_price_exekuce'), 'zero is allowed (free)');
         $this->assertSame(0, rej_price('neznamy'));
@@ -155,7 +159,9 @@ final class ModERejstrikyTest extends TestCase
         q("UPDATE rej_persons SET isir_found = '[{\"sz\":\"1 INS 1/2026\"}]'");
         $s = rej_summary();
         $this->assertSame(['katastr', 'insolvence'], array_keys($s));
-        $this->assertSame((int) val('SELECT COUNT(*) FROM units'), $s['katastr']['units']);
+        $this->assertSame([1, 1490], [$s['katastr']['lv'], $s['katastr']['price']], 'bez zadaného LV se počítá s jedním');
+        rej_set('rej_katastr_lv', '11, 12');
+        $this->assertSame([2, 2480], [rej_summary()['katastr']['lv'], rej_summary()['katastr']['price']]);
         $this->assertFalse($s['katastr']['on']);
         $this->assertSame([1, 1], [$s['insolvence']['persons'], $s['insolvence']['person_hits']]);
         $this->pset('beta_exekuce', 'on');

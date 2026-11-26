@@ -1,5 +1,5 @@
 <?php
-/** @var string $text @var bool $plain @var ?array $preview @var array $recipients @var array $bad @var bool $managed @var ?int $balance @var array $ledger @var int $price @var int $pack @var array $log @var bool $staging */
+/** @var string $text @var bool $plain @var ?array $preview @var array $recipients @var array $bad @var bool $managed @var ?int $balance (kolik SMS jde poslat) @var int $creditH @var int $freeLeft @var int $freeYear @var int $price (haléře) @var array $log @var bool $staging */
 $priceCzk = $price / 100;
 ?>
 <div class="wrap page">
@@ -26,7 +26,7 @@ $priceCzk = $price / 100;
         <p class="sms-preview"><?= nl2br(e($preview['text'])) ?></p>
         <p><small class="muted"><?= (int) $i['units'] ?> znaků · <?= $i['encoding'] === 'GSM-7' ? 'bez diakritiky' : 's diakritikou nebo zvláštními znaky' ?> · <?= (int) $i['segments'] ?> <?= $i['segments'] === 1 ? 'SMS' : 'SMS (zpráva se rozdělí)' ?> na příjemce</small></p>
         <p>Celkem <strong><?= (int) $preview['total'] ?> SMS</strong> pro <?= (int) $preview['recipients'] ?> vlastníků<?= $managed ? ', tj. ' . e(sms_money($preview['czk'])) . ' bez DPH' : '' ?>.
-          <?= $managed && $balance !== null && $balance < $preview['total'] ? '<br><strong>Kredit nestačí (zbývá ' . (int) $balance . ' SMS).</strong>' : '' ?></p>
+          <?= $managed && $balance !== null && $balance < $preview['total'] ? '<br><strong>Kredit služeb nestačí (vystačí na ' . (int) $balance . ' SMS).</strong> ' . credit_topup_link() : '' ?></p>
         <?php if ($preview['recipients'] > 0 && (!$managed || $balance >= $preview['total'])): ?>
         <form method="post" data-confirm="Odeslat SMS <?= (int) $preview['recipients'] ?> vlastníkům?"><?= csrf_field() ?>
           <input type="hidden" name="text" value="<?= e($preview['text']) ?>"><?= $plain ? '<input type="hidden" name="plain" value="1">' : '' ?>
@@ -37,20 +37,12 @@ $priceCzk = $price / 100;
     </section>
 
     <section class="card" id="kredit">
-      <h2>Kredit</h2>
+      <h2>Placení</h2>
       <?php if ($managed): ?>
       <p class="sms-balance"><strong><?= (int) $balance ?></strong> SMS</p>
-      <p class="hint">Jedna SMS stojí <?= e(sms_money($priceCzk)) ?> bez DPH. Dlouhá zpráva se rozdělí na více SMS (s diakritikou po 70 znacích, bez ní po 160) a každá část se počítá zvlášť. Neodeslaná zpráva se do kreditu vrací.</p>
-      <form method="post" class="form inline-form"><?= csrf_field() ?><input type="hidden" name="action" value="order">
-        <label>Balíčků po <?= (int) $pack ?> SMS <input type="number" name="packs" value="1" min="1" max="50"></label>
-        <button class="btn btn-ghost" type="submit">Objednat kredit</button></form>
-      <p class="hint">Balíček <?= (int) $pack ?> SMS za <?= e(sms_money($pack * $priceCzk)) ?> bez DPH. Kredit nepropadá.</p>
-      <?php if ($ledger): ?>
-      <table class="table"><thead><tr><th>Kdy</th><th>Pohyb</th><th>Poznámka</th></tr></thead><tbody>
-        <?php foreach ($ledger as $l): ?><tr><td data-label="Kdy"><?= e(cz_date(substr($l['at'], 0, 10))) ?></td><td data-label="Pohyb"><?= (int) $l['delta'] > 0 ? '+' : '' ?><?= (int) $l['delta'] ?></td>
-          <td data-label="Poznámka"><small><?= e(['credit' => 'připsáno', 'send' => 'odesláno', 'refund' => 'vráceno', 'fix' => 'oprava'][$l['kind']] ?? $l['kind']) ?><?= $l['note'] !== '' ? ' · ' . e($l['note']) : '' ?></small></td></tr><?php endforeach ?>
-      </tbody></table>
-      <?php endif ?>
+      <p>Tolik SMS teď můžete poslat: <?= $freeYear ? (int) $freeLeft . ' z ' . (int) $freeYear . ' SMS v ceně edice Premium na letošní rok a ' : '' ?>kredit služeb <?= e(credit_money($creditH)) ?>.</p>
+      <p class="hint">Jedna SMS stojí <?= e(credit_money($price)) ?> bez DPH a platí se z kreditu služeb<?= $freeYear ? ' (nejdřív se čerpají SMS v ceně edice)' : '' ?>. Dlouhá zpráva se rozdělí na více SMS (s diakritikou po 70 znacích, bez ní po 160) a každá část se počítá zvlášť. Neodeslaná zpráva se do kreditu vrací.</p>
+      <p><?= credit_topup_link() ?> <a href="<?= url('/admin/kredit') ?>">Výpis pohybů kreditu</a></p>
       <?php else: ?>
       <p>Web neběží na předplatném služby – SMS se posílají přes bránu nastavenou v config.php bez kreditu.</p>
       <?php endif ?>

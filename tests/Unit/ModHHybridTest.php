@@ -15,6 +15,8 @@ final class ModHHybridTest extends TestCase
     private array $savedSettings = [];
     private array $savedPset = [];
     private array $savedShares = [];
+    /** Termíny založené testem – po testu se smažou (jinak by se objevily třeba v týdenním přehledu jiných testů). */
+    private array $events = [];
 
     public static function setUpBeforeClass(): void
     {
@@ -48,7 +50,14 @@ final class ModHHybridTest extends TestCase
                 pset_save($key, $value);
             }
         }
-        $this->savedSettings = $this->savedPset = $this->savedShares = [];
+        $this->events && hybrid_ready();
+        foreach ($this->events as $id) {
+            foreach (['hybrid_attendance', 'hybrid_events', 'event_presence'] as $t) {
+                q("DELETE FROM $t WHERE event_id = ?", [$id]);
+            }
+            q('DELETE FROM events WHERE id = ?', [$id]);
+        }
+        $this->savedSettings = $this->savedPset = $this->savedShares = $this->events = [];
     }
 
     private static function setSetting(string $key, ?string $value): void
@@ -89,6 +98,7 @@ final class ModHHybridTest extends TestCase
         q('INSERT INTO events (title, event_date, event_time, place, note, rsvp, program) VALUES (?,?,?,?,?,1,?)',
             ['Shromáždění ' . uniqid(), date('Y-m-d', strtotime(($dayOffset >= 0 ? '+' : '') . $dayOffset . ' day')), '18:00', 'Sušárna', '', '']);
         $id = (int) db()->lastInsertId();
+        $this->events[] = $id;
         if ($form !== 'prezencni') {
             hybrid_event_store($id, ['hybrid_form' => $form, 'hybrid_video_url' => $url, 'hybrid_statutes' => $statutes ? '1' : ''], 1);
             if (!$statutes) {   // bez potvrzení by se neuložilo – zapíšeme přímo, abychom ověřili, že se pak online nekoná

@@ -95,6 +95,62 @@ function bankid_available(): bool
     return function_exists('beta_visible') && beta_visible('bankid') && bankid_config() !== null;
 }
 
+// ---------- Placení z kreditu služeb (app/ext/credit_lib.php) ----------
+
+/** Cena jednoho ověřeného hlasu v haléřích (bankid_price, výchozí 19 Kč bez DPH). */
+function bankid_price_h(): int
+{
+    return credit_setting('bankid_price') * 100;
+}
+/** Platí se ověření z kreditu? (Web mimo platformu ne.) */
+function bankid_paid(): bool
+{
+    return function_exists('credit_managed') && credit_managed() && bankid_price_h() > 0;
+}
+/** Stačí kredit na jedno ověření? */
+function bankid_credit_ok(): bool
+{
+    return !bankid_paid() || credit_enough(TENANT, bankid_price_h());
+}
+/** Varování pro formulář hlasování: kredit nestačí na ověření všech jednotek (nebo null). */
+function bankid_poll_warning(): ?string
+{
+    if (!bankid_paid()) {
+        return null;
+    }
+    $units = max(1, (int) val('SELECT COUNT(*) FROM units'));
+    $need = $units * bankid_price_h();
+    $have = credit_balance_h(TENANT);
+    return $have >= $need ? null : 'Ověření přes Bank iD stojí ' . credit_money(bankid_price_h()) . ' za každý ověřený hlas (z kreditu služeb). Na hlasy všech ' . $units
+        . ' jednotek je potřeba ' . credit_money($need) . ', kredit je ' . credit_money($have) . '. Když kredit dojde, vlastníci přes Bank iD hlasovat nemohou.';
+}
+/** Kredit došel: výboru (správcům) jednou za den e-mail, ať kredit dobije. */
+function bankid_credit_alert(): bool
+{
+    if (!bankid_paid() || credit_state(TENANT)['bankid_mailed'] === date('Y-m-d')) {
+        return false;
+    }
+    credit_state_set(TENANT, 'bankid_mailed', date('Y-m-d'));
+    foreach (credit_admin_emails(TENANT) as $to) {
+        send_mail($to, 'Hlasování: Bank iD nejde použít – dobijte kredit – ' . site('name'), "Dobrý den,\n\nvlastník právě chtěl hlasovat s ověřením přes Bank iD, ale kredit služeb domu nestačí ("
+            . credit_money(credit_balance_h(TENANT)) . ', jedno ověření stojí ' . credit_money(bankid_price_h()) . ").\nDokud kredit nedobijete, vlastníci přes Bank iD hlasovat nemohou.\n\n"
+            . 'Dobít kredit: ' . absolute_url('/admin/kredit') . "\n\n" . site('name'));
+    }
+    return true;
+}
+/** Strhne cenu ověřeného hlasu (po úspěšném ověření a uložení hlasu). */
+function bankid_charge(int $pollId, int $unitId, string $what): bool
+{
+    if (!bankid_paid()) {
+        return true;
+    }
+    $ok = credit_charge(TENANT, bankid_price_h(), 'bankid', 'Ověření hlasu: ' . mb_substr($what, 0, 150), 'bankid:' . $pollId . ':' . $unitId . ':' . bin2hex(random_bytes(3)), 1);
+    if (!$ok) {
+        error_log('SVJ web, Bank iD: ověřený hlas se nepodařilo zaplatit z kreditu (' . TENANT . ', hlasování ' . $pollId . ')');
+    }
+    return $ok;
+}
+
 function bankid_b64url(string $s): string
 {
     return rtrim(strtr(base64_encode($s), '+/', '-_'), '=');

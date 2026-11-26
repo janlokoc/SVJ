@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /*
- * Modul E – lustrace vlastníka v Centrální evidenci exekucí (CEE, vede Exekutorská komora ČR), placený dotaz na kliknutí správce.
+ * Modul E – lustrace vlastníka v Centrální evidenci exekucí (CEE, vede Exekutorská komora ČR), placený dotaz na kliknutí správce
+ * (cena rej_price_exekuce, výchozí 99 Kč bez DPH, platí se z kreditu služeb – app/ext/credit_lib.php – až po úspěšném dotazu).
  *
  * Dokumentace API (veřejná, pro vývojáře): https://www.ceecr.cz/dev → „API reference“ (verze 4):
  *  - GET {url}/auth?api_key=…&api_secret=… → token_value, valid_till (token platí jen pro IP adresu, ze které o něj server požádal);
@@ -139,16 +140,38 @@ function rej_exekuce_subjects(): array
     }
     return $out;
 }
-/** Lustrace jednoho vlastníka (správce potvrdil cenu). Zapíše výsledek a spotřebu. Vrací uložený řádek. */
+/** Cena lustrace v haléřích (z kreditu služeb). */
+function rej_exekuce_price_h(): int
+{
+    return rej_price('rej_price_exekuce') * 100;
+}
+/** Stačí kredit služeb na lustraci? (Web mimo platformu kredit nepotřebuje.) */
+function rej_exekuce_credit_ok(): bool
+{
+    return !function_exists('credit_managed') || !credit_managed() || credit_enough(TENANT, rej_exekuce_price_h());
+}
+/**
+ * Lustrace jednoho vlastníka (správce potvrdil cenu). Bez dost kreditu se dotaz vůbec nepošle ('refused' => true).
+ * Platí se z kreditu služeb až po úspěšném dotazu. Zapíše výsledek a spotřebu. Vrací uložený řádek.
+ */
 function rej_exekuce_check(array $subject, string $by): array
 {
     rej_ready();
+    if (!rej_exekuce_credit_ok()) {
+        return ['refused' => true, 'found' => 0, 'price' => 0, 'error' => 'Kredit služeb nestačí na lustraci (' . credit_money(rej_exekuce_price_h()) . ', zůstatek ' . credit_money(credit_balance_h(TENANT)) . '). Dobijte ho v části Kredit služeb.'];
+    }
     $r = rej_cee_search($subject['kind'], $subject['label'], $subject['id']);
     $price = $r['ok'] ? rej_price('rej_price_exekuce') : 0;
     q('INSERT INTO rej_exekuce (at, unit_id, person_id, subject, query_kind, found, result, price, user_name, error) VALUES (?,?,?,?,?,?,?,?,?,?)',
         [date('Y-m-d H:i:s'), $subject['unit_id'], $subject['person_id'], mb_substr($subject['label'], 0, 191), $subject['kind'], count($r['causes']),
             $r['causes'] ? json_encode($r['causes'], JSON_UNESCAPED_UNICODE) : '', $price, mb_substr($by, 0, 191), mb_substr($r['error'], 0, 255)]);
     $id = (int) db()->lastInsertId();   // hned – audit() níže vkládá do téže databáze
+    if ($r['ok'] && $price > 0 && function_exists('credit_managed') && credit_managed()
+        && !credit_charge(TENANT, $price * 100, 'exekuce', 'Lustrace: ' . $subject['unit'] . ($subject['kind'] === 'P' ? ' · IČO ' . $subject['id'] : ''), 'exekuce:' . $id, 1, $by)) {
+        // Kredit mezitím spotřebovala jiná služba: výsledek správce dostane, dotaz se nevyúčtuje (ztráta provozovatele).
+        q('UPDATE rej_exekuce SET price = 0 WHERE id = ?', [$id]);
+        $price = 0;
+    }
     if ($r['ok']) {
         $cost = preg_match('/(\d+)/', $r['paid'], $m) ? (int) $m[1] : rej_price('rej_cost_exekuce');
         rej_usage_add('exekuce', 1, $price, $cost, ($subject['kind'] === 'F' ? 'fyzická osoba' : 'IČO ' . $subject['id']));

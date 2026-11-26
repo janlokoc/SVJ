@@ -10,7 +10,7 @@ Přístupové údaje patří **jen do `storage/config.php`** na serveru (vzor je
 
 | # | Služba | Co zařídit | Kam s údaji | Náklady (neověřeno, ověřte u dodavatele) | Beta |
 |---|---|---|---|---|---|
-| 1 | **SMS brána** – GoSMS (gosms.eu) nebo BulkGate (bulkgate.com) | Firemní účet, ověřit odesílatele (jméno „SVJ“ apod.), dobít kredit | `sms` v config.php; brána a cena SMS pro domy v konzoli → SMS | cca 1 Kč/SMS u brány; cenu pro domy nastavujete sami | `beta_sms` |
+| 1 | **SMS brána** – GoSMS (gosms.eu) nebo BulkGate (bulkgate.com) | Firemní účet, ověřit odesílatele (jméno „SVJ“ apod.), dobít kredit | `sms` v config.php; brána v konzoli → SMS, cena SMS pro domy v konzoli → Kredit | cca 1 Kč/SMS u brány; cenu pro domy nastavujete sami | `beta_sms` |
 | 2 | **GoCardless Bank Account Data** (PSD2 – ČS, KB, ČSOB, Raiffeisen, Moneta…) | Registrace v portálu, vytvořit Secret ID a Secret Key. **Ověřte, zda nové registrace přijímají** – neměl jsem jak ověřit. | `bank.gocardless_id`, `bank.gocardless_key` | dle ceníku GoCardless | `beta_bank-psd2` |
 | 3 | **ČÚZK – WSDP** (sledování změn v katastru) | Žádost o účet do Webové služby dálkového přístupu (smlouva s ČÚZK, placený přístup) | `katastr.user`, `katastr.password` | cca 100 Kč za výpis LV (neověřeno) | `beta_katastr` |
 | 4 | **Centrální evidence exekucí** (Exekutorská komora) | Smlouva o přístupu přes API; nejdřív testovací klíč | `exekuce.api_key`, `exekuce.api_secret` (+ `url` testovacího prostředí) | cca 60 Kč za lustraci (neověřeno) | `beta_exekuce` |
@@ -46,7 +46,34 @@ Přístupové údaje patří **jen do `storage/config.php`** na serveru (vzor je
 | AI pomocník pro obyvatele | zapnutý, 20× denně na osobu, výbor může vypnout |
 | AI pomocník v partnerském portálu | 50× denně na firmu, náklady nese platforma |
 
-## 5. Před spuštěním placené bety
+## 5. Ceny doplňků a kredit
+
+Služby placené podle spotřeby se platí z jednoho **předplaceného kreditu služeb v Kč** na dům (bez DPH). Dům si ho dobije
+v administraci (Kredit služeb, 300 / 500 / 1 000 / 2 000 Kč nebo vlastní částka od 300 Kč) zálohovou fakturou s QR kódem;
+po potvrzení platby v konzoli (Platby) se kredit připíše a vystaví se faktura. Dům, za který platí správcovská firma,
+dostane dobití na její společnou fakturu. Kredit platí 24 měsíců, zbytek pak propadne.
+
+| Služba | Cena bez DPH (výchozí) | Klíč nastavení |
+|---|---|---|
+| SMS | 1,50 Kč za SMS; Premium 100 SMS ročně v ceně | `sms_price_h` (haléře), `sms_free_premium` |
+| Lustrace exekucí | 99 Kč za úspěšný dotaz | `rej_price_exekuce` |
+| Ověření hlasu přes Bank iD | 19 Kč za ověřený hlas | `bankid_price` |
+| Shromáždění online | Premium v ceně, Standard 490 Kč za shromáždění | `price_online_meeting` |
+| Sledování katastru (doplněk k ročnímu předplatnému) | 1 490 Kč za dům a rok vč. 1 LV, další LV 990 Kč; kontrola po 30 dnech | `rej_price_katastr_house`, `rej_price_katastr_lv_extra`, `rej_katastr_days` |
+| Kredit | platnost 24 měsíců, upozornění správcům pod 100 Kč | `credit_valid_months`, `credit_low_h` (haléře) |
+
+V ceně edice bez příplatku: hlídání insolvencí a propojení s bankami (PSD2) v Premium, přihlášení přes Google/Microsoft/Apple/Facebook
+ve všech edicích, export do účetnictví od Standardu.
+
+**Kde se mění:** konzole `/sprava/kredit` – ceny, zůstatky domů, ruční oprava, „Vrátit zůstatek“ při zrušení služby
+(kredit se vynuluje, peníze pošlete převodem a k faktuře za dobití vystavíte opravný doklad) a měsíční spotřeba.
+Dosavadní SMS kredit domů (počet SMS) se při aktualizaci převedl na Kč podle tehdejší ceny SMS.
+
+**Ověřit s účetní:** kredit považujeme za **jednoúčelový poukaz** – DPH se odvádí už při platbě za dobití (všechny služby
+mají sazbu 21 %) a čerpání se nefakturuje znovu. Tento režim, text faktury za dobití a postup při vrácení zůstatku
+(opravný doklad) musí potvrdit účetní, než kredit spustíte.
+
+## 6. Před spuštěním placené bety
 
 Až budou první platící zákazníci: u každé služby výše přepnout `beta_*` z `off` na `beta` (jen Premium) a sledovat náklady
-v konzoli (SMS kredit, AI tokeny, lustrace). Na `on` až po ověření na skutečném domě.
+v konzoli (Kredit služeb, AI tokeny, Rejstříky). Na `on` až po ověření na skutečném domě.

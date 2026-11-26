@@ -5,7 +5,7 @@ namespace Tests\Unit;
 
 use Tests\TestCase;
 
-/** Modul C – SMS (app/ext/sms_lib.php): čísla, kódování a počet částí, cena, kredit, brány s falešným HTTP, odeslání a beta. */
+/** Modul C – SMS (app/ext/sms_lib.php): čísla, kódování a počet částí, cena, placení z kreditu služeb, SMS v ceně Premium, brány s falešným HTTP, odeslání a beta. */
 final class ModCSmsTest extends TestCase
 {
     private array $savedPset = [];
@@ -16,6 +16,9 @@ final class ModCSmsTest extends TestCase
         parent::setUp();
         $this->pset('beta_sms', 'on');
         $this->pset('sms_provider', 'log');
+        $this->pset('sms_price_h', '150');
+        $this->pset('sms_free_premium', '0');   // „dum“ má Premium – volné SMS zkouší zvláštní test
+        $this->pset('credit_low_h', '0');
     }
     protected function tearDown(): void
     {
@@ -32,6 +35,8 @@ final class ModCSmsTest extends TestCase
         }
         sms_ledger_ready();
         pq('DELETE FROM sms_ledger WHERE tenant = ?', [TENANT]);
+        pq('DELETE FROM credit_ledger WHERE tenant = ?', [TENANT]);
+        pq('DELETE FROM credit_state WHERE tenant = ?', [TENANT]);
         sms_transport(null, true);
         unset($GLOBALS['SMS_SOURCE']);
     }
@@ -52,6 +57,11 @@ final class ModCSmsTest extends TestCase
     {
         q("INSERT INTO users (email, name, password_hash, role, kind, phone, active) VALUES (?,?,?,?,?,?,?)", ['sms-' . bin2hex(random_bytes(4)) . '@example.cz', 'Test SMS', 'x', 'resident', $kind, $phone, $active]);
         return $this->users[] = (int) db()->lastInsertId();
+    }
+    /** Připíše kredit služeb na $n SMS (po 1,50 Kč). */
+    private function credit(int $n): void
+    {
+        $this->assertNotNull(credit_add(TENANT, $n * 150, 'fix', 'test'));
     }
     private function logFile(): string
     {
@@ -141,34 +151,65 @@ final class ModCSmsTest extends TestCase
         $this->assertSame('300 Kč', str_replace("\u{a0}", ' ', sms_money(300.0)));
     }
 
-    // ---------- kredit ----------
+    // ---------- placení z kreditu služeb ----------
 
-    public function testCreditLedger(): void
+    public function testBalanceCountsCreditInSms(): void
     {
         $this->assertSame(0, sms_balance());
-        $this->assertNull(sms_credit_add(TENANT, 100, 'faktura 1', 'op@example.cz'));
+        $this->credit(100);
         $this->assertSame(100, sms_balance());
-        $this->assertNotNull(sms_credit_add(TENANT, 0, '', 'op'));
-        $this->assertNotNull(sms_credit_add('neexistuje', 10, '', 'op'));
-        $this->assertNotNull(sms_credit_add(TENANT, -101, 'oprava', 'op'));
-        $this->assertNull(sms_credit_add(TENANT, -10, 'oprava', 'op'));
-        $this->assertSame(90, sms_balance());
-        $this->assertTrue(sms_reserve(TENANT, 90, 'test'));
-        $this->assertFalse(sms_reserve(TENANT, 1, 'test'));
-        $this->assertSame(0, sms_balance());
-        $kinds = array_column(sms_ledger(TENANT), 'kind');
-        $this->assertSame(['send', 'fix', 'credit'], $kinds);
+        credit_add(TENANT, 149, 'fix', 'drobné');
+        $this->assertSame(100, sms_balance(), 'neúplná SMS se nepočítá');
+        $this->assertNotNull(sms_charge(TENANT, 100, 'test'));
+        $this->assertNull(sms_charge(TENANT, 1, 'test'), 'na další SMS nestačí');
+        $this->assertSame(149, credit_balance_h(TENANT));
+        $row = credit_statement(TENANT, 1)[0];
+        $this->assertSame(['sms', -15000, 100], [$row['kind'], (int) $row['delta_h'], (int) $row['qty']]);
+    }
+    public function testPremiumFreeSmsUsedBeforeCredit(): void
+    {
+        $this->pset('sms_free_premium', '3');
+        $this->assertSame('premium', tenant_edition(tenant_row(TENANT)));
+        $this->assertSame(3, sms_free_allowance(TENANT));
+        $this->credit(2);
+        $this->assertSame(5, sms_balance());
+        $ref = sms_charge(TENANT, 2, 'první');
+        $this->assertNotNull($ref);
+        $this->assertSame([1, 300], [sms_free_left(TENANT), credit_balance_h(TENANT)], 'nejdřív volné SMS');
+        $this->assertNotNull(sms_charge(TENANT, 2, 'druhá'));
+        $this->assertSame([0, 150], [sms_free_left(TENANT), credit_balance_h(TENANT)], '1 volná + 1 z kreditu');
+        // vrácení neodeslané zprávy vrátí i volné SMS
+        credit_reverse(TENANT, $ref, 'neodesláno');
+        $this->assertSame([2, 150], [sms_free_left(TENANT), credit_balance_h(TENANT)]);
+        // volné SMS z loňska se nepočítají
+        pq('UPDATE credit_ledger SET at = ? WHERE tenant = ? AND delta_h = 0', [(date('Y') - 1) . '-12-31 10:00:00', TENANT]);
+        $this->assertSame(3, sms_free_left(TENANT), 'nový kalendářní rok = nový příděl');
+    }
+    public function testFreeSmsOnlyInPremium(): void
+    {
+        $this->pset('sms_free_premium', '100');
+        $saved = pq('SELECT billing, plan, paid_until, trial_ends FROM tenants WHERE slug = ?', [TENANT])->fetch();
+        plan_tenant();   // edice webu je v procesu uložená – změna řádku ji neovlivní
+        try {
+            pq("UPDATE tenants SET billing = 1, plan = 'standard', paid_until = ? WHERE slug = ?", [date('Y-m-d', strtotime('+100 day')), TENANT]);
+            $this->assertSame(0, sms_free_allowance(TENANT));
+            $this->assertNull(sms_charge(TENANT, 1, 'Standard bez kreditu'));
+        } finally {
+            pq('UPDATE tenants SET billing = ?, plan = ?, paid_until = ?, trial_ends = ? WHERE slug = ?', [...array_values($saved), TENANT]);
+        }
+        $this->assertSame(100, sms_free_allowance(TENANT));
     }
 
     // ---------- odeslání ----------
 
     public function testSendDeductsSegmentsAndLogs(): void
     {
-        sms_credit_add(TENANT, 5, '', 'op');
+        $this->credit(5);
         $before = count($this->logLines());
         $GLOBALS['SMS_SOURCE'] = 'hlasovani';
         $this->assertTrue(sms_send('777 123 456', 'Hlasovani konci zitra.'));
         $this->assertSame(4, sms_balance());
+        $this->assertSame(600, credit_balance_h(TENANT));
         $lines = $this->logLines();
         $this->assertCount($before + 1, $lines);
         $this->assertSame('+420777123456', end($lines)['to']);
@@ -179,6 +220,15 @@ final class ModCSmsTest extends TestCase
         $this->assertTrue($r['ok']);
         $this->assertSame(2, $r['segments']);
         $this->assertSame(2, sms_balance());
+        $last = credit_statement(TENANT, 1)[0];
+        $this->assertSame(['sms', -300, 2], [$last['kind'], (int) $last['delta_h'], (int) $last['qty']]);
+    }
+    public function testSendUsesPremiumFreeSmsWithoutCredit(): void
+    {
+        $this->pset('sms_free_premium', '1');
+        $this->assertTrue(sms_send('777123456', 'Zdarma'));
+        $this->assertSame(0, credit_balance_h(TENANT));
+        $this->assertFalse(sms_send('777123456', 'Uz ne'), 'volné SMS došly a kredit není');
     }
     public function testSendRefusedWithoutCredit(): void
     {
@@ -189,10 +239,11 @@ final class ModCSmsTest extends TestCase
         $this->assertCount($before, $this->logLines(), 'nic se nesmí odeslat');
         $this->assertSame('refused', one('SELECT status FROM sms_log ORDER BY id DESC LIMIT 1')['status']);
         $this->assertSame(0, sms_balance());
+        $this->assertSame([], credit_statement(TENANT));
     }
     public function testSendValidation(): void
     {
-        sms_credit_add(TENANT, 100, '', 'op');
+        $this->credit(100);
         $this->assertFalse(sms_send('123', 'x'));
         $this->assertFalse(sms_send('777123456', '   '));
         $this->assertFalse(sms_send('777123456', str_repeat('č', 67 * SMS_MAX_SEGMENTS + 1)));
@@ -200,7 +251,7 @@ final class ModCSmsTest extends TestCase
     }
     public function testBetaOffBlocksSending(): void
     {
-        sms_credit_add(TENANT, 10, '', 'op');
+        $this->credit(10);
         $this->pset('beta_sms', 'off');
         $this->assertFalse(beta_visible('sms'));
         $this->assertFalse(sms_send('777123456', 'x'));
@@ -216,14 +267,36 @@ final class ModCSmsTest extends TestCase
     public function testFailedProviderRefundsCredit(): void
     {
         $this->pset('sms_provider', 'bulkgate');   // v config.php nejsou klíče → brána odmítne
-        sms_credit_add(TENANT, 3, '', 'op');
+        $this->credit(3);
         $r = sms_send_ex('777123456', 'x');
         $this->assertFalse($r['ok']);
         $this->assertStringContainsString('application_id', $r['error']);
         $this->assertSame(3, sms_balance());
-        $this->assertSame('refund', sms_ledger(TENANT)[0]['kind']);
+        $last = credit_statement(TENANT, 2);
+        $this->assertSame(['sms', 150], [$last[0]['kind'], (int) $last[0]['delta_h']], 'vráceno do kreditu');
+        $this->assertSame((int) $last[1]['lot_id'], (int) $last[0]['lot_id'], 'do téže šarže');
+        $this->assertStringContainsString('vráceno', $last[0]['note']);
         $this->assertSame('failed', one('SELECT status FROM sms_log ORDER BY id DESC LIMIT 1')['status']);
     }
+    public function testOldSmsCreditIsMigratedToMoney(): void
+    {
+        sms_ledger_ready();
+        pq("INSERT INTO sms_ledger (tenant, at, delta, kind) VALUES (?, '2026-01-01 10:00:00', 200, 'credit'), (?, '2026-02-01 10:00:00', -30, 'send')", [TENANT, TENANT]);
+        pq("INSERT INTO sms_ledger (tenant, at, delta, kind) VALUES ('jiny-dum', '2026-01-01 10:00:00', 5, 'credit'), ('jiny-dum', '2026-01-02 10:00:00', -5, 'send')");
+        $this->pset('sms_price_h', '120');
+        $done = credit_migrate_sms(platform_db());
+        $this->assertSame([TENANT => 170 * 120], $done, 'jen domy se zůstatkem');
+        $this->assertSame(170 * 120, credit_balance_h(TENANT));
+        $row = credit_statement(TENANT, 1)[0];
+        $this->assertSame(['migrate', 170], [$row['kind'], (int) $row['qty']]);
+        $this->assertSame((int) $row['id'], (int) $row['lot_id'], 'převod je nová šarže');
+        $this->assertSame(date('Y-m-d', strtotime('+24 month')), $row['expires_at']);
+        $this->assertSame(0, (int) pq('SELECT SUM(delta) FROM sms_ledger WHERE tenant = ?', [TENANT])->fetchColumn(), 'historie zůstává, zůstatek vynulován');
+        $this->assertSame(3, (int) pq('SELECT COUNT(*) FROM sms_ledger WHERE tenant = ?', [TENANT])->fetchColumn());
+        $this->assertSame([], credit_migrate_sms(platform_db()), 'podruhé se nic nepřevede');
+        pq("DELETE FROM sms_ledger WHERE tenant = 'jiny-dum'");
+    }
+
     public function testStagingAlwaysUsesLogProvider(): void
     {
         $this->assertSame('log', sms_provider_for('gosms', true));
@@ -300,7 +373,7 @@ final class ModCSmsTest extends TestCase
             return ['status' => 500, 'body' => ''];
         });
         $this->pset('sms_provider', 'gosms');
-        sms_credit_add(TENANT, 2, '', 'op');
+        $this->credit(2);
         $this->assertFalse(sms_send('777123456', 'x'));
         $this->assertFalse($called);
         $this->assertSame(2, sms_balance());
@@ -330,26 +403,22 @@ final class ModCSmsTest extends TestCase
         $this->owner('777 111 002');
         $this->owner('777 111 003');
         $n = count(sms_owner_recipients()[0]);
-        sms_credit_add(TENANT, $n - 1, '', 'op');
+        $this->credit($n - 1);
         [$sent, $failed, $err] = sms_send_owners('Havarie vody');
         $this->assertSame([0, 0], [$sent, $failed]);
         $this->assertStringContainsString('potřebuje ' . $n . ' SMS', $err);
-        sms_credit_add(TENANT, 1, '', 'op');
+        $this->credit(1);
         $before = count($this->logLines());
         $this->assertSame([$n, 0, null], sms_send_owners('Havarie vody'));
         $this->assertSame(0, sms_balance());
         $this->assertCount($before + $n, $this->logLines());
     }
-    public function testOrderMailsOperator(): void
+    public function testOrderFlowIsReplacedByCreditTopUp(): void
     {
-        $this->pset('contact_email', 'provozovatel@example.cz');
-        $this->pset('sms_pack', '200');
-        $this->assertTrue(sms_order(2, ['name' => 'Jana Správcová', 'email' => 'jana@example.cz']));
-        $m = $this->mails();
-        $this->assertSame('provozovatel@example.cz', end($m)['to']);
-        $this->assertStringContainsString('400 SMS', end($m)['body']);
-        $this->pset('contact_email', '');
-        $this->assertFalse(sms_order(1, ['name' => 'x', 'email' => 'x@example.cz']));
+        $this->assertFalse(function_exists('sms_order'), 'balíčky SMS se už neobjednávají – dobíjí se kredit služeb');
+        $this->assertArrayNotHasKey('sms_pack', SMS_DEFAULTS);
+        $src = (string) file_get_contents(dirname(__DIR__, 2) . '/app/ext/routes_sms.php');
+        $this->assertStringContainsString("redirect('/admin/kredit#dobit')", $src);
     }
 
     // ---------- obrazovky ----------
@@ -367,21 +436,25 @@ final class ModCSmsTest extends TestCase
         $text = sms_plain('Havárie vody – sklep zatopený');
         [$seg, $total, $czk] = sms_cost($text, 2);
         $html = $this->view('ext/sms/admin', ['text' => $text, 'plain' => true, 'preview' => ['text' => $text, 'info' => sms_segments($text), 'recipients' => 2, 'total' => $total, 'czk' => $czk],
-            'recipients' => [[], []], 'bad' => [], 'managed' => true, 'balance' => 1, 'ledger' => [['at' => '2026-11-26 10:00:00', 'delta' => 5, 'kind' => 'credit', 'note' => 'faktura']],
-            'price' => 150, 'pack' => 200, 'log' => [['at' => '2026-11-26 10:00:00', 'phone' => '+420777123456', 'segments' => 1, 'status' => 'sent', 'error' => '', 'text' => 'x']], 'staging' => true]);
+            'recipients' => [[], []], 'bad' => [], 'managed' => true, 'balance' => 1, 'creditH' => 150, 'freeLeft' => 0, 'freeYear' => 100,
+            'price' => 150, 'log' => [['at' => '2026-11-26 10:00:00', 'phone' => '+420777123456', 'segments' => 1, 'status' => 'sent', 'error' => '', 'text' => 'x']], 'staging' => true]);
         $this->assertStringContainsString('Havarie vody - sklep zatopeny', $html);
-        $this->assertStringContainsString('Kredit nestačí', $html);
+        $this->assertStringContainsString('Kredit služeb nestačí', $html);
+        $this->assertStringContainsString('/admin/kredit#dobit', $html, 'místo odeslání odkaz na dobití');
+        $this->assertStringContainsString('0 z 100 SMS v ceně edice Premium', $html);
         $this->assertStringNotContainsString('value="send"', $html, 'bez kreditu nejde odeslat');
+        $this->assertStringNotContainsString('name="packs"', $html, 'balíčky SMS se neobjednávají');
         $this->assertStringContainsString('+420777123•••', $html);
         $this->assertStringContainsString('Zkušební režim', $html);
         $this->assertStringNotContainsString('<script', $html);
     }
     public function testConsoleViewRenders(): void
     {
-        $html = $this->view('ext/sms/console', ['provider' => 'gosms', 'effective' => 'log', 'price' => 150, 'pack' => 200, 'tenants' => [['slug' => 'dum', 'name' => 'SVJ Zahradní 12']],
-            'balances' => ['dum' => ['n' => 7]], 'ledger' => [], 'stage' => 'beta']);
+        $html = $this->view('ext/sms/console', ['provider' => 'gosms', 'effective' => 'log', 'price' => 150, 'free' => 100, 'stage' => 'beta']);
         $this->assertStringContainsString('sms.gosms_client_id', $html);
-        $this->assertStringContainsString('SVJ Zahradní 12 (7 SMS)', $html);
+        $this->assertStringContainsString('Kredit služeb', $html);
+        $this->assertStringContainsString('100 SMS ročně v ceně', $html);
+        $this->assertStringNotContainsString('name="pack"', $html);
         $this->assertStringContainsString('value="1.5"', $html);
         $this->assertStringContainsString('Zkušební prostředí', $html);
     }
