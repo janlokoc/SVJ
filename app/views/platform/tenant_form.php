@@ -99,8 +99,10 @@
       <label>Barvy <select name="look"><?php foreach (LOOKS as $k => $label): ?><option value="<?= $k ?>"<?= $t['look'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
       <label>Jazyk webu <select name="lang"><?php foreach (LANGS as $k => $label): ?><option value="<?= $k ?>"<?= $t['lang'] === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
     </div>
-    <label>Vlastní doména (nepovinné) <input type="text" name="custom_domain" value="<?= e($t['custom_domain']) ?>" placeholder="www.svj-priklad.cz"></label>
-    <p class="hint">Doménu musí její majitel nasměrovat na tento server; web pak poběží na ní i na adrese platformy.</p>
+    <?php if (($t['custom_domain'] ?? '') !== ''): /* vlastní doménu už nenabízíme; pole jen u webů, které ji mají */ ?>
+    <label>Vlastní doména <input type="text" name="custom_domain" value="<?= e($t['custom_domain']) ?>" placeholder="www.svj-priklad.cz"></label>
+    <p class="hint">Doménu musí její majitel nasměrovat na tento server; web pak poběží na ní i na adrese platformy. Nové domény se nenabízejí.</p>
+    <?php else: ?><input type="hidden" name="custom_domain" value=""><?php endif ?>
     <label>Interní poznámka <input type="text" name="note" value="<?= e($t['note']) ?>"></label>
     <?php if ($new): ?><label class="check"><input type="checkbox" name="seed_tabor"> <span>Naplnit ukázkovým obsahem SVJ Tábor 48 <small>Dokumenty, kontakty a aktuality z původního webu svjtabor48.webnode.cz. Pro ostatní společenství nechte vypnuté.</small></span></label><?php endif ?>
     <?php if ($new): ?>
@@ -187,7 +189,7 @@
   <?php endif ?>
   <?php if ($raw['domain_status'] !== ''): ?>
   <div class="card" id="domena">
-    <h2>Vlastní doména (placený doplněk)</h2>
+    <h2>Vlastní doména (už se nenabízí, jen stávající)</h2>
     <p><strong><?= e($raw['domain_request']) ?></strong> · <?= $raw['domain_status'] === 'active' ? '<span class="status status-done">zprovozněna</span>' : '<span class="status status-new">žádost</span>' ?>
       <?= $raw['domain_until'] !== '' ? ' · zaplaceno do ' . cz_date($raw['domain_until']) : ' · zatím nezaplaceno' ?>
       <?= $domainPayment ? ' · poslední platba: ' . e(PAYMENT_STATUS[$domainPayment['status']]) . ' (VS ' . e($domainPayment['vs']) . ')' : '' ?></p>

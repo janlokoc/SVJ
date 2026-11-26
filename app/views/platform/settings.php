@@ -48,9 +48,8 @@
     </div>
     <p class="hint">AI kredity se čerpají, až web vyčerpá měsíční limit AI své edice, a nepropadají. Cena by měla pokrýt náklady na AI službu (orientačně desítky haléřů až korunu za dotaz asistenta).</p>
     <label>Jednorázový převod obsahu ze starého webu (Kč) <input type="number" name="price_migration" value="<?= e($v['price_migration']) ?>" min="0" required></label>
-    <label>Vlastní doména společenství (Kč za rok) <input type="number" name="price_domain" value="<?= e($v['price_domain']) ?>" min="0" required></label>
-    <label>Pokyny pro společenství, které doménu už vlastní <textarea name="domain_dns" rows="3" placeholder="Nastavte záznam A pro tabor48.cz a www.tabor48.cz na adresu 203.0.113.10"><?= e($v['domain_dns']) ?></textarea></label>
-    <p class="hint">O doménu žádá správce společenství v části Předplatné. Žádost uvidíte u společenství; po zaplacení, nasměrování domény na server a zapnutí HTTPS ji tam zprovozníte.</p>
+    <?php /* Vlastní doménu už nenabízíme – hodnoty zůstávají jen pro weby, které ji mají (prodloužení). */ ?>
+    <input type="hidden" name="price_domain" value="<?= e($v['price_domain']) ?>"><input type="hidden" name="domain_dns" value="<?= e($v['domain_dns']) ?>">
     <?php require __DIR__ . '/../ext/pricing/settings.php'; /* modul G: ceny podle velikosti, jednorázové hlasování, srovnání, aplikace */ ?>
     <h2 id="ai">AI pomocník a AI asistent</h2>
     <?php $aiLib = function_exists('ai_sdk_ready') && ai_sdk_ready(); $aiKey = function_exists('ai_settings') && ai_settings()['key'] !== ''; ?>
