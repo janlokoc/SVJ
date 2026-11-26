@@ -227,6 +227,8 @@ function edition_price(string $edition): int
  */
 const BETA_FEATURES = [
     'insolvence' => ['Hlídání insolvencí vlastníků', '/admin/insolvence', 'isir_enabled'],
+    'katastr' => ['Sledování změn v katastru (WSDP ČÚZK, placené)', '/admin/rejstriky/katastr', ''],
+    'exekuce' => ['Lustrace v Centrální evidenci exekucí (placené)', '/admin/rejstriky/exekuce', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 

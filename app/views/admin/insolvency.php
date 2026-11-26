@@ -5,7 +5,7 @@
   <?php if (!$premium): ?>
   <div class="card"><p>Hlídání insolvencí je součástí edice Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
   <?php else: ?>
-  <p class="hint">Hlídají se jen vlastníci s IČO (firmy, družstva, obce). Fyzické osoby rejstřík dohledává podle rodného čísla nebo data narození, která web nemá – a podle samotného jména by hlásil falešné shody.
+  <p class="hint">Firmy, družstva a obce se hlídají podle IČO. Fyzické osoby rejstřík dohledává podle jména a data narození – ty doplníte níže v části <a href="#osoby">Fyzické osoby</a>.
     <?= ($last[0] ?? '') !== '' ? 'Poslední kontrola ' . e($last[0]) . ': ' . e($last[2] ?? '') . '.' : '' ?></p>
   <?php if (!$units): ?>
   <div class="card"><p>Mezi vlastníky jednotek web nenašel žádnou firmu. Pozná ji podle označení v poli „Vlastník dle evidence“ (s.r.o., a.s., družstvo…) nebo podle IČO uvedeného u jednotky.</p></div>
@@ -31,5 +31,6 @@
     <div class="actions"><button class="btn" type="submit" name="action" value="save">Uložit IČO</button><button class="btn btn-ghost" type="submit" name="action" value="run">Zkontrolovat teď</button></div>
   </form>
   <?php endif ?>
+  <?php if (function_exists('rej_persons')) { require __DIR__ . '/../ext/rejstriky/isir_persons.php'; } ?>
   <?php endif ?>
 </div>

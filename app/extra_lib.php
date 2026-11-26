@@ -197,6 +197,13 @@ function daily_tasks(): void
             error_log('SVJ web, banka: ' . $e->getMessage());
         }
     }
+    foreach ((array) ($GLOBALS['EXT_DAILY'] ?? []) as $extDaily) {   // rozšíření (app/ext): $GLOBALS['EXT_DAILY'][] = 'funkce'
+        try {
+            $extDaily();
+        } catch (Throwable $e) {
+            error_log('SVJ web, rozšíření ' . (is_string($extDaily) ? $extDaily : '') . ': ' . $e->getMessage());
+        }
+    }
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }
