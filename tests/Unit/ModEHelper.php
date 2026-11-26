@@ -46,6 +46,10 @@ trait ModEHelper
         if (rej_usage_ready()) {
             pq('DELETE FROM rej_usage');
         }
+        // Kredit služeb a doplňky k předplatnému (lustrace a sledování katastru se platí přes ně).
+        pq('DELETE FROM credit_ledger WHERE tenant = ?', [TENANT]);
+        pq('DELETE FROM credit_state WHERE tenant = ?', [TENANT]);
+        pq('DELETE FROM tenant_addons WHERE tenant = ?', [TENANT]);
         foreach ($this->modePset as $key => $value) {
             if ($value === null) {
                 pq('DELETE FROM platform_settings WHERE key = ?', [$key]);

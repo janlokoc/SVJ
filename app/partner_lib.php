@@ -217,20 +217,78 @@ function partner_order(array $partner, array $choice): array|string
     if (!$lines) {
         return 'Vyberte aspoň jeden dům a edici.';
     }
-    $subtotal = array_sum(array_column($lines, 'price'));
-    $pct = partner_discount(count(partner_tenants((int) $partner['id'])));
-    $discount = (int) round($subtotal * $pct / 100);
-    $json = json_encode($lines, JSON_UNESCAPED_UNICODE);
+    // Doplňky domů k ročnímu předplatnému (např. sledování katastru) jako další řádky.
+    foreach ($lines as $l) {
+        foreach (addon_year_lines(tenant_row($l['slug']) ?? []) as $a) {
+            $lines[] = ['kind' => 'addon', 'slug' => $l['slug'], 'name' => $l['name'], 'label' => $a['name'], 'addon' => $a['addon'], 'qty' => $a['qty'], 'price' => $a['price'], 'year' => true];
+        }
+    }
+    // Řádky, které na fakturu přidaly domy samy (dobití kreditu, doplněk za zbytek období), zůstávají.
+    foreach ($open ? partner_lines($open) : [] as $l) {
+        if (isset($l['kind']) && empty($l['year'])) {
+            $lines[] = $l;
+        }
+    }
+    $p = partner_payment_store($partner, $lines, $open);
+    platform_log('Partner: společná faktura', $partner['name'] . ' · ' . count(array_filter($lines, fn($l) => !isset($l['kind']))) . ' domů · ' . $p['amount'] . ' Kč');
+    return $p;
+}
+/** Uloží řádky faktury partnera (přepíše otevřenou výzvu, jinak založí novou): množstevní sleva jen z cen edic. */
+function partner_payment_store(array $partner, array $lines, ?array $open): array
+{
+    $editions = array_sum(array_map(fn($l) => isset($l['kind']) ? 0 : (int) $l['price'], $lines));
+    $extra = array_sum(array_map(fn($l) => isset($l['kind']) ? (int) $l['price'] : 0, $lines));
+    $discount = (int) round($editions * partner_discount(count(partner_tenants((int) $partner['id']))) / 100);
+    $amount = $editions - $discount + $extra;
+    $json = json_encode(array_values($lines), JSON_UNESCAPED_UNICODE);
     if ($open) {
-        pq('UPDATE payments SET amount = ?, item = ?, discount = ?, vat_rate = ?, created_at = ? WHERE id = ?', [$subtotal - $discount, $json, $discount, vat_rate_now(), date('Y-m-d H:i:s'), $open['id']]);
+        pq('UPDATE payments SET amount = ?, item = ?, discount = ?, vat_rate = ?, created_at = ? WHERE id = ?', [$amount, $json, $discount, vat_rate_now(), date('Y-m-d H:i:s'), $open['id']]);
         return pq('SELECT * FROM payments WHERE id = ?', [$open['id']])->fetch();
     }
     pq("INSERT INTO payments (vat_rate, tenant, partner_id, amount, months, created_at, kind, item, discount) VALUES (" . vat_rate_now() . ",?,?,?,12,?,'partner',?,?)",
-        ['partner:' . $partner['id'], $partner['id'], $subtotal - $discount, date('Y-m-d H:i:s'), $json, $discount]);
+        ['partner:' . $partner['id'], $partner['id'], $amount, date('Y-m-d H:i:s'), $json, $discount]);
     $id = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $id), $id]);
-    platform_log('Partner: společná faktura', $partner['name'] . ' · ' . count($lines) . ' domů · ' . ($subtotal - $discount) . ' Kč');
     return pq('SELECT * FROM payments WHERE id = ?', [$id])->fetch();
+}
+/**
+ * Dům, za který platí partner, si objednal něco navíc (dobití kreditu služeb 'credit', doplněk za zbytek období 'addon'):
+ * řádek se přidá na otevřenou zálohovou fakturu partnera (stejný druh téhož domu se nahradí), případně na novou.
+ * Partnerovi přijde e-mail. Vrací platbu partnera, nebo chybu jako text.
+ */
+function partner_extra_line(array $t, array $line): array|string
+{
+    $partner = partner_row((int) $t['partner_id']);
+    if (!$partner || $t['partner_status'] !== 'active' || !(int) $t['partner_billing']) {
+        return 'Dům nemá aktivního správce, který za něj platí.';
+    }
+    $open = partner_open_payment((int) $partner['id']);
+    if ($open && $open['status'] === 'claimed') {
+        return 'Správce domu ' . $partner['name'] . ' už nahlásil platbu své zálohové faktury. Objednávku zopakujte, až platbu potvrdíme (obvykle do 2 pracovních dnů).';
+    }
+    $same = fn(array $l) => ($l['kind'] ?? '') === $line['kind'] && $l['slug'] === $t['slug'] && ($l['addon'] ?? '') === ($line['addon'] ?? '') && empty($l['year']);
+    $lines = array_values(array_filter($open ? partner_lines($open) : [], fn($l) => !$same($l)));
+    $line = array_merge($line, ['slug' => $t['slug'], 'name' => $t['name']]);
+    $lines[] = $line;
+    $p = partner_payment_store($partner, $lines, $open);
+    platform_log('Partner: řádek od domu', $partner['name'] . ' · ' . $t['slug'] . ' · ' . partner_line_text($line) . ' · ' . (int) $line['price'] . ' Kč');
+    if (filter_var($partner['email'], FILTER_VALIDATE_EMAIL)) {
+        platform_mail($partner['email'], 'Nová položka na zálohové faktuře – ' . $t['name'], "Dobrý den,\n\nspolečenství " . $t['name'] . ' si objednalo: ' . partner_line_text($line)
+            . ' za ' . money_czk((int) $line['price']) . " bez DPH.\nPoložka je na Vaší zálohové faktuře (VS " . $p['vs'] . ', celkem ' . pay_money($p) . ").\n"
+            . 'Po připsání platby ji domu připíšeme. Fakturu najdete v partnerském portálu: ' . platform_url('/partner/fakturace'));
+    }
+    return $p;
+}
+/** Text řádku faktury partnera. */
+function partner_line_text(array $l): string
+{
+    return match ($l['kind'] ?? '') {
+        'credit' => 'Kredit služeb pro ' . $l['name'] . ' (předplacené SMS, lustrace, ověření hlasu a další služby)',
+        'addon' => $l['name'] . ': ' . ($l['label'] ?? addon_label((string) ($l['addon'] ?? ''), (int) ($l['qty'] ?? 1)))
+            . (!empty($l['year']) ? (isset($l['to']) ? ' v období ' . cz_date((string) $l['from']) . ' – ' . cz_date((string) $l['to']) : ' na 1 rok')
+                : ' – zbytek období ' . cz_date((string) ($l['from'] ?? '')) . ' – ' . cz_date((string) ($l['to'] ?? ''))),
+        default => 'Web společenství ' . $l['name'] . ' – edice ' . (EDITIONS[$l['edition']] ?? $l['edition']) . (isset($l['from']) ? ' v období ' . cz_date($l['from']) . ' – ' . cz_date($l['to']) : ' na 1 rok'),
+    };
 }
 /** Odběratel na dokladu partnera. */
 function partner_invoice_parties(array $partner): array
@@ -248,12 +306,17 @@ function partner_billing_confirm(array $p, string $by): ?array
     $today = date('Y-m-d');
     $lines = partner_lines($p);
     $min = $max = null;
+    $houses = 0;
     foreach ($lines as &$l) {
         $t = tenant_row($l['slug']);
         if (!$t) {
             $l['skipped'] = true;
             continue;
         }
+        if (isset($l['kind'])) {
+            continue;   // řádky navíc (kredit, doplňky) až po prodloužení předplatného
+        }
+        $houses++;
         $same = tenant_edition($t) === $l['edition'];
         $from = $same && $t['paid_until'] >= $today ? date('Y-m-d', strtotime($t['paid_until'] . ' +1 day')) : $today;
         $to = date('Y-m-d', strtotime($from . ' +12 month -1 day'));
@@ -265,11 +328,32 @@ function partner_billing_confirm(array $p, string $by): ?array
     unset($l);
     $year = date('Y');
     $no = $year . sprintf('%04d', 1 + (int) pq('SELECT COUNT(*) FROM payments WHERE invoice_no LIKE ?', [$year . '%'])->fetchColumn());
+    // Řádky navíc: kredit služeb se připíše domu, doplněk je zaplacený do konce (nově prodlouženého) období domu.
+    $extras = [];
+    foreach ($lines as &$l) {
+        if (!isset($l['kind']) || !empty($l['skipped'])) {
+            continue;
+        }
+        if ($l['kind'] === 'credit') {
+            $l['ledger'] = credit_add($l['slug'], (int) $l['price'] * 100, 'topup', 'Faktura správce ' . $partner['name'] . ' č. ' . $no, $by);
+            $extras[] = 'kredit ' . $l['name'] . ' ' . money_czk((int) $l['price']);
+        } elseif ($l['kind'] === 'addon') {
+            $t = tenant_row($l['slug']);
+            if (!empty($l['year'])) {
+                $l['from'] = $t && $t['paid_until'] !== '' ? date('Y-m-d', strtotime($t['paid_until'] . ' -12 month +1 day')) : $today;
+                $l['to'] = $t ? (string) $t['paid_until'] : $today;
+            }
+            $l['prev_addon_until'] = (string) (addon_row($l['slug'], (string) $l['addon'])['paid_until'] ?? '');
+            addons_mark_paid($l['slug'], [['addon' => $l['addon'], 'qty' => $l['qty'], 'to' => $l['to']]], (string) $l['to']);
+        }
+    }
+    unset($l);
     pq("UPDATE payments SET status = 'paid', paid_at = ?, period_from = ?, period_to = ?, confirmed_by = ?, invoice_no = ?, invoice_data = ?, item = ? WHERE id = ?",
         [date('Y-m-d H:i:s'), $min ?? $today, $max ?? $today, $by, $no, json_encode(partner_invoice_parties($partner), JSON_UNESCAPED_UNICODE), json_encode($lines, JSON_UNESCAPED_UNICODE), $p['id']]);
     if (filter_var($partner['email'], FILTER_VALIDATE_EMAIL)) {
         platform_mail($partner['email'], 'Platba přijata – faktura ' . $no, "Dobrý den,\n\npřijali jsme platbu " . pay_money($p) . " (variabilní symbol " . $p['vs'] . ").\n"
-            . 'Prodloužili jsme předplatné ' . count($lines) . " domů na faktuře.\n\nFakturu najdete v partnerském portálu: " . platform_url('/partner/fakturace') . "\n\nDěkujeme.");
+            . ($houses ? 'Prodloužili jsme předplatné ' . $houses . " domů na faktuře.\n" : '') . ($extras ? 'Připsali jsme: ' . implode(', ', $extras) . ".\n" : '')
+            . "\nFakturu najdete v partnerském portálu: " . platform_url('/partner/fakturace') . "\n\nDěkujeme.");
     }
     return ['from' => $min ?? $today, 'to' => $max ?? $today];
 }
@@ -286,7 +370,7 @@ function partner_invoice_view(array $p): ?array
     $iban = (string) ($parties['supplier']['iban'] ?? '');
     $lines = [];
     foreach (partner_lines($p) as $l) {
-        $lines[] = ['Web společenství ' . $l['name'] . ' – edice ' . (EDITIONS[$l['edition']] ?? $l['edition']) . (isset($l['from']) ? ' v období ' . cz_date($l['from']) . ' – ' . cz_date($l['to']) : ' na 1 rok'), (int) $l['price']];
+        $lines[] = [partner_line_text($l), (int) $l['price']];
     }
     if ((int) $p['discount'] > 0) {
         $lines[] = ['Množstevní sleva správce', -(int) $p['discount']];
@@ -300,6 +384,18 @@ function partner_storno_revert(array $p): array
 {
     $notes = [];
     foreach (partner_lines($p) as $l) {
+        if (($l['kind'] ?? '') === 'credit') {
+            $notes[] = $l['name'] . ': ' . credit_storno_take($l['slug'], (int) $l['price'] * 100, 'storno faktury správce ' . $p['invoice_no'], 'storno');
+            continue;
+        }
+        if (($l['kind'] ?? '') === 'addon') {
+            $row = addon_row($l['slug'], (string) $l['addon']);
+            if ($row && $row['paid_until'] === ($l['to'] ?? '')) {
+                pq('UPDATE tenant_addons SET paid_until = ? WHERE tenant = ? AND addon = ?', [(string) ($l['prev_addon_until'] ?? ''), $l['slug'], $l['addon']]);
+                $notes[] = $l['name'] . ': doplněk „' . ($l['label'] ?? $l['addon']) . '“ je veden jako nezaplacený.';
+            }
+            continue;
+        }
         $t = isset($l['to']) ? tenant_row($l['slug']) : null;
         if ($t && $t['paid_until'] === $l['to']) {
             pq('UPDATE tenants SET paid_until = ?, plan = ? WHERE slug = ?', [(string) $l['prev_until'], (string) $l['prev_plan'], $t['slug']]);

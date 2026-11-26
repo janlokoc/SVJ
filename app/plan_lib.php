@@ -48,6 +48,7 @@ const PLAN_FEATURES = [
     'vyuctovani' => ['standard', 'Vyúčtování služeb', 'Vyúčtování jednotek na webu: vlastníci potvrdí převzetí, podávají námitky, výbor hlídá zákonné lhůty.', '~^/(admin/)?vyuctovani(/|$)~'],
     'smlouvy' => ['standard', 'Smlouvy a pojištění', 'Evidence smluv a pojištění s připomínkou výpovědní lhůty a konce smlouvy.', '~^/admin/smlouvy(/|$)~'],
     'plan-oprav' => ['premium', 'Plán oprav a fond oprav', 'Plánované opravy a výhled fondu oprav na 10–20 let s návrhem, o kolik zvýšit příspěvky.', '~^/(admin/)?plan-oprav(/|$)~'],
+    'ucetnictvi-export' => ['standard', 'Export do účetnictví', 'Vlastníci, předpisy a platby jedním kliknutím do POHODY, Money S3, ABRA Flexi nebo CSV. Import jednotek z tabulky je ve všech edicích.', '~^/admin/ucetnictvi/export$~'],
 ];
 
 function plan_managed(): bool

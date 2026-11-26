@@ -17,6 +17,7 @@
       <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
     <?php endforeach ?>
   </tbody></table>
+  <?php if (function_exists('credit_price_list')) { require __DIR__ . '/../ext/credit/pricing_rows.php'; } /* kredit služeb a doplňky */ ?>
 
   <h3 class="lp-sub" id="pripravujeme">Připravujeme</h3>
   <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>

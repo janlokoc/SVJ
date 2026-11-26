@@ -7,7 +7,7 @@
   <div class="card"><p>Lustrace exekucí je součástí edice Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
   <?php else: ?>
   <?php if (!$configured): ?><div class="callout"><p>Propojení s evidencí exekucí zatím provozovatel nenastavil.</p></div><?php endif ?>
-  <p class="hint">Lustrovat jde vlastníky-firmy s IČO a fyzické osoby, u kterých jste na stránce <a href="<?= url('/admin/insolvence') ?>#osoby">Insolvence vlastníků</a> zadali datum narození. Cena <strong><?= e(money_czk($price)) ?> za dotaz</strong> bez DPH, účtuje se s předplatným. Výsledek se uloží s datem a vidí ho jen správci.</p>
+  <p class="hint">Lustrovat jde vlastníky-firmy s IČO a fyzické osoby, u kterých jste na stránce <a href="<?= url('/admin/insolvence') ?>#osoby">Insolvence vlastníků</a> zadali datum narození. Cena <strong><?= e(money_czk($price)) ?> za dotaz</strong> bez DPH, platí se z <a href="<?= url('/admin/kredit') ?>">kreditu služeb</a> jen za dotaz, který se povede. Výsledek se uloží s datem a vidí ho jen správci.</p>
   <?php if (!$subjects): ?>
   <div class="card"><p>Zatím není koho lustrovat. Doplňte u vlastníka IČO, nebo jméno a datum narození na stránce <a href="<?= url('/admin/insolvence') ?>#osoby">Insolvence vlastníků</a>.</p></div>
   <?php else: ?>
@@ -24,9 +24,10 @@
             <?php else: foreach ((array) json_decode((string) $l['result'], true) as $c): ?><strong><?= e($c['ex_cislo']) ?></strong><?= $c['uprava'] !== '' ? ' · ' . e($c['uprava']) : '' ?><?= $c['urad'] !== '' ? ' · ' . e($c['urad']) : '' ?><br><?php endforeach; endif ?>
             <?= $l ? '<small class="muted">' . e(cz_datetime($l['at'])) . ' · ' . e($l['user_name']) . '</small>' : '' ?></td>
           <td data-label="">
-            <form method="post" class="form"><?= csrf_field() ?><input type="hidden" name="subject" value="<?= e($key) ?>">
+            <?php if (!($creditOk ?? true)): ?><?= credit_topup_link() ?><br><small class="muted">Na lustraci (<?= e(money_czk($price)) ?>) chybí kredit.</small>
+            <?php else: ?><form method="post" class="form"><?= csrf_field() ?><input type="hidden" name="subject" value="<?= e($key) ?>">
               <label class="check"><input type="checkbox" name="confirm" value="1" required> <span>Za <?= e(money_czk($price)) ?></span></label>
-              <button class="btn btn-small" type="submit"<?= $configured ? '' : ' disabled' ?>>Lustrovat</button></form></td>
+              <button class="btn btn-small" type="submit"<?= $configured ? '' : ' disabled' ?>>Lustrovat</button></form><?php endif ?></td>
         </tr>
       <?php endforeach ?></tbody>
     </table>

@@ -30,7 +30,8 @@ $route('GET', '/admin/rejstriky/katastr', function () use ($rejGate) {
     $show = ($_GET['zobrazit'] ?? '') === 'vse' ? 'all' : 'new';
     render('ext/rejstriky/katastr', ['title' => 'Změny v katastru', 'premium' => rej_premium(), 'configured' => rej_katastr_configured(), 'target' => rej_katastr_target(),
         'on' => setting('rej_katastr_on'), 'last' => explode('|', setting('rej_katastr_last'), 3), 'units' => (int) val('SELECT COUNT(*) FROM units'),
-        'price' => rej_price('rej_price_katastr_unit'), 'days' => max(1, rej_price('rej_katastr_days')), 'show' => $show,
+        'lvCount' => rej_katastr_lv_count(), 'price' => rej_katastr_year_price(rej_katastr_lv_count()), 'billed' => rej_katastr_billed(), 'payment' => rej_katastr_payment(),
+        'days' => max(1, rej_price('rej_katastr_days')), 'show' => $show,
         'changes' => all('SELECT * FROM rej_katastr_changes' . ($show === 'new' ? " WHERE status = 'new'" : '') . ' ORDER BY id DESC LIMIT 300'),
         'unitNames' => array_column(array_map(fn($u) => ['id' => $u['id'], 'n' => unit_name($u)], all_units()), 'n', 'id')]);
 });
@@ -47,10 +48,16 @@ $route('POST', '/admin/rejstriky/katastr', function () use ($rejGate) {
                 rej_set('rej_katastr_base', '');   // jiný dům → nové výchozí porovnání s evidencí
                 rej_set('rej_katastr_pending', '');
             }
+            $before = rej_katastr_lv_count();
             rej_set('rej_katastr_ku', post('ku'));
             rej_set('rej_katastr_lv', $lv);
             audit('Katastr: budova', 'k.ú. ' . post('ku') . ', LV ' . $lv);
-            flash('Uloženo.');
+            if (setting('rej_katastr_on') !== '' && rej_katastr_lv_count() !== $before) {
+                rej_katastr_target_changed();
+                flash('Uloženo. Cena sledování je teď ' . money_czk(rej_katastr_year_price(rej_katastr_lv_count())) . ' ročně bez DPH' . (rej_katastr_lv_count() > $before && rej_katastr_payment() ? '; za další LV do konce zaplaceného období je výzva k platbě v části Předplatné.' : '.'));
+            } else {
+                flash('Uloženo.');
+            }
         }
     } elseif ($action === 'activate') {
         if (post('confirm') !== '1') {
@@ -60,12 +67,14 @@ $route('POST', '/admin/rejstriky/katastr', function () use ($rejGate) {
         } else {
             $price = rej_katastr_activate();
             audit('Katastr: sledování zapnuto', money_czk($price) . ' ročně');
-            flash('Sledování je zapnuté. První kontrola proběhne během dne – nebo ji spusťte tlačítkem „Zkontrolovat teď“.');
+            $pay = rej_katastr_payment();
+            flash('Sledování je zapnuté. První kontrola proběhne během dne – nebo ji spusťte tlačítkem „Zkontrolovat teď“.'
+                . ($pay ? ' Za zbytek zaplaceného období (' . pay_money($pay) . ') je výzva k platbě v části Předplatné; dál se sledování platí s ročním předplatným.' : ''));
         }
     } elseif ($action === 'deactivate') {
         rej_katastr_deactivate();
         audit('Katastr: sledování vypnuto');
-        flash('Sledování je vypnuté. Zaplacené období se nevrací.', 'info');
+        flash('Sledování je vypnuté. Zaplacené období se nevrací; na další roční faktuře už nebude.', 'info');
     } elseif ($action === 'run') {
         if (setting('rej_katastr_on') === '') {
             flash('Nejdřív sledování zapněte.', 'error');
@@ -85,7 +94,7 @@ $route('POST', '/admin/rejstriky/katastr', function () use ($rejGate) {
 $route('GET', '/admin/rejstriky/exekuce', function () use ($rejGate) {
     $rejGate('exekuce');
     render('ext/rejstriky/exekuce', ['title' => 'Lustrace exekucí', 'premium' => rej_premium(), 'configured' => rej_cee_configured(), 'subjects' => rej_premium() ? rej_exekuce_subjects() : [],
-        'latest' => rej_exekuce_latest(), 'price' => rej_price('rej_price_exekuce')]);
+        'latest' => rej_exekuce_latest(), 'price' => rej_price('rej_price_exekuce'), 'creditOk' => rej_exekuce_credit_ok()]);
 });
 $route('POST', '/admin/rejstriky/exekuce', function () use ($rejGate) {
     $u = $rejGate('exekuce', true);
@@ -96,6 +105,9 @@ $route('POST', '/admin/rejstriky/exekuce', function () use ($rejGate) {
         flash('Lustrace je placená – potvrďte prosím cenu.', 'error');
     } elseif (!rej_cee_configured()) {
         flash('Evidence exekucí zatím není propojená. Napište prosím provozovateli.', 'error');
+    } elseif (!rej_exekuce_credit_ok()) {
+        flash('Kredit služeb nestačí na lustraci (' . money_czk(rej_price('rej_price_exekuce')) . '). Dobijte ho v části Kredit služeb.', 'error');
+        redirect('/admin/kredit#dobit');
     } else {
         $row = rej_exekuce_check($subject, $u['name']);
         flash(($row['error'] ?? '') !== '' ? 'Lustrace se nepovedla: ' . $row['error'] : ((int) $row['found'] ? 'Nalezené exekuce: ' . (int) $row['found'] . '.' : 'V evidenci exekucí nic nenalezeno.'),

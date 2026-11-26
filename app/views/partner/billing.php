@@ -14,10 +14,10 @@
         <dt>Částka</dt><dd><?= pay_money($open) ?></dd>
         <dt>Účet</dt><dd><?= e(pset('account')) ?></dd>
         <dt>Variabilní symbol</dt><dd><?= e($open['vs']) ?></dd>
-        <dt>Domů na faktuře</dt><dd><?= count($lines) ?><?= (int) $open['discount'] ? ' · sleva ' . money_czk((int) $open['discount']) : '' ?></dd>
+        <dt>Domů na faktuře</dt><dd><?= count(array_filter($lines, fn($l) => !isset($l['kind']))) ?><?= (int) $open['discount'] ? ' · sleva ' . money_czk((int) $open['discount']) : '' ?></dd>
       </dl>
     </div>
-    <ul class="plain-list"><?php foreach ($lines as $l): ?><li><?= e($l['name']) ?> – <?= e(EDITIONS[$l['edition']] ?? $l['edition']) ?>, <?= money_czk((int) $l['price']) ?></li><?php endforeach ?></ul>
+    <ul class="plain-list"><?php foreach ($lines as $l): ?><li><?= e(partner_line_text($l)) ?>, <?= money_czk((int) $l['price']) ?></li><?php endforeach ?></ul>
     <div class="actions">
       <a class="btn btn-ghost" href="<?= url('/fakturace/doklad/' . $open['id']) ?>">Zálohová faktura k tisku</a>
       <?php if ($open['status'] === 'pending'): ?>

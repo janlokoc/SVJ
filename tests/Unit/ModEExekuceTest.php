@@ -7,7 +7,7 @@ use Tests\TestCase;
 
 require_once __DIR__ . '/ModEHelper.php';
 
-/** Modul E – lustrace v Centrální evidenci exekucí (app/ext/rej_exekuce_lib.php) s podstrčeným API. */
+/** Modul E – lustrace v Centrální evidenci exekucí (app/ext/rej_exekuce_lib.php) s podstrčeným API; placení z kreditu služeb. */
 final class ModEExekuceTest extends TestCase
 {
     use ModEHelper;
@@ -110,9 +110,13 @@ final class ModEExekuceTest extends TestCase
         $key = array_key_first($subjects);
         $this->assertSame(['kind' => 'F', 'label' => 'Jan Novák', 'id' => '1989-11-11'], array_intersect_key($subjects[$key], ['kind' => 1, 'label' => 1, 'id' => 1]));
         $this->fakeCee(fn() => ['status' => 200, 'body' => self::searchBody(1)]);
+        credit_add(TENANT, 20000, 'fix', 'test');
         $row = rej_exekuce_check($subjects[$key], 'Správce');
         $this->assertSame(1, (int) $row['found']);
         $this->assertSame(120, (int) $row['price']);
+        $this->assertSame(8000, credit_balance_h(TENANT), 'cena se strhla z kreditu až po úspěšném dotazu');
+        $c = credit_statement(TENANT, 1)[0];
+        $this->assertSame(['exekuce', -12000, 1, 'exekuce:' . $row['id']], [$c['kind'], (int) $c['delta_h'], (int) $c['qty'], $c['ref']]);
         $this->assertSame('', $row['error']);
         $stored = json_decode($row['result'], true);
         $this->assertSame('999EX120/23', $stored[0]['ex_cislo']);
@@ -132,9 +136,49 @@ final class ModEExekuceTest extends TestCase
         $this->assertArrayHasKey('P1', $subjects);
         $this->assertSame(['kind' => 'P', 'id' => '27082440'], array_intersect_key($subjects['P1'], ['kind' => 1, 'id' => 1]));
         $this->fakeCee(fn() => ['status' => 0, 'body' => '', 'error' => 'offline']);
+        credit_add(TENANT, 9900, 'fix', 'test');
         $row = rej_exekuce_check($subjects['P1'], 'Správce');
         $this->assertStringContainsString('neodpovídá', $row['error']);
         $this->assertSame(0, (int) $row['price']);
         $this->assertSame(0, (int) pq("SELECT COUNT(*) FROM rej_usage WHERE kind = 'exekuce'")->fetchColumn());
+        $this->assertSame(9900, credit_balance_h(TENANT), 'nepovedený dotaz se neplatí');
+    }
+
+    public function testCheckRefusedUpFrontWithoutCredit(): void
+    {
+        $this->ceeConfig();
+        $this->assertSame(99, rej_price('rej_price_exekuce'), 'výchozí cena 99 Kč');
+        q('UPDATE units SET owner_note = ?, owner_contact = ? WHERE id = 1', ['Stavby Novák s.r.o.', 'IČO 27082440']);
+        $subject = rej_exekuce_subjects()['P1'];
+        credit_add(TENANT, 9899, 'fix', 'o haléř méně');
+        $this->assertFalse(rej_exekuce_credit_ok());
+        $before = (int) val('SELECT COUNT(*) FROM rej_exekuce');
+        $row = rej_exekuce_check($subject, 'Správce');
+        $this->assertTrue($row['refused']);
+        $this->assertStringContainsString('Kredit služeb nestačí', $row['error']);
+        $this->assertSame([], $this->calls, 'bez kreditu se do evidence vůbec neposílá dotaz');
+        $this->assertSame($before, (int) val('SELECT COUNT(*) FROM rej_exekuce'), 'nic se neukládá');
+        $this->assertSame(9899, credit_balance_h(TENANT));
+        credit_add(TENANT, 1, 'fix', 'doplnění');
+        $this->assertTrue(rej_exekuce_credit_ok());
+    }
+
+    public function testPageShowsTopUpLinkInsteadOfButton(): void
+    {
+        $this->loginAs('admin');
+        if (!function_exists('help_link')) {
+            $route = function (): void {};
+            require_once dirname(__DIR__, 2) . '/app/routes_help.php';
+        }
+        $html = (function (): string {
+            extract(['premium' => true, 'configured' => true, 'subjects' => ['P1' => ['kind' => 'P', 'person_id' => 0, 'unit_id' => 1, 'unit' => 'A1', 'label' => 'Firma', 'id' => '27082440']],
+                'latest' => [], 'price' => 99, 'creditOk' => false]);
+            ob_start();
+            require dirname(__DIR__, 2) . '/app/views/ext/rejstriky/exekuce.php';
+            return (string) ob_get_clean();
+        })();
+        $this->assertStringContainsString('Dobít kredit', $html);
+        $this->assertStringContainsString('/admin/kredit#dobit', $html);
+        $this->assertStringNotContainsString('>Lustrovat</button>', $html);
     }
 }

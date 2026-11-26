@@ -4,9 +4,10 @@ declare(strict_types=1);
 /*
  * Modul E – hlídání katastru a rejstříků (placený doplněk edice Premium).
  *
- * - Změny v katastru: dálkový přístup ČÚZK (WSDP 3.1), týdně výpis LV domu, porovnání s evidencí jednotek (app/ext/rej_katastr_lib.php).
- * - Insolvence fyzických osob: ISIR podle jména a data narození (app/ext/rej_isir_lib.php); firmy dál hlídá app/isir_lib.php.
- * - Exekuce: lustrace v Centrální evidenci exekucí na kliknutí správce (app/ext/rej_exekuce_lib.php).
+ * - Změny v katastru: dálkový přístup ČÚZK (WSDP 3.1), každých 30 dní výpis LV domu, porovnání s evidencí jednotek (app/ext/rej_katastr_lib.php).
+ *   Platí se jako doplněk k ročnímu předplatnému (1 490 Kč za dům vč. 1 LV, další LV 990 Kč; addon_set() v app/platform_lib.php).
+ * - Insolvence fyzických osob: ISIR podle jména a data narození (app/ext/rej_isir_lib.php); firmy dál hlídá app/isir_lib.php. V edici Premium bez příplatku.
+ * - Exekuce: lustrace v Centrální evidenci exekucí na kliknutí správce (app/ext/rej_exekuce_lib.php), platí se z kreditu služeb.
  *
  * Společné: tabulky v databázi domu (rej_ready), spotřeba placených dotazů v databázi platformy (rej_usage_*),
  * ceny pro zákazníky a náklady provozovatele v Nastavení služby (pset, klíče rej_*), síťové volání přes rej_http()
@@ -15,11 +16,12 @@ declare(strict_types=1);
 
 /** Ceny a parametry (konzole → Katastr a rejstříky): klíč => [výchozí hodnota, popis]. Ceny bez DPH. */
 const REJ_PRICES = [
-    'rej_price_katastr_unit' => [30, 'Sledování katastru – cena pro zákazníka za jednotku a rok (Kč)'],
-    'rej_price_exekuce' => [90, 'Lustrace exekucí – cena pro zákazníka za jeden dotaz (Kč)'],
+    'rej_price_katastr_house' => [1490, 'Sledování katastru – cena pro zákazníka za dům a rok včetně 1 LV (Kč, doplněk k ročnímu předplatnému)'],
+    'rej_price_katastr_lv_extra' => [990, 'Sledování katastru – každý další LV a rok (Kč)'],
+    'rej_price_exekuce' => [99, 'Lustrace exekucí – cena pro zákazníka za jeden dotaz (Kč, z kreditu služeb)'],
     'rej_cost_katastr_lv' => [100, 'Náklad provozovatele: výpis LV z WSDP (Kč, položka 5001 sazebníku ČÚZK)'],
     'rej_cost_exekuce' => [60, 'Náklad provozovatele: jeden dotaz do CEE (Kč, podle ceníku Exekutorské komory)'],
-    'rej_katastr_days' => [7, 'Jak často se katastr kontroluje (dní)'],
+    'rej_katastr_days' => [30, 'Jak často se katastr kontroluje (dní)'],
 ];
 
 /** Druhy záznamů spotřeby. */
@@ -212,7 +214,7 @@ function rej_summary(): array
     if (rej_visible('katastr')) {
         $out['katastr'] = ['allowed' => rej_allowed('katastr'), 'configured' => rej_katastr_configured(), 'on' => setting('rej_katastr_on') !== '',
             'last' => explode('|', setting('rej_katastr_last'), 3), 'open' => (int) val("SELECT COUNT(*) FROM rej_katastr_changes WHERE status = 'new'"),
-            'units' => (int) val('SELECT COUNT(*) FROM units'), 'price' => rej_price('rej_price_katastr_unit')];
+            'lv' => max(1, count(rej_katastr_target()['lv'])), 'price' => rej_katastr_year_price(max(1, count(rej_katastr_target()['lv'])))];
     }
     if (rej_visible('insolvence')) {
         $persons = all('SELECT isir_found FROM rej_persons');
@@ -223,7 +225,8 @@ function rej_summary(): array
     }
     if (rej_visible('exekuce')) {
         $out['exekuce'] = ['allowed' => rej_allowed('exekuce'), 'configured' => rej_cee_configured(), 'checks' => (int) val('SELECT COUNT(*) FROM rej_exekuce WHERE error = \'\''),
-            'hits' => (int) val("SELECT COUNT(*) FROM rej_exekuce WHERE error = '' AND found > 0"), 'last' => (string) val('SELECT MAX(at) FROM rej_exekuce'), 'price' => rej_price('rej_price_exekuce')];
+            'hits' => (int) val("SELECT COUNT(*) FROM rej_exekuce WHERE error = '' AND found > 0"), 'last' => (string) val('SELECT MAX(at) FROM rej_exekuce'), 'price' => rej_price('rej_price_exekuce'),
+            'credit' => rej_exekuce_credit_ok()];
     }
     return $out;
 }

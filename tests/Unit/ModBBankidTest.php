@@ -55,6 +55,8 @@ final class ModBBankidTest extends TestCase
     {
         bankid_transport(null, true);
         bankid_settings(null, true);
+        pq('DELETE FROM credit_ledger WHERE tenant = ?', [TENANT]);
+        pq('DELETE FROM credit_state WHERE tenant = ?', [TENANT]);
         foreach ($this->saved as $k => $v) {
             if ($v === null) {
                 pq('DELETE FROM platform_settings WHERE key = ?', [$k]);
@@ -349,6 +351,8 @@ final class ModBBankidTest extends TestCase
         q('INSERT INTO poll_items (poll_id, question) VALUES (?,?)', [$poll, 'Bod']);
         $item = (int) db()->lastInsertId();
         try {
+            $this->platformSetting('credit_low_h', '0');
+            credit_add(TENANT, 5000, 'fix', 'test');
             $this->assertNull(rollam_set_method($poll, 'bankid'));
             $user = one('SELECT * FROM users WHERE id = ?', [$uid]);
             $r = rollam_begin(one('SELECT * FROM polls WHERE id = ?', [$poll]), $user, $unit, [$item => 'yes']);
@@ -369,9 +373,12 @@ final class ModBBankidTest extends TestCase
 
             $_SESSION['bankid'] = $saved;
             $this->provider($saved['nonce']);
+            $this->assertSame(5000, credit_balance_h(TENANT), 'do ověření se nic neplatí');
             $res = rollam_bankid_finish($saved['state'], 'CODE', '', $uid);
             $this->assertTrue($res['ok'], $res['error'] ?? '');
             $this->assertSame($poll, $res['poll']);
+            $this->assertSame(5000 - 1900, credit_balance_h(TENANT), 'ověřený hlas stojí 19 Kč z kreditu');
+            $this->assertSame(['bankid', 1], [credit_statement(TENANT, 1)[0]['kind'], (int) credit_statement(TENANT, 1)[0]['qty']]);
             $this->assertSame([$item => 'yes'], rollam_unit_votes($poll, $unit));
             $rec = rollam_records($poll)[0];
             $this->assertSame('bankid', $rec['method']);
@@ -393,6 +400,7 @@ final class ModBBankidTest extends TestCase
             $this->assertFalse($res['ok']);
             $this->assertSame('failed', rollam_pending($r['pending'])['status']);
             $this->assertSame([], rollam_unit_votes($poll, $unit));
+            $this->assertSame(3100, credit_balance_h(TENANT), 'neověřený hlas se neplatí');
 
             // vypnutí funkce v konzoli: hlas přes Bank iD se nezahájí
             $this->platformSetting('beta_bankid', 'off');
@@ -410,5 +418,80 @@ final class ModBBankidTest extends TestCase
             q('DELETE FROM units WHERE id = ?', [$unit]);
             unset($_SESSION['bankid']);
         }
+    }
+
+    // ---------- placení z kreditu služeb ----------
+
+    public function testWithoutCreditOwnerIsToldAndCommitteeMailedOncePerDay(): void
+    {
+        $this->platformSetting('beta_bankid', 'beta');
+        $this->assertSame(1900, bankid_price_h(), 'výchozí cena 19 Kč');
+        $tag = bin2hex(random_bytes(3));
+        q('INSERT INTO units (entrance, number, share, owner_note) VALUES (?,?,?,?)', ['C' . $tag, '1', '1/10', 'Novák Jan']);
+        $unit = (int) db()->lastInsertId();
+        q("INSERT INTO users (email, name, password_hash, role, kind) VALUES (?,?,?,'resident','owner')", ["bidc-$tag@example.cz", 'Jan Novák', NO_PASSWORD]);
+        $uid = (int) db()->lastInsertId();
+        q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$uid, $unit]);
+        q('INSERT INTO polls (title, opens_at, closes_at, threshold) VALUES (?,?,?,50)', ['Kredit ' . $tag, date('Y-m-d'), date('Y-m-d', time() + 20 * 86400)]);
+        $poll = (int) db()->lastInsertId();
+        q('INSERT INTO poll_items (poll_id, question) VALUES (?,?)', [$poll, 'Bod']);
+        $item = (int) db()->lastInsertId();
+        try {
+            $this->assertNull(rollam_set_method($poll, 'bankid'));
+            credit_add(TENANT, 1899, 'fix', 'o haléř méně');
+            $this->assertFalse(bankid_credit_ok());
+            $user = one('SELECT * FROM users WHERE id = ?', [$uid]);
+            $pollRow = one('SELECT * FROM polls WHERE id = ?', [$poll]);
+            $r = rollam_begin($pollRow, $user, $unit, [$item => 'yes']);
+            $this->assertSame('error', $r['status']);
+            $this->assertStringContainsString('dočasně nedostupné', $r['error']);
+            $this->assertStringContainsString('dobil', $r['error']);
+            $this->assertSame(0, (int) val('SELECT COUNT(*) FROM rollam_pending WHERE poll_id = ?', [$poll]), 'hlas se ani nezačne');
+            $admins = array_column(all("SELECT email FROM users WHERE role = 'admin' AND active = 1"), 'email');
+            $mails = array_values(array_filter($this->mails(), fn($m) => str_contains(mb_decode_mimeheader((string) $m['subject']), 'Bank iD nejde použít')));
+            $this->assertNotEmpty($mails);
+            $this->assertEqualsCanonicalizing(array_map('strtolower', $admins), array_values(array_unique(array_map(fn($m) => strtolower((string) $m['to']), $mails))));
+            $this->assertStringContainsString('/admin/kredit', quoted_printable_decode((string) $mails[0]['body']));
+            $count = count($this->mails());
+            rollam_begin($pollRow, $user, $unit, [$item => 'yes']);
+            $this->assertCount($count, $this->mails(), 'výboru jen jednou za den');
+            credit_add(TENANT, 1, 'fix', 'doplnění');
+            $r = rollam_begin($pollRow, $user, $unit, [$item => 'yes']);
+            $this->assertSame('bankid', $r['status'], 'po dobití to jde');
+            // Kredit mezitím spotřebovala jiná služba: rozpracovaný hlas se do banky nepošle.
+            credit_charge(TENANT, 1, 'fix', 'jiná služba');
+            $this->assertSame([ROLLAM_BANKID_NO_CREDIT], rollam_bankid_start($r['pending'], $uid));
+        } finally {
+            q('DELETE FROM poll_items WHERE poll_id = ?', [$poll]);
+            q('DELETE FROM polls WHERE id = ?', [$poll]);
+            foreach (['rollam_records', 'rollam_pending', 'rollam_polls'] as $t) {
+                q("DELETE FROM $t WHERE poll_id = ?", [$poll]);
+            }
+            q('DELETE FROM user_units WHERE user_id = ?', [$uid]);
+            q('DELETE FROM users WHERE id = ?', [$uid]);
+            q('DELETE FROM units WHERE id = ?', [$unit]);
+        }
+    }
+
+    public function testPollFormWarnsWhenCreditDoesNotCoverAllUnits(): void
+    {
+        $this->platformSetting('beta_bankid', 'beta');
+        $units = (int) val('SELECT COUNT(*) FROM units');
+        credit_add(TENANT, $units * 1900 - 1, 'fix', 'skoro');
+        $w = bankid_poll_warning();
+        $this->assertStringContainsString('všech ' . $units . ' jednotek', (string) $w);
+        $this->loginAs('admin');
+        $poll = ['id' => 0, 'opens_at' => date('Y-m-d'), 'closes_at' => date('Y-m-d', strtotime('+20 day')), 'threshold' => 50];
+        $_POST['verify'] = 'bankid';
+        ob_start();
+        require dirname(__DIR__, 2) . '/app/views/ext/rollam/_form_fields.php';
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('Pozor:', $html);
+        $this->assertStringContainsString('/admin/kredit#dobit', $html);
+        credit_add(TENANT, 1, 'fix', 'dost');
+        $this->assertNull(bankid_poll_warning());
+        $this->platformSetting('bankid_price', '0');
+        $this->assertFalse(bankid_paid(), 'cena 0 = zdarma, nic se nehlídá');
+        $this->assertTrue(bankid_credit_ok());
     }
 }

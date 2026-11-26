@@ -15,6 +15,9 @@ declare(strict_types=1);
  * Videohovor samotný web neprovozuje ani nenahrává – jen ukládá odkaz. Veřejný Jitsi Meet (meet.jit.si) je zdarma,
  * přesto je funkce v BETA_FEATURES ('shromazdeni-online', výchozí stav vypnuto), aby ji provozovatel nejdřív vyzkoušel.
  * Zapnutí pro dům: edice Standard a výš + přepínač správce v Administraci → Shromáždění online (nastavení 'hybrid_on').
+ * Cena: v edici Premium v ceně; v edici Standard price_online_meeting (výchozí 490 Kč bez DPH) za shromáždění z kreditu služeb
+ * (app/ext/credit_lib.php) – strhne se, když výbor přepne termín na hybridní/online formu (jednou za termín). Přepne-li ho
+ * zpět na prezenční před začátkem a nikdo se zatím nepřipojil, částka se vrátí.
  */
 
 const HYBRID_BETA = 'shromazdeni-online';
@@ -77,6 +80,36 @@ function hybrid_available(): bool
         return false;
     }
     return !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['standard'];
+}
+/** Platí se online shromáždění z kreditu? Dům na platformě v edici nižší než Premium. */
+function hybrid_paid(): bool
+{
+    return function_exists('credit_managed') && credit_managed() && hybrid_price_h() > 0 && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'];
+}
+function hybrid_price_h(): int
+{
+    return credit_setting('price_online_meeting') * 100;
+}
+function hybrid_charge_ref(int $eventId): string
+{
+    return 'online:' . $eventId;
+}
+/** Je online forma termínu zaplacená (a nevrácená)? */
+function hybrid_charged(int $eventId): bool
+{
+    return $eventId > 0 && credit_ref_charged(TENANT, hybrid_charge_ref($eventId)) > 0;
+}
+/** Potřebuje termín teď zaplatit online formu a kredit na ni nestačí? */
+function hybrid_credit_missing(int $eventId): bool
+{
+    return hybrid_paid() && !hybrid_charged($eventId) && !credit_enough(TENANT, hybrid_price_h());
+}
+/** Začalo už shromáždění (den konání, případně hodina)? */
+function hybrid_started(array $ev): bool
+{
+    $now = date('Y-m-d H:i');
+    $start = (string) $ev['event_date'] . ' ' . ((string) ($ev['event_time'] ?? '') !== '' ? $ev['event_time'] : '00:00');
+    return $start <= $now;
 }
 /** Funkce je dostupná a správce domu ji zapnul. */
 function hybrid_enabled(): bool
@@ -160,10 +193,18 @@ function hybrid_event_input(array $in): array
     }
     return [$errors, ['form' => $form, 'video_url' => $form === 'prezencni' ? '' : $url, 'statutes_ok' => $form !== 'prezencni' && $ok ? 1 : 0]];
 }
-/** Háček formuláře termínu: chyby formy (prázdné, když funkce není zapnutá). */
-function hybrid_event_check(array $post): array
+/** Háček formuláře termínu: chyby formy (prázdné, když funkce není zapnutá), včetně nedostatku kreditu v edici Standard. */
+function hybrid_event_check(array $post, int $eventId = 0): array
 {
-    return hybrid_enabled() ? hybrid_event_input($post)[0] : [];
+    if (!hybrid_enabled()) {
+        return [];
+    }
+    [$errors, $d] = hybrid_event_input($post);
+    if (!$errors && $d['form'] !== 'prezencni' && hybrid_credit_missing($eventId)) {
+        $errors[] = 'Online nebo hybridní shromáždění stojí v edici ' . EDITIONS[plan_edition()] . ' ' . credit_money(hybrid_price_h()) . ' bez DPH a platí se z kreditu služeb (zůstatek '
+            . credit_money(credit_balance_h(TENANT)) . '). Dobijte kredit v části Kredit služeb, nebo zvolte prezenční formu. V edici Premium je v ceně.';
+    }
+    return $errors;
 }
 /** Háček formuláře termínu: uloží formu po uložení termínu. */
 function hybrid_event_store(int $eventId, array $post, int $userId): void
@@ -177,6 +218,21 @@ function hybrid_event_store(int $eventId, array $post, int $userId): void
     }
     $old = hybrid_event($eventId);
     $now = date('Y-m-d H:i:s');
+    // Placení (edice Standard): poprvé online/hybridně → strhnout z kreditu; zpět na prezenční před začátkem, bez připojených → vrátit.
+    if ($d['form'] !== 'prezencni' && hybrid_paid() && !hybrid_charged($eventId)) {
+        $ev = one('SELECT * FROM events WHERE id = ?', [$eventId]) ?? ['title' => '', 'event_date' => ''];
+        if (!credit_charge(TENANT, hybrid_price_h(), 'online', 'Shromáždění ' . ($d['form'] === 'online' ? 'online' : 'hybridně') . ': ' . mb_substr((string) $ev['title'], 0, 80)
+            . ($ev['event_date'] !== '' ? ' ' . cz_date((string) $ev['event_date']) : ''), hybrid_charge_ref($eventId), 1, (string) (user()['name'] ?? ''))) {
+            flash('Forma shromáždění se nezměnila: na online formu (' . credit_money(hybrid_price_h()) . ') nestačí kredit služeb. Dobijte ho v části Kredit služeb.', 'error');
+            return;
+        }
+    }
+    if ($d['form'] === 'prezencni' && $old['form'] !== 'prezencni' && hybrid_charged($eventId)) {
+        $ev = one('SELECT * FROM events WHERE id = ?', [$eventId]);
+        if ($ev && !hybrid_started($ev) && !(int) val('SELECT COUNT(*) FROM hybrid_attendance WHERE event_id = ?', [$eventId])) {
+            credit_reverse(TENANT, hybrid_charge_ref($eventId), 'vráceno – shromáždění přepnuto na prezenční před začátkem');
+        }
+    }
     $by = $d['statutes_ok'] ? ((int) $old['statutes_ok'] === 1 ? (int) $old['statutes_by'] : $userId) : 0;
     $at = $d['statutes_ok'] ? ((int) $old['statutes_ok'] === 1 ? (string) $old['statutes_at'] : $now) : '';
     q('INSERT INTO hybrid_events (event_id, form, video_url, statutes_ok, statutes_by, statutes_at, updated_at) VALUES (?,?,?,?,?,?,?)

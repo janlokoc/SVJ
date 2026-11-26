@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// SMS zprávy pro vlastníky (funkce v betě 'sms'): náhled, počet částí a cena, odeslání, kredit a historie.
+// SMS zprávy pro vlastníky (funkce v betě 'sms'): náhled, počet částí a cena, odeslání; platí se z kreditu služeb (/admin/kredit).
 
 $smsAdmin = function () {
     $me = require_admin();
@@ -17,13 +17,7 @@ $smsAdmin = function () {
         $text = trim(str_replace("\r\n", "\n", $text));
         $final = $plain ? sms_plain($text) : $text;
         if ($action === 'order') {
-            if (!sms_credit_managed()) {
-                redirect('/admin/sms');
-            }
-            $ok = sms_order((int) post('packs'), $me);
-            audit('SMS: objednávka kreditu', (int) post('packs') . ' balíčků');
-            flash($ok ? 'Objednávka je odeslaná provozovateli. Kredit se připíše po zaplacení – výzvu k platbě dostanete e-mailem.' : 'Objednávku se nepodařilo odeslat. Napište prosím provozovateli.', $ok ? 'ok' : 'error');
-            redirect('/admin/sms#kredit');
+            redirect('/admin/kredit#dobit');   // SMS se platí z kreditu služeb (dřívější balíčky SMS se už neobjednávají)
         }
         if ($final === '') {
             flash('Napište text zprávy.', 'error');
@@ -50,7 +44,8 @@ $smsAdmin = function () {
     [$rcpt, $bad] = sms_owner_recipients();
     $managed = sms_credit_managed();
     render('ext/sms/admin', ['title' => 'SMS zprávy', 'text' => $text, 'plain' => $plain, 'preview' => $preview, 'recipients' => $rcpt, 'bad' => $bad,
-        'managed' => $managed, 'balance' => $managed ? sms_balance() : null, 'ledger' => $managed ? sms_ledger(TENANT, 20) : [], 'price' => sms_price_h(), 'pack' => sms_pack(),
+        'managed' => $managed, 'balance' => $managed ? sms_balance() : null, 'creditH' => $managed ? credit_balance_h(TENANT) : 0, 'freeLeft' => $managed ? sms_free_left(TENANT) : 0,
+        'freeYear' => $managed ? sms_free_allowance(TENANT) : 0, 'price' => sms_price_h(),
         'log' => all('SELECT * FROM sms_log ORDER BY id DESC LIMIT 30'), 'staging' => sms_provider_name() === 'log']);
 };
 $route('GET', '/admin/sms', $smsAdmin);

@@ -27,6 +27,7 @@
         <li><a href="<?= url('/hlaseni') ?>"<?= str_starts_with($path, '/hlaseni') ? ' aria-current="page"' : '' ?>>Hlášení<?php $newReports = reports_open_count(); if ($newReports): ?> <span class="count"><?= $newReports ?></span><?php endif ?></a></li>
         <li><a href="<?= url('/vyuziti') ?>"<?= $path === '/vyuziti' ? ' aria-current="page"' : '' ?>>Využití</a></li>
         <li><a href="<?= url('/rejstriky') ?>"<?= $path === '/rejstriky' ? ' aria-current="page"' : '' ?>>Rejstříky</a></li>
+        <li><a href="<?= url('/kredit') ?>"<?= $path === '/kredit' ? ' aria-current="page"' : '' ?>>Kredit</a></li>
         <li><a href="<?= url('/zajem') ?>"<?= $path === '/zajem' ? ' aria-current="page"' : '' ?>>Zájem o funkce</a></li>
         <li><a href="<?= url('/nastaveni') ?>"<?= $path === '/nastaveni' ? ' aria-current="page"' : '' ?>>Nastavení služby</a></li>
         <li><a href="<?= url('/zaznamy') ?>"<?= $path === '/zaznamy' ? ' aria-current="page"' : '' ?>>Záznamy</a></li>

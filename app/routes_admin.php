@@ -269,7 +269,7 @@ $eventForm = function (int $id = 0) {
         if ($ev['event_time'] !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $ev['event_time'])) {
             $errors[] = 'Čas zadejte ve tvaru HH:MM, nebo pole nechte prázdné.';
         }
-        $errors = [...$errors, ...(function_exists('hybrid_event_check') ? hybrid_event_check($_POST) : [])];   // modul H: forma shromáždění
+        $errors = [...$errors, ...(function_exists('hybrid_event_check') ? hybrid_event_check($_POST, (int) $id) : [])];   // modul H: forma shromáždění (a kredit na ni)
         if (!$errors) {
             $args = [$ev['title'], $ev['event_date'], $ev['event_time'], $ev['place'], $ev['note'], $ev['rsvp'], $ev['program']];
             if ($id) {

@@ -4,6 +4,8 @@
   <?php foreach (HYBRID_FORMS as $k => $label): ?>
     <label class="check"><input type="radio" name="hybrid_form" value="<?= $k ?>"<?= $h['form'] === $k ? ' checked' : '' ?>> <span><?= e($label) ?></span></label>
   <?php endforeach ?>
+  <?php if (hybrid_paid()): ?><p class="hint">Online nebo hybridní forma stojí v edici <?= e(EDITIONS[plan_edition()]) ?> <strong><?= e(credit_money(hybrid_price_h())) ?></strong> bez DPH za shromáždění a platí se z kreditu služeb<?= hybrid_charged((int) $h['event_id']) ? ' – <strong>u tohoto termínu je už zaplacená</strong>' : '' ?>. Přepnete-li zpět na prezenční před začátkem a nikdo se nepřipojí, částka se vrátí. V edici Premium je v ceně.
+    <?php if (hybrid_credit_missing((int) $h['event_id'])): ?><br><strong>Kredit nestačí (zůstatek <?= e(credit_money(credit_balance_h(TENANT))) ?>).</strong> <?= credit_topup_link() ?><?php endif ?></p><?php endif ?>
   <div class="hybrid-remote" data-hybrid-remote>
     <label>Odkaz na videohovor
       <input type="url" name="hybrid_video_url" value="<?= e($h['video_url']) ?>" maxlength="500" placeholder="https://meet.jit.si/… nebo odkaz z Teams, Zoomu, Google Meet" inputmode="url"></label>
