@@ -21,4 +21,13 @@ final class LayoutNavTest extends TestCase
         }
         $this->assertSame(4, $checked);
     }
+
+    /** Položka menu funkce v betě má výrazný štítek Beta (ne jen text v názvu). */
+    public function testAdminMenuShowsBetaBadge(): void
+    {
+        $s = (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/layout.php');
+        $this->assertStringContainsString('<?php if (isset($adminBeta[$href])): ?> <span class="plan-tag tag-beta">Beta</span>', $s);
+        $this->assertStringNotContainsString("' · beta'", $s);
+        $this->assertStringContainsString('.admin-nav .plan-tag.tag-beta', (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css'));
+    }
 }

@@ -39,13 +39,20 @@ if ($billing['mode'] !== 'free') {
 if (function_exists('plan_managed') && plan_managed()) {
     $adminNav['/admin/spravce-domu'] = 'Správce domu';
 }
+$adminBeta = [];   // položky menu, které jsou v beta programu
 if (function_exists('beta_visible') && beta_visible('insolvence')) {
-    $adminNav['/admin/insolvence'] = 'Insolvence vlastníků' . (beta_is('insolvence') ? ' · beta' : '');
+    $adminNav['/admin/insolvence'] = 'Insolvence vlastníků';
+    if (beta_is('insolvence')) {
+        $adminBeta['/admin/insolvence'] = true;
+    }
 }
 // Rozšíření: položky menu administrace z modulů ($GLOBALS['EXT_ADMIN_NAV'][adresa] = [název, skupina]).
 foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => $extItem) {
     if (!isset($extItem[2]) || ($extItem[2])()) {   // [název, skupina, nepovinně funkce „ukázat?“ – např. fn() => beta_visible('klic')]
-        $adminNav[$extHref] = $extItem[0] . (function_exists('beta_menu_tag') ? beta_menu_tag((string) $extHref) : '');
+        $adminNav[$extHref] = $extItem[0];
+        if (function_exists('beta_menu_tag') && beta_menu_tag((string) $extHref) !== '') {
+            $adminBeta[$extHref] = true;   // v menu výrazný štítek Beta
+        }
     }
 }
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
@@ -151,7 +158,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <?php if (isset($adminNav['/admin'])): ?><a class="admin-home" href="<?= url('/admin') ?>"<?= $adminActive('/admin') ? ' aria-current="page"' : '' ?>>Přehled</a><?php endif ?>
     <?php foreach ($adminGroups as $group => $hrefs): $items = array_intersect_key($adminNav, array_flip($hrefs)); if (!$items) { continue; } ?>
       <div class="admin-group"><span class="admin-label"><?= e($group) ?></span>
-        <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?><?php if (isset($planAdmin[$href]) && ($ps = plan_state($planAdmin[$href])) !== 'on'): ?> <span class="plan-tag"><?= $ps === 'trial' ? 'zkouška' : e(EDITIONS[PLAN_FEATURES[$planAdmin[$href]][0]]) ?></span><?php endif ?></a></li><?php endforeach ?></ul>
+        <ul><?php foreach ($hrefs as $href): if (!isset($items[$href])) { continue; } ?><li><a href="<?= url($href) ?>"<?= $adminActive($href) ? ' aria-current="page"' : '' ?>><?= e($items[$href]) ?><?php if (isset($adminBeta[$href])): ?> <span class="plan-tag tag-beta">Beta</span><?php endif ?><?php if (isset($planAdmin[$href]) && ($ps = plan_state($planAdmin[$href])) !== 'on'): ?> <span class="plan-tag"><?= $ps === 'trial' ? 'zkouška' : e(EDITIONS[PLAN_FEATURES[$planAdmin[$href]][0]]) ?></span><?php endif ?></a></li><?php endforeach ?></ul>
       </div>
     <?php endforeach ?>
     <?php if (plan_managed()): ?>
