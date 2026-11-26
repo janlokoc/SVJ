@@ -5,6 +5,17 @@
     <form method="post" action="<?= url('/overeni') ?>" class="form"><?= csrf_field() ?>
       <label>Kód z ověřovací aplikace <input type="text" name="code" id="totp-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required autofocus></label>
       <button class="btn btn-big" type="submit">Přihlásit se</button></form>
+    <?php if (!empty($recovery)): ?>
+    <div class="card-soft"><h2>Obnova bez ověřovací aplikace</h2>
+      <p>Na serveru je teď ve složce <code>storage</code> soubor <code>obnova-2fa-….txt</code>. Otevřete ho přes FTP (např. FileZilla) a kód z něj opište sem. Po přihlášení bude dvoufázové ověření vypnuté – v části Můj účet ho nastavte znovu. Kód platí 30 minut.</p>
+      <form method="post" action="<?= url('/overeni') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="recovery">
+        <label>Kód ze souboru <input type="text" name="recovery_code" autocomplete="off" maxlength="20" required></label>
+        <button class="btn" type="submit">Vypnout 2FA a přihlásit se</button></form></div>
+    <?php else: ?>
+    <details><summary>Nemám přístup k ověřovací aplikaci</summary>
+      <p class="hint">Web uloží jednorázový kód do souboru na serveru. Kdo má přístup na hosting přes FTP, kód přečte a dvoufázové ověření tím vypne.</p>
+      <form method="post" action="<?= url('/overeni') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="recovery_start"><button class="btn btn-ghost btn-small" type="submit">Vytvořit kód na serveru</button></form></details>
+    <?php endif ?>
   <?php else: ?>
     <p>Přihlášení hlavního správce. Obyvatelé a výbory se přihlašují na webu svého společenství.</p>
     <form method="post" action="<?= url('/prihlaseni') ?>" class="form"><?= csrf_field() ?>

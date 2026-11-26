@@ -86,8 +86,32 @@ if ((int) pq('SELECT COUNT(*) FROM super_admins')->fetchColumn() === 0) {
 if (!$super) {
     $error = null;
     $pending = $_SESSION['spending'] ?? null;
-    if ($PATH === '/overeni' && $pending && time() - $pending['at'] < 300) {
+    // Záchrana bez ověřovací aplikace: kód v souboru storage/obnova-2fa-*.txt, ke kterému se dostane jen ten, kdo má přístup na hosting (FTP).
+    $recovery = !empty($pending['recovery']);
+    if ($PATH === '/overeni' && $pending && time() - $pending['at'] < ($recovery ? 1800 : 300)) {
         $a = pq('SELECT * FROM super_admins WHERE id = ?', [$pending['id']])->fetch();
+        if ($METHOD === 'POST' && $a && post('action') === 'recovery_start') {
+            array_map('unlink', glob(ROOT_STORAGE . '/obnova-2fa-*.txt') ?: []);
+            file_put_contents(ROOT_STORAGE . '/obnova-2fa-' . bin2hex(random_bytes(8)) . '.txt', strtoupper(bin2hex(random_bytes(6))) . "\n");
+            $_SESSION['spending'] = ['id' => (int) $a['id'], 'at' => time(), 'recovery' => true];
+            pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova 2FA: vytvořen kód na serveru', '']);
+            redirect('/overeni');
+        }
+        if ($METHOD === 'POST' && $a && post('action') === 'recovery' && $recovery) {
+            $file = glob(ROOT_STORAGE . '/obnova-2fa-*.txt')[0] ?? '';
+            $want = $file !== '' ? trim((string) file_get_contents($file)) : '';
+            if (!$blocked() && $want !== '' && hash_equals($want, strtoupper(preg_replace('/\s+/', '', post('recovery_code'))))) {
+                unlink($file);
+                pq('UPDATE super_admins SET totp_secret = NULL, totp_enabled = 0, totp_last = 0 WHERE id = ?', [$a['id']]);
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova 2FA: dvoufázové ověření vypnuto kódem ze serveru', '']);
+                $signIn(pq('SELECT * FROM super_admins WHERE id = ?', [$a['id']])->fetch());
+            }
+            $failed();
+            $error = 'Kód ze souboru nesouhlasí.';
+            http_response_code(422);
+            render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true, 'recovery' => true]);
+            exit;
+        }
         if ($METHOD === 'POST' && $a) {
             $step = $blocked() ? null : totp_verify((string) $a['totp_secret'], post('code'), (int) $a['totp_last']);
             if ($step !== null) {
@@ -98,7 +122,7 @@ if (!$super) {
             $error = 'Kód není správný nebo už vypršel.';
             http_response_code(422);
         }
-        render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true]);
+        render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true, 'recovery' => $recovery]);
         exit;
     }
     if ($METHOD === 'POST' && $PATH === '/prihlaseni') {
@@ -123,7 +147,7 @@ if (!$super) {
     if ($PATH !== '/' && $PATH !== '/prihlaseni') {
         redirect('/');
     }
-    render('platform/login', ['title' => 'Správa platformy', 'error' => $error, 'verify' => false]);
+    render('platform/login', ['title' => 'Správa platformy', 'error' => $error, 'verify' => false, 'recovery' => false]);
     exit;
 }
 

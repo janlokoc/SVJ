@@ -13,7 +13,7 @@
         <p><span class="status status-done">Zapnuto</span></p>
         <form method="post" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="totp_disable"><label>Pro vypnutí zadejte heslo <input type="password" name="current_password" required></label><button class="btn btn-ghost" type="submit">Vypnout</button></form>
       <?php elseif ($totpSetup): ?>
-        <?php $svc = pset('service_name') !== '' ? pset('service_name') . ' – správa' : platform_main_domain() . ' – správa'; ?>
+        <?php $svc = (pset('service_name') !== '' ? pset('service_name') . ' – správa' : platform_main_domain() . ' – správa') . (str_starts_with(platform_main_domain(), 'staging.') ? ' (staging)' : ''); ?>
         <p>V ověřovací aplikaci (Microsoft Authenticator, Google Authenticator…) přidejte účet <strong>naskenováním QR kódu</strong>:</p>
         <div class="totp-qr"><?= totp_qr($totpSetup, $svc, $super['email'], platform_main_domain()) ?></div>
         <p class="hint">V telefonu: <a href="<?= e(totp_uri($totpSetup, $svc, $super['email'])) ?>">otevřít v ověřovací aplikaci</a>. Nebo klíč zadejte ručně:<br><code class="totp-key"><?= e(trim(chunk_split($totpSetup, 4, ' '))) ?></code></p>
