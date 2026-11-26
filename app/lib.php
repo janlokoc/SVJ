@@ -1314,6 +1314,18 @@ function setting_int(string $key, int $default, int $min, int $max): int
     $v = setting($key, (string) $default);
     return ctype_digit($v) ? max($min, min($max, (int) $v)) : $default;
 }
+/** Kolik jednotek je a kolika chybí (nebo je nečitelný) spoluvlastnický podíl: ['units' => n, 'missing' => n]. */
+function shares_gap(): array
+{
+    $shares = array_column(all('SELECT share FROM units'), 'share');
+    return ['units' => count($shares), 'missing' => count(array_filter($shares, fn($s) => share_value((string) $s) <= 0))];
+}
+/** Hlasování (usnesení, shromáždění) se počítá podle podílů – bez podílů u všech jednotek ho nejde spustit. */
+function shares_ready(): bool
+{
+    $g = shares_gap();
+    return $g['units'] > 0 && $g['missing'] === 0;
+}
 /** Převede zápis podílu („652/100000“, „0,65 %“) na číslo; nečitelný zápis dá 0. */
 function share_value(string $share): float
 {

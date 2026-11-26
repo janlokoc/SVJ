@@ -1,6 +1,7 @@
 <div class="wrap page narrow">
   <p class="crumbs"><a href="<?= url('/admin/hlasovani') ?>">← Hlasování</a></p>
   <h1><?= e($title) ?></h1>
+  <?php if (!empty($sharesBlock)): require __DIR__ . '/_shares_needed.php'; else: ?>
   <?php require __DIR__ . '/../_errors.php'; ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
@@ -23,4 +24,5 @@
     <p class="hint">Zda je hlasování přes web platné rozhodnutí mimo zasedání, určují stanovy a zákon (lhůta nejméně 15 dní, podklady, oznámení výsledku). Web hlasy sbírá a počítá; za splnění formalit odpovídá výbor.</p>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit hlasování</button><a class="btn btn-ghost" href="<?= url('/admin/hlasovani') ?>">Zrušit</a></div>
   </form>
+  <?php endif ?>
 </div>

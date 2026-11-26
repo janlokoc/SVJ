@@ -7,6 +7,11 @@
 
 const PRESENCE = ['self' => 'Osobně', 'proxy' => 'Zmocněnec'];
 
+/** Prezenci a hlasování na shromáždění nejde začít bez podílů u všech jednotek (už rozjetá prezence se dokončí). */
+function presence_blocked(int $eventId): bool
+{
+    return !shares_ready() && !val('SELECT 1 FROM event_presence WHERE event_id = ? UNION SELECT 1 FROM meeting_motions WHERE event_id = ? LIMIT 1', [$eventId, $eventId]);
+}
 /** Prezence na místě: stejné klíče jako attendance(), aby ji uměl použít i zápis ze shromáždění. */
 function presence(int $eventId): array
 {
@@ -183,7 +188,7 @@ $route('GET', '/admin/terminy/(\d+)/prezence-na-miste', function (int $id) {
     require_admin();
     $ev = one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found();
     $p = presence($id);
-    render('admin/presence', ['title' => 'Prezence: ' . $ev['title'], 'ev' => $ev, 'p' => $p, 'motions' => meeting_motions($id, $p), 'errors' => array_filter([$_SESSION['presence_error'] ?? null])]);
+    render('admin/presence', ['title' => 'Prezence: ' . $ev['title'], 'ev' => $ev, 'p' => $p, 'sharesBlock' => presence_blocked($id), 'motions' => meeting_motions($id, $p), 'errors' => array_filter([$_SESSION['presence_error'] ?? null])]);
     unset($_SESSION['presence_error']);
 });
 $route('POST', '/admin/terminy/(\d+)/prezence-na-miste', function (int $id) {
@@ -191,6 +196,10 @@ $route('POST', '/admin/terminy/(\d+)/prezence-na-miste', function (int $id) {
     one('SELECT id FROM events WHERE id = ?', [$id]) ?? not_found();
     $do = post('do');
     $unitId = (int) post('unit_id');
+    if (presence_blocked($id)) {
+        $_SESSION['presence_error'] = 'Nejdřív doplňte spoluvlastnické podíly u všech jednotek.';
+        redirect('/admin/terminy/' . $id . '/prezence-na-miste');
+    }
     if ($do === 'reset') {
         q('DELETE FROM event_presence WHERE event_id = ?', [$id]);
         audit('presence', 'Prezence vynulována');

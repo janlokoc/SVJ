@@ -342,7 +342,10 @@ $pollForm = function (int $id = 0) {
     $itemsText = $id ? implode("\n", array_column(all('SELECT question FROM poll_items WHERE poll_id = ? ORDER BY sort, id', [$id]), 'question')) : '';
     $hasVotes = $id && (int) val('SELECT COUNT(*) FROM poll_votes v JOIN poll_items i ON i.id = v.item_id WHERE i.poll_id = ?', [$id]) > 0;
     $errors = [];
-    if ($GLOBALS['METHOD'] === 'POST') {
+    $sharesBlock = !$id && !shares_ready();
+    if ($GLOBALS['METHOD'] === 'POST' && $sharesBlock) {
+        $errors[] = 'Nejdřív doplňte spoluvlastnické podíly u všech jednotek.';
+    } elseif ($GLOBALS['METHOD'] === 'POST') {
         if (!$id && ($limitError = plan_limit_error('polls'))) {
             $errors[] = $limitError;
         }
@@ -385,7 +388,7 @@ $pollForm = function (int $id = 0) {
         }
         http_response_code(422);
     }
-    render('admin/poll_form', ['title' => $poll['id'] ? 'Upravit hlasování' : 'Nové hlasování', 'poll' => $poll, 'itemsText' => $itemsText, 'hasVotes' => $hasVotes, 'errors' => $errors,
+    render('admin/poll_form', ['title' => $poll['id'] ? 'Upravit hlasování' : 'Nové hlasování', 'poll' => $poll, 'itemsText' => $itemsText, 'hasVotes' => $hasVotes, 'errors' => $errors, 'sharesBlock' => $sharesBlock,
         'events' => all('SELECT id, title, event_date FROM events ORDER BY event_date DESC')]);
 };
 $route('GET', '/admin/hlasovani/nove', $pollForm);
