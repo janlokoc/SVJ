@@ -19,7 +19,8 @@
     <a class="brand" href="<?= url('/') ?>"><svg class="brand-mark" viewBox="0 0 44 32" aria-hidden="true"><rect x="1" y="9" width="9" height="22" rx="1.5"/><rect x="12" y="3" width="9" height="28" rx="1.5"/><rect x="23" y="9" width="9" height="22" rx="1.5"/><rect x="34" y="3" width="9" height="28" rx="1.5"/></svg>
       <span class="brand-text"><strong>Platforma SVJ</strong><small>správa všech společenství</small></span></a>
     <?php if ($super): ?>
-    <nav class="site-nav" aria-label="Menu platformy">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hlavni-menu"><?= icon('menu') ?><span>Menu</span></button>
+    <nav class="site-nav" id="hlavni-menu" aria-label="Menu platformy">
       <ul>
         <li><a href="<?= url('/') ?>"<?= $path === '/' || str_starts_with($path, '/svj') ? ' aria-current="page"' : '' ?>>Společenství</a></li>
         <li><a href="<?= url('/platby') ?>"<?= str_starts_with($path, '/platby') ? ' aria-current="page"' : '' ?>>Platby<?php $claimed = (int) pq("SELECT COUNT(*) FROM payments WHERE status = 'claimed'")->fetchColumn(); if ($claimed): ?> <span class="count"><?= $claimed ?></span><?php endif ?></a></li>

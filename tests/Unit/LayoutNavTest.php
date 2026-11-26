@@ -1,0 +1,24 @@
+<?php
+declare(strict_types=1);
+
+namespace Tests\Unit;
+
+use Tests\TestCase;
+
+/** Každé rozvržení s menu (web domu, veřejný web služby, konzole, partnerský portál) má na telefonu tlačítko „Menu“ – jinak menu na úzké obrazovce nejde otevřít. */
+final class LayoutNavTest extends TestCase
+{
+    public function testEveryLayoutWithMenuHasMobileToggle(): void
+    {
+        $root = dirname(__DIR__, 2) . '/app/views/';
+        $checked = 0;
+        foreach (['layout.php', 'platform/layout.php', 'platform/site_layout.php', 'partner/layout.php'] as $f) {
+            $s = (string) file_get_contents($root . $f);
+            $this->assertStringContainsString('class="site-nav" id="hlavni-menu"', $s, $f);
+            $this->assertMatchesRegularExpression('~<button class="nav-toggle"[^>]*aria-controls="hlavni-menu"~', $s, $f);
+            $this->assertLessThan(strpos($s, 'class="site-nav"'), strpos($s, 'class="nav-toggle"'), "$f: toggle before menu");
+            $checked++;
+        }
+        $this->assertSame(4, $checked);
+    }
+}
