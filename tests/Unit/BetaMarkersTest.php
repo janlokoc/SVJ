@@ -103,4 +103,23 @@ final class BetaMarkersTest extends TestCase
         }
         $this->assertSame(array_keys(BETA_FEATURES), array_values(array_intersect(array_keys(BETA_FEATURES), ['insolvence', 'sms', 'bank-psd2', 'shromazdeni-online', 'katastr', 'exekuce', 'sso', 'bankid'])), 'migration covers every beta feature');
     }
+
+    /** „Připravujeme“ nenabízí funkce, které dům už má v betě; veřejný web služby ty, které nejsou vypnuté. */
+    public function testPlannedListDropsFeaturesInBeta(): void
+    {
+        foreach (['sms', 'katastr', 'insolvence', 'exekuce', 'bankid'] as $k) {
+            $this->pset('beta_' . $k, 'off');
+        }
+        $this->assertSame(array_keys(PLANNED_FEATURES), array_keys(planned_features()));
+        $this->assertSame(array_keys(PLANNED_FEATURES), array_keys(planned_features(true)));
+        $this->pset('beta_sms', 'beta');
+        $this->pset('beta_exekuce', 'beta');
+        $this->assertArrayNotHasKey('sms', planned_features(), 'Premium house sees SMS in beta');
+        $this->assertArrayNotHasKey('insolvence', planned_features(), 'exekuce also covers this item');
+        $this->assertArrayHasKey('katastr', planned_features());
+        $this->assertArrayNotHasKey('sms', planned_features(true));
+        $this->assertArrayHasKey('ai-zapis-nahravka', planned_features(true), 'not a beta feature');
+        $this->assertStringContainsString('1 490 Kč', PLANNED_FEATURES['katastr'][2]);
+        $this->assertStringContainsString('19 Kč', PLANNED_FEATURES['bankid'][2]);
+    }
 }

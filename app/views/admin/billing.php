@@ -297,7 +297,7 @@
     <h2>Připravujeme</h2>
     <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>
     <ul class="planned">
-      <?php foreach (PLANNED_FEATURES as $key => [$name, $desc, $price]): ?>
+      <?php foreach (planned_features() as $key => [$name, $desc, $price]): ?>
       <li><a href="<?= url('/admin/predplatne/funkce/' . $key) ?>"><span class="planned-head"><strong><?= e($name) ?></strong> <span class="tag">již brzy</span></span>
         <span class="planned-desc"><?= e($desc) ?></span>
         <span class="planned-foot"><small class="muted"><?= e($price) ?></small><span class="planned-more">Více o funkci</span></span></a></li>

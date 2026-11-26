@@ -1864,11 +1864,33 @@ function cert_reminders(): void
  */
 const PLANNED_FEATURES = [
     'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · platí se AI kredity', 'Zápis z nahrávky'],
-    'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'doplněk od Standardu · asi 1,50 Kč za SMS', 'SMS upozornění'],
-    'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'doplněk od Standardu · asi 490 Kč ročně', 'Hlídání katastru'],
+    'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'z kreditu služeb · 1,50 Kč za SMS, v Premium 100 SMS ročně v ceně', 'SMS upozornění'],
+    'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'Premium · 1 490 Kč ročně za dům', 'Hlídání katastru'],
     'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
-    'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'doplněk k Premium · asi 15 Kč za ověření', 'Bankovní identita'],
+    'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'z kreditu služeb · 19 Kč za ověřený hlas', 'Bankovní identita'],
 ];
+/** Které funkce beta programu „připravovanou“ funkci nahrazují: jakmile je některá vidět, mezi připravovanými se už nenabízí. */
+const PLANNED_BETA = ['sms' => ['sms'], 'katastr' => ['katastr'], 'insolvence' => ['insolvence', 'exekuce'], 'bankid' => ['bankid']];
+/**
+ * Připravované funkce k zobrazení. Na webu domu bez těch, které dům už vidí v betě nebo spuštěné; na veřejném webu služby
+ * ($public) bez těch, které už v betě nebo spuštěné jsou (pro kohokoli).
+ */
+function planned_features(bool $public = false): array
+{
+    $out = [];
+    foreach (PLANNED_FEATURES as $key => $f) {
+        $live = false;
+        foreach (PLANNED_BETA[$key] ?? [] as $b) {
+            if (function_exists('beta_stage') && ($public ? beta_stage($b) !== 'off' : beta_visible($b))) {
+                $live = true;
+            }
+        }
+        if (!$live) {
+            $out[$key] = $f;
+        }
+    }
+    return $out;
+}
 /**
  * Podrobný popis připravovaných funkcí pro stránku s detailem:
  * lead = jednou větou, problem = jaký problém řeší, how = co přesně bude dělat, note = cena a omezení.
@@ -1890,7 +1912,7 @@ const PLANNED_DETAILS = [
         'lead' => 'Web sám pozná, že byt změnil majitele.',
         'problem' => 'Vlastník má změnu nahlásit, ale často to neudělá. Výbor pak posílá pozvánky a předpisy záloh původnímu majiteli, seznam pro hlasování neodpovídá skutečnosti a usnesení se dá kvůli tomu napadnout.',
         'how' => ['Web pravidelně porovnává seznam jednotek s údaji v katastru nemovitostí.', 'Při změně vlastníka nebo podílu upozorní výbor e-mailem a v administraci.', 'Jedním kliknutím změnu převezmete do evidence jednotek, včetně hlasovacích podílů.', 'Před shromážděním dostanete přehled změn od posledního hlasování.'],
-        'note' => 'Doplněk od edice Standard, asi 490 Kč ročně – dálkový přístup do katastru je zpoplatněný státem, u velkých domů může být cena vyšší.',
+        'note' => 'Doplněk edice Premium: 1 490 Kč ročně za dům včetně jednoho listu vlastnictví, každý další 990 Kč – dálkový přístup do katastru je zpoplatněný státem.',
     ],
     'insolvence' => [
         'lead' => 'Upozornění, když se dlužník dostane do insolvence – dokud je čas přihlásit pohledávku.',
