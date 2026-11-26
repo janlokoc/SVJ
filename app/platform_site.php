@@ -258,5 +258,9 @@ if (isset($steps[$PATH])) {
     render('platform/signup', ['title' => 'Založení webu', 'officers' => $officers, 'errors' => $errors, 'step' => $step, 'steps' => $steps, 's' => $signup + ['name' => '', 'slug' => '', 'address' => '', 'look' => '', 'style' => 'klasik', 'person' => '', 'email' => '']]);
     exit;
 }
+// Rozšíření veřejného webu služby: app/ext/site_*.php (stránka, kterou modul obslouží, skončí exit).
+foreach (glob(__DIR__ . '/ext/site_*.php') ?: [] as $extSite) {
+    require $extSite;
+}
 http_response_code(404);
 render('platform/message', ['title' => 'Stránka nenalezena', 'message' => 'Tato stránka neexistuje.']);

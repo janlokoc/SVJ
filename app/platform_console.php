@@ -968,5 +968,9 @@ if ($PATH === '/ucet') {
         'admins' => pq('SELECT * FROM super_admins ORDER BY name')->fetchAll(), 'newSuper' => $newSuper]);
     exit;
 }
+// Rozšíření konzole: app/ext/console_*.php (stránka, kterou modul obslouží, skončí exit).
+foreach (glob(__DIR__ . '/ext/console_*.php') ?: [] as $extConsole) {
+    require $extConsole;
+}
 http_response_code(404);
 render('platform/message', ['title' => 'Stránka nenalezena', 'message' => 'Tato stránka v konzoli platformy neexistuje.']);

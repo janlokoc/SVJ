@@ -664,4 +664,8 @@ if ($PATH === '/ucet') {
     render('partner/account', ['title' => 'Můj účet', 'errors' => $errors, 'me' => $pu, 'partner' => $partner, 'totpSetup' => $pu['totp_enabled'] ? null : ($_SESSION['ptotp_setup'] ?? null)]);
     exit;
 }
+// Rozšíření portálu: app/ext/partner_*.php (stránka, kterou modul obslouží, skončí exit).
+foreach (glob(__DIR__ . '/ext/partner_*.php') ?: [] as $extPartner) {
+    require $extPartner;
+}
 not_found();

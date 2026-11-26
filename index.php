@@ -386,6 +386,10 @@ require __DIR__ . '/app/routes_push.php';
 require __DIR__ . '/app/routes_search.php';
 require __DIR__ . '/app/routes_assistant.php';
 require __DIR__ . '/app/routes_reports.php';
+// Rozšíření: adresy webu společenství z app/ext/routes_*.php.
+foreach (glob(__DIR__ . '/app/ext/routes_*.php') ?: [] as $extRoutes) {
+    require $extRoutes;
+}
 if (TENANT !== '') {
     require __DIR__ . '/app/routes_billing.php';
 }

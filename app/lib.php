@@ -1919,6 +1919,11 @@ require_once __DIR__ . '/bank_lib.php';
 require_once __DIR__ . '/isir_lib.php';
 require_once __DIR__ . '/ticket_lib.php';
 require_once __DIR__ . '/dashboard_lib.php';
+// Rozšíření (samostatné moduly): app/ext/*_lib.php se načtou samy, v abecedním pořadí.
+foreach (glob(__DIR__ . '/ext/*_lib.php') ?: [] as $extLib) {
+    require_once $extLib;
+}
+unset($extLib);
 /** Oslovení křestním jménem v 5. pádě (Jan → Jane, Jana → Jano, Tomáš → Tomáši). Neznámé tvary nechá beze změny. */
 function cz_vocative(string $name): string
 {

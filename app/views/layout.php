@@ -42,6 +42,10 @@ if (function_exists('plan_managed') && plan_managed()) {
 if (function_exists('beta_visible') && beta_visible('insolvence')) {
     $adminNav['/admin/insolvence'] = 'Insolvence vlastníků' . (beta_is('insolvence') ? ' · beta' : '');
 }
+// Rozšíření: položky menu administrace z modulů ($GLOBALS['EXT_ADMIN_NAV'][adresa] = [název, skupina]).
+foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => [$extLabel]) {
+    $adminNav[$extHref] = $extLabel;
+}
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
     $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
     $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Standard na zkoušku končí ' . cz_date($billing['until']) . ', potom web poběží v edici Zdarma.',
@@ -125,6 +129,11 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/insolvence', '/admin/klice'],
         'Provoz domu' => ['/admin/prehled-spravy', '/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace'],
         'Správa webu' => ['/admin/pruvodce', '/admin/napoveda', '/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/spravce-domu', '/admin/hlaseni']];
+    foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => [, $extGroup]) {
+        if (isset($adminGroups[$extGroup]) && !in_array($extHref, $adminGroups[$extGroup], true)) {
+            $adminGroups[$extGroup][] = $extHref;
+        }
+    }
     $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory')));
     $adminCurrent = 'Přehled';
     foreach ($adminNav as $href => $label) {
