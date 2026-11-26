@@ -910,4 +910,6 @@ return [
     'Odpovědi připravuje umělá inteligence (Claude od společnosti Anthropic) z podkladů tohoto webu a může se splést – u důležitých věcí si zdroj otevřete nebo se zeptejte výboru. Otázka a vybrané úryvky podkladů se ke zpracování odesílají této službě; nepište do otázky osobní údaje. Rozhovor se na webu neukládá.' => 'Câu trả lời do trí tuệ nhân tạo (Claude của Anthropic) soạn từ tài liệu trên trang web này và có thể sai – với việc quan trọng, hãy mở nguồn hoặc hỏi ban quản trị. Câu hỏi và một số đoạn trích tài liệu được gửi tới dịch vụ này để xử lý; đừng ghi thông tin cá nhân vào câu hỏi. Cuộc trò chuyện không được lưu trên trang web.',
     'od #. #. #' => 'từ #. #. #',
     'Pozvánka' => 'Lời mời',
+    'Stav opravy' => 'Tình trạng sửa chữa',
+    'Oprava probíhá' => 'Đang sửa chữa',
 ];

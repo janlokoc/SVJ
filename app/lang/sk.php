@@ -910,4 +910,6 @@ return [
     'Odpovědi připravuje umělá inteligence (Claude od společnosti Anthropic) z podkladů tohoto webu a může se splést – u důležitých věcí si zdroj otevřete nebo se zeptejte výboru. Otázka a vybrané úryvky podkladů se ke zpracování odesílají této službě; nepište do otázky osobní údaje. Rozhovor se na webu neukládá.' => 'Odpovede pripravuje umelá inteligencia (Claude od spoločnosti Anthropic) z podkladov tohto webu a môže sa pomýliť – pri dôležitých veciach si zdroj otvorte alebo sa opýtajte výboru. Otázka a vybrané úryvky podkladov sa na spracovanie odosielajú tejto službe; nepíšte do otázky osobné údaje. Rozhovor sa na webe neukladá.',
     'od #. #. #' => 'od #. #. #',
     'Pozvánka' => 'Pozvánka',
+    'Stav opravy' => 'Stav opravy',
+    'Oprava probíhá' => 'Oprava prebieha',
 ];

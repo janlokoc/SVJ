@@ -11,9 +11,9 @@
   <section class="card" aria-labelledby="modf-chart-h"><h2 id="modf-chart-h">Výhled fondu</h2><?php require __DIR__ . '/_chart.php'; ?></section>
   <section class="card" aria-labelledby="modf-rep-h"><h2 id="modf-rep-h">Plánované opravy</h2>
     <?php if (!$repairs): ?><p class="empty">Žádné opravy v plánu.</p><?php else: ?>
-    <table class="table"><thead><tr><th>Oprava</th><th>Rok</th><th>Odhad nákladů</th><th>Stav</th></tr></thead><tbody>
+    <table class="table"><thead><tr><th>Oprava</th><th>Rok</th><th>Odhad nákladů</th><th>Stav opravy</th></tr></thead><tbody>
       <?php foreach ($repairs as $r): ?><tr><td data-label="Oprava"><strong><?= e($r['title']) ?></strong><?= $r['note'] !== '' ? '<br><small class="muted">' . e($r['note']) . '</small>' : '' ?></td><td data-label="Rok"><?= (int) $r['year'] ?></td>
-        <td data-label="Odhad nákladů"><?= modf_money((int) $r['cost']) ?></td><td data-label="Stav"><?= e(MODF_REPAIR_STATUS[$r['status']] ?? '') ?></td></tr><?php endforeach ?>
+        <td data-label="Odhad nákladů"><?= modf_money((int) $r['cost']) ?></td><td data-label="Stav opravy"><?= e($r['status'] === 'in_progress' ? 'Oprava probíhá' : (MODF_REPAIR_STATUS[$r['status']] ?? '')) ?></td></tr><?php endforeach ?>
     </tbody></table><?php endif ?>
   </section>
 </div>

@@ -239,4 +239,15 @@ final class I18nCoverageTest extends TestCase
         $html = '<p class="muted">A dále, co jste na webu sami zapsali: <span>jednotky (1)</span>, <span>zprávy (5)</span>.</p>';
         $this->assertSame('<p class="muted">And what you have entered on the website yourself: <span>units (1)</span>, <span>messages (5)</span>.</p>', translate_html($html, 'en'));
     }
+
+    /** Plán oprav: „Stav“ a „Probíhá“ mají ve slovníku jiný význam (odečet, otevřené hlášení), proto vlastní texty. */
+    public function testRepairPlanStatusHasOwnWording(): void
+    {
+        $this->assertSame('Repair status', t('Stav opravy', 'en'));
+        $this->assertSame('Repair in progress', t('Oprava probíhá', 'en'));
+        foreach (['sk', 'uk', 'vi'] as $lang) {
+            $this->assertNotSame('Oprava probíhá', t('Oprava probíhá', $lang), $lang);
+        }
+        $this->assertStringContainsString("'Oprava probíhá'", (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/modf/fund_public.php'));
+    }
 }
