@@ -197,7 +197,7 @@ if ($IS_PLATFORM && preg_match('~^/sprava(/mcp(?:/[A-Za-z0-9_\-]{20,})?)$~', $PA
 if ($IS_PLATFORM) {
     $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
     $GLOBALS['LAYOUT'] = 'platform/layout';
-    if ($METHOD === 'POST') {
+    if ($METHOD === 'POST' && $PATH !== '/sso/callback/apple') {   // Apple vrací přihlášení POSTem (form_post), chrání ho podepsaný state
         check_csrf();
     }
     $GLOBALS['IS_PLATFORM'] = true;
@@ -230,7 +230,7 @@ if ($dbProblem !== null) {
 
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
 // Adresa pro příjem odečtů ze strojů (odečtová firma, sběrnice) se ověřuje tajným klíčem v adrese, ne formulářovým tokenem.
-if ($METHOD === 'POST' && !preg_match('~^/api/odecty/[a-f0-9]{40}$~', $PATH)) {
+if ($METHOD === 'POST' && !preg_match('~^/api/odecty/[a-f0-9]{40}$~', $PATH) && $PATH !== '/sso/callback/apple') {
     check_csrf();
 }
 

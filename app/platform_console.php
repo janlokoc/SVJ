@@ -82,6 +82,10 @@ if ((int) pq('SELECT COUNT(*) FROM super_admins')->fetchColumn() === 0) {
     exit;
 }
 
+// Rozšíření přihlášení: app/ext/auth_console_*.php (např. přihlášení přes další účty) – ještě před přihlašovací stránkou.
+foreach (glob(__DIR__ . '/ext/auth_console_*.php') ?: [] as $extAuth) {
+    require $extAuth;
+}
 // ---------- Přihlášení ----------
 if (!$super) {
     $error = null;

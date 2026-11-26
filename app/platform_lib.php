@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost', 'sso'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';

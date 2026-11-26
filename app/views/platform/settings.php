@@ -157,6 +157,7 @@
       <p class="hint">Pro průkaznou zkoušku zadejte IČO firmy, o které víte, že v rejstříku je (najdete ji na isir.justice.cz) – a pro srovnání i IČO bez řízení.</p>
       <button class="btn btn-ghost" type="submit">Vyzkoušet spojení</button></form>
   </section>
+  <?= function_exists('sso_console_section') ? sso_console_section() : '' ?>
   <section class="card" id="beta">
     <h2>Nové funkce (beta program)</h2>
     <p>Novou funkci můžete nejdřív pustit jen edici Premium (slib „přístup k novým funkcím ještě před spuštěním“ v ceníku). Premium domy ji uvidí se štítkem <span class="tag tag-beta">Beta</span>, výzvou k ohlasu a v kartě „Vyzkoušejte“. Až je vyladěná, přepněte ji na <em>spuštěno</em> – pak ji dostanou edice, pro které je určená.</p>

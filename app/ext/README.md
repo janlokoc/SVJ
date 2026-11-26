@@ -10,6 +10,7 @@ Funkce, které stojí peníze nebo potřebují smlouvu s třetí stranou, se zap
 - `app/ext/console_*.php` – stránky konzole provozovatele (`$PATH`, `$METHOD`, `$super` jako v app/platform_console.php),
 - `app/ext/partner_*.php` – stránky partnerského portálu (`$pu`, `$partner`, `$plog`),
 - `app/ext/site_*.php` – veřejné stránky hlavního webu služby.
+- `app/ext/auth_partner_*.php`, `app/ext/auth_console_*.php` – adresy portálu / konzole, které musí fungovat i bez přihlášení (načtou se před přihlašovací stránkou; k dispozici `$signIn`, `$blocked`, `$failed`).
 
 Položku v menu administrace domu přidá modul v `*_lib.php`: `$GLOBALS['EXT_ADMIN_NAV']['/admin/neco'] = ['Název', 'Provoz domu', fn() => beta_visible('klic')];`
 (skupiny: Obsah webu, Komunikace, Dům a lidé, Provoz domu, Správa webu; třetí prvek je nepovinný – vyhodnotí se až při vykreslení stránky).

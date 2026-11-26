@@ -238,6 +238,7 @@ const BETA_FEATURES = [
     'shromazdeni-online' => ['Shromáždění online a hybridně', '/admin/shromazdeni-online', ''],
     'katastr' => ['Sledování změn v katastru (WSDP ČÚZK, placené)', '/admin/rejstriky/katastr', ''],
     'exekuce' => ['Lustrace v Centrální evidenci exekucí (placené)', '/admin/rejstriky/exekuce', ''],
+    'sso' => ['Přihlášení přes Google, Microsoft, Apple a Facebook', '/muj-ucet#sso', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 

@@ -25,6 +25,7 @@
       <label>E-mail <input type="email" name="email" value="<?= e(post('email')) ?>" autocomplete="username" required autofocus></label>
       <label>Heslo <input type="password" name="password" autocomplete="current-password" required></label>
       <button class="btn btn-big" type="submit">Přihlásit se</button></form>
+    <?= function_exists('sso_buttons') ? sso_buttons('partner') : '' ?>
     <p class="hint">Chcete spravovat weby domů pro své klienty? <?= pset('contact_email') !== '' ? 'Napište nám na <a href="mailto:' . e(pset('contact_email')) . '">' . e(pset('contact_email')) . '</a>.' : 'Ozvěte se nám.' ?></p>
   <?php endif ?>
 </div></div>

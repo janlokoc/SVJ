@@ -24,6 +24,7 @@
       <?php endif ?>
     </div>
   </div>
+  <?= function_exists('sso_account_box') ? sso_account_box('console', (int) $super['id']) : '' ?>
   <h2>Hlavní správci</h2>
   <table class="table"><thead><tr><th>Jméno</th><th>E-mail</th><th>Poslední přihlášení</th><th>2FA</th></tr></thead><tbody>
     <?php foreach ($admins as $a): ?><tr><td data-label="Jméno"><strong><?= e($a['name']) ?></strong></td><td data-label="E-mail"><?= e($a['email']) ?></td><td data-label="Poslední přihlášení"><?= $a['last_login_at'] ? cz_datetime($a['last_login_at']) : 'zatím ne' ?></td><td data-label="2FA"><?= $a['totp_enabled'] ? 'ano' : 'ne' ?></td></tr><?php endforeach ?>

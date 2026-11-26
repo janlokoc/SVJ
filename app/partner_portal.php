@@ -66,6 +66,10 @@ if ($PATH === '/kalendar.ics' && preg_match('/^[a-f0-9]{40}$/', (string) ($_GET[
     send_ics(partner_calendar_ics($cp, partner_calendar(partner_tenants((int) $cp['id']), date('Y-m-d', strtotime('-30 days')), date('Y-m-d', strtotime('+365 days')))), 'domy.ics');
 }
 
+// Rozšíření přihlášení: app/ext/auth_partner_*.php (např. přihlášení přes další účty) – ještě před přihlašovací stránkou.
+foreach (glob(__DIR__ . '/ext/auth_partner_*.php') ?: [] as $extAuth) {
+    require $extAuth;
+}
 // ---------- Bez přihlášení: pozvánka, přihlášení, ověření ----------
 if (preg_match('~^/pozvanka/([a-f0-9]{64})$~', $PATH, $m)) {
     $u = pq('SELECT * FROM partner_users WHERE invite_hash = ? AND invite_expires > ? AND active = 1', [hash('sha256', $m[1]), date('Y-m-d H:i:s')])->fetch();

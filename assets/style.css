@@ -1931,3 +1931,14 @@ a.dash-tile:hover { border-color: var(--primary); }
 .modf-key-neg { background: var(--accent); }
 .modf-key-cost { background: var(--warn); opacity: .75; }
 tr.is-neg td { color: var(--accent); }
+/* ---------- Modul I: přihlášení přes Google, Microsoft, Apple a Facebook (SSO) ---------- */
+.sso-box { margin-top: 1rem; }
+.sso-or { display: flex; align-items: center; gap: .8rem; color: var(--muted); font-size: .9rem; margin: .4rem 0 .8rem; }
+.sso-or::before, .sso-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.sso-buttons { display: grid; gap: .5rem; }
+.sso-btn { width: 100%; color: var(--ink); }
+.sso-logo { display: inline-flex; width: 1.2rem; height: 1.2rem; flex: none; vertical-align: middle; }
+.sso-logo svg { width: 100%; height: 100%; }
+.sso-links { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: .5rem; }
+.sso-links li { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+.sso-links li > span:not(.sso-logo) { flex: 1; min-width: 12rem; }
