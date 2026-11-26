@@ -105,6 +105,7 @@ final class CreditServicesTest extends TestCase
         pq('DELETE FROM credit_ledger WHERE tenant = ?', [TENANT]);
         $saved = pq("SELECT value FROM platform_settings WHERE key = 'beta_" . HYBRID_BETA . "'")->fetchColumn();
         $hyb = val("SELECT value FROM settings WHERE `key` = 'hybrid_on'");
+        $id = 0;
         try {
             $this->prepare('premium');
             $this->assertSame('premium', plan_edition());
@@ -115,6 +116,8 @@ final class CreditServicesTest extends TestCase
             $this->assertSame('online', hybrid_event($id)['form']);
             $this->assertSame([], credit_statement(TENANT), 'v Premium se nic neplatí');
         } finally {
+            q('DELETE FROM hybrid_events WHERE event_id = ?', [$id]);
+            q('DELETE FROM events WHERE id = ?', [$id]);   // jiné testy (týdenní přehled) počítají nadcházející termíny
             $saved === false ? pq("DELETE FROM platform_settings WHERE key = 'beta_" . HYBRID_BETA . "'") : pset_save('beta_' . HYBRID_BETA, (string) $saved);
             pq("DELETE FROM platform_settings WHERE key = 'credit_low_h'");
             pset('__reset');
