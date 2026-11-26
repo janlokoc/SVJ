@@ -68,8 +68,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <link rel="stylesheet" href="<?= asset('style.css') ?>">
 <script src="<?= asset('app.js') ?>" defer></script>
 </head>
-<body<?= $inAdmin ? ' class="in-admin"' : '' ?>
-<?= staging_bar() ?>>
+<body<?= $inAdmin ? ' class="in-admin"' : '' ?>>
+<?= staging_bar() ?>
 <?= support_bar() ?>
 <a class="skip" href="#obsah">Přeskočit na obsah</a>
 <header class="site-header">
