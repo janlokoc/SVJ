@@ -217,6 +217,13 @@ function bank_paid_since(): array
 /** Denně: stáhne pohyby z Fio API, je-li zadán token (a funkce Platby je v edici). */
 function bank_daily(): void
 {
+    if (function_exists('psd2_daily')) {
+        try {
+            psd2_daily();   // účty u dalších bank přes PSD2 agregátor (app/ext/psd2_lib.php)
+        } catch (Throwable $e) {
+            error_log('SVJ web, banka PSD2: ' . $e->getMessage());
+        }
+    }
     $token = setting('fio_token');
     if ($token === '' || (function_exists('plan_has') && !plan_has('platby'))) {
         return;

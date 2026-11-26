@@ -1,0 +1,6 @@
+[
+  {"id": "CSOB_CEKOCZPP", "name": "ČSOB", "bic": "CEKOCZPP", "transaction_total_days": "730", "countries": ["CZ"], "logo": "https://storage.googleapis.com/gc-prd-institution_icons-production/CZ/PNG/csob.png", "max_access_valid_for_days": "180"},
+  {"id": "CESKA_SPORITELNA_GIBACZPX", "name": "Česká spořitelna", "bic": "GIBACZPX", "transaction_total_days": "90", "countries": ["CZ"], "logo": "", "max_access_valid_for_days": "90"},
+  {"id": "KB_KOMBCZPP", "name": "Komerční banka", "bic": "KOMBCZPP", "transaction_total_days": "60", "countries": ["CZ"], "logo": "", "max_access_valid_for_days": "90"},
+  {"id": "AIRBANK_AIRACZPP", "name": "Air Bank", "bic": "AIRACZPP", "transaction_total_days": "365", "countries": ["CZ"], "logo": "", "max_access_valid_for_days": "90"}
+]

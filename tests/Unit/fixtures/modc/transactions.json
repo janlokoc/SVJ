@@ -1,0 +1,17 @@
+{
+  "transactions": {
+    "booked": [
+      {"transactionId": "CSOB-0001", "bookingDate": "2026-11-20", "valueDate": "2026-11-20", "transactionAmount": {"amount": "2500.00", "currency": "CZK"},
+       "debtorName": "Jan Novák", "debtorAccount": {"iban": "CZ5508000000001234567899"}, "endToEndId": "/VS{VS1}/SS/KS0308", "remittanceInformationUnstructured": "Zaloha listopad"},
+      {"transactionId": "CSOB-0002", "bookingDate": "2026-11-21", "transactionAmount": {"amount": "1800.50", "currency": "CZK"},
+       "debtorName": "Petra Malá", "debtorAccount": {"iban": "CZ1201000000190000123457"}, "remittanceInformationStructured": "{VS2}"},
+      {"internalTransactionId": "int-77", "bookingDate": "2026-11-22", "transactionAmount": {"amount": "999", "currency": "CZK"},
+       "remittanceInformationUnstructuredArray": ["Platba", "VS: 0099999 nevim"]},
+      {"transactionId": "CSOB-0004", "bookingDate": "2026-11-22", "transactionAmount": {"amount": "-350.00", "currency": "CZK"}, "creditorName": "Dodavatel s.r.o.", "remittanceInformationUnstructured": "Faktura"},
+      {"transactionId": "CSOB-0005", "bookingDate": "2026-11-23", "transactionAmount": {"amount": "100.00", "currency": "EUR"}, "remittanceInformationUnstructured": "VS 1"}
+    ],
+    "pending": [
+      {"transactionAmount": {"amount": "500.00", "currency": "CZK"}, "valueDate": "2026-11-26", "remittanceInformationUnstructured": "VS 12345"}
+    ]
+  }
+}
