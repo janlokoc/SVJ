@@ -17,3 +17,12 @@ Co není z obrazovky intuitivní, dostane článek v nápovědě – a to **se s
    nejde (cizí weby), musí být v článku i v `note` výslovně uvedeno.
 4. Po změně funkce, které se návod týká, spustit `node tools/napoveda/overit.js` znovu – snímky
    a datum ověření se obnoví; když kontrola selže, návod se musí opravit.
+
+## Testy (od 11/2026 závazné)
+
+- Každá nová funkce nebo změna chování má **unit testy** (PHPUnit, `tests/Unit/`), ve stejném commitu jako kód.
+  Opravená chyba dostane test, který by ji zachytil.
+- Spuštění: `vendor/bin/phpunit` (po `composer install`). Testy běží nad dočasnou kopií platformy s ukázkovým domem
+  (`tests/bootstrap.php`), e-maily se jen zachytávají, nic nesmí volat síť.
+- GitHub Actions spouští testy před každým nasazením; když neprojdou, na staging ani do produkce se nic nenasadí.
+- End-to-end testy v prohlížeči (Playwright) a `tools/napoveda/overit.js` jsou doplněk, ne náhrada unit testů.

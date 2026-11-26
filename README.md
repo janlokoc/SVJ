@@ -612,6 +612,19 @@ se přesměrují na adresu `staging_mail` (původní příjemce je v předmětu)
 bez ní se neodešlou vůbec. Vývoj probíhá ve zkušební větvi; do produkční
 větve patří jen to, co bylo na stagingu vyzkoušeno.
 
+## Testy
+
+```
+composer install          # včetně PHPUnit (jen pro vývoj, na hosting se nenahrává)
+vendor/bin/phpunit        # všechny unit testy
+vendor/bin/phpunit tests/Unit/TicketTest.php
+```
+
+Unit testy (`tests/Unit/`) běží nad dočasnou kopií platformy s ukázkovým domem „dum“ – skutečná data se nikdy
+nepoužijí (`tests/bootstrap.php`, proměnná `SVJ_STORAGE`). E-maily se místo odeslání zapisují do souboru
+(`SVJ_MAIL_CAPTURE`), testy nesmí volat síť. GitHub Actions je spouští před každým nasazením; když neprojdou,
+nic se nenasadí. Každá nová funkce má mít unit testy ve stejném commitu.
+
 ## Hlášení problémů a nápadů
 
 Každá stránka má v hlavičce tlačítko **Nahlásit**. Uživatel vybere, zda

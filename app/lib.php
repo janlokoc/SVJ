@@ -1174,6 +1174,12 @@ function mail_text_html(string $text): string
 /** Předá hotovou zprávu serveru (SMTP z config.php, jinak PHP mail()). */
 function mail_deliver(array $msg): bool
 {
+    // Testy: zprávy se jen zapíší do souboru (SVJ_MAIL_CAPTURE), nic se neodešle.
+    if (($capture = getenv('SVJ_MAIL_CAPTURE')) && PHP_SAPI === 'cli') {
+        file_put_contents($capture, json_encode(['to' => $msg['to'], 'subject' => $msg['subject'], 'body' => $msg['body']], JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+        $GLOBALS['MAIL_LAST'] = 'capture';
+        return true;
+    }
     $smtp = app_config()['smtp'] ?? null;
     if (is_array($smtp) && !empty($smtp['host'])) {
         $GLOBALS['MAIL_LAST'] = 'smtp';

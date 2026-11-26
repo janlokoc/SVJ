@@ -25,7 +25,29 @@ permissions:
   contents: read
 
 jobs:
+  # Unit testy (PHPUnit): když neprojdou, nasazení se nespustí – na staging ani do produkce.
+  testy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Stažení zdrojového kódu
+        uses: actions/checkout@v4
+
+      - name: PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, mbstring, gd, intl, sodium
+          coverage: none
+
+      - name: Knihovny včetně testovacích
+        run: composer install --no-interaction --no-progress
+
+      - name: Unit testy
+        run: vendor/bin/phpunit --colors=never
+
   deploy:
+    needs: testy
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -73,7 +95,7 @@ jobs:
             git init --quiet -b "$BRANCH" ../nasazeni && git -C ../nasazeni remote add origin "$GIT_URL"
           fi
           find ../nasazeni -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          tar --exclude=./.git --exclude=./.github --exclude='./storage/*' -cf - . | tar -xf - -C ../nasazeni
+          tar --exclude=./.git --exclude=./.github --exclude='./storage/*' --exclude=./tests --exclude=./phpunit.xml.dist --exclude=./.phpunit.cache -cf - . | tar -xf - -C ../nasazeni
           # do domény patří jen chráněné soubory ze storage/, nikdy data
           mkdir -p ../nasazeni/storage
           for f in .htaccess .gitkeep index.html; do [ -f "storage/$f" ] && cp "storage/$f" ../nasazeni/storage/; done
