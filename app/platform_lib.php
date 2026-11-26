@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -356,6 +356,8 @@ const PLATFORM_SEO_PAGES = [
     '/funkce' => ['0.8', 'Co umí web pro společenství vlastníků jednotek: shromáždění a hlasování podle podílů, dokumenty, hlášení závad, odečty, platby, upozornění do telefonu a AI pomocník.'],
     '/cenik' => ['0.8', 'Ceník webu pro SVJ: edice Zdarma, Standard a Premium. Ceny bez DPH, placené edice 30 dní na zkoušku zdarma.'],
     '/pro-spravce' => ['0.7', 'Pro správcovské firmy a bytová družstva: všechny spravované domy na jednom místě. Partnerský portál zdarma, SVJ platí Vám.'],
+    '/pro-spravce/program' => ['0.6', 'Partnerský program pro správcovské firmy: portál zdarma, množstevní sleva, Vaše marže a fakturace SVJ.'],
+    '/mesicni-informace-o-spotrebe' => ['0.7', 'Měsíční informace o spotřebě tepla a teplé vody: co musí SVJ od roku 2027 splnit a jak to zařídí web domu s dálkovými odečty.'],
     '/podminky' => ['0.2', 'Obchodní podmínky služby.'],
     '/ochrana-udaju' => ['0.2', 'Zásady ochrany osobních údajů.'],
     '/zpracovani-udaju' => ['0.2', 'Smlouva o zpracování osobních údajů pro weby společenství.'],
@@ -695,6 +697,7 @@ const PLATFORM_DEFAULTS = [
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'partner_discounts' => "5:10\n20:15\n50:20",
     'google_verification' => '',
+    'price_flat_units' => '50', 'price_unit_standard' => '20', 'price_unit_premium' => '40', 'free_max_units' => '0', 'price_vote' => '990', 'compare_on' => '0', 'twa_package' => '', 'twa_sha256' => '',
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];
@@ -876,7 +879,7 @@ function billing_order(array $t, string $edition): ?array
     if (billing_order_problem($t, $edition)) {
         return null;
     }
-    $amount = max(0, edition_price($edition) - billing_credit($t, $edition));
+    $amount = max(0, edition_price($edition, $t) - billing_credit($t, $edition));
     // Kredit za doporučení se strhne až při potvrzení platby.
     $discount = min($amount, max(0, (int) ($t['credit'] ?? 0)));
     $amount -= $discount;
@@ -898,6 +901,9 @@ function billing_confirm(array $p, string $by): ?array
 {
     if (($p['kind'] ?? '') === 'partner') {
         return partner_billing_confirm($p, $by);
+    }
+    if (($p['kind'] ?? '') === 'vote') {
+        return vote_confirm($p, $by);   // jednorázové hlasování (app/ext/pricing_lib.php)
     }
     $t = tenant_row($p['tenant']);
     if (!$t || !in_array($p['status'], ['pending', 'claimed'], true)) {
@@ -1181,7 +1187,7 @@ function invoice_view(array $p): ?array
     }
     $issued = substr((string) ($paid ? $p['paid_at'] : $p['created_at']), 0, 10);
     $iban = (string) ($parties['supplier']['iban'] ?? '');
-    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
+    return ['item' => match ($p['kind'] ?? 'service') { 'domain' => 'Vlastní doména ' . $p['item'] . ' – provoz webu na této doméně', 'ai' => 'Doplněk AI Plus – ' . $p['item'], 'migration' => 'Jednorázový převod obsahu z webu ' . $p['item'], 'storage' => 'Úložiště navíc ' . (int) $p['item'] . ' MB na 1 rok', 'aicredits' => 'AI kredity – ' . (int) $p['item'] . ' dotazů na AI (nepropadají)', 'vote' => vote_invoice_item($p), default => isset(EDITIONS[$p['item'] ?? '']) ? 'Web společenství – edice ' . EDITIONS[$p['item']] . ' na 1 rok' : null }, 'p' => $p, 'paid' => $paid, 'parties' => $parties, 'issued' => $issued, 'due' => date('Y-m-d', strtotime($issued . ' +' . pset_int('invoice_due_days', 0, 90) . ' day')),
         'site' => $t ? preg_replace('~^https?://~', '', rtrim(tenant_url($t), '/')) : $p['tenant'],
         'storno' => $p['status'] === 'storno', 'credit' => false,
         'qr' => !$paid && $iban !== '' ? qr_svg(spayd($iban, pay_total($p), $p['vs'], 'Web SVJ ' . $p['tenant'], pset('recipient'), true), 'QR kód pro okamžitou platbu') : ''];
@@ -1355,7 +1361,7 @@ function trial_reminders(): void
         }
         [$min, $name] = PLAN_FEATURES[$r['feature']];
         tenant_notify($t, 'trial' . $step, 'Zkouška funkce ' . $name . ' končí ' . cz_date($r['ends']) . ' – ' . $t['name'], "Dobrý den,\n\nzkouška funkce „" . $name . "“ na webu " . $t['name'] . " končí " . cz_date($r['ends'])
-            . ".\nPotom zůstane vše, co jste do ní zapsali, uložené a viditelné, jen už nepůjde nic přidávat ani měnit.\n\nFunkce je součástí edice " . EDITIONS[$min] . " (" . money_czk(edition_price($min))
+            . ".\nPotom zůstane vše, co jste do ní zapsali, uložené a viditelné, jen už nepůjde nic přidávat ani měnit.\n\nFunkce je součástí edice " . EDITIONS[$min] . " (" . money_czk(edition_price($min, $t))
             . " ročně). Objednat ji můžete zde: " . tenant_url($t, '/admin/predplatne'));
         pq('UPDATE feature_trials SET warned = ? WHERE id = ?', [$step, $r['id']]);
     }
@@ -1964,6 +1970,9 @@ function billing_storno(array $p, string $by, string $reason): ?array
             case 'migration':
                 pq("UPDATE migrations SET status = 'cancelled' WHERE payment_id = ?", [$p['id']]);
                 $notes[] = 'Objednávka převodu obsahu je zrušená (už převedený obsah na webu zůstává).';
+                break;
+            case 'vote':
+                $notes[] = 'Jednorázové hlasování už neplatí (hlasování, které web mezitím vypsal, zůstává).';
                 break;
             case 'aicredits':
                 pq('UPDATE tenants SET ai_credits = MAX(0, ai_credits - ?) WHERE slug = ?', [(int) $p['item'], $t['slug']]);

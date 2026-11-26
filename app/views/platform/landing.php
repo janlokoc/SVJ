@@ -86,6 +86,7 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
           <li><strong>Upozornění odejde samo.</strong> Každý měsíc dostanou obyvatelé e-mail a web si zaznamená, komu a kdy odešel.</li>
         </ol>
         <p class="lpx-fineprint">Shrnutí povinností, ne právní rada. Studená voda povinná není. Data o spotřebě dodává odečtová firma – web je přijme, ukáže a obyvatele upozorní.</p>
+        <p class="lp-more"><a href="<?= url('/mesicni-informace-o-spotrebe') ?>">Co přesně musí SVJ splnit a jak to web zařídí</a></p>
       </div>
       <div class="lpx-row-media lpx-meter-media">
         <?= $browser('odecty-sprava.jpg', 'Dálkové odečty v administraci: stav za minulý měsíc a nastavení', '') ?>
@@ -116,12 +117,13 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
 <section class="lpx-section" id="cenik">
   <div class="wrap">
     <h2>Kolik to stojí</h2>
-    <p class="lpx-intro">Ceny jsou bez DPH. Placené edice se platí ročně převodem a jejich funkce si můžete <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušet.</p>
+    <p class="lpx-intro">Ceny jsou bez DPH<?= vat_payer() ? ', pod nimi cena s DPH' : '' ?>. Placené edice se platí ročně převodem a jejich funkce si můžete <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušet.</p>
     <div class="lpx-prices">
       <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); [$who, $points] = $editions[$ek] ?? ['', []]; ?>
         <div class="lpx-price<?= $ek === 'standard' ? ' is-main' : '' ?>">
           <h3><?= e($en) ?></h3>
           <p class="lpx-amount"><?= $price > 0 ? money_czk($price) . ' <small>/ rok</small> <b class="vat-tag">bez DPH</b>' : '0 Kč <small>navždy</small>' ?></p>
+          <?php if ($price > 0 && function_exists('price_vat_html')): ?><p class="edition-vat"><?= price_vat_html($price) ?></p><?php endif ?>
           <p class="muted"><?= e($who) ?></p>
           <ul class="lp-check"><?php foreach ($points as $pt): ?><li><?= e($pt) ?></li><?php endforeach ?></ul>
           <?php if ($open): ?><a class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" href="<?= url('/registrace') ?>"><?= $ek === 'free' ? 'Založit zdarma' : 'Vyzkoušet ' . PLAN_TRIAL_DAYS . ' dní' ?></a><?php endif ?>

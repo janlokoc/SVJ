@@ -1829,3 +1829,30 @@ a.dash-tile:hover { border-color: var(--primary); }
 .mgr-grid h3 { margin-top: 0; }
 .lpx-partner-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); }
 .lpx-hero-plain { padding-bottom: 2rem; }
+
+/* ---------- Modul G: ceny s DPH, srovnání s konkurencí, leták partnerského programu, jednorázové hlasování ---------- */
+.vat-incl { display: block; margin-top: .15rem; color: var(--muted); font-size: .85rem; font-weight: 600; }
+.edition-vat { margin: -.2rem 0 .6rem; }
+.pricing-notes { margin-top: 1.2rem; }
+.table-wrap { overflow-x: auto; }
+.compare-table .t-num, .price-table .t-num { text-align: right; white-space: nowrap; }
+.compare-table tr.is-ours td { background: var(--soft); }
+.compare-features th, .compare-features td { font-size: .9rem; vertical-align: top; }
+.compare-features .is-ours { background: var(--soft); font-weight: 600; }
+.compare-features .cmp-a { color: var(--ok); }
+.compare-features .cmp-c { color: var(--warn); }
+.compare-features .cmp-n, .compare-features .cmp-q { color: var(--muted); }
+.compare-features small { display: block; color: var(--muted); font-weight: 400; }
+.vote-offer { margin: 0 0 1rem; }
+.leaflet { max-width: 190mm; margin: 1rem auto 0; padding: 1.4rem 1.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.leaflet header { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: space-between; border-bottom: 2px solid var(--primary); padding-bottom: .5rem; }
+.leaflet header span { color: var(--muted); }
+.leaflet h3 { font-family: var(--display); font-size: 1.6rem; margin: 1rem 0 .6rem; }
+.leaflet ul { padding-left: 1.2rem; }
+.leaflet li { margin: .35rem 0; }
+.leaflet-price { font-weight: 600; }
+.leaflet footer { margin-top: 1rem; padding-top: .5rem; border-top: 1px solid var(--line); font-size: .9rem; color: var(--muted); }
+@media print {
+  .leaflet { border: 0; margin: 0; padding: 0; max-width: none; color: #000; background: #fff; }
+  .lp-page-head.no-print, .lpx-cta.no-print { display: none !important; }
+}

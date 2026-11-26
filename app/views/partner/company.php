@@ -31,7 +31,7 @@
     <label>Vaše roční cena za web pro SVJ <small class="muted">(výchozí pro všechny domy)</small> <input type="text" name="resale" value="<?= $def ?: '' ?>" inputmode="numeric" placeholder="např. 4 500"<?= $owner ? '' : ' disabled' ?>></label>
     <?php if ($houses): ?>
     <div class="table-scroll"><table class="table"><thead><tr><th>Dům</th><th>Edice</th><th>Platíte nám</th><th>Účtujete SVJ</th><th>Marže / rok</th></tr></thead><tbody>
-      <?php $sumM = 0; foreach ($houses as $h): $ed = billing_state($h)['edition']; $ed = $ed === 'free' ? 'standard' : $ed; $cost = (int) round(edition_price($ed) * (100 - $disc) / 100); $sell = (int) ($h['partner_resale'] ?? 0) ?: $def; $m = $sell ? $sell - $cost : null; $sumM += (int) $m; ?>
+      <?php $sumM = 0; foreach ($houses as $h): $ed = billing_state($h)['edition']; $ed = $ed === 'free' ? 'standard' : $ed; $cost = (int) round(edition_price($ed, $h) * (100 - $disc) / 100); $sell = (int) ($h['partner_resale'] ?? 0) ?: $def; $m = $sell ? $sell - $cost : null; $sumM += (int) $m; ?>
       <tr><td data-label="Dům"><?= e($h['name']) ?></td><td data-label="Edice"><?= e(EDITIONS[$ed]) ?></td><td data-label="Platíte nám"><?= money_czk($cost) ?></td>
         <td data-label="Účtujete SVJ"><input type="text" name="house[<?= e($h['slug']) ?>]" value="<?= (int) ($h['partner_resale'] ?? 0) ?: '' ?>" inputmode="numeric" size="8" placeholder="<?= $def ?: '—' ?>" aria-label="Cena pro <?= e($h['name']) ?>"<?= $owner ? '' : ' disabled' ?>></td>
         <td data-label="Marže / rok"><?= $m === null ? '<span class="muted">—</span>' : '<strong' . ($m < 0 ? ' class="is-neg"' : '') . '>' . money_czk($m) . '</strong>' ?></td></tr>

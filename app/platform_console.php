@@ -682,6 +682,7 @@ if ($PATH === '/nastaveni') {
                 $errors[] = $label . ': zadejte celé číslo.';
             }
         }
+        $errors = array_merge($errors, function_exists('pricing_settings_errors') ? pricing_settings_errors($in) : []);   // ceny podle velikosti, hlasování, aplikace (app/ext)
         foreach (['ai_price_in' => 'Cena vstupních tokenů', 'ai_price_out' => 'Cena výstupních tokenů'] as $k => $label) {
             $in[$k] = str_replace([' ', ','], ['', '.'], (string) ($in[$k] ?? '0'));
             if (!preg_match('/^\d{1,6}(\.\d{1,4})?$/', $in[$k])) {

@@ -17,10 +17,11 @@ if ($edCompact) {
     ];
 } ?>
 <div class="editions<?= $edCompact ? ' editions-compact' : '' ?>">
-  <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); ?>
+  <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek, $edView === 'admin' && !empty($t) ? $t : null); ?>
   <section class="edition<?= $ek === 'standard' ? ' is-main' : '' ?><?= $edNow === $ek ? ' is-current' : '' ?>">
     <h3><?= e($en) ?><?= $edNow === $ek ? ' <span class="tag">Vaše edice</span>' : '' ?></h3>
     <p class="edition-price"><?= $price ? '<strong>' . money_czk($price) . '</strong> <small>/ rok' . ' <b class="vat-tag">bez DPH</b>' . '</small>' : '<strong>0 Kč</strong> <small>napořád</small>' ?></p>
+    <?php if (function_exists('price_vat_html')) { require __DIR__ . '/../ext/pricing/edition_note.php'; } /* modul G: cena s DPH, přirážka za velikost */ ?>
     <?php if ($edCompact): ?><div class="edition-more" id="edice-<?= $ek ?>"><div><ul class="edition-limits">
       <?php foreach (PLAN_LIMITS as $lk => [$ln, $unit]): if ($lk === 'ai' && !ai_configured()) { continue; } $v = $lim($ek, $lk); ?>
       <li><span><?= e($ln) ?></span><strong><?= $lk === 'ai' && EDITION_RANK[$ek] < EDITION_RANK[PLAN_FEATURES['ai-pomocnik'][0]] ? '–' : ($v ? number_format($v, 0, ',', "\u{a0}") . ($unit !== '' ? ' ' . $unit : '') : 'bez omezení') ?></strong></li>

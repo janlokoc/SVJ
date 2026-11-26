@@ -17,7 +17,7 @@ $contact = filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('cont
       <li><strong>SVJ platí Vám.</strong> Za web domu si účtujete vlastní cenu (samostatně, nebo v ceně správy). Fakturu společenství vystavíte přímo z portálu, výbor ji dostane e-mailem i do administrace webu.</li>
       <li><strong>Vy platíte nám.</strong> Jednou fakturou za všechny domy, s množstevní slevou<?= ($tiers = partner_discount_tiers()) ? ' až ' . max(array_values($tiers)) . ' %' : '' ?>. Rozdíl je Váš výdělek – portál ho spočítá za Vás.</li>
     </ol>
-    <p class="muted">Ceny edic pro jeden dům najdete v <a href="<?= url('/cenik') ?>">ceníku</a> (bez DPH).</p>
+    <p class="muted">Ceny edic pro jeden dům najdete v <a href="<?= url('/cenik') ?>">ceníku</a> (bez DPH). Podmínky, slevy, časté otázky a leták k tisku: <a href="<?= url('/pro-spravce/program') ?>">partnerský program</a>.</p>
   </div>
 </section>
 <section class="lpx-section">

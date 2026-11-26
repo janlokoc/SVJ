@@ -2,7 +2,7 @@
 
 - Komunikace s provozovatelem česky, formálně (Vy), stručně; poctivě rozlišovat „ověřeno“ a „neověřeno“.
 - Vývoj jen na větvi `claude/svj-web-redesign-admin-1m52yt` (staging). `main` je produkce – nic tam bez výslovného souhlasu.
-- Ceny jsou bez DPH (zákazníci jsou SVJ, ne spotřebitelé).
+- Ceny se uvádějí bez DPH; na veřejném ceníku vedle nich i cena s DPH.
 
 ## Nápověda (od 11/2026 závazné)
 

@@ -3,6 +3,7 @@
   <h1><?= e($title) ?></h1>
   <?php if (!empty($sharesBlock)): require __DIR__ . '/_shares_needed.php'; else: ?>
   <?php require __DIR__ . '/../_errors.php'; ?>
+  <?php if (!$poll['id'] && function_exists('vote_offerable')) { require __DIR__ . '/../ext/pricing/vote_offer.php'; } ?>
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <label>Název <input type="text" name="title" value="<?= e($poll['title']) ?>" maxlength="200" required placeholder="Např. Hlasování o výměně stoupaček"></label>

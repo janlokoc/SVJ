@@ -42,7 +42,7 @@
           <td><input type="checkbox" name="houses[]" value="<?= e($h['slug']) ?>" id="h-<?= e($h['slug']) ?>"<?= $soon ? ' checked' : '' ?>></td>
           <td data-label="Dům"><label for="h-<?= e($h['slug']) ?>"><strong><?= e($h['name']) ?></strong></label></td>
           <td data-label="Současný stav">Edice <?= e(EDITIONS[$bs['edition']] ?? $bs['edition']) ?><?= $bs['mode'] === 'paid' ? ' do ' . cz_date($bs['until']) : ($bs['mode'] === 'grace' ? ' – po splatnosti' : '') ?></td>
-          <td data-label="Edice"><select name="edition[<?= e($h['slug']) ?>]"><?php foreach (['standard', 'premium'] as $ek): ?><option value="<?= $ek ?>"<?= ($bs['edition'] === $ek || ($ek === 'standard' && !in_array($bs['edition'], ['standard', 'premium'], true))) ? ' selected' : '' ?>><?= e(EDITIONS[$ek]) ?> – <?= money_czk(edition_price($ek)) ?></option><?php endforeach ?></select></td>
+          <td data-label="Edice"><select name="edition[<?= e($h['slug']) ?>]"><?php foreach (['standard', 'premium'] as $ek): ?><option value="<?= $ek ?>"<?= ($bs['edition'] === $ek || ($ek === 'standard' && !in_array($bs['edition'], ['standard', 'premium'], true))) ? ' selected' : '' ?>><?= e(EDITIONS[$ek]) ?> – <?= money_czk(edition_price($ek, $h)) ?></option><?php endforeach ?></select></td>
         </tr>
       <?php endforeach ?></tbody>
     </table>

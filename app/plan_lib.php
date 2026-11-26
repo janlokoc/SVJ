@@ -95,6 +95,8 @@ function plan_limit(string $key): int
     }
     $limit = plan_limit_of(plan_edition(), $key);
     // K limitu úložiště se přičítají zaplacené balíčky navíc.
+    // Zaplacené jednorázové hlasování přidá jedno hlasování nad limit (app/ext/pricing_lib.php).
+    $limit += $key === 'polls' && $limit > 0 && function_exists('vote_extra_polls') ? vote_extra_polls(plan_tenant()) : 0;
     return $key === 'storage' && $limit > 0 ? $limit + storage_extra_mb(plan_tenant()) : $limit;
 }
 function plan_storage_mb(): float
@@ -213,10 +215,11 @@ function plan_feature_for(string $path): ?string
     }
     return null;
 }
-/** Cena edice za rok (bez DPH). Platí se jen ročně. */
-function edition_price(string $edition): int
+/** Cena edice za rok (bez DPH). Platí se jen ročně. $size = společenství nebo počet jednotek: nad paušál se přičte přirážka za jednotku (app/ext/pricing_lib.php). */
+function edition_price(string $edition, array|int|null $size = null): int
 {
-    return $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
+    $base = $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
+    return $base && $size !== null && function_exists('edition_surcharge') ? $base + edition_surcharge($edition, is_array($size) ? tenant_unit_count($size) : $size) : $base;
 }
 
 // ---------- Beta program: nové funkce nejdřív pro edici Premium ----------

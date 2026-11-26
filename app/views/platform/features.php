@@ -61,4 +61,5 @@ $premiumTemplates = ['noviny' => 'grafit', 'vlidna' => 'svestka', 'cedule' => 'p
   </div>
 </section>
 
+<section class="wrap lp-section narrow" id="spotreba"><p class="lpx-partner-note"><strong>Měsíční informace o spotřebě tepla a teplé vody</strong> – povinná nejpozději od ledna 2027. Web ji obyvatelům zpřístupní z dálkových odečtů a upozorní je. <a href="<?= url('/mesicni-informace-o-spotrebe') ?>">Jak to funguje</a></p></section>
 <section class="wrap lp-section narrow"><div class="actions lp-final"><?= $cta() ?><a class="btn btn-big btn-ghost" href="<?= url('/cenik') ?>">Ceník</a></div></section>

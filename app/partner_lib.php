@@ -211,7 +211,7 @@ function partner_order(array $partner, array $choice): array|string
         if ($problem = billing_order_problem($t, $edition)) {
             return $t['name'] . ': ' . $problem;
         }
-        $price = max(0, edition_price($edition) - billing_credit($t, $edition));
+        $price = max(0, edition_price($edition, $t) - billing_credit($t, $edition));
         $lines[] = ['slug' => $t['slug'], 'name' => $t['name'], 'edition' => $edition, 'price' => $price];
     }
     if (!$lines) {
