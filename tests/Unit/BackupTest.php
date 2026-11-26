@@ -57,6 +57,7 @@ final class BackupTest extends TestCase
             'tenants/dum/import.pending',
             'instalacni-kod-0123abcd.txt',
             'instalacni-kod-platformy-0123abcd.txt',
+            'tenants/dum/instalacni-kod-0123abcd.txt',
             'obnova-2fa-0123abcd.txt',
             'obnova-pristupu-0123abcd.txt',
             'mail-staging.log',

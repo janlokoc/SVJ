@@ -109,8 +109,6 @@ final class IsirTest extends TestCase
 
     public function testIcoInAcceptsUsualCzechGrouping(): void
     {
-        $this->markTestIncomplete('BUG: isir_ico_in() only accepts the grouping "27 082 440" (\\d{2}\\s?\\d{3}\\s?\\d{3}, app/isir_lib.php:76), '
-            . 'but IČO is usually written "270 82 440" (e.g. "IČ: 000 64 581"), so such owners are not watched.');
         $this->assertSame('27082440', isir_ico_in('IČ 270 82 440, sídlo Brno'));
         $this->assertSame('00064581', isir_ico_in('IČO: 000 64 581'));
     }

@@ -25,7 +25,7 @@ function meter_kind_from(string $s): ?string
     return match (true) {
         isset(READING_KINDS[$s]) => $s,
         (bool) preg_match('~indik|itn|rozdelovac|hca~', $s) => 'itn',
-        (bool) preg_match('~tepl\w* vod|tuv|^tv$|hot|warm~', $s) => 'tv',
+        (bool) preg_match('~tepl\w* (uzitkov\w* )?vod|vod\w* tepl|uzitkov\w* vod|tuv|^tv$|hot|warm~', $s) => 'tv',
         (bool) preg_match('~studen|^sv$|cold|^voda$|vodomer~', $s) => 'sv',
         (bool) preg_match('~tepl|kalorim|heat|^ut$~', $s) => 'teplo',
         (bool) preg_match('~plyn|gas~', $s) => 'plyn',
@@ -107,7 +107,7 @@ function meter_csv_rows(string $text): array|string
 {
     $text = preg_replace('/^\xEF\xBB\xBF/', '', $text);
     if (!mb_check_encoding($text, 'UTF-8')) {
-        $text = mb_convert_encoding($text, 'UTF-8', 'Windows-1250');
+        $text = bank_utf8($text);   // Windows-1250 (mbstring ho neumí, převede iconv)
     }
     $lines = array_values(array_filter(preg_split('/\r\n|\r|\n/', $text), fn($l) => trim($l) !== ''));
     if (count($lines) < 2) {

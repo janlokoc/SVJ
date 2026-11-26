@@ -73,7 +73,8 @@ function isir_check_ico(string $ico, bool $activeOnly = true): array
 /** IČO v textu u jednotky (8 číslic s platným kontrolním součtem). */
 function isir_ico_in(string $text): string
 {
-    if (preg_match_all('/(?:IČO?|IC|ič)\s*[:.]?\s*(\d{2}\s?\d{3}\s?\d{3})/iu', $text, $m)) {
+    // IČO bývá zapsané vcelku i po skupinách („27 082 440“, „270 82 440“, „000 64 581“).
+    if (preg_match_all('/(?:IČO?|IC|ič)\s*[:.]?\s*(\d(?:\s?\d){7})(?!\d)/iu', $text, $m)) {
         foreach ($m[1] as $c) {
             $c = preg_replace('/\s/', '', $c);
             if (ares_ico($c) !== null) {

@@ -181,8 +181,6 @@ final class AresTest extends TestCase
 
     public function testNameKeyMatchesRegistryNameWithPostnominalTitles(): void
     {
-        $this->markTestIncomplete('BUG: ares_name_key() leaves ", Ph.D." and a trailing comma after ", CSc."/", DiS." (app/ares_lib.php:220) – '
-            . 'a registry member from ares_person_name() like "Ing. Jan Novák, Ph.D." does not match the existing account "Jan Novák" in platform_console.php /vybor.');
         $this->assertSame('jan novak', ares_name_key(ares_person_name(['titulPredJmenem' => 'Ing.', 'jmeno' => 'JAN', 'prijmeni' => 'NOVÁK', 'titulZaJmenem' => 'Ph.D.'])));
         $this->assertSame('petr dvorak', ares_name_key('doc. MUDr. Petr Dvořák, CSc.'));
         $this->assertSame('eva svobodova', ares_name_key('Eva Svobodová, DiS.'));

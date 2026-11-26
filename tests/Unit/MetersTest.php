@@ -81,8 +81,6 @@ final class MetersTest extends TestCase
 
     public function testKindFromCzechHotWaterAbbreviationSpelledOut(): void
     {
-        $this->markTestIncomplete('BUG: meter_kind_from() classifies "Teplá užitková voda" (spelled-out TUV) and "Voda teplá" as heat (teplo), '
-            . 'because only "tepl\w* vod" directly adjacent is recognised before the generic "tepl" rule (app/meters_lib.php:28,30).');
         $this->assertSame('tv', meter_kind_from('Teplá užitková voda'));
         $this->assertSame('tv', meter_kind_from('Voda teplá'));
     }
@@ -220,8 +218,6 @@ final class MetersTest extends TestCase
 
     public function testCsvRowsCp1250(): void
     {
-        $this->markTestIncomplete('BUG: meter_csv_rows() converts non-UTF-8 input with mb_convert_encoding(…, "Windows-1250"), which mbstring does not support '
-            . '(PHP 8.3: ValueError) – a CSV export in Windows-1250 crashes the import (app/meters_lib.php:110; bank_lib uses iconv for this).');
         $csv = iconv('UTF-8', 'CP1250', "Jednotka;Druh;Stav;Datum\nA/1;Teplá voda;1;1.10.2026");
         $rows = meter_csv_rows($csv);
         $this->assertSame('Teplá voda', $rows[0]['kind']);

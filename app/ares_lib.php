@@ -217,5 +217,6 @@ function ares_officers(string $raw): array
 /** Jméno pro porovnání účtu s členem z rejstříku: bez titulů, diakritiky a velikosti písmen. */
 function ares_name_key(string $name): string
 {
-    return trim(preg_replace('/\s+/', ' ', search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|phd|csc|dis|mba)\b\.?/iu', '', $name))));
+    $name = str_replace(',', ' ', $name);   // „Jan Novák, Ph.D.“
+    return trim(preg_replace('/\s+/', ' ', search_norm(preg_replace('/\b(ing|mgr|bc|judr|mudr|phdr|rndr|doc|prof|ph\.?\s?d|csc|dis|mba|ll\.?\s?m)\b\.?/iu', '', $name))));
 }
