@@ -345,7 +345,7 @@ function partner_next(): string
 /** Je adresa po vstupu povolená (jen vybrané stránky administrace)? */
 function partner_next_ok(string $next): bool
 {
-    return (bool) preg_match('~^/admin(/zavady(\?f=vse)?(#z\d+)?|/prehled-spravy|/revize)?$~', $next);
+    return (bool) preg_match('~^/admin(/zavady(\?f=vse)?(#z\d+)?|/prehled-spravy|/revize)?$~D', $next);
 }
 
 // ---------- Ukázka partnerského portálu ----------
