@@ -1,4 +1,4 @@
-<?php $t = strtotime($ev['event_date']); $present = $att['counts']['yes'] + $att['counts']['proxy']; ?>
+<?php $t = strtotime($ev['event_date']); $present = $att['counts']['yes'] + $att['counts']['proxy'] + ($att['counts']['online'] ?? 0); ?>
 <div class="wrap page narrow print-doc minutes">
   <p class="no-print"><a class="btn btn-small btn-ghost" href="<?= url('/admin/terminy') ?>">← Termíny</a> <button class="btn btn-small" type="button" data-print>Vytisknout nebo uložit jako PDF</button></p>
   <p class="hint no-print">Zápis je sestavený z účasti, programu a hlasování přiřazených k tomuto termínu. Text v rámečcích můžete před tiskem přímo na stránce doplnit; úpravy se neukládají, proto zápis rovnou vytiskněte nebo uložte jako PDF a nahrajte do Dokumentů.</p>
@@ -12,8 +12,9 @@
     <dt>Zapisovatel</dt><dd contenteditable="true" class="fill">&nbsp;</dd>
   </dl>
   <h2>1. Účast a usnášeníschopnost</h2>
-  <p>Přítomni jsou vlastníci <?= $present ?> z <?= (int) $att['units'] ?> jednotek (osobně <?= (int) $att['counts']['yes'] ?>, v zastoupení <?= (int) $att['counts']['proxy'] ?>), kteří mají <strong><?= percent_cz($att['percent']) ?></strong> <?= $att['byShare'] ? 'všech hlasů podle spoluvlastnických podílů' : 'všech hlasů (jeden hlas na jednotku)' ?>.
+  <p>Přítomni jsou vlastníci <?= $present ?> z <?= (int) $att['units'] ?> jednotek (osobně <?= (int) $att['counts']['yes'] ?>, v zastoupení <?= (int) $att['counts']['proxy'] ?><?= !empty($att['counts']['online']) ? ', online ' . (int) $att['counts']['online'] : '' ?>), kteří mají <strong><?= percent_cz($att['percent']) ?></strong> <?= $att['byShare'] ? 'všech hlasů podle spoluvlastnických podílů' : 'všech hlasů (jeden hlas na jednotku)' ?>.
     Shromáždění <strong><?= $att['quorate'] ? 'je' : 'není' ?> usnášeníschopné</strong> (potřeba je více než <?= (int) $att['threshold'] ?> %). Prezenční listina je přílohou zápisu.</p>
+  <?php if (function_exists('hybrid_minutes_block')) { hybrid_minutes_block($ev); } ?>
   <?php if ($ev['program'] !== ''): ?><h2>2. Program</h2><div class="prose"><?= format_text($ev['program'], true) ?></div><?php endif ?>
   <h2><?= $ev['program'] !== '' ? '3' : '2' ?>. Průběh jednání</h2>
 <?php
@@ -49,7 +50,7 @@
     <?php foreach ($motions as $i => $m): $r = $m['res']; ?>
       <p><strong><?= $i + 1 ?>) <?= e($m['title']) ?></strong><br>
         Pro <?= percent_cz($r['yes']) ?> (<?= (int) $r['count']['yes'] ?> jednotek), proti <?= percent_cz($r['no']) ?> (<?= (int) $r['count']['no'] ?>), zdrželo se <?= percent_cz($r['abstain']) ?> (<?= (int) $r['count']['abstain'] ?>) – z hlasů přítomných.
-        Usnesení <strong><?= $r['passed'] ? 'bylo přijato' : 'nebylo přijato' ?></strong> (potřeba: <?= e($r['label']) ?>)<?= $m['status'] !== 'closed' ? ' <em class="no-print">– hlasování zatím není uzavřené</em>' : '' ?>.</p>
+        Usnesení <strong><?= $r['passed'] ? 'bylo přijato' : 'nebylo přijato' ?></strong> (potřeba: <?= e($r['label']) ?>)<?= $m['status'] !== 'closed' ? ' <em class="no-print">– hlasování zatím není uzavřené</em>' : '' ?>.<?= function_exists('hybrid_motion_split') && ($split = hybrid_motion_split($r)) !== '' ? '<br>' . e($split) : '' ?></p>
     <?php endforeach ?>
   <?php endif ?>
   <?php foreach ($polls as $p): ?>

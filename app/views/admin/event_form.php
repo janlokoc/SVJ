@@ -19,6 +19,7 @@
       <legend>Podklady</legend>
       <?php $pickId = 'event-docs'; $pickLabel = 'Vyberte z dokumentů'; $pickSelected = $evDocs; require __DIR__ . '/_doc_pick.php'; ?>
     </fieldset>
+    <?php if (function_exists('hybrid_form_fields')) { hybrid_form_fields((int) $ev['id']); } ?>
     <label class="check"><input type="checkbox" name="rsvp"<?= $ev['rsvp'] ? ' checked' : '' ?>> <span>Sbírat účast vlastníků <small>Vlastníci na webu potvrdí, zda přijdou, a výbor uvidí odhad usnášeníschopnosti.</small></span></label>
     <div class="actions"><button class="btn btn-big" type="submit">Uložit termín</button><a class="btn btn-ghost" href="<?= url('/admin/terminy') ?>">Zrušit</a></div>
   </form>

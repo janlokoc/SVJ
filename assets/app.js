@@ -686,3 +686,67 @@ document.querySelectorAll('select[data-template-fill]').forEach((sel) => sel.add
   if (t && o.dataset.title) { t.value = o.dataset.title; t.dispatchEvent(new Event('input', { bubbles: true })); }
   if (b) { b.value = o.dataset.body; b.dispatchEvent(new Event('input', { bubbles: true })); }
 }));
+
+// ---------- Modul H: shromáždění online a hybridně (app/ext/hybrid_lib.php) ----------
+// Formulář termínu: pole pro videohovor jen u hybridní a online formy; tlačítko vytvoří místnost Jitsi s náhodným názvem.
+document.querySelectorAll('[data-hybrid-fields]').forEach((box) => {
+  const remote = box.querySelector('[data-hybrid-remote]');
+  const sync = () => { const v = (box.querySelector('input[name=hybrid_form]:checked') || {}).value || 'prezencni'; remote.hidden = v === 'prezencni'; };
+  box.querySelectorAll('input[name=hybrid_form]').forEach((r) => r.addEventListener('change', sync));
+  sync();
+  box.querySelectorAll('[data-jitsi-room]').forEach((btn) => btn.addEventListener('click', () => {
+    const input = box.querySelector('input[name=hybrid_video_url]');
+    if (input.value.trim() !== '' && !confirm('Nahradit současný odkaz novou místností Jitsi?')) return;
+    input.value = btn.dataset.jitsiRoom;
+    input.focus();
+  }));
+});
+// Připojení vlastníka: spolu s odesláním formuláře se otevře videohovor v nové kartě (jde o klik, prohlížeč okno nezablokuje).
+document.querySelectorAll('form[data-hybrid-video]').forEach((form) => form.addEventListener('submit', () => {
+  window.open(form.dataset.hybridVideo, '_blank', 'noopener');
+}));
+// Stránka vlastníka: každé 4 s se zeptá na stav; když předsedající pustí nebo uzavře návrh, stránka se obnoví.
+document.querySelectorAll('[data-hybrid-poll]').forEach((page) => {
+  let busy = false;
+  document.addEventListener('submit', () => { busy = true; });
+  window.setInterval(async () => {
+    if (busy || document.hidden) return;
+    try {
+      const res = await fetch(page.dataset.hybridPoll, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const s = await res.json();
+      if (s.sig && s.sig !== page.dataset.hybridSig) { busy = true; window.location.reload(); }
+    } catch (e) { /* výpadek spojení – zkusí se znovu za chvíli */ }
+  }, 4000);
+});
+// Prezence na místě: průběžně přepočítá přítomné (na místě i online) a výsledky otevřených návrhů.
+document.querySelectorAll('[data-hybrid-admin-poll]').forEach((panel) => {
+  const tick = panel.querySelector('[data-hybrid-tick]');
+  window.setInterval(async () => {
+    if (document.hidden) return;
+    try {
+      const res = await fetch(panel.dataset.hybridAdminPoll, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+      const s = await res.json();
+      const box = document.querySelector('[data-presence-summary]');
+      if (box) {
+        ['percent', 'verdict', 'self', 'proxy', 'online', 'absent', 'missingDocs'].forEach((k) => { const el = box.querySelector('[data-p=' + k + ']'); if (el) el.textContent = s[k]; });
+        const fill = box.querySelector('.meter-fill'); if (fill) fill.style.width = s.width + '%';
+        box.classList.toggle('is-ok', s.quorate);
+      }
+      Object.entries(s.modes || {}).forEach(([id, mode]) => {
+        const row = document.getElementById('j' + id);
+        if (!row || row.dataset.mode === mode) return;
+        row.dataset.mode = mode;
+        row.classList.toggle('is-present', mode !== '');
+        row.querySelectorAll('input[name=mode]').forEach((r) => { r.checked = r.value === mode; });
+        const badge = row.querySelector('[data-online-badge]'); if (badge) badge.hidden = mode !== 'online';
+        document.querySelectorAll('.vote-list li[data-unit="' + id + '"]').forEach((li) => { li.hidden = mode === ''; });
+      });
+      document.querySelectorAll('[data-none-present]').forEach((el) => { el.hidden = (s.self + s.proxy + s.online) > 0; });
+      Object.entries(s.motions || {}).forEach(([id, m]) => {
+        updateMotion(id, m);
+        const el = document.querySelector('[data-motion="' + id + '"] [data-m=online]'); if (el) el.textContent = m.online || '';
+      });
+      if (tick) tick.textContent = '(naposledy ' + new Date().toLocaleTimeString('cs-CZ') + ')';
+    } catch (e) { if (tick) tick.textContent = '(spojení se nepodařilo – zkouším znovu)'; }
+  }, 4000);
+});

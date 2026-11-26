@@ -269,6 +269,7 @@ $eventForm = function (int $id = 0) {
         if ($ev['event_time'] !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $ev['event_time'])) {
             $errors[] = 'Čas zadejte ve tvaru HH:MM, nebo pole nechte prázdné.';
         }
+        $errors = [...$errors, ...(function_exists('hybrid_event_check') ? hybrid_event_check($_POST) : [])];   // modul H: forma shromáždění
         if (!$errors) {
             $args = [$ev['title'], $ev['event_date'], $ev['event_time'], $ev['place'], $ev['note'], $ev['rsvp'], $ev['program']];
             if ($id) {
@@ -283,6 +284,7 @@ $eventForm = function (int $id = 0) {
                     q('INSERT INTO event_documents (event_id, document_id) VALUES (?,?)', [$id, $docId]);
                 }
             }
+            function_exists('hybrid_event_store') && hybrid_event_store($id, $_POST, (int) user()['id']);
             flash('Termín byl uložen.');
             redirect('/admin/terminy');
         }
