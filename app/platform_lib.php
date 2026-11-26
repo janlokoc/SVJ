@@ -396,9 +396,6 @@ function platform_seo_head(string $path, string $title): string
     if (preg_match('/^[A-Za-z0-9_-]{20,100}$/', pset('google_verification'))) {
         $out .= '<meta name="google-site-verification" content="' . e(pset('google_verification')) . '">' . "\n";
     }
-    if ($path === '/' && preg_match('/^[A-Za-z0-9_-]{8,100}$/', pset('seznam_verification'))) {
-        $out .= '<meta name="seznam-wmt" content="' . e(pset('seznam_verification')) . '">' . "\n";   // Seznam Webmaster (reporter.seznam.cz/wm)
-    }
     if ($path === '/') {
         $op = operator();
         $data = ['@context' => 'https://schema.org', '@type' => 'SoftwareApplication', 'name' => pset('service_name'), 'url' => platform_url('/'),
@@ -698,7 +695,6 @@ const PLATFORM_DEFAULTS = [
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'partner_discounts' => "5:10\n20:15\n50:20",
     'google_verification' => '',
-    'seznam_verification' => '',
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];

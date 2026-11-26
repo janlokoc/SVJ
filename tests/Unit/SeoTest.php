@@ -9,18 +9,15 @@ use Tests\TestCase;
 final class SeoTest extends TestCase
 {
     private string $oldVerification = '';
-    private string $oldSeznam = '';
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->oldVerification = pset('google_verification');
-        $this->oldSeznam = pset('seznam_verification');
     }
     protected function tearDown(): void
     {
         pset_save('google_verification', $this->oldVerification);
-        pset_save('seznam_verification', $this->oldSeznam);
     }
 
     public function testRobotsAllowsPublicPagesAndHidesPrivateOnes(): void
@@ -84,14 +81,5 @@ final class SeoTest extends TestCase
         $this->assertStringNotContainsString('google-site-verification', platform_seo_head('/', 'x'));
         pset_save('google_verification', '');
         $this->assertStringNotContainsString('google-site-verification', platform_seo_head('/', 'x'));
-    }
-
-    public function testSeznamVerificationOnLandingOnly(): void
-    {
-        pset_save('seznam_verification', 'aB3dE5fG7hJ9kL1m');
-        $this->assertStringContainsString('<meta name="seznam-wmt" content="aB3dE5fG7hJ9kL1m">', platform_seo_head('/', 'x'));
-        $this->assertStringNotContainsString('seznam-wmt', platform_seo_head('/cenik', 'x'), 'jen na úvodní stránce');
-        pset_save('seznam_verification', '<b>zlo</b>');
-        $this->assertStringNotContainsString('seznam-wmt', platform_seo_head('/', 'x'));
     }
 }

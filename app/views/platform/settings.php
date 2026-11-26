@@ -98,9 +98,7 @@
     <label>Název příjemce (nepovinné) <input type="text" name="recipient" value="<?= e($v['recipient']) ?>" maxlength="35"></label>
     <h2 id="vyhledavace">Vyhledávače</h2>
     <label>Ověření v Google Search Console <small class="muted">(nepovinné)</small> <input type="text" name="google_verification" value="<?= e($v['google_verification']) ?>" placeholder="kód z meta značky google-site-verification" maxlength="100"></label>
-    <p class="hint">V Search Console zvolte ověření „Značka HTML“ a sem vložte jen kód z atributu content (při ověření celé domény přes DNS pole nechte prázdné). Mapa stránek pro vyhledávače je na <code><?= e(platform_url('/sitemap.xml')) ?></code>.</p>
-    <label>Ověření v Seznam Webmaster <small class="muted">(nepovinné)</small> <input type="text" name="seznam_verification" value="<?= e($v['seznam_verification']) ?>" placeholder="kód z meta značky seznam-wmt" maxlength="100"></label>
-    <p class="hint">Na <a href="https://reporter.seznam.cz/wm/" target="_blank" rel="noopener">reporter.seznam.cz/wm</a> přidejte web, zvolte ověření meta značkou a sem vložte jen kód z atributu content. Mapu stránek Seznam najde sám v robots.txt.</p>
+    <p class="hint">V Search Console zvolte ověření „Značka HTML“ a sem vložte jen kód z atributu content. Mapa stránek pro vyhledávače je na <code><?= e(platform_url('/sitemap.xml')) ?></code>.</p>
     <h2 id="kontakt">Kontakt a e-maily</h2>
     <div class="form-row">
       <label>Kontaktní e-mail (zobrazuje se na webu) <input type="email" name="contact_email" value="<?= e($v['contact_email']) ?>"></label>
