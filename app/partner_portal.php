@@ -399,6 +399,68 @@ if ($PATH === '/hlaseni') {
     render('partner/tickets', ['title' => 'Hlášení', 'rows' => $rows, 'houses' => $houses, 'filter' => $filter, 'house' => $house, 'counts' => $counts]);
     exit;
 }
+// Faktury společenstvím: SVJ platí za web partnerovi (jeho cenou), partner platí platformě společnou fakturou.
+if (preg_match('~^/fakturace/svj/(\d+)$~', $PATH, $m)) {
+    $inv = pq('SELECT * FROM partner_svj_invoices WHERE id = ? AND partner_id = ?', [(int) $m[1], $partner['id']])->fetch() ?: not_found();
+    $GLOBALS['LAYOUT'] = 'partner/layout';
+    render('partner/svj_invoice', ['title' => 'Faktura ' . $inv['number'], 'd' => partner_svj_view($inv), 'backUrl' => url('/fakturace/svj')]);
+    exit;
+}
+if ($PATH === '/fakturace/svj') {
+    $houses = partner_tenants((int) $partner['id']);
+    $errors = [];
+    if ($METHOD === 'POST') {
+        $action = post('action');
+        if ($action === 'issue') {
+            $t = tenant_row(post('slug'));
+            $amount = (int) preg_replace('/\D/', '', post('amount'));
+            if (!$t || (int) $t['partner_id'] !== (int) $partner['id'] || $t['partner_status'] !== 'active') {
+                $errors[] = 'Dům nenalezen.';
+            } elseif ($missing = partner_svj_missing($partner)) {
+                $errors[] = 'Před vystavením faktury doplňte na stránce Firma: ' . implode(', ', $missing) . '.';
+            } elseif ($amount <= 0 || !valid_date(post('from')) || !valid_date(post('to')) || post('to') < post('from')) {
+                $errors[] = 'Zadejte částku a platné období.';
+            } else {
+                $id = partner_svj_issue($partner, $t, post('from'), post('to'), $amount, $pu['name']);
+                if (isset($_POST['send'])) {
+                    partner_svj_notify($partner, $t, $id);
+                }
+                $plog('faktura společenství', $t['slug'] . ' · ' . $amount);
+                flash('Faktura je vystavená' . (isset($_POST['send']) ? ' a výbor dostal e-mail s odkazem.' : '.'));
+                redirect('/fakturace/svj');
+            }
+        } elseif (in_array($action, ['paid', 'unpaid', 'cancel'], true)) {
+            $to = ['paid' => 'paid', 'unpaid' => 'issued', 'cancel' => 'cancelled'][$action];
+            pq('UPDATE partner_svj_invoices SET status = ?, paid_at = ? WHERE id = ? AND partner_id = ?', [$to, $to === 'paid' ? date('Y-m-d') : '', (int) post('id'), $partner['id']]);
+            $plog('faktura společenství: ' . PARTNER_SVJ_STATUS[$to], (string) (int) post('id'));
+            redirect('/fakturace/svj');
+        }
+        http_response_code(422);
+    }
+    $invoices = pq('SELECT * FROM partner_svj_invoices WHERE partner_id = ? ORDER BY id DESC LIMIT 300', [$partner['id']])->fetchAll();
+    if (($_GET['export'] ?? '') === 'csv') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="faktury-svj.csv"');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, ['Číslo', 'VS', 'Společenství', 'IČO', 'Vystaveno', 'Splatnost', 'Období od', 'Období do', 'Bez DPH', 'DPH %', 'Celkem', 'Stav', 'Zaplaceno'], ';');
+        foreach ($invoices as $i) {
+            $c = (array) (json_decode($i['data'], true)['customer'] ?? []);
+            fputcsv($out, [$i['number'], $i['vs'], $c['name'] ?? $i['tenant'], $c['ico'] ?? '', $i['issued'], $i['due'], $i['period_from'], $i['period_to'], $i['amount'], $i['vat_rate'],
+                $i['amount'] + (int) round($i['amount'] * $i['vat_rate'] / 100), PARTNER_SVJ_STATUS[$i['status']], $i['paid_at']], ';');
+        }
+        exit;
+    }
+    $last = [];
+    foreach ($invoices as $i) {
+        if ($i['status'] !== 'cancelled' && (!isset($last[$i['tenant']]) || $i['period_to'] > $last[$i['tenant']])) {
+            $last[$i['tenant']] = $i['period_to'];
+        }
+    }
+    render('partner/svj_billing', ['title' => 'Faktury společenstvím', 'partner' => $partner, 'houses' => $houses, 'invoices' => $invoices, 'last' => $last, 'errors' => $errors,
+        'missing' => partner_svj_missing($partner)]);
+    exit;
+}
 // Hromadné oznámení: aktualita (s přílohou) do vybraných domů najednou.
 if ($PATH === '/hromadne') {
     $houses = partner_tenants((int) $partner['id']);
@@ -492,6 +554,18 @@ if ($PATH === '/firma') {
                     flash('Uloženo.');
                     redirect('/firma');
                 }
+            }
+        } elseif ($action === 'svjbill') {
+            $iban = strtoupper(preg_replace('/\s+/', '', post('iban')));
+            if ($iban !== '' && !preg_match('/^CZ\d{22}$/', $iban)) {
+                $errors[] = 'IBAN má tvar CZ a 22 číslic (najdete ho v internetovém bankovnictví).';
+            } elseif (isset($_POST['vat']) && trim((string) $partner['dic']) === '') {
+                $errors[] = 'Plátce DPH musí mít na faktuře DIČ – napište ho prosím provozovateli služby, doplní ho k údajům firmy.';
+            } else {
+                pq('UPDATE partners SET account = ?, iban = ?, vat_rate = ?, inv_due = ? WHERE id = ?', [mb_substr(post('account'), 0, 40), $iban, isset($_POST['vat']) ? 21 : 0, max(0, min(90, (int) post('inv_due'))), $partner['id']]);
+                $plog('fakturační údaje pro SVJ');
+                flash('Fakturační údaje jsou uložené.');
+                redirect('/firma#fakturace-svj');
             }
         } elseif ($action === 'resale') {
             $price = post('resale') === '' ? 0 : (int) preg_replace('/\D/', '', post('resale'));

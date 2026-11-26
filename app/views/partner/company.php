@@ -19,8 +19,15 @@
       <p class="hint">Web se zakládá v edici Zdarma; edici pak objednáváte na společné faktuře.</p>
     </section>
   </div>
+  <form method="post" class="card form" id="fakturace-svj"><h2>Fakturační údaje pro SVJ</h2><?= csrf_field() ?><input type="hidden" name="action" value="svjbill">
+    <p class="muted">Společenstvím fakturujete za web přímo z portálu (<a href="<?= url('/fakturace/svj') ?>">Faktury společenstvím</a>). Na faktuře budou údaje firmy (název, IČO, DIČ, sídlo – mění je provozovatel služby) a tyto platební údaje.</p>
+    <div class="form-row"><label>Číslo účtu <input type="text" name="account" value="<?= e($partner['account'] ?? '') ?>" placeholder="123456789/0100"<?= $owner ? '' : ' disabled' ?>></label>
+      <label>IBAN <small class="muted">(pro QR platbu)</small> <input type="text" name="iban" value="<?= e($partner['iban'] ?? '') ?>" placeholder="CZ65 0800 0000 1920 0014 5399"<?= $owner ? '' : ' disabled' ?>></label></div>
+    <div class="form-row"><label>Splatnost (dní) <input type="number" name="inv_due" value="<?= (int) ($partner['inv_due'] ?? 14) ?>" min="0" max="90"<?= $owner ? '' : ' disabled' ?>></label>
+      <label class="check"><input type="checkbox" name="vat" value="1"<?= (int) ($partner['vat_rate'] ?? 0) ? ' checked' : '' ?><?= $owner ? '' : ' disabled' ?>> Jsme plátci DPH (21 %)</label></div>
+    <?php if ($owner): ?><button class="btn" type="submit">Uložit</button><?php endif ?></form>
   <form method="post" class="card form" id="cena"><h2>Cena pro SVJ a Vaše marže</h2><?= csrf_field() ?><input type="hidden" name="action" value="resale">
-    <p class="muted">Edice platíte na společné faktuře s množstevní slevou (teď <?= $disc ?> %). Společenstvím ji můžete účtovat za svou cenu – třeba jako součást správy. Tady si ji zapište a uvidíte, kolik na každém domě vyděláte. Ceny jsou bez DPH; fakturujete je společenstvím Vy, web je nikde neukazuje.</p>
+    <p class="muted">Edice platíte na společné faktuře s množstevní slevou (teď <?= $disc ?> %). Portál je pro Vás zdarma: platíte jen za weby domů a ty Vám platí jednotlivá SVJ – Vaší cenou, třeba jako součást správy. Tady si cenu zapište a uvidíte, kolik na každém domě vyděláte; faktury společenstvím pak vystavíte v části <a href="<?= url('/fakturace/svj') ?>">Faktury společenstvím</a>. Ceny jsou bez DPH.</p>
     <label>Vaše roční cena za web pro SVJ <small class="muted">(výchozí pro všechny domy)</small> <input type="text" name="resale" value="<?= $def ?: '' ?>" inputmode="numeric" placeholder="např. 4 500"<?= $owner ? '' : ' disabled' ?>></label>
     <?php if ($houses): ?>
     <div class="table-scroll"><table class="table"><thead><tr><th>Dům</th><th>Edice</th><th>Platíte nám</th><th>Účtujete SVJ</th><th>Marže / rok</th></tr></thead><tbody>

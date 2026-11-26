@@ -1,7 +1,14 @@
 <div class="wrap page narrow">
   <h1>Předplatné</h1>
   <?php if (!empty($t['partner_billing']) && $t['partner_status'] === 'active' && ($bp = partner_row((int) $t['partner_id']))): ?>
-  <div class="callout">Předplatné tohoto webu hradí <strong>správce domu <?= e($bp['name']) ?></strong> na své společné faktuře. Edici objednává a prodlužuje on; doplňky níže si můžete objednat sami. <a href="<?= url('/admin/spravce-domu') ?>">Správce domu</a></div>
+  <div class="callout">Web Vám zajišťuje <strong>správce domu <?= e($bp['name']) ?></strong> – edici objednává a prodlužuje on a za web Vám fakturuje podle Vaší dohody (například jako součást správy). Doplňky níže si můžete objednat sami. <a href="<?= url('/admin/spravce-domu') ?>">Správce domu</a></div>
+  <?php $svjInv = pq("SELECT * FROM partner_svj_invoices WHERE tenant = ? AND status <> 'cancelled' ORDER BY id DESC LIMIT 20", [TENANT])->fetchAll(); if ($svjInv): ?>
+  <div class="card" id="spravce-faktury"><h2>Faktury od správce domu</h2>
+    <table class="table"><thead><tr><th>Číslo</th><th>Období</th><th>Částka</th><th>Splatnost</th><th>Stav</th></tr></thead><tbody>
+      <?php foreach ($svjInv as $si): ?><tr><td data-label="Číslo"><a href="<?= url('/admin/predplatne/spravce/' . (int) $si['id']) ?>"><?= e($si['number']) ?></a></td><td data-label="Období"><?= cz_date($si['period_from']) ?> – <?= cz_date($si['period_to']) ?></td>
+        <td data-label="Částka"><?= money_czk((int) $si['amount'] + (int) round($si['amount'] * $si['vat_rate'] / 100)) ?></td><td data-label="Splatnost"><?= cz_date($si['due']) ?></td><td data-label="Stav"><?= e(PARTNER_SVJ_STATUS[$si['status']]) ?></td></tr><?php endforeach ?>
+    </tbody></table></div>
+  <?php endif ?>
   <?php endif ?>
   <?php if ($state['mode'] === 'free'): ?>
     <p class="lead">Tento web běží bez placení – provoz je domluven přímo s provozovatelem služby.</p>

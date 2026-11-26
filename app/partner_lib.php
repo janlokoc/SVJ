@@ -375,14 +375,14 @@ function partner_demo_ensure(): ?array
             [$pid, 'Petra Dvořáková', 'ukazka-partner@example.invalid', password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT), date('Y-m-d H:i:s')]);
     }
     // Novější obsah ukázky (víc funkcí portálu): domy ukázky založit znovu.
-    if (pset('demo_partner_v') !== '3') {
+    if (pset('demo_partner_v') !== '4') {
         foreach (array_keys(PARTNER_DEMO_HOUSES) as $slug) {
             if (($old = tenant_row($slug)) && !empty($old['demo'])) {
                 tenant_delete_storage($slug);
                 pq('DELETE FROM tenants WHERE slug = ?', [$slug]);
             }
         }
-        pq("UPDATE partners SET web = 'https://www.example.com', phone = '+420 500 600 700', email = 'sprava@example.invalid', resale = '4500', brand = 1 WHERE id = ?", [$pid]);
+        pq("UPDATE partners SET web = 'https://www.example.com', phone = '+420 500 600 700', email = 'sprava@example.invalid', resale = '4500', brand = 1, ico = '00000000', address = 'Masarykova 1, 602 00 Brno', account = '000000-0000000000/0000' WHERE id = ?", [$pid]);
         if (!pq('SELECT 1 FROM partner_templates WHERE partner_id = ?', [$pid])->fetchColumn()) {
             foreach ([
                 ['post', 'Odečty vodoměrů', 'Odečty vodoměrů a měřičů tepla', "Dobrý den,\n\nv úterý příští týden od 16 do 19 hodin proběhnou odečty vodoměrů a měřičů tepla. Prosíme o zpřístupnění bytů; kdo nebude doma, nechte prosím stav měřidel s číslem bytu ve schránce.\n\nDěkujeme, Ukázková správa domů"],
@@ -392,7 +392,7 @@ function partner_demo_ensure(): ?array
                 pq('INSERT INTO partner_templates (partner_id, kind, name, title, body, updated_at) VALUES (?,?,?,?,?,?)', [$pid, $k, $n, $ti, $b, date('Y-m-d H:i:s')]);
             }
         }
-        pset_save('demo_partner_v', '3');
+        pset_save('demo_partner_v', '4');
     }
     foreach (PARTNER_DEMO_HOUSES as $slug => [$name, $title, $address, $look]) {
         if (!tenant_row($slug)) {
@@ -650,4 +650,58 @@ function partner_bulk_post(array $pu, array $partner, array $slugs, string $titl
         }
     }
     return [$done, $errors];
+}
+
+// ---------- Faktury partnera společenstvím (SVJ platí partnerovi, partner platformě) ----------
+
+const PARTNER_SVJ_STATUS = ['issued' => 'čeká na platbu', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno'];
+
+/** Fakturační údaje odběratele (SVJ) z nastavení jeho webu. */
+function partner_svj_customer(array $t): array
+{
+    $s = tenant_settings($t['slug']);
+    return ['name' => (string) ($t['full'] !== '' ? $t['full'] : $t['name']), 'address' => (string) (($s['address'] ?? '') !== '' ? $s['address'] : $t['address']), 'ico' => (string) ($s['ico'] ?? ''), 'dic' => ''];
+}
+/** Partner může fakturovat: má IČO, adresu a účet. Vrací chybějící údaje (prázdné pole = vše v pořádku). */
+function partner_svj_missing(array $p): array
+{
+    return array_keys(array_filter(['IČO' => $p['ico'] === '', 'sídlo' => $p['address'] === '', 'číslo účtu' => ($p['account'] ?? '') === '']));
+}
+/** Vystaví fakturu společenství za web na dané období. Vrací id faktury. */
+function partner_svj_issue(array $p, array $t, string $from, string $to, int $amount, string $by): int
+{
+    $year = date('Y');
+    $seq = 1 + (int) pq("SELECT COUNT(*) FROM partner_svj_invoices WHERE partner_id = ? AND number LIKE ?", [$p['id'], $year . '-%'])->fetchColumn();
+    $number = $year . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+    $vs = $year . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+    $supplier = ['name' => $p['name'], 'address' => $p['address'], 'ico' => $p['ico'], 'dic' => $p['dic'], 'email' => $p['email'], 'phone' => $p['phone'], 'account' => (string) $p['account'], 'iban' => (string) $p['iban']];
+    $issued = date('Y-m-d');
+    pq('INSERT INTO partner_svj_invoices (partner_id, tenant, number, vs, issued, due, period_from, period_to, item, amount, vat_rate, data, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$p['id'], $t['slug'], $number, $vs, $issued, date('Y-m-d', strtotime($issued . ' +' . max(0, (int) ($p['inv_due'] ?? 14)) . ' day')), $from, $to,
+            'Web společenství ' . $t['name'] . ' (' . tenant_address($t['slug']) . ')', $amount, (int) ($p['vat_rate'] ?? 0),
+            json_encode(['supplier' => $supplier, 'customer' => partner_svj_customer($t)], JSON_UNESCAPED_UNICODE), $by, date('Y-m-d H:i:s')]);
+    return (int) platform_db()->lastInsertId();
+}
+/** Data pro zobrazení faktury. */
+function partner_svj_view(array $inv): array
+{
+    $data = (array) json_decode($inv['data'], true);
+    $vat = (int) round($inv['amount'] * $inv['vat_rate'] / 100);
+    $total = $inv['amount'] + $vat;
+    $iban = preg_replace('/\s+/', '', (string) ($data['supplier']['iban'] ?? ''));
+    return ['inv' => $inv, 's' => $data['supplier'] ?? [], 'c' => $data['customer'] ?? [], 'vat' => $vat, 'total' => $total,
+        'qr' => $inv['status'] === 'issued' && $iban !== '' ? qr_svg(spayd($iban, $total, $inv['vs'], 'Web SVJ ' . $inv['number'], (string) ($data['supplier']['name'] ?? ''), true), 'QR kód pro okamžitou platbu') : ''];
+}
+/** Pošle výboru (správcům webu) e-mail o nové faktuře s odkazem do administrace. */
+function partner_svj_notify(array $p, array $t, int $invId): void
+{
+    $inv = pq('SELECT * FROM partner_svj_invoices WHERE id = ?', [$invId])->fetch();
+    $emails = array_column(tenant_pdo($t['slug'])->query("SELECT email FROM users WHERE role = 'admin' AND active = 1 AND email NOT LIKE '%.invalid'")->fetchAll(), 'email');
+    $map = array_map('strtolower', array_keys((array) json_decode((string) (tenant_settings($t['slug'])['partner_users'] ?? ''), true)));
+    foreach (array_unique($emails) as $email) {
+        if (!in_array(strtolower($email), $map, true) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            platform_mail($email, 'Faktura za web domu od správce ' . $p['name'], "Dobrý den,\n\nsprávce domu " . $p['name'] . ' Vám vystavil fakturu č. ' . $inv['number'] . ' za web společenství ' . $t['name']
+                . ' (' . money_czk((int) $inv['amount']) . ($inv['vat_rate'] ? ' bez DPH' : '') . ', splatnost ' . cz_date($inv['due']) . ").\n\nFakturu najdete v administraci webu: " . tenant_url($t, '/admin/predplatne#spravce-faktury'));
+        }
+    }
 }

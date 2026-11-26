@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -243,6 +243,19 @@ SQL);
             CREATE TABLE IF NOT EXISTS partner_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'post', name TEXT NOT NULL,
                 title TEXT NOT NULL DEFAULT '', body TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '');
             PRAGMA user_version = 25;");
+    }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 26) {
+        // Partner fakturuje společenstvím přímo z portálu (SVJ platí partnerovi, partner platformě).
+        $pdo->exec("ALTER TABLE partners ADD COLUMN account TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN iban TEXT NOT NULL DEFAULT '';
+            ALTER TABLE partners ADD COLUMN vat_rate INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE partners ADD COLUMN inv_due INTEGER NOT NULL DEFAULT 14;
+            CREATE TABLE IF NOT EXISTS partner_svj_invoices (id INTEGER PRIMARY KEY AUTOINCREMENT, partner_id INTEGER NOT NULL, tenant TEXT NOT NULL, number TEXT NOT NULL, vs TEXT NOT NULL,
+                issued TEXT NOT NULL, due TEXT NOT NULL, period_from TEXT NOT NULL DEFAULT '', period_to TEXT NOT NULL DEFAULT '', item TEXT NOT NULL DEFAULT '', amount INTEGER NOT NULL DEFAULT 0,
+                vat_rate INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'issued', paid_at TEXT NOT NULL DEFAULT '', data TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '');
+            CREATE INDEX IF NOT EXISTS psi_partner ON partner_svj_invoices (partner_id, issued);
+            CREATE INDEX IF NOT EXISTS psi_tenant ON partner_svj_invoices (tenant);
+            PRAGMA user_version = 26;");
     }
     return $pdo;
 }

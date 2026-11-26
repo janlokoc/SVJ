@@ -51,6 +51,12 @@ $route('GET', '/spravce-vstup/([a-f0-9]{64})', function (string $token) {
     $next = (string) ($d['next'] ?? '');
     redirect(partner_next_ok($next) ? $next : '/admin');
 });
+// Faktura od správce domu (správcovská firma fakturuje společenství za web).
+$route('GET', '/admin/predplatne/spravce/(\d+)', function (int $id) {
+    require_admin();
+    $inv = pq("SELECT * FROM partner_svj_invoices WHERE id = ? AND tenant = ? AND status <> 'cancelled'", [$id, TENANT])->fetch() ?: not_found();
+    render('partner/svj_invoice', ['title' => 'Faktura ' . $inv['number'], 'd' => partner_svj_view($inv), 'backUrl' => url('/admin/predplatne')]);
+});
 // Správce domu (správcovská firma): výbor schvaluje přístup, vidí, kdo dům spravuje, a může přístup odebrat.
 $route('GET', '/admin/spravce-domu', function () {
     require_admin();

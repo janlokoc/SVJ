@@ -36,6 +36,10 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }
+if ($METHOD === 'GET' && $PATH === '/pro-spravce') {
+    render('platform/for_managers', ['title' => 'Pro správcovské firmy', 'demo' => demo_tenant()]);
+    exit;
+}
 if ($METHOD === 'GET' && ($PATH === '/funkce' || $PATH === '/cenik')) {
     render($PATH === '/funkce' ? 'platform/features' : 'platform/pricing', ['title' => $PATH === '/funkce' ? 'Co web umí' : 'Ceník', 'open' => pset('signup_open') === '1', 'demo' => demo_tenant()]);
     exit;

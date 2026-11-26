@@ -26,6 +26,7 @@
         <?php $navPath = $GLOBALS['PATH'] ?? '/'; $navDemo = function_exists('demo_tenant') ? demo_tenant() : null; ?>
         <li><a href="<?= url('/funkce') ?>"<?= str_starts_with($navPath, '/funkce') ? ' aria-current="page"' : '' ?>>Funkce</a></li>
         <li><a href="<?= url('/cenik') ?>"<?= str_starts_with($navPath, '/cenik') ? ' aria-current="page"' : '' ?>>Ceník</a></li>
+        <li><a href="<?= url('/pro-spravce') ?>"<?= str_starts_with($navPath, '/pro-spravce') ? ' aria-current="page"' : '' ?>>Pro správce domů</a></li>
         <?php if ($navDemo): ?><li><a href="<?= e(tenant_url($navDemo, '/vstup')) ?>">Ukázka webu</a></li><?php endif ?>
       </ul>
       <div class="nav-user"><a class="btn btn-small" href="<?= url('/registrace') ?>">Založit web zdarma</a></div>

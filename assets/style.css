@@ -1816,3 +1816,16 @@ a.dash-tile:hover { border-color: var(--primary); }
 .check-list { border: 0; padding: 0; margin: .3rem 0; display: grid; gap: .3rem; }
 .check-list legend { font-weight: 600; margin-bottom: .3rem; }
 @media (min-width: 900px) { .dash-tiles-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.svj-issue { display: flex; flex-wrap: wrap; gap: .5rem .8rem; align-items: flex-end; }
+.svj-issue label { display: grid; gap: .15rem; font-size: .85rem; }
+.svj-issue label.check { display: flex; align-items: center; }
+.svj-issue input[type=date] { width: 9.5rem; }
+.inline-form { display: inline-flex; gap: .6rem; align-items: center; }
+.mgr-flow { counter-reset: f; list-style: none; padding: 0; display: grid; gap: .8rem; max-width: 760px; }
+.mgr-flow li { counter-increment: f; position: relative; padding: .9rem 1rem .9rem 3.2rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.mgr-flow li::before { content: counter(f); position: absolute; left: 1rem; top: .85rem; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--primary); color: var(--on-primary, #fff); display: grid; place-items: center; font-weight: 700; font-size: .9rem; }
+.mgr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
+.mgr-grid .card { margin: 0; }
+.mgr-grid h3 { margin-top: 0; }
+.lpx-partner-note { margin-top: 1rem; padding: .8rem 1rem; border-radius: 10px; background: var(--soft); }
+.lpx-hero-plain { padding-bottom: 2rem; }

@@ -1,7 +1,8 @@
 <?php /* Společná faktura partnera. $houses = domy, za které platí partner; $open = otevřená výzva k platbě; $tiers = [počet domů => %] */ ?>
 <div class="wrap page">
   <header class="page-head"><h1>Fakturace</h1>
-    <p class="lead">Předplatné domů, které platíte za společenství, objednáte najednou – jednou zálohovou fakturou a jednou platbou. Po připsání platby se předplatné každého domu na faktuře prodlouží o rok.</p></header>
+    <p class="lead">Partnerský portál je pro Vás <strong>zdarma</strong>. Platíte jen za weby domů – najednou, jednou fakturou s množstevní slevou – a ty Vám platí jednotlivá SVJ Vaší cenou. Po připsání platby se předplatné každého domu na faktuře prodlouží o rok.</p>
+    <p><a class="btn btn-ghost" href="<?= url('/fakturace/svj') ?>">Faktury společenstvím (SVJ platí Vám)</a></p></header>
   <?php if ($error): ?><div class="flash flash-error" role="alert"><?= e($error) ?></div><?php endif ?>
 
   <?php if ($open): $lines = partner_lines($open); ?>
