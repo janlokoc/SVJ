@@ -1876,3 +1876,31 @@ a.dash-tile:hover { border-color: var(--primary); }
 /* ---------- Modul D: účetnictví (export a import, app/views/ext/ucetnictvi) ---------- */
 .acct-preview tr.is-unmatched td { background: var(--accent-soft); }
 .acct-preview td small { display: inline-block; max-width: 32rem; }
+/* ===== Modul A: plakát do vchodu, pomoc s hlasováním, zpracovatelská smlouva ===== */
+.poster-tools { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-bottom: 1rem; }
+.poster { max-width: 190mm; margin: 0 auto; padding: 2rem 1.5rem; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.poster-eyebrow { text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0; }
+.poster-title { font-size: clamp(1.8rem, 6vw, 2.8rem); line-height: 1.15; margin: .3rem 0; }
+.poster-address { font-size: 1.2rem; margin: 0 0 1rem; }
+.poster-qr { width: min(70vw, 85mm); margin: 1rem auto .5rem; }
+.poster-qr svg { width: 100%; height: auto; display: block; }
+.poster-web { font-size: clamp(1.2rem, 4vw, 1.7rem); font-weight: 700; word-break: break-all; margin: .2rem 0 1rem; }
+.poster-lead { font-size: 1.15rem; max-width: 34em; margin: 0 auto 1rem; }
+.poster-h { font-size: 1.3rem; margin: 1.2rem 0 .4rem; }
+.poster-steps { text-align: left; max-width: 32em; margin: 0 auto; font-size: 1.15rem; line-height: 1.6; }
+.poster-contact { font-size: 1.1rem; margin-top: 1rem; }
+.poster-foot { color: var(--muted); margin-top: 1.5rem; }
+.poll-gap { margin: 1.2rem 0; }
+.poll-gap-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+.poll-gap-list li { padding: .4rem 0; border-bottom: 1px solid var(--line); }
+.dpa-parties { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 1rem; margin: 1rem 0; }
+.dpa-sign { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 2rem; margin: 2rem 0 1rem; }
+@media print {
+  .poster-page { padding: 0; max-width: none; }
+  .poster { border: 0; border-radius: 0; padding: 0; max-width: none; background: #fff; color: #000; }
+  .poster-qr { width: 95mm; }
+  .poster-title { font-size: 30pt; }
+  .poster-web { font-size: 20pt; }
+  .poster-lead, .poster-steps { font-size: 14pt; }
+  .dpa-doc .prose { font-size: 10.5pt; }
+}

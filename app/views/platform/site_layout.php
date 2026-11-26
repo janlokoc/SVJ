@@ -50,6 +50,7 @@
       <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
       <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
       <li><a href="<?= url('/zpracovani-udaju') ?>">Smlouva o zpracování údajů</a></li>
+      <li><a href="<?= url('/bezpecnost') ?>">Bezpečnost a ochrana dat</a></li>
       <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
       <li><a href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open>Nahlásit problém nebo nápad</a></li>
       <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>

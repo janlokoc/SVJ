@@ -197,6 +197,7 @@ function daily_tasks(): void
             error_log('SVJ web, banka: ' . $e->getMessage());
         }
     }
+    if (function_exists('digest_daily')) digest_daily();   // týdenní přehled pro obyvatele (app/ext/moda_lib.php)
     if (!filter_var(setting('mail_from'), FILTER_VALIDATE_EMAIL)) {
         return;
     }
