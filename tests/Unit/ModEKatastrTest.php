@@ -493,4 +493,14 @@ final class ModEKatastrTest extends TestCase
         $this->assertSame(1, (int) pq("SELECT COUNT(*) FROM rej_usage WHERE kind = 'katastr_year'")->fetchColumn(), 'only once a year');
         $this->assertSame([], $this->calls);
     }
+
+    /** Nezaplacený doplněk: po 30 dnech od výzvy se kontroly katastru pozastaví, nahlášená platba ne. */
+    public function testUnpaidAddonPausesAfterGracePeriod(): void
+    {
+        $old = date('Y-m-d H:i:s', time() - (REJ_KATASTR_GRACE_DAYS + 1) * 86400);
+        $fresh = date('Y-m-d H:i:s', time() - 5 * 86400);
+        $this->assertTrue(rej_katastr_unpaid(['status' => 'pending', 'created_at' => $old]));
+        $this->assertFalse(rej_katastr_unpaid(['status' => 'pending', 'created_at' => $fresh]), 'within grace period');
+        $this->assertFalse(rej_katastr_unpaid(['status' => 'claimed', 'created_at' => $old]), 'payment reported by the house');
+    }
 }

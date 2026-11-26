@@ -591,6 +591,13 @@ function rej_katastr_payment(): ?array
 {
     return rej_katastr_billed() ? addon_payment(tenant_row(TENANT), 'katastr') : null;
 }
+/** Doplněk se platí předem: když výzva k platbě zůstane nezaplacená déle než 30 dní, kontroly se pozastaví (náklad ČÚZK by nesl provozovatel). */
+const REJ_KATASTR_GRACE_DAYS = 30;
+function rej_katastr_unpaid(?array $payment = null): bool
+{
+    $payment ??= rej_katastr_payment();
+    return $payment !== null && $payment['status'] === 'pending' && (string) $payment['created_at'] < date('Y-m-d H:i:s', time() - REJ_KATASTR_GRACE_DAYS * 86400);
+}
 /** Správce změnil čísla LV: u zapnutého sledování se přepočítá doplněk (navýšení se doplatí poměrně). */
 function rej_katastr_target_changed(): void
 {
@@ -619,6 +626,9 @@ function rej_katastr_daily(): void
             rej_usage_add('katastr_year', $lv, rej_katastr_year_price($lv), 0, 'prodloužení sledování');
         }
         rej_set('rej_katastr_year', date('Y-m-d'));
+    }
+    if (rej_katastr_unpaid()) {
+        return;   // pozastaveno do zaplacení
     }
     $last = substr(setting('rej_katastr_last'), 0, 10);
     $days = max(1, rej_price('rej_katastr_days'));

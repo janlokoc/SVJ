@@ -45,6 +45,8 @@ Přístupové údaje patří **jen do `storage/config.php`** na serveru (vzor je
 | Bank iD vypnuté uprostřed hlasování | hlasování se odmítne (nepřepne se tiše na e-mail) |
 | AI pomocník pro obyvatele | zapnutý, 20× denně na osobu, výbor může vypnout |
 | AI pomocník v partnerském portálu | 50× denně na firmu, náklady nese platforma |
+| Nezaplacené sledování katastru | běží 30 dní od výzvy k platbě, pak se kontroly pozastaví do zaplacení |
+| Kredit došel těsně před ověřeným hlasem / lustrací (souběh) | služba proběhne, haléřový rozdíl nese provozovatel |
 
 ## 5. Ceny doplňků a kredit
 

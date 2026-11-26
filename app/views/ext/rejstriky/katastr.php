@@ -29,7 +29,8 @@
         <button class="btn" type="submit"<?= $target['ku'] === '' ? ' disabled' : '' ?>>Zapnout sledování</button>
       </form>
       <?php else: ?>
-      <?php if ($payment): ?><p class="callout">Za zbytek zaplaceného období čeká platba <?= pay_money($payment) ?> (VS <?= e($payment['vs']) ?>) – <a href="<?= url('/admin/predplatne') ?>#doplnky">platební údaje</a>.</p><?php endif ?>
+      <?php if ($payment && rej_katastr_unpaid($payment)): ?><p class="callout">Sledování je <strong>pozastavené</strong>: výzva k platbě (VS <?= e($payment['vs']) ?>) je nezaplacená déle než <?= REJ_KATASTR_GRACE_DAYS ?> dní. Po zaplacení se kontroly obnoví – <a href="<?= url('/admin/predplatne') ?>#doplnky">platební údaje</a>.</p>
+      <?php elseif ($payment): ?><p class="callout">Za zbytek zaplaceného období čeká platba <?= pay_money($payment) ?> (VS <?= e($payment['vs']) ?>) – <a href="<?= url('/admin/predplatne') ?>#doplnky">platební údaje</a>.</p><?php endif ?>
       <p><span class="status status-done">zapnuto</span> od <?= e(cz_date($on)) ?> · <?= e(money_czk($price)) ?> ročně bez DPH.
         <?= ($last[0] ?? '') !== '' ? '<br>Poslední kontrola ' . e($last[0]) . ': ' . e($last[2] ?? '') . '.' : '<br>Zatím bez kontroly.' ?></p>
       <form method="post" class="actions">
