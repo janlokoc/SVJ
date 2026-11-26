@@ -21,6 +21,10 @@ $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 require $root . '/vendor/autoload.php';
 require $root . '/app/lib.php';
 require __DIR__ . '/TestCase.php';
+// Testy počítají s výchozím stavem beta programu „vypnuto“; každý test si funkce zapíná sám
+// (migrace platformy v29 je na nové databázi přepne do bety – ta má vlastní test v BetaMarkersTest).
+pq("DELETE FROM platform_settings WHERE key LIKE 'beta\\_%' ESCAPE '\\'");
+pset('__reset');
 register_shutdown_function(function () use ($store) {
     exec('rm -rf ' . escapeshellarg($store));
 });

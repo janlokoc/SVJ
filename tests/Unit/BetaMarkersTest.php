@@ -85,4 +85,22 @@ final class BetaMarkersTest extends TestCase
         $this->pset('sms_provider', 'gosms');
         $this->assertTrue(sms_gateway_ready());
     }
+
+    /** Migrace v29: „připravujeme“ (vypnuto i nenastaveno) → beta; spuštěné a starší zapnuté insolvence beze změny. */
+    public function testMigrationMovesPreparedFeaturesToBeta(): void
+    {
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE platform_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+        $pdo->exec("INSERT INTO platform_settings VALUES ('beta_sms', 'off'), ('beta_sso', 'on'), ('beta_katastr', 'beta'), ('isir_enabled', '1')");
+        platform_beta_2026_11($pdo);
+        $all = $pdo->query('SELECT key, value FROM platform_settings')->fetchAll(\PDO::FETCH_KEY_PAIR);
+        $this->assertSame('beta', $all['beta_sms']);
+        $this->assertSame('on', $all['beta_sso'], 'launched stays launched');
+        $this->assertSame('beta', $all['beta_katastr']);
+        $this->assertArrayNotHasKey('beta_insolvence', $all, 'legacy switch already on');
+        foreach (['bank-psd2', 'shromazdeni-online', 'exekuce', 'bankid'] as $k) {
+            $this->assertSame('beta', $all['beta_' . $k], $k);
+        }
+        $this->assertSame(array_keys(BETA_FEATURES), array_values(array_intersect(array_keys(BETA_FEATURES), ['insolvence', 'sms', 'bank-psd2', 'shromazdeni-online', 'katastr', 'exekuce', 'sso', 'bankid'])), 'migration covers every beta feature');
+    }
 }

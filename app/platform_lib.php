@@ -273,7 +273,31 @@ SQL);
             UPDATE platform_settings SET value = '99' WHERE key = 'rej_price_exekuce' AND value = '90';
             PRAGMA user_version = 28;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 29) {
+        // Beta program (11/2026): funkce, které byly „připravujeme“, jdou do testování v betě (jen edice Premium).
+        platform_beta_2026_11($pdo);
+        $pdo->exec('PRAGMA user_version = 29;');
+    }
     return $pdo;
+}
+/** Vypnuté funkce beta programu (i nikdy nenastavené) přepne do bety; spuštěné ('on') a starší zapnuté hlídání insolvencí nechá. */
+function platform_beta_2026_11(PDO $pdo): void
+{
+    $get = $pdo->prepare('SELECT value FROM platform_settings WHERE key = ?');
+    $set = $pdo->prepare('INSERT INTO platform_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
+    foreach (['insolvence', 'sms', 'bank-psd2', 'shromazdeni-online', 'katastr', 'exekuce', 'sso', 'bankid'] as $key) {
+        $get->execute(['beta_' . $key]);
+        $cur = $get->fetchColumn();
+        if ($cur === false && $key === 'insolvence') {
+            $get->execute(['isir_enabled']);
+            if ($get->fetchColumn() === '1') {
+                continue;   // dřívější přepínač: insolvence už běží naostro
+            }
+        }
+        if ($cur === false || $cur === '' || $cur === 'off') {
+            $set->execute(['beta_' . $key, 'beta']);
+        }
+    }
 }
 function pq(string $sql, array $params = []): PDOStatement
 {
