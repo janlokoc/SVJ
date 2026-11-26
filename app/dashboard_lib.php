@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 const DASH_PERIODS = [30 => '30 dní', 90 => '90 dní', 365 => '12 měsíců'];
 /** Záznamy, které do časové osy „co se dělo“ nepatří (přihlášení apod.). */
-const DASH_QUIET = ['login', 'logout', 'login_failed', 'login_2fa_failed', 'session_expired', 'partner_login', 'support_login', 'support_logout', 'password_changed', '2fa_enabled', '2fa_disabled', 'gdpr_export', 'setup_code_failed'];
+const DASH_QUIET = ['login', 'logout', 'login_failed', 'login_2fa_failed', 'session_expired', 'partner_login', 'support_login', 'support_logout', 'password_changed', '2fa_enabled', '2fa_disabled', 'gdpr_export', 'setup_code_failed', 'sso_login', 'sso_failed', 'sso_linked', 'sso_unlinked'];
 
 function dash_period(): int
 {

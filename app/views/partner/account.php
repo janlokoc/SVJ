@@ -27,4 +27,5 @@
       <?php endif ?>
     </div>
   </div>
+  <?= function_exists('sso_account_box') && empty($GLOBALS['PARTNER_DEMO']) ? sso_account_box('partner', (int) $me['id']) : '' ?>
 </div>

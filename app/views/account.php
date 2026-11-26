@@ -72,6 +72,7 @@
       <?php endif ?>
     </div>
   </section>
+  <?= function_exists('sso_account_box') && empty($_SESSION['partner']) ? sso_account_box('site', (int) $u['id']) : '' ?>
   <?php if ($units): ?>
   <section class="household">
     <h2>Moje domácnost</h2>

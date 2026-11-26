@@ -227,6 +227,7 @@ function edition_price(string $edition): int
  */
 const BETA_FEATURES = [
     'insolvence' => ['Hlídání insolvencí vlastníků', '/admin/insolvence', 'isir_enabled'],
+    'sso' => ['Přihlášení přes Google, Microsoft, Apple a Facebook', '/muj-ucet#sso', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 
