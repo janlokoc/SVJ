@@ -136,6 +136,24 @@
     <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
   </form>
 <form id="ai-test-form" method="post" action="<?= url('/nastaveni/ai-test') ?>" hidden><?= csrf_field() ?></form>
+  <section class="card" id="isir">
+    <h2>Insolvenční rejstřík</h2>
+    <p>Hlídání insolvencí vlastníků-firem (podle IČO) přes veřejnou webovou službu insolvenčního rejstříku. Je zdarma. Zapněte ho, až zkouška níže z tohoto serveru projde – ukáže, co rejstřík skutečně vrátil.</p>
+    <p>Stav: <?= pset('isir_enabled') === '1' ? '<span class="status status-done">zapnuto</span>' : '<span class="status">vypnuto</span>' ?></p>
+    <?php $it = $_SESSION['isir_test'] ?? null; unset($_SESSION['isir_test']); if ($it): ?>
+    <div class="callout">
+      <strong><?= $it['ok'] ? 'Spojení funguje' : 'Zkouška se nepovedla' ?></strong> (IČO <?= e($it['ico']) ?>)<?= $it['error'] !== '' ? ': ' . e($it['error']) : '' ?><br>
+      Nalezená řízení: <?= count($it['found']) ?><?php foreach ($it['found'] as $f): ?><br>· <?= e($f['sz']) ?> <?= e($f['name']) ?> <?= e($f['state']) ?><?php endforeach ?>
+      <?php if ($it['raw'] !== ''): ?><details><summary>Odpověď rejstříku</summary><pre class="report-trace"><?= e($it['raw']) ?></pre></details><?php endif ?>
+    </div>
+    <?php endif ?>
+    <form method="post" action="<?= url('/nastaveni/isir') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="action" value="test">
+      <div class="form-row"><label>IČO ke zkoušce <input type="text" name="ico" inputmode="numeric" maxlength="8" required placeholder="např. IČO firmy, která je v insolvenci"></label>
+        <label>Řízení <select name="scope"><option value="active">jen probíhající</option><option value="all">i ukončená</option></select></label></div>
+      <p class="hint">Pro průkaznou zkoušku zadejte IČO firmy, o které víte, že v rejstříku je (najdete ji na isir.justice.cz) – a pro srovnání i IČO bez řízení.</p>
+      <button class="btn btn-ghost" type="submit">Vyzkoušet spojení</button></form>
+    <form method="post" action="<?= url('/nastaveni/isir') ?>"><?= csrf_field() ?><button class="btn" type="submit" name="action" value="<?= pset('isir_enabled') === '1' ? 'disable' : 'enable' ?>"><?= pset('isir_enabled') === '1' ? 'Vypnout hlídání' : 'Zapnout hlídání' ?></button></form>
+  </section>
   <section class="card" id="prenos">
     <h2>Přenos nastavení na jiný web služby</h2>
     <p>Např. ze skutečného webu na zkušební: stáhněte nastavení zde a na druhém webu ho načtěte. Přenesou se jen údaje z této stránky (provozovatel, účet, ceny, limity, texty a podmínky) – žádná společenství, uživatelé ani platby. Klíč pro AI ani přístup pro AI k hlášením se nepřenášejí.</p>

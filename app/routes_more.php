@@ -302,3 +302,39 @@ $route('POST', '/admin/ai', function () {
     echo json_encode($result, JSON_UNESCAPED_UNICODE);
     exit;
 });
+
+// ---------- Hlídání insolvencí vlastníků-firem ----------
+$route('GET', '/admin/insolvence', function () {
+    require_admin();
+    if (!isir_enabled()) {
+        not_found();
+    }
+    $premium = !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['premium'];
+    render('admin/insolvency', ['title' => 'Insolvence vlastníků', 'premium' => $premium, 'units' => $premium ? isir_company_units() : [],
+        'results' => (array) json_decode(setting('isir_results'), true), 'last' => explode('|', setting('isir_last'), 3)]);
+});
+$route('POST', '/admin/insolvence', function () {
+    require_admin();
+    if (!isir_enabled() || (plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'])) {
+        redirect('/admin/insolvence');
+    }
+    if (post('action') === 'save') {
+        $manual = (array) json_decode(setting('isir_ico'), true);
+        foreach ((array) ($_POST['ico'] ?? []) as $uid => $ico) {
+            $ico = preg_replace('/\D/', '', (string) $ico);
+            if ($ico === '') {
+                unset($manual[(int) $uid]);
+            } elseif (ares_ico($ico) !== null) {
+                $manual[(int) $uid] = $ico;
+            }
+        }
+        q('INSERT INTO settings (`key`, value) VALUES (?,?) ON CONFLICT(`key`) DO UPDATE SET value = excluded.value', ['isir_ico', json_encode($manual)]);
+        audit('Insolvence: IČO vlastníků', count($manual) . ' doplněno ručně');
+        flash('IČO jsou uložená. Neplatná IČO se neuložila.');
+    } elseif (post('action') === 'run') {
+        [$checked, $hits, $error] = isir_run();
+        audit('Insolvence: kontrola', "ověřeno $checked, řízení $hits" . ($error !== '' ? ' · ' . $error : ''));
+        flash($error !== '' ? 'Kontrola se nepovedla: ' . $error : "Zkontrolováno IČO: $checked. Nalezená řízení: $hits.", $error !== '' ? 'error' : ($hits ? 'info' : 'ok'));
+    }
+    redirect('/admin/insolvence');
+});

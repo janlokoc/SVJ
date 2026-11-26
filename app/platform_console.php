@@ -692,6 +692,19 @@ if ($PATH === '/nastaveni/import' && $METHOD === 'POST') {
     flash($changed ? 'Nastavení je načtené ze souboru (změněno položek: ' . count($changed) . '). Zkontrolujte ho prosím.' : 'Nastavení ze souboru je stejné jako současné – nic se nezměnilo.');
     redirect('/nastaveni');
 }
+// Insolvenční rejstřík: zkouška spojení z hostingu a zapnutí hlídání (funkce je vypnutá, dokud zkouška neprojde).
+if ($PATH === '/nastaveni/isir' && $METHOD === 'POST') {
+    if (post('action') === 'test') {
+        $r = isir_check_ico(post('ico'), post('scope') !== 'all');
+        $_SESSION['isir_test'] = ['ico' => preg_replace('/\D/', '', post('ico'))] + $r;
+        platform_log('Zkouška insolvenčního rejstříku', post('ico') . ' · ' . ($r['ok'] ? 'v pořádku, řízení ' . count($r['found']) : 'chyba'));
+    } elseif (post('action') === 'enable' || post('action') === 'disable') {
+        pset_save('isir_enabled', post('action') === 'enable' ? '1' : '0');
+        platform_log(post('action') === 'enable' ? 'Zapnutí hlídání insolvencí' : 'Vypnutí hlídání insolvencí');
+        flash(post('action') === 'enable' ? 'Hlídání insolvencí je zapnuté – společenstvím v edici Premium se ukáže v administraci.' : 'Hlídání insolvencí je vypnuté.', 'info');
+    }
+    redirect('/nastaveni#isir');
+}
 if ($PATH === '/nastaveni/ai-test' && $METHOD === 'POST') {
     // Krátký zkušební dotaz na Claude s klíčem ze storage/config.php.
     $r = ai_configured() ? ai_call('Odpovídej jedním slovem.', [['role' => 'user', 'content' => 'Napiš česky slovo: funguje']], 2000) : ['error' => 'Chybí knihovna nebo klíč (viz postup).'];

@@ -169,6 +169,13 @@ function daily_tasks(): void
     if (function_exists('search_index_pending')) {
         search_index_pending(200, 8.0);   // text z nových dokumentů pro hledání
     }
+    if (function_exists('isir_daily')) {
+        try {
+            isir_daily();   // insolvence vlastníků-firem, jednou týdně
+        } catch (Throwable $e) {
+            error_log('SVJ web, insolvenční rejstřík: ' . $e->getMessage());
+        }
+    }
     if (function_exists('bank_daily')) {
         try {
             bank_daily();   // platby z banky (Fio API), je-li zadán token

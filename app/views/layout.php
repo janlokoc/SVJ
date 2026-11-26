@@ -39,6 +39,9 @@ if ($billing['mode'] !== 'free') {
 if (function_exists('plan_managed') && plan_managed()) {
     $adminNav['/admin/spravce-domu'] = 'Správce domu';
 }
+if (function_exists('isir_enabled') && isir_enabled()) {
+    $adminNav['/admin/insolvence'] = 'Insolvence vlastníků';
+}
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
     $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
     $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Standard na zkoušku končí ' . cz_date($billing['until']) . ', potom web poběží v edici Zdarma.',
@@ -119,7 +122,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     // Položky administrace seskupené podle toho, k čemu slouží; skupina bez dostupných položek se nezobrazí.
     $adminGroups = ['Obsah webu' => ['/admin/aktuality', '/admin/dokumenty', '/admin/kontakty', '/admin/terminy', '/admin/vyveska'],
         'Komunikace' => ['/admin/zpravy', '/admin/hlasovani', '/admin/ankety', '/admin/zavady'],
-        'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/klice'],
+        'Dům a lidé' => ['/admin/jednotky', '/admin/uzivatele', '/admin/platby', '/admin/insolvence', '/admin/klice'],
         'Provoz domu' => ['/admin/ukoly', '/admin/odecty', '/admin/revize', '/admin/dodavatele', '/admin/rezervace'],
         'Správa webu' => ['/admin/pruvodce', '/admin/napoveda', '/admin/nastaveni', '/admin/zaznamy', '/admin/zaloha', '/admin/predplatne', '/admin/spravce-domu', '/admin/hlaseni']];
     $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory')));
@@ -142,7 +145,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
     <?php endforeach ?>
     <?php if (plan_managed()): ?>
       <div class="admin-group admin-planned"><span class="admin-label">Připravujeme</span>
-        <ul><?php foreach (PLANNED_FEATURES as $pk => $pf): $ph = '/admin/predplatne/funkce/' . $pk; ?><li><a href="<?= url($ph) ?>"<?= $path === $ph ? ' aria-current="page"' : '' ?> title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?></a></li><?php endforeach ?></ul>
+        <ul><?php foreach (array_diff_key(PLANNED_FEATURES, function_exists('isir_enabled') && isir_enabled() ? ['insolvence' => 1] : []) as $pk => $pf): $ph = '/admin/predplatne/funkce/' . $pk; ?><li><a href="<?= url($ph) ?>"<?= $path === $ph ? ' aria-current="page"' : '' ?> title="<?= e($pf[2]) ?>"><?= e($pf[3]) ?></a></li><?php endforeach ?></ul>
       </div>
     <?php endif ?>
   </div>
