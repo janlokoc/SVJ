@@ -902,11 +902,42 @@ function csrf_field(): string
 {
     return '<input type="hidden" name="_csrf" value="' . csrf_token() . '">';
 }
+/** Byl požadavek větší, než PHP přijme (post_max_size)? PHP pak zahodí celý obsah formuláře včetně _csrf. */
+function post_too_large(): bool
+{
+    $limit = ini_size_bytes((string) ini_get('post_max_size'));
+    return $_POST === [] && $_FILES === [] && $limit > 0 && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > $limit;
+}
+/** Hodnota z php.ini typu „8M“ v bajtech. */
+function ini_size_bytes(string $v): int
+{
+    $v = trim($v);
+    $n = (int) $v;
+    return match (strtolower(substr($v, -1))) { 'g' => $n << 30, 'm' => $n << 20, 'k' => $n << 10, default => $n };
+}
+/** Čeká volající odpověď JSON (odeslání na pozadí)? */
+function wants_json(): bool
+{
+    return str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+}
+/** Kód a text chyby, když formulář neprošel kontrolou CSRF: příliš velký požadavek (413), jinak vypršelý formulář (400). */
+function csrf_error(): array
+{
+    return post_too_large()
+        ? [413, 'Soubor je příliš velký', 'Odesílaný soubor je příliš velký – zmenšete ho nebo přiložte menší a zkuste to znovu.']
+        : [400, 'Formulář vypršel', 'Vraťte se prosím zpět, načtěte stránku znovu a odešlete formulář ještě jednou.'];
+}
 function check_csrf(): void
 {
     if (!hash_equals(csrf_token(), (string) ($_POST['_csrf'] ?? ''))) {
-        http_response_code(400);
-        render('error', ['title' => 'Formulář vypršel', 'message' => 'Vraťte se prosím zpět, načtěte stránku znovu a odešlete formulář ještě jednou.']);
+        [$code, $title, $msg] = csrf_error();
+        http_response_code($code);
+        if (wants_json()) {   // odeslání na pozadí (okno hlášení apod.) dostane srozumitelnou chybu v JSON, ne stránku
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok' => false, 'errors' => [$msg]], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        render('error', ['title' => $title, 'message' => $msg]);
         exit;
     }
 }
