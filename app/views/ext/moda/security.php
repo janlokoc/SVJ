@@ -1,10 +1,16 @@
 <?php /* Veřejná stránka služby: Bezpečnost a ochrana dat. $s (moda_security_facts()) */
 $op = $s['operator']; ?>
-<section class="lpx-hero lpx-hero-plain">
-  <div class="wrap">
+<?php $shot = is_file(__DIR__ . '/../../../../assets/landing/data-domu.jpg'); ?>
+<section class="lpx-hero<?= $shot ? '' : ' lpx-hero-plain' ?>">
+  <div class="wrap<?= $shot ? ' lpx-hero-grid' : '' ?>">
+    <div class="lpx-hero-text">
     <p class="lpx-eyebrow">Bezpečnost a ochrana dat</p>
     <h1>Data Vašeho domu jsou v bezpečí – a patří Vám.</h1>
     <p class="lpx-lead">Stručně a konkrétně: kde data leží, jak je chráníme, kdo k nim má přístup a jak si je kdykoli odnesete.</p>
+    </div>
+    <?php if ($shot): ?>
+    <div class="lpx-browser"><div class="lpx-bar" aria-hidden="true"><i></i><i></i><i></i></div><img src="<?= asset('landing/data-domu.jpg') ?>" alt="Administrace domu: export všech dat jedním kliknutím a smlouva o zpracování osobních údajů" width="1280" height="800" decoding="async"></div>
+    <?php endif ?>
   </div>
 </section>
 <section class="lpx-section">

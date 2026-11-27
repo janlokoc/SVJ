@@ -16,7 +16,7 @@
   },
   "odecty-api": {
     "date": "2026-11-27",
-    "checks": 15,
+    "checks": 16,
     "steps": [
       "Správce zapnul automatický příjem a získal adresu.",
       "Poslán JSON (1 řádek uložen, 1 s chybou), CSV (stav přepsán), JSON jen s číslem měřidla (uložen) a požadavek se špatným klíčem (odmítnut 403).",

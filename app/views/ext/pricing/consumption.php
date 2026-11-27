@@ -4,12 +4,21 @@ $mmr = 'https://mmr.gov.cz/getmedia/224540f8-975f-4c66-a2fc-3c980b37ad29/Vyklad-
 $open = pset('signup_open') === '1';
 $std = edition_price('standard');
 ?>
-<section class="lpx-hero lpx-hero-plain">
-  <div class="wrap">
+<?php $shots = is_file(__DIR__ . '/../../../../assets/landing/odecty-sprava.jpg') && is_file(__DIR__ . '/../../../../assets/landing/odecty-telefon.jpg'); ?>
+<section class="lpx-hero<?= $shots ? '' : ' lpx-hero-plain' ?>">
+  <div class="wrap<?= $shots ? ' lpx-hero-grid' : '' ?>">
+    <div class="lpx-hero-text">
     <p class="lpx-eyebrow lpx-law">Povinnost nejpozději od ledna 2027</p>
     <h1>Měsíční informace o spotřebě tepla a teplé vody – vyřešená webem domu</h1>
     <p class="lpx-lead">Kde se teplo a teplá voda odečítají na dálku, musí každý vlastník a nájemník <strong>každý měsíc dostat informaci o své spotřebě</strong>. Do konce roku 2026 musí mít dálkově odečitatelná měřidla prakticky každý dům s ústředním topením. Web domu ji obyvatelům zpřístupní a upozorní je – automaticky.</p>
     <div class="actions"><?php if ($open): ?><a class="btn btn-big" href="<?= url('/registrace') ?>">Založit web zdarma</a><?php endif ?><a class="btn btn-big btn-ghost" href="#jak">Jak to funguje</a></div>
+    </div>
+    <?php if ($shots): ?>
+    <div class="lpx-row-media lpx-meter-media">
+      <div class="lpx-browser"><div class="lpx-bar" aria-hidden="true"><i></i><i></i><i></i></div><img src="<?= asset('landing/odecty-sprava.jpg') ?>" alt="Dálkové odečty v administraci: stav za minulý měsíc a nastavení" decoding="async"></div>
+      <div class="lpx-phone"><img src="<?= asset('landing/odecty-telefon.jpg') ?>" alt="Spotřeba po měsících s grafem v telefonu obyvatele" decoding="async"></div>
+    </div>
+    <?php endif ?>
   </div>
 </section>
 

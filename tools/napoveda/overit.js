@@ -196,13 +196,13 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const ot = await text(owner); check(ot.includes('Spotřeba po měsících') && ot.includes('dálkový odečet'), 'obyvatel vidí dálkový odečet'); step('Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“.');
     // Data za celé měsíce: stavy ke konci posledních tří měsíců (teplá voda a indikátory topení) → měsíční spotřeba.
     const endOf = (back) => { const d = new Date(); const x = new Date(d.getFullYear(), d.getMonth() - back + 1, 0); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
-    const series = [[3, 38.10, 1210], [2, 40.35, 1302], [1, 42.80, 1388]].flatMap(([m, tv, itn]) => [{ unit, meter_no: 'TV-104233', kind: 'tv', amount: tv, date: endOf(m) }, { unit, meter_no: 'ITN-5521', kind: 'itn', amount: itn, date: endOf(m) }]);
+    const series = [[7, 28.90, 1150], [6, 31.20, 1185], [5, 33.40, 1195], [4, 35.80, 1200], [3, 38.10, 1210], [2, 40.35, 1302], [1, 42.80, 1388]].flatMap(([m, tv, itn]) => [{ unit, meter_no: 'TV-104233', kind: 'tv', amount: tv, date: endOf(m) }, { unit, meter_no: 'ITN-5521', kind: 'itn', amount: itn, date: endOf(m) }]);
     const r5 = await post(api, JSON.stringify(series), 'application/json');
-    check(r5.status === 200 && JSON.parse(r5.body).errors.length === 0, 'stavy za tři měsíce přijaty');
+    check(r5.status === 200 && JSON.parse(r5.body).errors.length === 0, 'stavy za sedm měsíců přijaty');
     await owner.goto(T + '/odecty');
     const mt = await text(owner, '.meter-monthly');
     check(mt.includes('2,45') && mt.includes('86 dílků'), 'měsíční spotřeba spočítaná ze stavů'); step('Ze stavů na konci měsíců web spočítal měsíční spotřebu (teplá voda 2,45 m³, indikátory 86 dílků).');
-    check(await owner.locator('.meter-monthly svg.meter-chart').count() >= 1 && /Za posledních 2 měsíců celkem/.test(mt), 'graf spotřeby a součet za období'); step('Obyvatel vidí u každého měřidla graf spotřeby po měsících a součet za období.');
+    check(await owner.locator('.meter-monthly svg.meter-chart').count() >= 1 && /Za posledních 6 měsíců celkem/.test(mt), 'graf spotřeby a součet za období'); step('Obyvatel vidí u každého měřidla graf spotřeby po měsících a součet za období.');
     await admin.goto(T + '/admin/odecty/dalkove');
     await admin.click('#upozorneni form:has([value=notice]) button');
     const fl = await text(admin, 'main'); check(/Upozornění/.test(fl), 'měsíční upozornění odesláno: ' + fl.slice(0, 120));
@@ -235,6 +235,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     const desk = async (email) => { const p = await (await b.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(p, email); return p; };
     const res = await desk(who.owner); await res.goto(T + '/'); await lpShot(res, 'web-obyvatel.jpg');
     const adm = await desk(who.admin); await adm.goto(T + '/admin'); await lpShot(adm, 'administrace.jpg');
+    await adm.goto(T + '/admin/data-domu'); check((await text(adm, 'main')).includes('Export všech dat domu'), 'Data a smlouva pro stránku Bezpečnost'); await lpShot(adm, 'data-domu.jpg');
     const phone = await (await b.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2, locale: 'cs-CZ', colorScheme: 'light' })).newPage(); await login(phone, who.owner); await phone.goto(T + '/'); await lpShot(phone, 'telefon.jpg');
     // Tablet: výbor na shromáždění odklikává prezenci na iPadu.
     // iPad na ležato (1180 × 820): prezence se součtem podílů.
