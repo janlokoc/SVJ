@@ -211,4 +211,15 @@ final class ModGSiteTest extends TestCase
         $site = file_get_contents(dirname(__DIR__, 2) . '/app/ext/site_pricing.php');
         $this->assertStringContainsString("'/.well-known/assetlinks.json'", $site);
     }
+
+    /** Stránka Pro správce domů: v úvodu snímek partnerského portálu (soubor je v repozitáři, pořizuje ho tools/napoveda/overit.js). */
+    public function testManagersHeroShowsPortalScreenshot(): void
+    {
+        $this->assertFileExists(dirname(__DIR__, 2) . '/assets/landing/partner-prehled.jpg');
+        $html = $this->view('platform/for_managers', ['demo' => null]);
+        $this->assertStringContainsString('lpx-hero-grid', $html);
+        $this->assertStringContainsString('class="lpx-browser mgr-hero-shot"', $html);
+        $this->assertStringContainsString('landing/partner-prehled.jpg', $html);
+        $this->assertStringNotContainsString('lpx-hero-plain', $html);
+    }
 }

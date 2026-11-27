@@ -1141,6 +1141,13 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     check(done.includes('nových jednotek 6'), 'uloženo 6 nových jednotek: ' + done); step('Po uložení vzniklo 6 jednotek s vlastníky a podíly.');
     check(sql('SELECT COUNT(*) FROM units') === '6', 'jednotky v databázi: ' + sql("SELECT group_concat(entrance || '/' || number) FROM units"));
     await shot(admin.locator('main'), 'katastr-3-hotovo.jpg', 700);
+    // ---------- Snímek pro stránku Pro správce domů (assets/landing) – až na konci: založí ukázkový web a ukázkovou správcovskou firmu ----------
+    await s.goto(BASE + '/sprava'); s.once('dialog', (d) => d.accept());
+    await Promise.all([s.waitForNavigation(), s.click('form[action$="/demo"] button')]);
+    const prt = await (await b.newContext({ viewport: { width: 1280, height: 800 }, locale: 'cs-CZ', colorScheme: 'light' })).newPage();
+    await prt.goto(BASE + '/partner/ukazka');
+    await prt.evaluate(() => document.querySelector('.demo-bar')?.remove());
+    await prt.screenshot({ path: path.join(ROOT, 'assets/landing/partner-prehled.jpg'), type: 'jpeg', quality: 74 });
   } catch (e) {
     failures.push('přerušeno: ' + e.message.split('\n')[0]);
   } finally {

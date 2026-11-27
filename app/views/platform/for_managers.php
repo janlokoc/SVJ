@@ -1,12 +1,19 @@
 <?php /* Veřejná stránka pro správcovské firmy (partnery). */
 $demoPortal = $demo ? platform_url('/partner/ukazka') : '';
 $contact = filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('contact_email') : ''; ?>
-<section class="lpx-hero lpx-hero-plain">
-  <div class="wrap">
+<?php $mgrShot = is_file(__DIR__ . '/../../../assets/landing/partner-prehled.jpg'); ?>
+<section class="lpx-hero<?= $mgrShot ? '' : ' lpx-hero-plain' ?>">
+  <div class="wrap<?= $mgrShot ? ' lpx-hero-grid' : '' ?>">
+    <div class="lpx-hero-text">
     <p class="lpx-eyebrow">Pro správcovské firmy a bytová družstva</p>
     <h1>Všechny Vaše domy na jednom místě. Portál máte zdarma.</h1>
     <p class="lpx-lead">Každý dům, který spravujete, dostane vlastní web pro vlastníky a výbor. Vy je řídíte z jednoho partnerského portálu – <strong>ten je pro Vás úplně zdarma</strong>. Platíte jen za weby domů, a ty Vám platí jednotlivá SVJ Vaší cenou, třeba jako součást správy.</p>
     <div class="actions"><?php if ($demoPortal): ?><a class="btn btn-big" href="<?= e($demoPortal) ?>">Prohlédnout ukázku portálu</a><?php endif ?><?php if ($contact): ?><a class="btn btn-big btn-ghost" href="mailto:<?= e($contact) ?>?subject=<?= rawurlencode('Partnerský účet pro správcovskou firmu') ?>">Chci partnerský účet</a><?php endif ?></div>
+    </div>
+    <?php if ($mgrShot): ?>
+    <div class="lpx-browser mgr-hero-shot"><div class="lpx-bar" aria-hidden="true"><i></i><i></i><i></i><span><?= e((string) parse_url(platform_url('/partner'), PHP_URL_HOST)) ?>/partner</span></div>
+      <img src="<?= asset('landing/partner-prehled.jpg') ?>" alt="Partnerský portál: přehled všech spravovaných domů – otevřená hlášení, termíny, platby a stav webů" width="1280" height="800" decoding="async"></div>
+    <?php endif ?>
   </div>
 </section>
 <section class="lpx-section">
