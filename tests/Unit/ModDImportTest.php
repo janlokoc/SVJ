@@ -231,7 +231,7 @@ final class ModDImportTest extends TestCase
             . "C/1;;100/10000;Nikdo;;\n"
             . "A/2;;velký;X;;\n", 'jednotky.csv');
         $map = acct_guess_mapping($table['headers'], array_keys(acct_fields('units')));
-        $this->assertSame(['unit' => 0, 'entrance' => 1, 'share' => 2, 'owner' => 3, 'contact' => 4, 'floor' => 5], $map);
+        $this->assertSame(['unit' => 0, 'entrance' => 1, 'share' => 2, 'owner' => 3, 'contact' => 4, 'floor' => 5, 'area' => null], $map);
         $pv = acct_preview($pdo, $house, 'units', $table, $map);
         [$a1, $b7, $b8, $c1, $a2] = $pv['rows'];
         $this->assertSame('update', $a1['action']);

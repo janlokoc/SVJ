@@ -88,6 +88,7 @@
     <?php foreach ($units as $un): ?>
       <div class="card">
         <h3>Jednotka <?= e(unit_name($un)) ?><?= $un['floor'] !== '' ? ' <small class="muted">· ' . e($un['floor']) . '. patro</small>' : '' ?></h3>
+        <?php if (unit_area_label($un['area'] ?? null) !== ''): ?><p class="muted">Plocha jednotky: <?= e(unit_area_label($un['area'])) ?></p><?php endif ?>
         <ul class="people">
           <?php foreach ($un['people'] as $p): ?>
             <li><span><?= e($p['name']) ?><?= (int) $p['id'] === (int) $u['id'] ? ' (vy)' : '' ?> <small><?= mb_strtolower(KINDS[$p['kind']]) ?></small></span>
@@ -98,6 +99,9 @@
         </ul>
       </div>
     <?php endforeach ?>
+    <?php if ($u['kind'] === 'owner' && function_exists('listing_enabled') && listing_enabled()): ?>
+      <p><a class="btn btn-ghost" href="<?= url('/inzeraty/moje') ?>">Inzerát na prodej nebo pronájem bytu</a></p>
+    <?php endif ?>
     <?php if ($canInvite): ?>
     <form method="post" action="<?= url('/muj-ucet/pozvat') ?>" class="card form">
       <h3>Pozvat manžela, manželku nebo dalšího člena domácnosti</h3>

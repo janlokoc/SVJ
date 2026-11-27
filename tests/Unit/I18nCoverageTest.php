@@ -18,6 +18,7 @@ final class I18nCoverageTest extends TestCase
         // moduly
         'ext/hybrid/_event_box', 'ext/hybrid/owner', 'ext/moda/_digest_box', 'ext/moda/digest_unsub', 'ext/moda/magic_confirm',
         'ext/moda/magic_request', 'ext/modf/fund_public', 'ext/modf/my', 'ext/modf/_chart', 'ext/rollam/_poll_note', 'ext/rollam/confirm',
+        'ext/listing/page', 'ext/listing/list', 'ext/listing/mine', 'ext/listing/form', 'ext/listing/report', 'ext/listing/extend',
         '_ai_mini',
         // jádro
         'account', 'gdpr', 'chat', 'chat_thread', 'contacts', 'event', 'events', 'file_view', 'home', 'invite', 'join', 'login',
@@ -33,6 +34,8 @@ final class I18nCoverageTest extends TestCase
         'E-mail' => 'stejné ve všech jazycích',
         'Outlook (Microsoft 365)' => 'název služby',
         'Outlook.com' => 'název služby',
+        'Facebook' => 'název služby',
+        'WhatsApp' => 'název služby',
         'Web' => 'skryté pole proti robotům (honeypot)',
         'Potřeba: {}' => 'MAJORITY – ověřeno v testMajorityLabels',
         'od {} za {} {}. Vaše podíly se počítají do usnášeníschopnosti.' => 'jednotku/jednotky – ověřeno v testComposedTexts',
@@ -207,11 +210,65 @@ final class I18nCoverageTest extends TestCase
                 $this->assertNotSame('Hlas je zaznamenaný: ' . mb_strtolower($label) . '.', t('Hlas je zaznamenaný: ' . mb_strtolower($label) . '.', $lang));
             }
         }
-        foreach (['polish', 'shorten'] as $task) {
+        foreach (AI_RESIDENT_TASKS as $task) {
             foreach (self::LANGS as $lang) {
                 $this->assertNotSame(AI_TASKS[$task][0], t(AI_TASKS[$task][0], $lang), "$lang: AI_TASKS[$task]");
             }
         }
+    }
+
+    /** Inzeráty: názvy, ceny a hlášky skládané v PHP (app/ext/listing_lib.php, routes_listing.php). */
+    public function testListingRuntimeTexts(): void
+    {
+        $l = ['type' => 'prodej', 'layout' => '2+kk', 'price' => 4250000];
+        $cases = [
+            listing_title($l) => '2+kk flat for sale',
+            listing_title(['type' => 'pronajem', 'layout' => '3+1']) => '3+1 flat for rent',
+            listing_title(['type' => 'pronajem', 'layout' => 'jine']) => 'Flat for rent',
+            listing_price_label(['type' => 'pronajem', 'price' => 18500]) => '18 500 Kč / month',   // t() sjednotí mezery
+            'Ke zveřejnění jsou potřeba aspoň ' . LISTING_PHOTOS_MIN . ' fotky.' => 'At least 3 photos are needed to publish.',
+            'Inzerát je označený jako prodaný. Ještě ' . LISTING_SOLD_DAYS . ' dní bude vidět se štítkem, potom zmizí.' => 'The listing is marked as sold. It will be shown with a label for another 14 days and then disappear.',
+            'Inzerát je prodloužený do 3. 2. 2027.' => 'The listing has been extended until 3. 2. 2027.',
+            'Fotka je příliš malá (aspoň 200 × 200 bodů).' => 'The photo is too small (at least 200 × 200 pixels).',
+            'K inzerátu lze nahrát nejvýše ' . LISTING_PHOTOS_MAX . ' fotek.' => 'At most 10 photos can be uploaded to a listing.',
+            'Jednotka 12A/5. V inzerátu se ukáže jen ulice a město domu – číslo bytu, vchod ani Váš e-mail ne.' => 'Unit 12A/5. The listing shows only the street and town of the building – not the flat number, the entrance or your e-mail.',
+        ];
+        foreach ($cases as $cs => $en) {
+            $this->assertSame($en, t($cs, 'en'), $cs);
+            foreach (['sk', 'uk', 'vi'] as $lang) {
+                $this->assertTrue(t($cs, $lang) !== $cs || ($lang === 'sk' && self::inDictionary($cs, 'sk')), "$lang: $cs");
+            }
+        }
+        // Hlášky a chyby, které vidí vlastník nebo zájemce.
+        [, $errors] = listing_input([], ['id' => 0, 'floor' => '', 'area' => null]);
+        // Trasy pro vlastníky a návštěvníky (část pro výbor je až za značkou „Výbor“ a nepřekládá se).
+        $routes = (string) file_get_contents(dirname(__DIR__, 2) . '/app/ext/routes_listing.php');
+        $src = substr($routes, 0, (int) strpos($routes, '// ---------- Výbor')) . file_get_contents(dirname(__DIR__, 2) . '/app/ext/listing_lib.php');
+        preg_match_all("~(?:flash|render\\('error'[^;]*'message' =>)\\('([^'.]+[.!?])'~u", $src, $m);
+        $texts = array_merge($errors, $m[1]);
+        foreach (['Fotka musí být JPG, PNG nebo WebP.', 'Napište prosím zprávu.', 'Vyplňte prosím své jméno.', 'Zadejte e-mail nebo telefon, na kterém Vás vlastník bytu zastihne.',
+            'Napište prosím, co je na inzerátu špatně.', 'Inzerát už není aktivní, zprávu nejde odeslat.'] as $x) {
+            $texts[] = $x;
+        }
+        $this->assertGreaterThan(12, count($texts));
+        foreach (array_unique($texts) as $x) {
+            foreach (self::LANGS as $lang) {
+                $this->assertTrue(t($x, $lang) !== $x || ($lang === 'sk' && self::inDictionary($x, 'sk')), "$lang: $x");
+            }
+        }
+        foreach (['Inzeráty', 'Moje inzeráty', 'Nový inzerát', 'Upravit inzerát', 'Nahlásit inzerát', 'Prodloužit inzerát'] as $title) {
+            $this->assertNotSame($title, t($title, 'en'));
+        }
+    }
+
+    /** Obsah textových polí (text ke zkopírování, co napsal uživatel) se nepřekládá, ani když začíná známou frází. */
+    public function testTextareaContentIsNeverTranslated(): void
+    {
+        $html = '<h1>Prodej bytu 2+kk</h1><textarea rows="3" placeholder="Popis bytu">Prodej bytu 2+kk, Brno' . "\n" . 'Cena: 1 Kč</textarea><p>Kontakt</p>';
+        $out = translate_html($html, 'en');
+        $this->assertStringContainsString('<h1>2+kk flat for sale</h1>', $out);
+        $this->assertStringContainsString('<textarea rows="3" placeholder="Description of the flat">Prodej bytu 2+kk, Brno' . "\n" . 'Cena: 1 Kč</textarea>', $out);
+        $this->assertStringContainsString('<p>Contact</p>', $out);
     }
 
     public function testSsoMessagesAreTranslated(): void

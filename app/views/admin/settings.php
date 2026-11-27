@@ -129,4 +129,5 @@
       <?= $saveBtn('gdpr') ?>
     </fieldset>
   </form>
+  <?php foreach ((array) ($GLOBALS['EXT_SETTINGS'] ?? []) as $extSettings) { require $extSettings; }   // sekce modulů s vlastním formulářem (app/ext/*_lib.php: $GLOBALS['EXT_SETTINGS'][] = šablona) ?>
 </div>

@@ -61,7 +61,7 @@ final class AiTest extends TestCase
 
     public function testTaskDefinitions(): void
     {
-        $this->assertSame(['draft', 'polish', 'shorten', 'sms', 'objection', 'minutes', 'program', 'resolution', 'rationale', 'invite', 'reply'], array_keys(AI_TASKS));
+        $this->assertSame(['draft', 'polish', 'shorten', 'sms', 'objection', 'minutes', 'program', 'resolution', 'rationale', 'invite', 'listing', 'fb', 'reply'], array_keys(AI_TASKS));
         $this->assertStringContainsString('nejvýše 160 znaků', AI_TASKS['sms'][1]);
         $this->assertStringContainsString('[doplnit: …]', AI_TASKS['objection'][1]);
         foreach (AI_TASKS as $key => $t) {
@@ -342,6 +342,46 @@ final class AiTest extends TestCase
         FakeAiClient::$reply = ['stop' => 'max_tokens', 'text' => 'Useknutý', 'in' => 1, 'out' => 1];
         $this->assertSame(['text' => 'Useknutý', 'truncated' => true], ai_run('draft', 'x'));
         $this->assertSame(6, ai_used());
+    }
+
+    /** Obyvatel smí jen úpravu vlastního textu a inzerát; údaje z formuláře (kontext) jdou jen k inzerátu. */
+    public function testResidentTaskList(): void
+    {
+        $this->assertSame(['polish', 'shorten', 'listing', 'fb'], AI_RESIDENT_TASKS);
+        $this->assertStringContainsString('[doplnit: …]', AI_TASKS['listing'][1]);
+        $this->assertStringContainsString('nic nevymýšlej', AI_TASKS['listing'][1]);
+        $this->assertStringContainsString('nejvýše 600 znaků', AI_TASKS['fb'][1]);
+        $this->assertStringContainsString('bez emoji', AI_TASKS['fb'][1]);
+        $this->assertSame('Napsat inzerát', AI_TASKS['listing'][0]);
+        $this->assertSame('Zkrátit pro Facebook', AI_TASKS['fb'][0]);
+    }
+
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
+    public function testResidentRunPassesFormFactsOnlyForListing(): void
+    {
+        self::fakeSdk();
+        self::setSetting('ai_enabled', '1');
+        self::setSetting('ai_residents', '1');
+        $u = one("SELECT * FROM users WHERE role = 'resident' AND active = 1 ORDER BY id LIMIT 1");
+        $this->assertSame(['error' => 'Tento úkol pomocníka je jen pro správce.'], ai_run_resident($u, 'draft', 'text', 'Typ: prodej'));
+        $this->assertSame(['error' => 'Tento úkol pomocníka je jen pro správce.'], ai_run_resident($u, 'minutes', 'text'));
+
+        $this->assertSame(['text' => 'Hotový text', 'truncated' => false], ai_run_resident($u, 'listing', 'slunný byt, sklep', "Typ inzerátu: prodej\nDispozice: 2+kk"));
+        $prompt = end(FakeAiClient::$calls)['messages'][0]['content'];
+        $this->assertStringStartsWith(AI_TASKS['listing'][1], $prompt);
+        $this->assertStringContainsString("<kontext>\nTyp inzerátu: prodej\nDispozice: 2+kk\n</kontext>", $prompt);
+
+        // Příspěvek pro Facebook jde napsat i z prázdného pole – text inzerátu je v kontextu.
+        $this->assertArrayHasKey('text', ai_run_resident($u, 'fb', '', 'Text inzerátu: Prodám byt.'));
+        $this->assertStringContainsString('Text inzerátu: Prodám byt.', end(FakeAiClient::$calls)['messages'][0]['content']);
+
+        // Uhlazení dál pracuje jen s textem v poli.
+        ai_run_resident($u, 'polish', 'Muj text', 'Cena: 5 000 000');
+        $prompt = end(FakeAiClient::$calls)['messages'][0]['content'];
+        $this->assertStringNotContainsString('<kontext>', $prompt);
+        $this->assertStringNotContainsString('5 000 000', $prompt);
+        $this->assertSame(3, (int) setting('ai_res_' . (int) $u['id'] . '_' . date('Y-m-d')), 'počítá se do denního limitu obyvatele');
     }
 
     #[RunInSeparateProcess]

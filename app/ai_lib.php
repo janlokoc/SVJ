@@ -33,6 +33,14 @@ const AI_TASKS = [
         . 'Datum, čas a místo dej hned na začátek tučně. Je-li v kontextu program, uveď všechny jeho body jako výčet ve stejném pořadí a znění (můžeš jen opravit pravopis). '
         . 'U shromáždění vlastníků připomeň, že kdo nemůže přijít, může se nechat zastoupit na základě plné moci, a že pro usnášeníschopnost je potřeba přítomnost vlastníků s potřebným podílem hlasů. '
         . 'Na podklady a potvrzení účasti odkaž přesně adresou z kontextu – jiné adresy nevymýšlej. Text níže jsou poznámky nebo koncept výboru; co v nich je navíc, zapracuj.'],
+    // Inzerát vlastníka bytu (app/ext/listing_lib.php): údaje z formuláře přicházejí jako kontext.
+    'listing' => ['Napsat inzerát', 'Z poznámek vlastníka níže a z údajů v kontextu (typ inzerátu, dispozice, plocha, patro, cena, energetická třída, lokalita) napiš text inzerátu na prodej nebo pronájem bytu. '
+        . 'Tento text nepíše výbor, ale vlastník bytu, a čtou ho zájemci o byt – piš poutavě, ale věcně a pravdivě, česky, bez superlativů a bez emoji. '
+        . 'Začni krátkým shrnutím (co, kde, jak velké), pak popis bytu, domu a okolí, nakonec praktické informace (dostupnost, k nastěhování, vybavení). '
+        . 'Použij jen fakta z poznámek a kontextu; nic nevymýšlej (žádné vybavení, rekonstrukce, výhled, parkování, sklep ani MHD, pokud nejsou uvedené). '
+        . 'Když chybí důležitý údaj, který zájemci obvykle hledají (stav bytu, vybavení, sklep, kdy je volný), napiš na jeho místo [doplnit: …]. Číslo bytu, vchod ani jména sousedů neuváděj. Cenu a kontakt do textu nepiš – web je ukazuje zvlášť.'],
+    'fb' => ['Zkrátit pro Facebook', 'Z textu inzerátu v kontextu (a z rozepsaného příspěvku níže, je-li nějaký) napiš krátký příspěvek do facebookové skupiny nebo na Bazoš: nejvýše 600 znaků, bez emoji, bez hashtagů. '
+        . 'První řádek: typ, dispozice, plocha a lokalita. Pak 2–4 krátké věty s tím nejdůležitějším z inzerátu. Cenu uveď přesně podle kontextu. Nic nepřidávej, co v textu ani kontextu není. Odkaz nepiš – připojí se sám.'],
     'reply' => ['Navrhnout odpověď', 'Napiš krátkou odpověď výboru obyvateli na jeho hlášení uvedené v kontextu. Poznámky níže říkají, co mu má výbor sdělit; když jsou prázdné, potvrď přijetí a napiš, že se výbor ozve.'],
 ];
 
@@ -171,7 +179,7 @@ function ai_run(string $task, string $input, string $context = ''): array
         return ['error' => 'AI pomocník je součástí edice Standard. Vyzkoušet ho můžete v části Předplatné.'];
     }
     $input = trim($input);
-    if ($input === '' && !in_array($task, ['reply', 'invite', 'rationale'], true)) {
+    if ($input === '' && !in_array($task, ['reply', 'invite', 'rationale', 'fb'], true)) {
         return ['error' => 'Nejdřív napište text nebo aspoň pár poznámek.'];
     }
     if (mb_strlen($input) + mb_strlen($context) > ($task === 'minutes' ? 120000 : 20000)) {
@@ -236,14 +244,14 @@ function ai_text_call(string $instruction, string $task, string $input, string $
     return ['text' => $text, 'truncated' => $message->stopReason === 'max_tokens', 'message' => $message];
 }
 /** Úkoly AI pomocníka, které smí použít i obyvatel (úprava vlastního textu). */
-const AI_RESIDENT_TASKS = ['polish', 'shorten'];
+const AI_RESIDENT_TASKS = ['polish', 'shorten', 'listing', 'fb'];
 const AI_RESIDENT_DAILY = 20;
 /** AI pomocník pro přihlášeného obyvatele: jen úprava vlastního textu, nejvýš 20× denně; počítá se do limitu webu. */
 function ai_resident_available(): bool
 {
     return ai_available() && setting_on('ai_residents', true) && (!function_exists('plan_has') || plan_has('ai-pomocnik'));
 }
-function ai_run_resident(array $user, string $task, string $input): array
+function ai_run_resident(array $user, string $task, string $input, string $context = ''): array
 {
     if (!ai_resident_available()) {
         return ['error' => 'AI pomocník tu není zapnutý.'];
@@ -255,7 +263,8 @@ function ai_run_resident(array $user, string $task, string $input): array
     if ((int) setting($key, '0') >= AI_RESIDENT_DAILY) {
         return ['error' => 'Dnes jste pomocníka použili už ' . AI_RESIDENT_DAILY . '×. Zkuste to prosím zítra.'];
     }
-    $r = ai_run($task, $input);
+    // Údaje z formuláře (kontext) jen u inzerátu; uhlazení a zkrácení pracují jen s vlastním textem (ai_run kontext zahodí).
+    $r = ai_run($task, $input, in_array($task, ['listing', 'fb'], true) ? mb_substr($context, 0, 4000) : '');
     if (isset($r['text'])) {
         q("INSERT INTO settings (`key`, value) VALUES (?, '1') ON CONFLICT(`key`) DO UPDATE SET value = value + 1", [$key]);
         setting('__reset');

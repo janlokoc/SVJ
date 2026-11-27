@@ -88,6 +88,12 @@ function translate_html(string $html, string $lang): string
     if ($lang === 'cs' || !lang_dictionary($lang)) {
         return $html;
     }
+    // Obsah textových polí (co napsal uživatel, text ke zkopírování) se nikdy nepřekládá.
+    $kept = [];
+    $html = (string) preg_replace_callback('~(<textarea\b[^>]*>)(.*?)(</textarea>)~su', function ($m) use (&$kept) {
+        $kept[] = $m[2];
+        return $m[1] . "\x02" . (count($kept) - 1) . "\x02" . $m[3];
+    }, $html);
     $html = preg_replace_callback('~(\s(?:placeholder|aria-label|title|alt|data-confirm|data-label|data-tip)=")([^"]*)(")~u',
         fn($m) => $m[1] . htmlspecialchars(t(html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8'), $lang), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $m[3], $html);
     $html = preg_replace_callback('~(<title>)([^<]*)(</title>)~u', function ($m) use ($lang) {
@@ -95,11 +101,12 @@ function translate_html(string $html, string $lang): string
         $parts[0] = t($parts[0], $lang);
         return $m[1] . htmlspecialchars(implode(' · ', $parts), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $m[3];
     }, $html);
-    return preg_replace_callback('~(>)([^<>]+)(<)~u', function ($m) use ($lang) {
+    $html = preg_replace_callback('~(>)([^<>\x02]+)(<)~u', function ($m) use ($lang) {
         $plain = html_entity_decode($m[2], ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $out = t($plain, $lang);
         return $out === $plain ? $m[0] : $m[1] . htmlspecialchars($out, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $m[3];
     }, $html);
+    return $kept ? (string) preg_replace_callback('~\x02(\d+)\x02~', fn($m) => $kept[(int) $m[1]] ?? '', $html) : $html;
 }
 /** Má se tato stránka překládat? (jen veřejná část a část pro obyvatele) */
 function page_translatable(): bool

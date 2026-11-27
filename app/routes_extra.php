@@ -326,8 +326,8 @@ $route('GET', '/admin/jednotky/export', function () use ($csv) {
     foreach (all('SELECT uu.unit_id, u.name, u.email, u.phone, u.kind FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 ORDER BY u.kind, u.name') as $p) {
         $people[$p['unit_id']][] = $p['name'] . ' (' . mb_strtolower(KINDS[$p['kind']]) . ') ' . $p['email'] . ($p['phone'] ? ' ' . $p['phone'] : '');
     }
-    $csv('seznam-clenu-' . date('Y-m-d') . '.csv', ['Jednotka', 'Patro', 'Podíl', 'Vlastník dle evidence', 'Adresa pro doručování', 'Účty na webu', 'Poznámka'],
-        array_map(fn($un) => [unit_name($un), $un['floor'], $un['share'], $un['owner_note'], str_replace("\n", ' | ', $un['owner_contact']), implode(' | ', $people[$un['id']] ?? []), $un['note']], all_units()));
+    $csv('seznam-clenu-' . date('Y-m-d') . '.csv', ['Jednotka', 'Patro', 'Plocha (m²)', 'Podíl', 'Vlastník dle evidence', 'Adresa pro doručování', 'Účty na webu', 'Poznámka'],
+        array_map(fn($un) => [unit_name($un), $un['floor'], $un['area'] === null ? '' : str_replace('.', ',', (string) (float) $un['area']), $un['share'], $un['owner_note'], str_replace("\n", ' | ', $un['owner_contact']), implode(' | ', $people[$un['id']] ?? []), $un['note']], all_units()));
 });
 
 // ---------- Hlasování: správa ----------
