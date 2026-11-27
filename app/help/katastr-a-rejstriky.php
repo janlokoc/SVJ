@@ -13,7 +13,7 @@
 <p class="callout">Stránky Nahlížení do katastru jsme nemohli ověřit automaticky – web katastru strojové procházení blokuje. Spojení s katastrem (dálkový přístup ČÚZK) zatím nebylo vyzkoušeno se skutečným účtem – ověřovací běh použil zkušební službu se vzorovým výpisem listu vlastnictví podle dokumentace ČÚZK. Kdyby výsledky nesouhlasily s Nahlížením do katastru, dejte nám prosím vědět přes Hlášení.</p>
 
 <h2>2. Insolvence vlastníků</h2>
-<p>Na stránce <strong>Insolvence vlastníků</strong> web hlídá firmy podle IČO a nově i <strong>fyzické osoby podle jména a data narození</strong>. V části <em>Fyzické osoby</em> vyberte jednotku, doplňte příjmení, jméno a datum narození a klikněte na <strong>Hlídat</strong>. Rejstřík se kontroluje jednou týdně (hned tlačítkem <strong>Zkontrolovat osoby teď</strong>); když se objeví řízení, správcům přijde e-mail. Na přihlášení pohledávky má společenství zpravidla jen dva měsíce od rozhodnutí o úpadku.</p>
+<p>Na stránce <strong>Insolvence vlastníků</strong> (v menu <em>Katastr a rejstříky</em> → u insolvencí <em>Otevřít</em>) web hlídá firmy podle IČO a nově i <strong>fyzické osoby podle jména a data narození</strong>. V části <em>Fyzické osoby</em> vyberte jednotku, doplňte příjmení, jméno a datum narození a klikněte na <strong>Hlídat</strong>. Rejstřík se kontroluje jednou týdně (hned tlačítkem <strong>Zkontrolovat osoby teď</strong>); když se objeví řízení, správcům přijde e-mail. Na přihlášení pohledávky má společenství zpravidla jen dva měsíce od rozhodnutí o úpadku.</p>
 <p>Insolvenční rejstřík je zdarma. Vyhledávání fyzických osob zatím nebylo vyzkoušeno proti skutečné službě rejstříku (neověřeno) – ověřovací běh použil zkušební službu se vzorovou odpovědí.</p>
 
 <h2>3. Lustrace exekucí</h2>

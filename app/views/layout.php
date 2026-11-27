@@ -61,6 +61,10 @@ foreach ((array) ($GLOBALS['EXT_ADMIN_NAV'] ?? []) as $extHref => $extItem) {
         }
     }
 }
+// Insolvence jsou součástí rozcestníku „Katastr a rejstříky“ – v menu by byly dvakrát (stránka /admin/insolvence zůstává, otevírá se odtud).
+if (isset($adminNav['/admin/rejstriky'])) {
+    unset($adminNav['/admin/insolvence'], $adminBeta['/admin/insolvence']);
+}
 $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) {
     $billing['mode'] === 'grace' => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' skončilo. Bez platby web brzy přejde na edici Zdarma.',
     $billing['mode'] === 'trial' && $billing['days'] <= 7 => 'Standard na zkoušku končí ' . cz_date($billing['until']) . ', potom web poběží v edici Zdarma.',
@@ -150,7 +154,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
             $adminGroups[$extGroup][] = $extHref;
         }
     }
-    $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory')));
+    $adminActive = fn(string $href) => $href === '/admin' ? $path === '/admin' : (str_starts_with($path, $href) || ($href === '/admin/rezervace' && str_starts_with($path, '/admin/prostory'))
+        || ($href === '/admin/rejstriky' && str_starts_with($path, '/admin/insolvence')));
     $adminCurrent = 'Přehled';
     foreach ($adminNav as $href => $label) {
         if ($href !== '/admin' && $adminActive($href)) {
