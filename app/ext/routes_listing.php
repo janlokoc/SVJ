@@ -310,7 +310,6 @@ $route('POST', '/admin/nastaveni/inzeraty', function () {
         }
     }
     listing_penb_file($stored, isset($_POST['penb_offer']), isset($_POST['penb_remove']));
-    listing_setting_save('listing_enabled', isset($_POST['listing_enabled']) ? '1' : '0');
     listing_setting_save('listing_locality', mb_substr(post('listing_locality'), 0, 100));
     flash('Nastavení průkazu a inzerátů je uloženo.');
     redirect('/admin/nastaveni#penb');

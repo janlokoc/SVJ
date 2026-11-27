@@ -242,9 +242,28 @@ final class ListingTest extends TestCase
         $html = (string) ob_get_clean();
         $this->assertStringContainsString('<option value="D" selected>D</option>', $html);
         $this->assertStringContainsString('value="2031-05-01"', $html);
-        $this->assertStringContainsString('name="listing_enabled" checked', $html, 'inzeráty jsou ve výchozím stavu povolené');
+        $this->assertStringContainsString('Inzeráty jsou zapnuté', $html, 'inzeráty jsou ve výchozím stavu povolené');
+        $this->assertStringNotContainsString('name="listing_enabled"', $html, 'přepínač je jen v části Menu');
+        $this->assertStringContainsString('href="#menu"', $html);
         $this->assertStringContainsString('name="penb_pdf"', $html);
         $this->assertStringContainsString('placeholder="Zahradní, Brno"', $html);
+    }
+
+    /** Chyba z 11/2026: inzeráty nešly vypnout v Nastavení → Menu, přepínač byl schovaný u PENB. */
+    public function testListingsCanBeSwitchedOffInSettingsMenu(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $this->assertSame('Inzeráty', $GLOBALS['EXT_MENU']['inzeraty'][0]);
+        $this->assertStringContainsString("\$GLOBALS['EXT_MENU']", (string) file_get_contents($root . '/app/views/admin/settings.php'));
+        $this->assertStringContainsString('ext_menu_save(', (string) file_get_contents($root . '/app/routes_admin.php'));
+        $this->assertTrue(($GLOBALS['EXT_MENU']['inzeraty'][1])(), 'výchozí stav: zapnuto');
+        ext_menu_save([]);   // odškrtnuto
+        $this->assertFalse(listing_enabled());
+        $this->assertFalse(($GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'][2])(), 'zmizí i z menu administrace');
+        $this->assertFalse(($GLOBALS['EXT_RESIDENT_NAV']['/inzeraty'][1])(), 'zmizí z menu obyvatel');
+        ext_menu_save(['inzeraty']);
+        $this->assertTrue(listing_enabled());
+        $this->assertTrue(($GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'][2])());
     }
 
     public function testPenbPdfAsDocumentOrAdminOnly(): void
@@ -688,8 +707,9 @@ final class ListingTest extends TestCase
 
     public function testAdminMenuResidentMenuAndDailyHook(): void
     {
-        $this->assertSame(['Inzeráty vlastníků', 'Dům a lidé'], $GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty']);
-        $this->assertCount(2, $GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'], 'bez podmínky beta programu – ve všech edicích');
+        $this->assertSame(['Inzeráty vlastníků', 'Dům a lidé'], array_slice($GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'], 0, 2));
+        $this->assertTrue(($GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'][2])(), 'podmínkou je jen zapnutí v Menu, ne beta program – ve všech edicích');
+        $this->assertSame('', beta_menu_tag('/admin/inzeraty'));
         $this->assertContains('listing_daily', $GLOBALS['EXT_DAILY']);
         $this->assertTrue(($GLOBALS['EXT_RESIDENT_NAV']['/inzeraty'][1])());
         listing_setting_save('listing_enabled', '0');

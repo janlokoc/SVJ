@@ -603,6 +603,7 @@ $route('POST', '/admin/nastaveni', function () {
     // Menu: zaškrtnuté části se zobrazují, ostatní se schovají.
     $shown = (array) ($_POST['features'] ?? []);
     $save('hidden_features', implode(',', array_values(array_diff(array_keys(FEATURES), $shown))));
+    ext_menu_save(array_map('strval', (array) ($_POST['ext_menu'] ?? [])));   // části z modulů (např. Inzeráty)
     flash('Nastavení bylo uloženo.');
     // Tlačítko Uložit u sekce: stránka se po uložení vrátí k ní (viz settings.php).
     if (preg_match('/^[a-z]{2,20}$/', post('sekce'))) {

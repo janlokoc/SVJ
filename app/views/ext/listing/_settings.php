@@ -21,7 +21,7 @@ $penbFile = preg_match('/^[a-f0-9]{32}\.pdf$/', setting('penb_file')) ? setting(
   </fieldset>
   <fieldset>
     <legend>Inzeráty vlastníků</legend>
-    <label class="check"><input type="checkbox" name="listing_enabled"<?= listing_enabled() ? ' checked' : '' ?>> <span>Povolit inzeráty vlastníků <small>Vlastník může na webu domu zveřejnit inzerát na prodej nebo pronájem svého bytu a sdílet ho. Přehled inzerátů je v administraci v části Inzeráty vlastníků.</small></span></label>
+    <p class="hint">Inzeráty jsou <?= listing_enabled() ? 'zapnuté' : '<strong>vypnuté</strong>' ?>. Zapínají a vypínají se výše v části <a href="#menu">Menu – co se na webu zobrazuje</a> (položka Inzeráty).</p>
     <label>Lokalita v inzerátech <input type="text" name="listing_locality" value="<?= e(setting('listing_locality')) ?>" maxlength="100" placeholder="<?= e(listing_locality_from(setting('address'))) ?>"></label>
     <p class="hint">Inzerát ukazuje jen ulici a město domu (nikdy číslo bytu ani vchod). Nevyplněno = podle adresy domu: <?= e(listing_locality_from(setting('address')) ?: '—') ?>.</p>
   </fieldset>

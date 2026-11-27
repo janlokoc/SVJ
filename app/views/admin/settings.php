@@ -58,6 +58,7 @@
     <fieldset id="menu">
       <legend>Menu – co se na webu zobrazuje</legend>
       <?php foreach (FEATURES as $k => $f): ?><label class="check"><input type="checkbox" name="features[]" value="<?= $k ?>"<?= feature_on($k) ? ' checked' : '' ?>> <?= e($f[0]) ?></label><?php endforeach ?>
+      <?php foreach ((array) ($GLOBALS['EXT_MENU'] ?? []) as $k => $f): ?><label class="check"><input type="checkbox" name="ext_menu[]" value="<?= e($k) ?>"<?= ($f[1])() ? ' checked' : '' ?>> <?= e($f[0]) ?></label><?php endforeach ?>
       <p class="hint">Odškrtnutá část zmizí z menu obyvatelům i z administrace a nepůjde otevřít ani přímou adresou. Její data zůstanou uložená a po opětovném zaškrtnutí se vrátí.</p>
       <?= $saveBtn('menu') ?>
     </fieldset>

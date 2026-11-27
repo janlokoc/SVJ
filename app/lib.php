@@ -596,6 +596,17 @@ function unit_prefix(): string
 {
     return mb_substr(preg_replace('/[^\p{L}\p{N} .\-]/u', '', site('unit_prefix')), 0, 10);
 }
+/**
+ * Části webu z modulů, které jde vypnout v Nastavení → Menu (vedle FEATURES):
+ * $GLOBALS['EXT_MENU'][klíč] = [název, fn(): bool zapnuto?, fn(bool $on): void uložit].
+ * Uloží stav podle zaškrtnutých klíčů z formuláře.
+ */
+function ext_menu_save(array $shown): void
+{
+    foreach ((array) ($GLOBALS['EXT_MENU'] ?? []) as $key => $item) {
+        ($item[2])(in_array($key, $shown, true));
+    }
+}
 function feature_on(string $key): bool
 {
     return !in_array($key, array_filter(explode(',', setting('hidden_features'))), true);

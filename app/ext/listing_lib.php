@@ -41,9 +41,11 @@ const LISTING_REPORT_PER_HOUR = 3;
 const LISTING_INQUIRY_KEEP_DAYS = 90;
 const LISTING_INQUIRY_MAX = 3000;
 
-$GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'] = ['Inzeráty vlastníků', 'Dům a lidé'];
+$GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'] = ['Inzeráty vlastníků', 'Dům a lidé', fn() => listing_enabled()];
 $GLOBALS['EXT_RESIDENT_NAV']['/inzeraty'] = ['Inzeráty', fn() => listing_enabled()];
 $GLOBALS['EXT_DAILY'][] = 'listing_daily';
+// Zapnutí a vypnutí v Nastavení → Menu (dříve samostatný přepínač u PENB, správci ho v Menu hledali).
+$GLOBALS['EXT_MENU']['inzeraty'] = ['Inzeráty', fn() => listing_enabled(), fn(bool $on) => listing_setting_save('listing_enabled', $on ? '1' : '0')];
 $GLOBALS['EXT_SETTINGS'][] = __DIR__ . '/../views/ext/listing/_settings.php';
 
 /** Založí tabulky modulu (jednou za požadavek a databázi). */
