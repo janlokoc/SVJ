@@ -5,7 +5,7 @@
   <?php if (!$penb['valid']): ?><p class="callout">Průkaz energetické náročnosti budovy <?= $penb['class'] === '' ? 'není zadaný' : 'už neplatí' ?>. Vlastníci pak energetickou třídu uvádějí sami. <a href="<?= url('/admin/nastaveni') ?>#penb">Zadat průkaz</a></p><?php endif ?>
   <?php if (!$rows): ?><p class="empty">Zatím žádný vlastník inzerát nepodal.</p><?php else: ?>
   <table class="table">
-    <thead><tr><th>Inzerát</th><th>Jednotka</th><th>Stav</th><th>Hlášení</th><th></th></tr></thead>
+    <thead><tr><th>Inzerát</th><th>Jednotka</th><th>Stav</th><th>Hlášení</th><th>Zájemci</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($rows as $l): $vis = listing_visibility($l); ?>
       <tr>
@@ -15,6 +15,7 @@
           <?php else: ?><span class="status<?= $vis !== 'none' ? ' status-done' : '' ?>"><?= e(LISTING_STATUS[$l['status']] ?? $l['status']) ?></span>
           <?php if ($l['status'] === 'published'): ?><small><?= $vis === 'residents' ? 'zatím jen pro sousedy · ' : '' ?>do <?= e(cz_date($l['expires_on'])) ?></small><?php endif ?><?php endif ?></td>
         <td data-label="Hlášení"><?= (int) $l['reports'] ?: '' ?></td>
+        <td data-label="Zájemci" title="Jen počet – zprávy zájemců vidí pouze vlastník"><?= (int) ($l['inquiries'] ?? 0) ?: '' ?></td>
         <td class="t-actions">
           <?php if ((int) $l['hidden']): ?>
             <form method="post" action="<?= url('/admin/inzeraty/' . $l['id'] . '/odkryt') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Znovu zobrazit</button></form>

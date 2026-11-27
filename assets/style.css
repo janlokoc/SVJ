@@ -2028,3 +2028,18 @@ tr.is-neg td { color: var(--accent); }
 /* Konzole a portál: položky menu a počty na jednom řádku */
 .site-nav li a { white-space: nowrap; }
 .site-nav li a .count { vertical-align: baseline; }
+/* Zájemci o inzerát (app/views/ext/listing/inquiries.php, inquiry.php) */
+.lst-inq-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .6rem; }
+.lst-inq { padding: 0; }
+.lst-inq-link { display: grid; gap: .3rem; padding: .85rem 1rem; color: inherit; text-decoration: none; border-radius: inherit; }
+.lst-inq-link:hover, .lst-inq-link:focus-visible { background: var(--surface-2); }
+.lst-inq-new { border-left: 4px solid var(--primary); }
+.lst-inq-new .lst-inq-head strong { font-weight: 800; }
+.lst-inq-head { display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; }
+.lst-inq-contact { display: inline-flex; gap: .35rem; align-items: center; color: var(--muted); overflow-wrap: anywhere; }
+.lst-inq-last { color: var(--muted); overflow-wrap: anywhere; }
+.lst-inq-tabs { margin: .5rem 0 0; }
+.lst-inq-reply { margin-top: 1.25rem; }
+.lst-inq-phone { margin-top: 1.25rem; }
+.lst-inq-archive { margin-top: 1rem; }
+.lst-inq-badge { margin: 0 0 1rem; }

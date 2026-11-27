@@ -18,7 +18,7 @@ final class I18nCoverageTest extends TestCase
         // moduly
         'ext/hybrid/_event_box', 'ext/hybrid/owner', 'ext/moda/_digest_box', 'ext/moda/digest_unsub', 'ext/moda/magic_confirm',
         'ext/moda/magic_request', 'ext/modf/fund_public', 'ext/modf/my', 'ext/modf/_chart', 'ext/rollam/_poll_note', 'ext/rollam/confirm',
-        'ext/listing/page', 'ext/listing/list', 'ext/listing/mine', 'ext/listing/form', 'ext/listing/report', 'ext/listing/extend',
+        'ext/listing/page', 'ext/listing/list', 'ext/listing/mine', 'ext/listing/form', 'ext/listing/report', 'ext/listing/extend', 'ext/listing/inquiries', 'ext/listing/inquiry',
         '_ai_mini',
         // jádro
         'account', 'gdpr', 'chat', 'chat_thread', 'contacts', 'event', 'events', 'file_view', 'home', 'invite', 'join', 'login',
@@ -256,6 +256,18 @@ final class I18nCoverageTest extends TestCase
                 $this->assertTrue(t($x, $lang) !== $x || ($lang === 'sk' && self::inDictionary($x, 'sk')), "$lang: $x");
             }
         }
+        // Zájemci o inzerát a balkon / lodžie: popisky, chyby a hlášky skládané v PHP.
+        $more = array_merge(array_values(LISTING_OUTDOOR), [listing_inquiry_label(1, 1), listing_inquiry_label(3, 3), listing_inquiry_label(12, 12), listing_inquiry_label(0, 4), listing_inquiry_label(0, 0),
+            'Zájemce nechal jen telefon – zavolejte mu nebo pošlete SMS.', 'Napište prosím odpověď.', 'Odpověď je příliš dlouhá (nejvýše ' . LISTING_INQUIRY_MAX . ' znaků).',
+            'Odpověď jsme zájemci poslali e-mailem. Vaši adresu neuvidí.', 'Zpráva je v archivu.', 'Zpráva je zpět mezi zájemci.', 'Zájemci o inzerát', 'Zpráva zájemce',
+            'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. 9,7.']);
+        foreach ($more as $x) {
+            foreach (self::LANGS as $lang) {
+                $this->assertTrue(t($x, $lang) !== $x || ($lang === 'sk' && self::inDictionary($x, 'sk')), "$lang: $x");
+            }
+        }
+        $this->assertSame('Interested people (3 new)', t(listing_inquiry_label(3, 5), 'en'));
+        $this->assertSame('Glazed loggia', t('Zasklená lodžie', 'en'));
         foreach (['Inzeráty', 'Moje inzeráty', 'Nový inzerát', 'Upravit inzerát', 'Nahlásit inzerát', 'Prodloužit inzerát'] as $title) {
             $this->assertNotSame($title, t($title, 'en'));
         }

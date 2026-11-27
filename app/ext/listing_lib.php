@@ -19,6 +19,9 @@ declare(strict_types=1);
 const LISTING_TYPES = ['prodej' => 'Prodej', 'pronajem' => 'Pronájem'];
 const LISTING_LAYOUTS = ['1+kk', '1+1', '2+kk', '2+1', '3+kk', '3+1', '4+kk', '4+1', '5+kk', '5+1', 'jine'];
 const LISTING_CLASSES = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+// Balkon, lodžie a podobné (od 11/2026): zvlášť od podlahové plochy bytu (area). '' u starších inzerátů = none.
+const LISTING_OUTDOOR = ['none' => 'Bez balkonu a lodžie', 'balkon' => 'Balkon', 'lodzie' => 'Lodžie', 'lodzie_zasklena' => 'Zasklená lodžie',
+    'lodzie_zazdena' => 'Zazděná lodžie', 'terasa' => 'Terasa', 'predzahradka' => 'Předzahrádka'];
 const LISTING_STATUS = ['draft' => 'Koncept', 'published' => 'Zveřejněný', 'sold' => 'Prodáno / pronajato', 'expired' => 'Vypršel'];
 const LISTING_DAYS = 60;            // jak dlouho je inzerát zveřejněný
 const LISTING_REMIND_DAYS = 7;      // připomínka před koncem
@@ -34,6 +37,9 @@ const LISTING_PENB_REMIND_DAYS = 90;
 const LISTING_FORM_MIN_SECONDS = 3;
 const LISTING_CONTACT_PER_HOUR = 5;
 const LISTING_REPORT_PER_HOUR = 3;
+// Zájemci (zprávy z formuláře u inzerátu): jak dlouho po skončení inzerátu (prodáno, vypršel) se uchovávají; smazáním inzerátu zmizí hned.
+const LISTING_INQUIRY_KEEP_DAYS = 90;
+const LISTING_INQUIRY_MAX = 3000;
 
 $GLOBALS['EXT_ADMIN_NAV']['/admin/inzeraty'] = ['Inzeráty vlastníků', 'Dům a lidé'];
 $GLOBALS['EXT_RESIDENT_NAV']['/inzeraty'] = ['Inzeráty', fn() => listing_enabled()];
@@ -64,15 +70,26 @@ function listing_ready(?PDO $pdo = null): void
         // public_from: od kdy inzerát vidí i nepřihlášení (Nejdřív sousedé); expires_on: poslední den zveřejnění.
         'listings' => "CREATE TABLE listings ($id, unit_id $int, user_id $int, type {$s(10)}, price $big, fees $big, layout {$s(10)}, area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL')
             . ", floor {$s(10)}, description $text, share_text $text, contact_name {$s(120)}, energy_class {$s(1)}, energy_source {$s(10)}, neighbours_first $int, status {$s(10)}, hidden $int,"
+            . " outdoor_type {$s(20)}, outdoor_area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL') . ","
             . " hidden_reason {$s(500)}, created_at {$s(19)}, updated_at {$s(19)}, published_at {$s(19)}, public_from {$s(19)}, expires_on {$s(10)}, reminded_on {$s(10)}, sold_at {$s(19)})$end",
         'listing_photos' => "CREATE TABLE listing_photos ($id, listing_id $int, filename {$s(80)}, thumb {$s(80)}, width $int, height $int, sort $int, caption {$s(120)})$end",
         // Záznamy pro omezení počtu zpráv a hlášení z jedné adresy (mažou se po dni).
         'listing_hits' => "CREATE TABLE listing_hits ($id, kind {$s(10)}, ip {$s(45)}, listing_id $int, at $big)$end",
         'listing_reports' => "CREATE TABLE listing_reports ($id, listing_id $int, reason $text, created_at {$s(19)})$end",
+        // Zájemci o inzerát (od 11/2026): contact = e-mail nebo telefon, jak ho zájemce zadal; email = platný e-mail malými písmeny
+        // (jen pak jde odpovědět z webu); status: new (nepřečtený), read, archived.
+        'listing_inquiries' => "CREATE TABLE listing_inquiries ($id, listing_id $int, name {$s(120)}, contact {$s(190)}, email {$s(190)}, status {$s(10)}, created_at {$s(19)}, updated_at {$s(19)})$end",
+        // Zprávy ve vlákně: author 'visitor' | 'owner', via 'web' | 'email'.
+        'listing_inquiry_messages' => "CREATE TABLE listing_inquiry_messages ($id, inquiry_id $int, author {$s(10)}, body $text, via {$s(10)}, created_at {$s(19)})$end",
     ];
     foreach ($tables as $name => $ddl) {
         if (!in_array($name, $have, true)) {
             $pdo->exec($ddl);
+            if ($name === 'listing_inquiries') {
+                $pdo->exec('CREATE INDEX listing_inquiries_listing ON listing_inquiries (listing_id, status)');
+            } elseif ($name === 'listing_inquiry_messages') {
+                $pdo->exec('CREATE INDEX listing_inquiry_messages_inquiry ON listing_inquiry_messages (inquiry_id)');
+            }
         }
     }
     // Popis fotky (přidán 11/2026) – starší tabulka sloupec nemá.
@@ -81,6 +98,17 @@ function listing_ready(?PDO $pdo = null): void
             : array_column($pdo->query('PRAGMA table_info(listing_photos)')->fetchAll(PDO::FETCH_ASSOC), 'name');
         if (!in_array('caption', $cols, true)) {
             $pdo->exec("ALTER TABLE listing_photos ADD COLUMN caption {$s(120)}");
+        }
+    }
+    // Balkon / lodžie (přidáno 11/2026) – starší tabulka sloupce nemá.
+    if (in_array('listings', $have, true)) {
+        $cols = $mysql ? array_map('strval', $pdo->query('SHOW COLUMNS FROM listings')->fetchAll(PDO::FETCH_COLUMN))
+            : array_column($pdo->query('PRAGMA table_info(listings)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+        if (!in_array('outdoor_type', $cols, true)) {
+            $pdo->exec("ALTER TABLE listings ADD COLUMN outdoor_type {$s(20)}");
+        }
+        if (!in_array('outdoor_area', $cols, true)) {
+            $pdo->exec('ALTER TABLE listings ADD COLUMN outdoor_area ' . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL'));
         }
     }
     if (!in_array('listings', $have, true)) {
@@ -278,6 +306,27 @@ function listing_price_label(array $l): string
 {
     return listing_money((int) $l['price']) . ($l['type'] === 'pronajem' ? ' / měsíc' : '');
 }
+/** Druh balkonu / lodžie ('none' i u starších inzerátů bez údaje). */
+function listing_outdoor_type(array $l): string
+{
+    $t = (string) ($l['outdoor_type'] ?? '');
+    return isset(LISTING_OUTDOOR[$t]) ? $t : 'none';
+}
+/** Balkon / lodžie s plochou: „zasklená lodžie 9,7 m²“ (bez balkonu prázdný text). */
+function listing_outdoor_text(array $l): string
+{
+    $t = listing_outdoor_type($l);
+    if ($t === 'none') {
+        return '';
+    }
+    $area = unit_area_label($l['outdoor_area'] ?? null);
+    return mb_strtolower(LISTING_OUTDOOR[$t]) . ($area !== '' ? ' ' . $area : '');
+}
+/** Plocha pro sdílení a popis: „82 m² + zasklená lodžie 9,7 m²“, „82 m²“, případně jen balkon. */
+function listing_area_text(array $l): string
+{
+    return implode(' + ', array_filter([unit_area_label($l['area'] ?? null), listing_outdoor_text($l)], fn($x) => $x !== ''));
+}
 function listing_slug(array $l): string
 {
     $s = strtolower(strip_accents(listing_title($l) . ' ' . listing_city()));
@@ -314,7 +363,7 @@ function listing_photo_url(array $photo, bool $thumb = false): string
 /** Krátký popis (pro náhled při sdílení): plocha, patro, lokalita a začátek textu. */
 function listing_summary(array $l, int $len = 160): string
 {
-    $facts = array_filter([unit_area_label($l['area']), $l['floor'] !== '' ? $l['floor'] . '. patro' : '', listing_locality()], fn($x) => $x !== '');
+    $facts = array_filter([listing_area_text($l), $l['floor'] !== '' ? $l['floor'] . '. patro' : '', listing_locality()], fn($x) => $x !== '');
     $head = implode(' · ', $facts);
     return trim($head . ($head !== '' ? '. ' : '') . excerpt((string) $l['description'], max(40, $len - mb_strlen($head))));
 }
@@ -343,7 +392,7 @@ function listing_meta(array $l, array $photos): array
 function listing_share_text(array $l): string
 {
     $lines = [listing_title($l) . ', ' . listing_locality()];
-    $facts = array_filter([unit_area_label($l['area']), $l['floor'] !== '' ? $l['floor'] . '. patro' : '',
+    $facts = array_filter([listing_area_text($l), $l['floor'] !== '' ? $l['floor'] . '. patro' : '',
         $l['energy_class'] !== '' ? 'energetická třída ' . $l['energy_class'] : ''], fn($x) => $x !== '');
     if ($facts) {
         $lines[] = implode(', ', $facts);
@@ -394,6 +443,16 @@ function listing_input(array $post, array $unit, ?string $today = null): array
         $errors[] = 'Plochu zadejte v m² jako číslo, např. 54,3.';
     }
     $d['area'] = $area === false ? null : $area;
+    // Balkon / lodžie: druh a plocha zvlášť od plochy bytu; u druhu jiného než „bez“ je plocha povinná.
+    $d['outdoor_type'] = isset(LISTING_OUTDOOR[$g('outdoor_type')]) ? $g('outdoor_type') : 'none';
+    $d['outdoor_area'] = null;
+    if ($d['outdoor_type'] !== 'none') {
+        $oa = unit_area_parse($g('outdoor_area'));
+        if ($oa === null || $oa === false) {
+            $errors[] = 'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. 9,7.';
+        }
+        $d['outdoor_area'] = is_float($oa) ? $oa : null;
+    }
     if (mb_strlen($d['description']) < 30) {
         $errors[] = 'Napište popis bytu (aspoň pár vět).';
     }
@@ -420,7 +479,7 @@ function listing_input(array $post, array $unit, ?string $today = null): array
 function listing_defaults(array $unit, array $user): array
 {
     $penb = listing_penb();
-    return ['id' => 0, 'unit_id' => (int) $unit['id'], 'type' => 'prodej', 'price' => '', 'fees' => '', 'layout' => '', 'area' => $unit['area'] ?? null, 'floor' => (string) $unit['floor'],
+    return ['id' => 0, 'unit_id' => (int) $unit['id'], 'type' => 'prodej', 'price' => '', 'fees' => '', 'layout' => '', 'area' => $unit['area'] ?? null, 'outdoor_type' => 'none', 'outdoor_area' => null, 'floor' => (string) $unit['floor'],
         'description' => '', 'share_text' => '', 'contact_name' => (string) $user['name'], 'energy_class' => $penb['valid'] ? $penb['class'] : '', 'energy_source' => $penb['valid'] ? 'budova' : '',
         'neighbours_first' => 0, 'status' => 'draft', 'hidden' => 0, 'hidden_reason' => '', 'expires_on' => '', 'public_from' => '', 'published_at' => '', 'sold_at' => ''];
 }
@@ -430,7 +489,8 @@ function listing_save(array $user, int $unitId, array $d, int $id = 0): int
     listing_ready();
     $now = date('Y-m-d H:i:s');
     $cols = ['type' => $d['type'], 'price' => $d['price'], 'fees' => $d['fees'], 'layout' => $d['layout'], 'area' => $d['area'], 'floor' => $d['floor'], 'description' => $d['description'], 'share_text' => $d['share_text'],
-        'contact_name' => $d['contact_name'], 'energy_class' => $d['energy_class'], 'energy_source' => $d['energy_source'], 'neighbours_first' => $d['neighbours_first'], 'updated_at' => $now];
+        'contact_name' => $d['contact_name'], 'energy_class' => $d['energy_class'], 'energy_source' => $d['energy_source'], 'neighbours_first' => $d['neighbours_first'],
+        'outdoor_type' => $d['outdoor_type'] ?? 'none', 'outdoor_area' => $d['outdoor_area'] ?? null, 'updated_at' => $now];
     if ($id) {
         q('UPDATE listings SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($cols))) . ' WHERE id = ?', [...array_values($cols), $id]);
         return $id;
@@ -491,6 +551,7 @@ function listing_delete(int $id): void
     }
     q('DELETE FROM listing_photos WHERE listing_id = ?', [$id]);
     q('DELETE FROM listing_reports WHERE listing_id = ?', [$id]);
+    listing_inquiries_delete($id);
     q('DELETE FROM listings WHERE id = ?', [$id]);
 }
 /** Výbor inzerát skryje (s důvodem) nebo znovu ukáže; vlastník dostane e-mail. */
@@ -753,12 +814,200 @@ function listing_contact(array $l, array $post, string $ip, bool $loggedIn = fal
         return ['errors' => $errors, 'in' => $in];
     }
     listing_hit('contact', $ip, (int) $l['id'], $now);
-    $text = "Dobrý den,\n\nna webu domu " . site('name') . ' se ozval zájemce o Váš inzerát „' . listing_title($l) . "“:\n\n"
-        . 'Jméno: ' . $in['name'] . "\n" . ($email !== '' ? 'E-mail: ' . $email : 'Telefon: ' . $in['contact']) . "\n\n" . $in['message'] . "\n\n"
-        . ($email !== '' ? 'Odpovědět můžete přímo na tento e-mail – odpověď dostane zájemce.' : 'Zájemce nechal jen telefon – zavolejte mu prosím.') . "\n"
+    $inq = listing_inquiry_add($l, $in['name'], $in['contact'], $email, $in['message'], $now);
+    listing_inquiry_notify_owner($l, $inq, $in['message'], true, $owner);
+    return ['ok' => true, 'inquiry' => (int) $inq['id']];
+}
+
+// ---------- Zájemci: schránka zpráv u inzerátu ----------
+
+/** Uloží novou zprávu zájemce jako nové vlákno; vrací řádek listing_inquiries. */
+function listing_inquiry_add(array $l, string $name, string $contact, string $email, string $message, ?int $now = null): array
+{
+    listing_ready();
+    $at = date('Y-m-d H:i:s', $now ?? time());
+    q("INSERT INTO listing_inquiries (listing_id, name, contact, email, status, created_at, updated_at) VALUES (?,?,?,?,'new',?,?)",
+        [(int) $l['id'], $name, $contact, strtolower($email), $at, $at]);
+    $id = (int) db()->lastInsertId();
+    listing_inquiry_message_add($id, 'visitor', $message, 'web', $now);
+    return one('SELECT * FROM listing_inquiries WHERE id = ?', [$id]);
+}
+function listing_inquiry_message_add(int $inquiryId, string $author, string $body, string $via, ?int $now = null): void
+{
+    $at = date('Y-m-d H:i:s', $now ?? time());
+    q('INSERT INTO listing_inquiry_messages (inquiry_id, author, body, via, created_at) VALUES (?,?,?,?,?)', [$inquiryId, $author, $body, $via, $at]);
+    // Nová zpráva zájemce vrací vlákno mezi nepřečtené (i z archivu); odpověď vlastníka ho označí jako přečtené.
+    q('UPDATE listing_inquiries SET updated_at = ?, status = ? WHERE id = ?', [$at, $author === 'visitor' ? 'new' : 'read', $inquiryId]);
+}
+function listing_inquiry_path(array $l, array $inq): string
+{
+    return '/inzeraty/' . (int) $l['id'] . '/zajemci/' . (int) $inq['id'];
+}
+/**
+ * Zájemci o inzerát pro uživatele, který inzerát spravuje (vlastník jednotky); komukoli jinému (i výboru a správcům) null –
+ * obsah zpráv vidí jen vlastník. Nejnovější nahoře.
+ */
+function listing_inquiries_for(array $l, ?array $user): ?array
+{
+    if (!listing_can_manage($l, $user)) {
+        return null;
+    }
+    listing_ready();
+    return all('SELECT i.*, (SELECT COUNT(*) FROM listing_inquiry_messages m WHERE m.inquiry_id = i.id) messages,
+        (SELECT m.body FROM listing_inquiry_messages m WHERE m.inquiry_id = i.id ORDER BY m.id DESC LIMIT 1) last_body,
+        (SELECT m.author FROM listing_inquiry_messages m WHERE m.inquiry_id = i.id ORDER BY m.id DESC LIMIT 1) last_author
+        FROM listing_inquiries i WHERE i.listing_id = ? ORDER BY i.updated_at DESC, i.id DESC', [(int) $l['id']]);
+}
+/** Jedno vlákno zájemce – jen pro toho, kdo inzerát spravuje (jinak null). */
+function listing_inquiry_for(array $l, int $inquiryId, ?array $user): ?array
+{
+    if (!listing_can_manage($l, $user)) {
+        return null;
+    }
+    listing_ready();
+    return one('SELECT * FROM listing_inquiries WHERE id = ? AND listing_id = ?', [$inquiryId, (int) $l['id']]);
+}
+function listing_inquiry_messages(int $inquiryId): array
+{
+    return all('SELECT * FROM listing_inquiry_messages WHERE inquiry_id = ? ORDER BY id', [$inquiryId]);
+}
+/** Počty zájemců inzerátu (pro odkaz „Zájemci“ a přehled výboru – jen čísla, bez obsahu): ['new', 'total']. */
+function listing_inquiry_counts(int $listingId): array
+{
+    listing_ready();
+    $r = one("SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END), 0) fresh FROM listing_inquiries WHERE listing_id = ?", [$listingId]);
+    return ['new' => (int) ($r['fresh'] ?? 0), 'total' => (int) ($r['total'] ?? 0)];
+}
+/** Text odkazu: „Zájemci (2 noví)“, „Zájemci (5)“, nebo „Zájemci“. */
+function listing_inquiry_label(int $new, int $total): string
+{
+    if ($new > 0) {
+        return 'Zájemci (' . $new . ' ' . ($new === 1 ? 'nový' : ($new < 5 ? 'noví' : 'nových')) . ')';
+    }
+    return $total > 0 ? 'Zájemci (' . $total . ')' : 'Zájemci';
+}
+function listing_inquiry_set_status(int $inquiryId, string $status): void
+{
+    if (in_array($status, ['new', 'read', 'archived'], true)) {
+        q('UPDATE listing_inquiries SET status = ? WHERE id = ?', [$status, $inquiryId]);
+    }
+}
+/** Je kontakt zájemce telefon (bez e-mailu) – tedy odpovědět jde jen zavoláním nebo SMS? */
+function listing_inquiry_phone(array $inq): string
+{
+    return (string) $inq['email'] === '' ? (string) $inq['contact'] : '';
+}
+/** Adresa „neodpovídejte“ na doméně odesílatele webu domu (Reply-To, když příjem odpovědí e-mailem není zapnutý). */
+function listing_noreply_address(): string
+{
+    $from = setting('mail_from');
+    $domain = filter_var($from, FILTER_VALIDATE_EMAIL) ? substr((string) strrchr($from, '@'), 1) : '';
+    return $domain !== '' ? 'neodpovidejte@' . $domain : $from;
+}
+/**
+ * Upozorní vlastníka na zprávu zájemce: e-mail (Reply-To = e-mail zájemce, když ho zadal – odpověď ze schránky dál funguje)
+ * a upozornění do telefonu, má-li je zapnuté. $first = první zpráva (jinak odpověď zájemce ve vlákně).
+ */
+function listing_inquiry_notify_owner(array $l, array $inq, string $message, bool $first, ?array $owner = null): void
+{
+    $owner ??= listing_owner_user($l);
+    if (!$owner) {
+        return;
+    }
+    $email = (string) $inq['email'];
+    $link = absolute_url(listing_inquiry_path($l, $inq));
+    $text = "Dobrý den,\n\n" . ($first ? 'na webu domu ' . site('name') . ' se ozval zájemce o Váš inzerát „' . listing_title($l) . "“:\n\n"
+            : 'zájemce o Váš inzerát „' . listing_title($l) . "“ odpověděl na Vaši zprávu:\n\n")
+        . 'Jméno: ' . $inq['name'] . "\n" . ($email !== '' ? 'E-mail: ' . $email : 'Telefon: ' . $inq['contact']) . "\n\n" . $message . "\n\n"
+        . ($email !== '' ? "Odpovědět můžete na webu – zájemce Vaši adresu neuvidí:\n" . $link . "\n\nNebo odpovězte přímo na tento e-mail – odpověď dostane zájemce (i s Vaší adresou)."
+            : "Zájemce nechal jen telefon – zavolejte mu prosím. Všechny zprávy zájemců: " . $link) . "\n"
         . 'Váš e-mail jsme zájemci neprozradili. Inzerát: ' . absolute_url(listing_path($l));
-    send_mail($owner['email'], 'Zájemce o Váš inzerát: ' . listing_title($l), $text, null, null, null, $email !== '' ? $email : null);
-    return ['ok' => true];
+    send_mail($owner['email'], ($first ? 'Zájemce o Váš inzerát: ' : 'Odpověď zájemce o Váš inzerát: ') . listing_title($l), $text, null, null, null, $email !== '' ? $email : null);
+    if (function_exists('push_notify')) {
+        push_notify([(int) $owner['id']], site('name'), ($first ? 'Zájemce o inzerát: ' : 'Odpověď zájemce: ') . $inq['name'], listing_inquiry_path($l, $inq));
+    }
+}
+/**
+ * Odpověď vlastníka z webu: uloží se do vlákna a zájemci odejde e-mailem od odesílatele webu domu – adresa vlastníka se
+ * neprozradí. Reply-To: schránka pro odpovědi se značkou vlákna (app/ext/inbound_lib.php), jinak adresa „neodpovídejte“
+ * s odkazem na formulář u inzerátu. Volající ověří oprávnění (listing_inquiry_for). Vrací text chyby, nebo null.
+ */
+function listing_inquiry_reply(array $l, array $inq, string $body, ?int $now = null): ?string
+{
+    $body = trim(str_replace("\r", '', $body));
+    if ((string) $inq['email'] === '') {
+        return 'Zájemce nechal jen telefon – zavolejte mu nebo pošlete SMS.';
+    }
+    if (mb_strlen($body) < 2) {
+        return 'Napište prosím odpověď.';
+    }
+    if (mb_strlen($body) > LISTING_INQUIRY_MAX) {
+        return 'Odpověď je příliš dlouhá (nejvýše ' . LISTING_INQUIRY_MAX . ' znaků).';
+    }
+    $last = one("SELECT body FROM listing_inquiry_messages WHERE inquiry_id = ? AND author = 'visitor' ORDER BY id DESC LIMIT 1", [(int) $inq['id']]);
+    listing_inquiry_message_add((int) $inq['id'], 'owner', $body, 'web', $now);
+    $in = function_exists('inbound_reply') ? inbound_reply('I', defined('TENANT') ? TENANT : '', (int) $inq['id'], (string) $inq['email']) : null;
+    $quote = $last ? "\n\nVaše zpráva:\n" . implode("\n", array_map(fn($x) => '> ' . $x, explode("\n", excerpt((string) $last['body'], 600)))) : '';
+    $text = "Dobrý den,\n\nvlastník bytu z inzerátu „" . listing_title($l) . '“ (' . site('name') . ") Vám odpověděl:\n\n" . $body . "\n\n"
+        . ($in ? 'Odpovědět můžete přímo na tento e-mail – zprávu předáme vlastníkovi bytu.' : 'Na tento e-mail prosím neodpovídejte. Odpovědět můžete přes formulář u inzerátu: ' . absolute_url(listing_path($l)))
+        . "\nInzerát: " . absolute_url(listing_path($l)) . $quote . ($in ? "\n\n" . $in['line'] : '');
+    send_mail((string) $inq['email'], 'Odpověď k inzerátu: ' . listing_title($l) . ' – ' . site('name') . ($in ? ' ' . $in['tag'] : ''), $text, null, null, null,
+        $in['reply_to'] ?? listing_noreply_address());
+    return null;
+}
+/**
+ * Odpověď zájemce e-mailem (příjem odpovědí, druh značky „I“): připojí se k vláknu, jen když odesílatel je e-mail,
+ * který zájemce zadal; vlastník dostane upozornění. V kontextu webu domu. Přílohy se neukládají. Vrací důvod odmítnutí, nebo ''.
+ */
+function listing_inquiry_inbound(int $inquiryId, string $email, string $text, array $files = []): string
+{
+    listing_ready();
+    $inq = one('SELECT * FROM listing_inquiries WHERE id = ?', [$inquiryId]);
+    if (!$inq) {
+        return 'dotaz k inzerátu neexistuje';
+    }
+    if ((string) $inq['email'] === '' || strtolower(trim($email)) !== (string) $inq['email']) {
+        return 'odesílatel není zájemce, který dotaz poslal';
+    }
+    $l = listing_get((int) $inq['listing_id']);
+    if (!$l) {
+        return 'inzerát už neexistuje';
+    }
+    $skipped = count(array_filter($files, fn($f) => !($f['inline'] && str_starts_with((string) $f['type'], 'image/') && strlen((string) $f['data']) < 15000)));
+    $text = mb_substr(trim($text), 0, LISTING_INQUIRY_MAX);
+    $body = $text . ($skipped ? ($text !== '' ? "\n\n" : '') . '(příloha z e-mailu nebyla uložena)' : '');
+    if ($body === '') {
+        return 'prázdná odpověď';
+    }
+    listing_inquiry_message_add($inquiryId, 'visitor', $body, 'email');
+    listing_inquiry_notify_owner($l, $inq, $body, false);
+    return '';
+}
+/** Smaže zájemce inzerátu i se zprávami. */
+function listing_inquiries_delete(int $listingId): void
+{
+    listing_ready();
+    q('DELETE FROM listing_inquiry_messages WHERE inquiry_id IN (SELECT id FROM listing_inquiries WHERE listing_id = ?)', [$listingId]);
+    q('DELETE FROM listing_inquiries WHERE listing_id = ?', [$listingId]);
+}
+/** Úklid: zájemci skončených inzerátů (prodáno, vypršel) po LISTING_INQUIRY_KEEP_DAYS dnech a zájemci smazaných inzerátů. Vrací počet smazaných vláken. */
+function listing_inquiries_purge(?int $now = null): int
+{
+    listing_ready();
+    $now ??= time();
+    $cut = $now - LISTING_INQUIRY_KEEP_DAYS * 86400;
+    $ids = array_map(fn($r) => (int) $r['id'], all("SELECT id FROM listings WHERE (status = 'sold' AND sold_at <> '' AND sold_at < ?) OR (status = 'expired' AND expires_on <> '' AND expires_on < ?)",
+        [date('Y-m-d H:i:s', $cut), date('Y-m-d', $cut)]));
+    $n = 0;
+    foreach ($ids as $id) {
+        $n += (int) val('SELECT COUNT(*) FROM listing_inquiries WHERE listing_id = ?', [$id]);
+        listing_inquiries_delete($id);
+    }
+    $n += (int) val('SELECT COUNT(*) FROM listing_inquiries WHERE listing_id NOT IN (SELECT id FROM listings)');
+    q('DELETE FROM listing_inquiry_messages WHERE inquiry_id IN (SELECT id FROM listing_inquiries WHERE listing_id NOT IN (SELECT id FROM listings))');
+    q('DELETE FROM listing_inquiries WHERE listing_id NOT IN (SELECT id FROM listings)');
+    q('DELETE FROM listing_inquiry_messages WHERE inquiry_id NOT IN (SELECT id FROM listing_inquiries)');
+    return $n;
 }
 /** Nahlášení nevhodného inzerátu výboru (omezené počtem z jedné adresy). Vrací text chyby, nebo null. */
 function listing_report(array $l, string $reason, string $ip, ?int $now = null): ?string
@@ -807,6 +1056,7 @@ function listing_daily(?int $now = null): void
     }
     listing_ready();
     q('DELETE FROM listing_hits WHERE at < ?', [$now - 86400]);
+    listing_inquiries_purge($now);
     foreach (all("SELECT * FROM listings WHERE status = 'published' AND expires_on <> '' AND expires_on < ?", [$today]) as $l) {
         q("UPDATE listings SET status = 'expired', updated_at = ? WHERE id = ?", [date('Y-m-d H:i:s', $now), (int) $l['id']]);
         if (($owner = listing_owner_user($l)) && !(int) $l['hidden']) {

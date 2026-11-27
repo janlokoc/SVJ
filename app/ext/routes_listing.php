@@ -43,7 +43,7 @@ $listingForm = function (int $unitId, int $id) use ($listingOwnerGuard) {
     $errors = $warnings = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         [$d, $errors] = listing_input($_POST, $unit);
-        $form = array_merge($form, $d, ['area' => $d['area'] ?? post('area')]);
+        $form = array_merge($form, $d, ['area' => $d['area'] ?? post('area'), 'outdoor_area' => $d['outdoor_area'] ?? post('outdoor_area')]);
         if (!$errors) {
             $id = listing_save($u, $unitId, $d, $id);
             foreach (array_map('intval', (array) ($_POST['photo_delete'] ?? [])) as $pid) {
@@ -112,6 +112,50 @@ $route('POST', '/inzeraty/(\d+)/(zverejnit|prodano|prodlouzit|smazat)', function
             break;
     }
     redirect('/inzeraty/moje');
+});
+
+// ---------- Vlastník: zájemci o inzerát (obsah vidí jen vlastník jednotky, ne výbor ani správci) ----------
+
+/** Inzerát, který přihlášený uživatel spravuje; jinak 404 (cizí inzerát se ani neprozradí). */
+$listingManaged = function (int $id): array {
+    $u = require_login();
+    $l = listing_get($id);
+    if (!$l || !listing_can_manage($l, $u)) {
+        not_found();
+    }
+    return [$u, $l];
+};
+$route('GET', '/inzeraty/(\d+)/zajemci', function (int $id) use ($listingManaged) {
+    [$u, $l] = $listingManaged($id);
+    render('ext/listing/inquiries', ['title' => 'Zájemci o inzerát', 'l' => $l, 'rows' => listing_inquiries_for($l, $u) ?? [], 'archive' => ($_GET['archiv'] ?? '') === '1']);
+});
+$listingInquiry = function (int $id, int $inqId, ?string $error = null, string $draft = '') use ($listingManaged) {
+    [$u, $l] = $listingManaged($id);
+    $inq = listing_inquiry_for($l, $inqId, $u) ?? not_found();
+    if ($inq['status'] === 'new') {
+        listing_inquiry_set_status($inqId, 'read');
+        $inq['status'] = 'read';
+    }
+    render('ext/listing/inquiry', ['title' => 'Zpráva zájemce', 'l' => $l, 'inq' => $inq, 'msgs' => listing_inquiry_messages($inqId), 'error' => $error, 'draft' => $draft]);
+};
+$route('GET', '/inzeraty/(\d+)/zajemci/(\d+)', fn(int $id, int $inqId) => $listingInquiry($id, $inqId));
+$route('POST', '/inzeraty/(\d+)/zajemci/(\d+)', function (int $id, int $inqId) use ($listingManaged, $listingInquiry) {
+    [$u, $l] = $listingManaged($id);
+    $inq = listing_inquiry_for($l, $inqId, $u) ?? not_found();
+    if ($err = listing_inquiry_reply($l, $inq, (string) ($_POST['body'] ?? ''))) {
+        http_response_code(422);
+        $listingInquiry($id, $inqId, $err, is_string($_POST['body'] ?? null) ? $_POST['body'] : '');
+        return;
+    }
+    flash('Odpověď jsme zájemci poslali e-mailem. Vaši adresu neuvidí.');
+    redirect(listing_inquiry_path($l, $inq));
+});
+$route('POST', '/inzeraty/(\d+)/zajemci/(\d+)/(archivovat|obnovit)', function (int $id, int $inqId, string $action) use ($listingManaged) {
+    [$u, $l] = $listingManaged($id);
+    $inq = listing_inquiry_for($l, $inqId, $u) ?? not_found();
+    listing_inquiry_set_status((int) $inq['id'], $action === 'archivovat' ? 'archived' : 'read');
+    flash($action === 'archivovat' ? 'Zpráva je v archivu.' : 'Zpráva je zpět mezi zájemci.');
+    redirect('/inzeraty/' . $id . '/zajemci');
 });
 
 // Prodloužení odkazem z e-mailu (bez přihlášení, podepsaný odkaz platí jen pro aktuální datum konce).
@@ -232,7 +276,8 @@ $route('GET', '/inzeraty', function () {
 $route('GET', '/admin/inzeraty', function () {
     require_admin();
     listing_ready();
-    $rows = all('SELECT l.*, un.entrance, un.number, u.name owner_name, (SELECT COUNT(*) FROM listing_reports r WHERE r.listing_id = l.id) reports
+    $rows = all('SELECT l.*, un.entrance, un.number, u.name owner_name, (SELECT COUNT(*) FROM listing_reports r WHERE r.listing_id = l.id) reports,
+        (SELECT COUNT(*) FROM listing_inquiries i WHERE i.listing_id = l.id) inquiries
         FROM listings l LEFT JOIN units un ON un.id = l.unit_id LEFT JOIN users u ON u.id = l.user_id ORDER BY l.id DESC');
     render('ext/listing/admin', ['title' => 'Inzeráty vlastníků', 'rows' => $rows,
         'reports' => all('SELECT * FROM listing_reports ORDER BY id DESC LIMIT 50'), 'penb' => listing_penb()]);
