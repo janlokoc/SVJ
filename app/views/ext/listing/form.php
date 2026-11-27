@@ -3,12 +3,16 @@ $isNew = !(int) $l['id'];
 $canPublish = in_array($l['status'], ['draft', 'expired'], true);
 $area = $l['area'] ?? null;
 $areaValue = is_numeric($area) ? str_replace('.', ',', (string) (float) $area) : (string) $area;
-$aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' => 'Plocha (m²)', 'floor' => 'Patro', 'price' => 'Cena v Kč', 'fees' => 'Poplatky v Kč za měsíc', 'energy' => 'Energetická třída'];
+$outdoor = listing_outdoor_type($l);
+$oArea = $l['outdoor_area'] ?? null;
+$outdoorValue = is_numeric($oArea) ? str_replace('.', ',', (string) (float) $oArea) : (string) $oArea;
+$aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' => 'Podlahová plocha bytu (m²)', 'outdoor_type' => 'Balkon / lodžie', 'outdoor_area' => 'Plocha balkonu / lodžie (m²)', 'floor' => 'Patro', 'price' => 'Cena v Kč', 'fees' => 'Poplatky v Kč za měsíc', 'energy' => 'Energetická třída'];
 ?>
 <div class="wrap page narrow">
   <p class="crumbs"><a href="<?= url('/inzeraty/moje') ?>">← Moje inzeráty</a></p>
   <header class="page-head"><h1><?php if ($isNew): ?><span>Nový inzerát</span><?php else: ?><span>Upravit inzerát</span><?php endif ?></h1>
     <p class="lead">Jednotka <?= e(unit_name($unit)) ?>. V inzerátu se ukáže jen ulice a město domu – číslo bytu, vchod ani Váš e-mail ne.</p></header>
+  <?php if (!$isNew): $ic = listing_inquiry_counts((int) $l['id']); ?><p class="lst-inq-badge"><a class="btn btn-small<?= $ic['new'] ? '' : ' btn-ghost' ?>" href="<?= url('/inzeraty/' . $l['id'] . '/zajemci') ?>"><?= e(listing_inquiry_label($ic['new'], $ic['total'])) ?></a></p><?php endif ?>
   <?php require __DIR__ . '/../../_errors.php'; ?>
   <form method="post" enctype="multipart/form-data" class="card form lst-form">
     <?= csrf_field() ?>
@@ -22,10 +26,15 @@ $aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' =
     </div>
     <p class="hint">U pronájmu je cena nájemné za měsíc; poplatky (zálohy na služby a energie) jsou nepovinné.</p>
     <div class="form-row">
-      <label>Plocha (m²) <input type="text" name="area" inputmode="decimal" value="<?= e($areaValue) ?>" maxlength="10" placeholder="Např. 54,3"></label>
+      <label>Podlahová plocha bytu (m²) <input type="text" name="area" inputmode="decimal" value="<?= e($areaValue) ?>" maxlength="10" placeholder="Např. 54,3"></label>
       <label>Patro <input type="text" name="floor" value="<?= e($l['floor']) ?>" maxlength="10"></label>
       <label>Jméno u inzerátu <input type="text" name="contact_name" value="<?= e($l['contact_name']) ?>" maxlength="120" required></label>
     </div>
+    <div class="form-row">
+      <label>Balkon / lodžie <select name="outdoor_type" data-lst-outdoor><?php foreach (LISTING_OUTDOOR as $k => $label): ?><option value="<?= $k ?>"<?= $outdoor === $k ? ' selected' : '' ?>><?= e($label) ?></option><?php endforeach ?></select></label>
+      <label class="lst-outdoor-area">Plocha balkonu / lodžie (m²) <input type="text" name="outdoor_area" inputmode="decimal" value="<?= e($outdoorValue) ?>" maxlength="10" placeholder="Např. 9,7"></label>
+    </div>
+    <p class="hint">Plocha bytu je podlahová plocha bez balkonu a lodžie – ty uveďte zvlášť, v inzerátu se ukážou vedle sebe.</p>
     <p class="hint">Plochu a patro jsme předvyplnili z evidence výboru. Zájemci Vám píší přes formulář na webu – zprávy chodí na Váš e-mail.</p>
 
     <fieldset class="lst-energy-field">

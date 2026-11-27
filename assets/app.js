@@ -269,7 +269,13 @@ document.querySelectorAll('.ai-box').forEach((box) => {
     let context = box.dataset.aiContext || '';
     if (box.dataset.aiFields) {
       try {
-        Object.entries(JSON.parse(box.dataset.aiFields)).forEach(([name, label]) => { const el = form.querySelector('[name="' + name + '"]'); if (el && el.value.trim()) context += (context ? '\n' : '') + label + ': ' + el.value.trim(); });
+        Object.entries(JSON.parse(box.dataset.aiFields)).forEach(([name, label]) => {
+          const el = form.querySelector('[name="' + name + '"]');
+          if (!el || el.closest('[hidden]')) return;   // skryté pole (např. plocha balkonu u „bez balkonu“) do kontextu nepatří
+          // U výběru čitelný text volby („Zasklená lodžie“), ne její kód.
+          const v = (el.tagName === 'SELECT' && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : el.value).trim();
+          if (v) context += (context ? '\n' : '') + label + ': ' + v;
+        });
       } catch (e) { /* bez kontextu */ }
     }
     const body = new URLSearchParams({ _csrf: form.querySelector('[name=_csrf]').value, task: btn.dataset.aiTask, text: field.value, context });
@@ -422,6 +428,11 @@ document.querySelectorAll('[data-select-all]').forEach((f) => f.addEventListener
 document.querySelectorAll('[data-lst-type]').forEach((sel) => {
   const fees = sel.form.querySelector('.lst-fees');
   const sync = () => { if (fees) fees.hidden = sel.value !== 'pronajem'; };
+  sel.addEventListener('change', sync); sync();
+});
+document.querySelectorAll('[data-lst-outdoor]').forEach((sel) => {
+  const area = sel.form.querySelector('.lst-outdoor-area');
+  const sync = () => { if (area) area.hidden = sel.value === 'none'; };
   sel.addEventListener('change', sync); sync();
 });
 document.querySelectorAll('input[type=file][data-shrink-photos]').forEach((input) => {

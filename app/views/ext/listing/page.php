@@ -47,6 +47,7 @@ $service = plan_managed() ? pset('service_name') : '';
       <dl class="lst-facts">
         <div><dt>Dispozice</dt><dd><?= e(listing_layout_label((string) $l['layout']) ?: '—') ?></dd></div>
         <?php if (unit_area_label($l['area']) !== ''): ?><div><dt>Plocha</dt><dd><?= e(unit_area_label($l['area'])) ?></dd></div><?php endif ?>
+        <?php if (listing_outdoor_type($l) !== 'none'): ?><div class="lst-outdoor"><dt><?= e(LISTING_OUTDOOR[listing_outdoor_type($l)]) ?></dt><dd><?= e(unit_area_label($l['outdoor_area'] ?? null) ?: '—') ?></dd></div><?php endif ?>
         <?php if ($l['floor'] !== ''): ?><div><dt>Patro</dt><dd><?= e($l['floor']) ?></dd></div><?php endif ?>
         <div><dt>Cena</dt><dd><?= e(listing_money((int) $l['price'])) ?><?php if ($rent): ?> <span>/ měsíc</span><?php endif ?></dd></div>
         <?php if ($rent && (int) $l['fees'] > 0): ?><div><dt>Poplatky</dt><dd><?= e(listing_money((int) $l['fees'])) ?> <span>/ měsíc</span></dd></div><?php endif ?>

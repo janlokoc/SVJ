@@ -558,7 +558,8 @@ final class ListingTest extends TestCase
         $owner = $this->u('owner');
         $t = listing_form_token($this->now - 30);
         $r = listing_contact($l, ['name' => 'Petr Zájemce', 'contact' => 'petr@example.org', 'message' => 'Dobrý den, mohu na prohlídku v sobotu?', 't' => $t], '10.0.0.1', false, $this->now);
-        $this->assertSame(['ok' => true], $r);
+        $this->assertTrue($r['ok']);
+        $this->assertGreaterThan(0, $r['inquiry'], 'zpráva je uložená jako zájemce');
         $mails = array_values(array_filter($this->decodedMails(), fn($m) => !str_contains($m['subject'], 'Nový inzerát')));
         $this->assertCount(1, $mails);
         $this->assertSame($owner['email'], $mails[0]['to']);
@@ -785,5 +786,80 @@ final class ListingTest extends TestCase
         $html = $this->renderPage($this->published());
         $this->assertMatchesRegularExpression('~<a class="lst-photo" href="[^"]*/inzerat/foto/\d+\.jpg">~', $html, 'fallback link to the photo');
         $this->assertStringContainsString('.lst-viewer', (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css'));
+    }
+
+    // ---------- Balkon / lodžie zvlášť od plochy bytu ----------
+
+    public function testOutdoorTypeAndAreaValidation(): void
+    {
+        [$d, $errors] = listing_input($this->post(), $this->unitRow('a'));
+        $this->assertSame([], $errors, 'bez údaje = bez balkonu (starší formulář)');
+        $this->assertSame(['none', null], [$d['outdoor_type'], $d['outdoor_area']]);
+        [$d, $errors] = listing_input($this->post(['area' => '82', 'outdoor_type' => 'lodzie_zasklena', 'outdoor_area' => '9,7 m²']), $this->unitRow('a'));
+        $this->assertSame([], $errors);
+        $this->assertSame(['lodzie_zasklena', 9.7, 82.0], [$d['outdoor_type'], $d['outdoor_area'], $d['area']], 'plocha bytu zůstává zvlášť');
+        foreach (['', '0', 'abc', '-3'] as $bad) {
+            [, $errors] = listing_input($this->post(['outdoor_type' => 'balkon', 'outdoor_area' => $bad]), $this->unitRow('a'));
+            $this->assertContains('Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. 9,7.', $errors, "plocha „{$bad}“");
+        }
+        [$d, $errors] = listing_input($this->post(['outdoor_type' => 'none', 'outdoor_area' => '12']), $this->unitRow('a'));
+        $this->assertSame([], $errors);
+        $this->assertNull($d['outdoor_area'], 'u „bez balkonu“ se plocha neukládá');
+        [$d] = listing_input($this->post(['outdoor_type' => 'bazen']), $this->unitRow('a'));
+        $this->assertSame('none', $d['outdoor_type'], 'neznámý druh');
+        $this->assertSame(['none', 'balkon', 'lodzie', 'lodzie_zasklena', 'lodzie_zazdena', 'terasa', 'predzahradka'], array_keys(LISTING_OUTDOOR));
+        // Uloží se a formulář ho zobrazí (plocha balkonu skrytá u „bez“ – app.js, data-lst-outdoor).
+        $id = $this->draft(['area' => '82', 'outdoor_type' => 'terasa', 'outdoor_area' => '15,5']);
+        $l = listing_get($id);
+        $this->assertSame(['terasa', 15.5], [$l['outdoor_type'], (float) $l['outdoor_area']]);
+        $unit = $this->unitRow('a');
+        $errors = [];
+        $photos = [];
+        $penb = listing_penb();
+        ob_start();
+        require dirname(__DIR__, 2) . '/app/views/ext/listing/form.php';
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('<option value="terasa" selected>Terasa</option>', $html);
+        $this->assertStringContainsString('name="outdoor_area" inputmode="decimal" value="15,5"', $html);
+        $this->assertStringContainsString('data-lst-outdoor', $html);
+        $this->assertStringContainsString("'outdoor_type' => 'Balkon / lodžie', 'outdoor_area' => 'Plocha balkonu / lodžie (m²)'", (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/listing/form.php'),
+            'AI pomocník dostane druh i plochu balkonu');
+        $this->assertStringContainsString("[data-lst-outdoor]", (string) file_get_contents(dirname(__DIR__, 2) . '/assets/app.js'));
+    }
+
+    public function testOutdoorShownOnPageAndInShareTexts(): void
+    {
+        $l = $this->published(['area' => '82', 'outdoor_type' => 'lodzie_zasklena', 'outdoor_area' => '9,7']);
+        $html = $this->renderPage($l);
+        $this->assertStringContainsString("<div><dt>Plocha</dt><dd>82\u{a0}m²</dd></div>", $html);
+        $this->assertStringContainsString("<div class=\"lst-outdoor\"><dt>Zasklená lodžie</dt><dd>9,7\u{a0}m²</dd></div>", $html);
+        $this->assertSame("82\u{a0}m² + zasklená lodžie 9,7\u{a0}m²", listing_area_text($l));
+        $this->assertStringContainsString("\n82 m² + zasklená lodžie 9,7 m², 3. patro", listing_share_text($l));
+        $this->assertStringStartsWith("82\u{a0}m² + zasklená lodžie 9,7\u{a0}m² · 3. patro", listing_meta($l, [])['og:description']);
+        // Bez balkonu beze změny.
+        q("UPDATE listings SET outdoor_type = 'none', outdoor_area = NULL WHERE id = ?", [$l['id']]);
+        $l = listing_get((int) $l['id']);
+        $this->assertSame("82\u{a0}m²", listing_area_text($l));
+        $this->assertStringNotContainsString('lst-outdoor', $this->renderPage($l));
+        // Starší inzerát bez údaje ('').
+        $this->assertSame('', listing_outdoor_text(['outdoor_type' => '', 'outdoor_area' => null]));
+        $this->assertSame("balkon 4\u{a0}m²", listing_area_text(['area' => null, 'outdoor_type' => 'balkon', 'outdoor_area' => 4]));
+        // AI úkol „Napsat inzerát“ ví, že plochy se nesčítají.
+        $this->assertStringContainsString('balkon / lodžie', AI_TASKS['listing'][1]);
+    }
+
+    /** Starší tabulka inzerátů bez sloupců pro balkon dostane sloupce při prvním použití; údaje zůstanou. */
+    public function testOutdoorColumnsAddedToOldTable(): void
+    {
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec("CREATE TABLE listings (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL DEFAULT 0, area REAL, status TEXT NOT NULL DEFAULT '')");
+        $pdo->exec("INSERT INTO listings (unit_id, area, status) VALUES (3, 54.3, 'published')");
+        listing_ready($pdo);
+        $cols = array_column($pdo->query('PRAGMA table_info(listings)')->fetchAll(\PDO::FETCH_ASSOC), 'name');
+        $this->assertContains('outdoor_type', $cols);
+        $this->assertContains('outdoor_area', $cols);
+        $row = $pdo->query('SELECT * FROM listings')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertSame(['', null, 54.3], [$row['outdoor_type'], $row['outdoor_area'], (float) $row['area']]);
+        $this->assertSame('none', listing_outdoor_type($row));
     }
 }

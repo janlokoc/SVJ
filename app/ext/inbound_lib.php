@@ -7,6 +7,7 @@ declare(strict_types=1);
  * - Hlášení provozovateli (H): odpověď autora na e-mail s odpovědí podpory → doplnění ve vlákně (jako „Moje hlášení“).
  * - Závady a požadavky (Z): odpověď obyvatele na zprávu výboru → odpověď obyvatele (jako /zavady/{id}/odpoved).
  * - Závady a požadavky (V): odpověď správce domu na upozornění o hlášení → zpráva obyvateli (jen aktivní správce domu).
+ * - Inzeráty (I): odpověď zájemce na zprávu vlastníka bytu → zpráva ve vlákně zájemce (jen z e-mailu, který zájemce zadal).
  *
  * Jedna schránka pro celou službu, v storage/config.php:
  *   'inbound' => ['host' => 'imap.example.cz', 'port' => 993, 'secure' => 'ssl', 'user' => 'odpovedi@…', 'password' => '…',
@@ -27,7 +28,7 @@ declare(strict_types=1);
  * případně při nejbližší návštěvě webu.
  */
 
-const INBOUND_KINDS = ['H' => 'hlášení provozovateli', 'Z' => 'závada – odpověď obyvatele', 'V' => 'závada – odpověď správce'];
+const INBOUND_KINDS = ['H' => 'hlášení provozovateli', 'Z' => 'závada – odpověď obyvatele', 'V' => 'závada – odpověď správce', 'I' => 'inzerát – odpověď zájemce'];
 const INBOUND_STATUS = ['attached' => 'připojeno', 'queued' => 'čeká na web domu', 'rejected' => 'odmítnuto', 'ignored' => 'automatická zpráva', 'error' => 'chyba'];
 const INBOUND_DONE_FOLDER = 'Zpracovano';
 const INBOUND_FAILED_FOLDER = 'Nezpracovano';
@@ -119,7 +120,7 @@ function inbound_token(string $kind, string $tenant, int $id, string $email): st
 /** Všechny značky nalezené v textu (v pořadí výskytu): [['kind', 'id', 'tenant', 'mac', 'token'], …]. */
 function inbound_tokens_in(string $s): array
 {
-    preg_match_all('/(?<![A-Za-z0-9])([HZV])(\d{1,10})(?:\.([a-z0-9][a-z0-9-]{0,38}))?\.([0-9a-f]{16})(?![0-9a-f])/i', $s, $m, PREG_SET_ORDER);
+    preg_match_all('/(?<![A-Za-z0-9])([HZVI])(\d{1,10})(?:\.([a-z0-9][a-z0-9-]{0,38}))?\.([0-9a-f]{16})(?![0-9a-f])/i', $s, $m, PREG_SET_ORDER);
     $out = [];
     foreach ($m as $x) {
         $t = ['kind' => strtoupper($x[1]), 'id' => (int) $x[2], 'tenant' => strtolower($x[3] ?? ''), 'mac' => strtolower($x[4]), 'token' => $x[0]];
@@ -252,7 +253,7 @@ function inbound_find_tokens(array $msg, string $raw): array
     $addr = implode(' ', array_merge($h['delivered-to'] ?? [], $h['x-original-to'] ?? [], $h['to'] ?? [], $h['envelope-to'] ?? []));
     $html = $msg['html'] !== null ? html_entity_decode(strip_tags($msg['html']), ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
     // Jen kandidáti z adresy +značka a z předmětu, pak z textu; duplicitní značky se sloučí.
-    return inbound_tokens_in(preg_replace('/\+([HZV]\d+[^@\s]*)@/i', ' $1 @', $addr) . "\n" . $msg['subject'] . "\n" . $msg['text'] . "\n" . $html);
+    return inbound_tokens_in(preg_replace('/\+([HZVI]\d+[^@\s]*)@/i', ' $1 @', $addr) . "\n" . $msg['subject'] . "\n" . $msg['text'] . "\n" . $html);
 }
 /**
  * Ověří zprávu a určí cíl. Vrací ['ok' => bool, 'status', 'reason', 'kind', 'tenant', 'thread_id', 'text', 'attachments'].
@@ -292,7 +293,7 @@ function inbound_route(string $raw): array
     }
     $text = inbound_reply_text($msg['text']);
     // Řádek se značkou (když odesílatel necitoval, ale patičku zkopíroval) do vlákna nepatří.
-    $text = trim(preg_replace('/^.*#?[HZV]\d+(\.[a-z0-9-]+)?\.[0-9a-f]{16}.*$/mi', '', $text));
+    $text = trim(preg_replace('/^.*#?[HZVI]\d+(\.[a-z0-9-]+)?\.[0-9a-f]{16}.*$/mi', '', $text));
     $text = inbound_tidy_text($text);
     if (mb_strlen($text) > INBOUND_MAX_TEXT) {
         $text = mb_substr($text, 0, INBOUND_MAX_TEXT - 20) . "\n… (zkráceno)";
@@ -342,6 +343,19 @@ function inbound_access_error(array $token, string $email): string
     $pdo = inbound_house_pdo($token['tenant']);
     if (!$pdo) {
         return 'web domu neexistuje nebo není aktivní';
+    }
+    if ($token['kind'] === 'I') {
+        try {
+            $st = $pdo->prepare('SELECT i.email FROM listing_inquiries i JOIN listings l ON l.id = i.listing_id WHERE i.id = ?');
+            $st->execute([$id]);
+            $stored = $st->fetchColumn();
+        } catch (Throwable $e) {
+            $stored = false;   // dům inzeráty nikdy nepoužil (tabulky nejsou)
+        }
+        if ($stored === false) {
+            return 'dotaz k inzerátu neexistuje';
+        }
+        return (string) $stored !== '' && (string) $stored === $email ? '' : 'odesílatel není zájemce, který dotaz poslal';
     }
     $st = $pdo->prepare('SELECT * FROM tickets WHERE id = ?');
     $st->execute([$id]);
@@ -444,6 +458,11 @@ function inbound_apply_ticket(string $kind, int $threadId, string $email, string
     $kind === 'Z' ? ticket_author_reply($t, $u, $full) : ticket_admin_reply(one('SELECT * FROM tickets WHERE id = ?', [$threadId]), $u, $full);
     return '';
 }
+/** Uloží odpověď určenou webu domu (závada nebo zájemce o inzerát) – v kontextu webu domu. Vrací důvod neúspěchu, nebo ''. */
+function inbound_apply_house(string $kind, int $threadId, string $email, string $text, array $files): string
+{
+    return $kind === 'I' ? listing_inquiry_inbound($threadId, $email, $text, $files) : inbound_apply_ticket($kind, $threadId, $email, $text, $files);
+}
 /** Web domu převezme odpovědi z fronty (spouští /cron/prichozi/<klíč>, návštěva webu, nebo přímo běh pro tentýž dům). */
 function inbound_apply_pending(int $max = 50): int
 {
@@ -466,7 +485,7 @@ function inbound_apply_pending(int $max = 50): int
                 }
             }
             try {
-                $why = inbound_apply_ticket((string) $p['kind'], (int) $p['thread_id'], (string) $p['email'], (string) $p['text'], $files);
+                $why = inbound_apply_house((string) $p['kind'], (int) $p['thread_id'], (string) $p['email'], (string) $p['text'], $files);
             } catch (Throwable $e) {
                 $why = 'chyba při ukládání: ' . $e->getMessage();
             }
@@ -534,7 +553,7 @@ function inbound_handle(string $raw): array
             } elseif ($r['tenant'] !== $current) {
                 $r['status'] = 'queued';
             } else {
-                $why = inbound_apply_ticket($r['kind'], (int) $r['thread_id'], $r['sender'], $r['text'], $r['attachments']);
+                $why = inbound_apply_house($r['kind'], (int) $r['thread_id'], $r['sender'], $r['text'], $r['attachments']);
                 $r = $why === '' ? $r : ['ok' => false, 'status' => 'rejected', 'reason' => $why] + $r;
             }
         } catch (Throwable $e) {

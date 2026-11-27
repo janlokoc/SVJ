@@ -22,6 +22,7 @@
             </div>
           </div>
           <div class="actions lst-mine-actions">
+            <?php $ic = listing_inquiry_counts((int) $l['id']); if ($l['status'] !== 'draft' || $ic['total']): ?><a class="btn btn-small<?= $ic['new'] ? '' : ' btn-ghost' ?>" href="<?= url('/inzeraty/' . $l['id'] . '/zajemci') ?>"><?= e(listing_inquiry_label($ic['new'], $ic['total'])) ?></a><?php endif ?>
             <?php if (in_array($l['status'], ['draft', 'published', 'expired'], true)): ?><a class="btn btn-small btn-ghost" href="<?= url('/inzeraty/' . $l['id'] . '/upravit') ?>">Upravit</a><?php endif ?>
             <?php if ($l['status'] === 'draft'): ?><form method="post" action="<?= url('/inzeraty/' . $l['id'] . '/zverejnit') ?>"><?= csrf_field() ?><button class="btn btn-small" type="submit">Zveřejnit</button></form><?php endif ?>
             <?php if ($l['status'] === 'published' || ($l['status'] === 'expired' && !listing_active_for_unit((int) $un['id'], (int) $l['id']))): ?><form method="post" action="<?= url('/inzeraty/' . $l['id'] . '/prodlouzit') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Prodloužit o <?= LISTING_DAYS ?> dní</button></form><?php endif ?>
