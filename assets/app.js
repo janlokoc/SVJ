@@ -788,3 +788,35 @@ document.querySelectorAll('[data-hybrid-admin-poll]').forEach((panel) => {
 });
 // Modul F – výhled fondu oprav: poloha a výška sloupců z data-b/data-h (styl z dat, ne vložený do stránky – CSP).
 document.querySelectorAll('.modf-chart [data-b]').forEach((el) => { el.style.bottom = el.dataset.b + '%'; if (el.dataset.h !== undefined) el.style.height = el.dataset.h + '%'; });
+// Inzerát: prohlížeč fotek přes celou obrazovku (předchozí / další, šipky, posun prstem, Esc). Bez skriptu vede odkaz na samotnou fotku.
+document.querySelectorAll('.lst-gallery').forEach((gal) => {
+  const links = [...gal.querySelectorAll('a.lst-photo')];
+  if (!links.length || typeof HTMLDialogElement !== 'function') return;
+  const dlg = document.createElement('dialog');
+  dlg.className = 'lst-viewer';
+  dlg.setAttribute('aria-label', 'Prohlížeč fotek');
+  dlg.innerHTML = '<figure><img alt=""><figcaption></figcaption></figure>'
+    + '<button type="button" class="lst-v-btn lst-v-prev" aria-label="Předchozí fotka">‹</button>'
+    + '<button type="button" class="lst-v-btn lst-v-next" aria-label="Další fotka">›</button>'
+    + '<button type="button" class="lst-v-btn lst-v-close" aria-label="Zavřít">×</button><span class="lst-v-count" aria-live="polite"></span>';
+  document.body.append(dlg);
+  const img = dlg.querySelector('img'), cap = dlg.querySelector('figcaption'), count = dlg.querySelector('.lst-v-count');
+  let i = 0;
+  const show = (n) => {
+    i = (n + links.length) % links.length;
+    const a = links[i], src = a.querySelector('img');
+    img.src = a.href; img.alt = src ? src.alt : '';
+    const c = a.querySelector('.lst-caption'); cap.textContent = c ? c.textContent : ''; cap.hidden = !c;
+    count.textContent = (i + 1) + ' / ' + links.length;
+  };
+  links.forEach((a, n) => a.addEventListener('click', (e) => { e.preventDefault(); show(n); dlg.showModal(); }));
+  dlg.querySelector('.lst-v-prev').addEventListener('click', () => show(i - 1));
+  dlg.querySelector('.lst-v-next').addEventListener('click', () => show(i + 1));
+  dlg.querySelector('.lst-v-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });   // klik vedle fotky zavře
+  dlg.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') show(i - 1); if (e.key === 'ArrowRight') show(i + 1); });
+  let x0 = null;
+  dlg.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  dlg.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) show(i + (dx < 0 ? 1 : -1)); x0 = null; });
+  if (links.length < 2) dlg.querySelectorAll('.lst-v-prev, .lst-v-next').forEach((b) => { b.hidden = true; });
+});

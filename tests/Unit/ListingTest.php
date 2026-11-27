@@ -774,4 +774,16 @@ final class ListingTest extends TestCase
         listing_ready($pdo);
         $this->assertContains('caption', array_column($pdo->query('PRAGMA table_info(listing_photos)')->fetchAll(\PDO::FETCH_ASSOC), 'name'));
     }
+
+    /** Fotka v galerii se otevře v prohlížeči (předchozí/další, šipky, Esc) – bez skriptu odkaz na samotnou fotku. */
+    public function testGalleryHasPhotoViewer(): void
+    {
+        $js = (string) file_get_contents(dirname(__DIR__, 2) . '/assets/app.js');
+        foreach (["querySelectorAll('.lst-gallery')", 'lst-v-prev', 'lst-v-next', 'lst-v-close', "'ArrowLeft'", "'ArrowRight'", 'touchend', 'showModal()'] as $needle) {
+            $this->assertStringContainsString($needle, $js, $needle);
+        }
+        $html = $this->renderPage($this->published());
+        $this->assertMatchesRegularExpression('~<a class="lst-photo" href="[^"]*/inzerat/foto/\d+\.jpg">~', $html, 'fallback link to the photo');
+        $this->assertStringContainsString('.lst-viewer', (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css'));
+    }
 }
