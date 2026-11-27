@@ -16,12 +16,14 @@
   },
   "odecty-api": {
     "date": "2026-11-27",
-    "checks": 13,
+    "checks": 15,
     "steps": [
       "Správce zapnul automatický příjem a získal adresu.",
       "Poslán JSON (1 řádek uložen, 1 s chybou), CSV (stav přepsán), JSON jen s číslem měřidla (uložen) a požadavek se špatným klíčem (odmítnut 403).",
       "Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“.",
       "Ze stavů na konci měsíců web spočítal měsíční spotřebu (teplá voda 2,45 m³, indikátory 86 dílků).",
+      "Obyvatel vidí u každého měřidla graf spotřeby po měsících a součet za období.",
+      "Automatiku správce zapnul přímo v rámečku „Měsíční informace obyvatelům“; rámeček ukazuje, kdy a za jaký měsíc odejde další upozornění.",
       "Se zapnutým automatickým upozorněním odešel e-mail obyvatelům sám při denní úloze webu (od 5. dne v měsíci, jednou za měsíc)."
     ],
     "note": ""

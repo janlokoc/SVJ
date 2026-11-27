@@ -1,4 +1,4 @@
-<?php /* Dálkové odečty: $remote, $prev, $withData, $units, $bySource, $notices, $apiUrl, $preview */
+<?php /* Dálkové odečty: $remote, $prev, $withData, $units, $bySource, $notices, $plan, $missing, $apiUrl, $preview */
 $prevName = month_label($prev); ?>
 <div class="wrap page narrow">
   <p><a href="<?= url('/admin/odecty') ?>">← Odečty měřidel</a></p>
@@ -8,6 +8,7 @@ $prevName = month_label($prev); ?>
   <section class="card">
     <h2>Stav za <?= e($prevName) ?></h2>
     <p>Odečty za minulý měsíc má <strong><?= $withData ?> z <?= $units ?></strong> jednotek.<?= $units && $withData < $units ? ' U ostatních data chybí – zkontrolujte s odečtovou firmou, že posílá všechna měřidla.' : '' ?></p>
+    <?php if ($missing && $withData): ?><details><summary>Jednotky bez dat za <?= e($prevName) ?> (<?= count($missing) ?>)</summary><p><?= e(implode(', ', $missing)) ?></p></details><?php endif ?>
     <p class="muted">Za posledních 60 dní: <?= (int) ($bySource['api'] ?? 0) ?> odečtů přišlo automaticky, <?= (int) ($bySource['import'] ?? 0) ?> z nahraného souboru, <?= (int) ($bySource['manual'] ?? 0) ?> zadaných ručně.</p>
   </section>
 
@@ -16,7 +17,7 @@ $prevName = month_label($prev); ?>
     <h2>Která měřidla se odečítají na dálku</h2>
     <p class="hint">U těchto měřidel obyvatelé stav nezadávají – přijde od odečtové firmy. Podle zákona jde o teplou vodu, teplo a indikátory; studenou vodu, plyn a elektřinu můžete dál sbírat ručně, nebo je přidat, pokud je máte také na dálku.</p>
     <fieldset class="checks"><?php foreach (READING_KINDS as $k => $label): ?><label class="check"><input type="checkbox" name="kinds[]" value="<?= $k ?>"<?= in_array($k, $remote, true) ? ' checked' : '' ?>> <?= e($label) ?></label><?php endforeach ?></fieldset>
-    <label class="check"><input type="checkbox" name="auto"<?= setting('meter_notice_auto') === '1' ? ' checked' : '' ?>> <span>Každý měsíc obyvatele automaticky upozornit e-mailem <small>5. den v měsíci za předchozí měsíc, jen těm, jejichž jednotka má odečty.</small></span></label>
+    <label class="check"><input type="checkbox" name="compare"<?= meter_compare_on() ? ' checked' : '' ?>> <span>Ukazovat obyvatelům srovnání s průměrem domu <small>Spotřeba na m² proti průměru domu – jen průměr, nikdy jednotlivé byty, a jen když má data aspoň <?= METER_COMPARE_MIN_UNITS ?> jednotek s vyplněnou plochou. Indikátory topení se mezi byty nesrovnávají.</small></span></label>
     <button class="btn" type="submit">Uložit</button>
   </form>
 
@@ -56,9 +57,17 @@ $prevName = month_label($prev); ?>
 
   <section class="card" id="upozorneni">
     <h2>Měsíční informace obyvatelům</h2>
-    <p>Obyvatelé vidí spotřebu po měsících na stránce Odečty měřidel. Zákon (67/2013 Sb., § 8a) žádá, aby o ní každý měsíc prokazatelně věděli – proto jim web pošle e-mail s odkazem.</p>
+    <p>Obyvatelé vidí spotřebu po měsících na stránce Odečty měřidel (graf, srovnání s loňskem<?= meter_compare_on() ? ' a s průměrem domu' : '' ?>). Zákon (67/2013 Sb., § 8a) žádá, aby o ní každý měsíc prokazatelně věděli – proto jim web pošle e-mail s odkazem a upozornění do telefonu.</p>
+    <form method="post" action="<?= url('/admin/odecty/dalkove') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="do" value="auto">
+      <label class="check"><input type="checkbox" name="auto"<?= $plan['on'] ? ' checked' : '' ?>> <span>Posílat automaticky každý měsíc <small>Od 5. dne v měsíci za předchozí měsíc, jakmile jsou data. Jednotkám, kterým data přijdou později, odejde upozornění dodatečně.</small></span></label>
+      <button class="btn btn-small" type="submit">Uložit</button></form>
+    <p class="meter-plan<?= $plan['on'] ? ' is-on' : '' ?>"><?php if (!$plan['on']): ?><strong>Automatika je vypnutá.</strong> Upozornění pošlete ručně tlačítkem níže.
+      <?php elseif ($plan['waiting']): ?><strong>Čeká na data za <?= e(month_label($plan['month'])) ?>.</strong> Upozornění odejde samo, jakmile je pošle odečtová firma<?= $withData ? ' (zatím data má ' . $withData . ' z ' . $units . ' jednotek)' : '' ?>.
+      <?php else: ?><strong>Zapnuto.</strong> Další upozornění odejde <?= e(cz_date($plan['date'])) ?> za <?= e(month_label($plan['month'])) ?>.<?php endif ?></p>
+    <details<?= $plan['on'] ? '' : ' open' ?>><summary>Poslat ručně</summary>
     <form method="post" action="<?= url('/admin/odecty/dalkove') ?>" class="inline-form"><?= csrf_field() ?><input type="hidden" name="do" value="notice"><input type="hidden" name="mesic" value="<?= e($prev) ?>">
-      <button class="btn<?= isset($notices[$prev]) ? ' btn-ghost' : '' ?>" type="submit"><?= isset($notices[$prev]) ? 'Poslat znovu' : 'Poslat upozornění' ?> za <?= e($prevName) ?></button></form>
+      <button class="btn<?= isset($notices[$prev]) || $plan['on'] ? ' btn-ghost' : '' ?>" type="submit"><?= isset($notices[$prev]) ? 'Poslat znovu' : 'Poslat teď' ?> za <?= e($prevName) ?></button></form>
+    </details>
     <?php if ($notices): ?><table class="table"><thead><tr><th>Měsíc</th><th>Odesláno</th><th>Kdy</th></tr></thead><tbody><?php foreach ($notices as $ym => [$when, $n]): ?><tr><td data-label="Měsíc"><?= e(month_label($ym)) ?></td><td data-label="Odesláno"><?= (int) $n ?> e-mailů</td><td data-label="Kdy"><?= e(cz_datetime($when)) ?></td></tr><?php endforeach ?></tbody></table><?php endif ?>
   </section>
   <p class="hint">Údaje o zákonech jsou shrnutí; přesné povinnosti a lhůty si ověřte u odečtové firmy nebo správce domu.</p>

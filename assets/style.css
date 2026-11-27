@@ -2081,3 +2081,19 @@ tr.is-neg td { color: var(--accent); }
 
 .lst-mine-box { margin-bottom: 1.5rem; }
 .lst-mine-box ul { margin: .4rem 0 0; }
+/* Odečty: přehled spotřeby s grafem (11/2026) */
+.meter-box { border-top: 1px solid var(--line); padding-top: .8rem; margin-top: .8rem; }
+.meter-box h3 { margin: 0 0 .2rem; font-size: 1.05rem; }
+.meter-stat { margin: .15rem 0; }
+.meter-delta { display: inline-block; font-size: .88em; font-weight: 600; padding: .05rem .5rem; border-radius: 999px; margin-left: .25rem; }
+.meter-delta.is-down { background: var(--ok-soft); color: var(--ok); }
+.meter-delta.is-up { background: var(--warn-soft); color: var(--warn); }
+.meter-chart { display: block; width: 100%; max-width: 520px; height: auto; margin: .5rem 0 .2rem; }
+.meter-chart .mc-base { stroke: var(--line); stroke-width: 1; }
+.meter-chart .mc-bar { fill: var(--accent-soft); }
+.meter-chart .mc-bar.is-last { fill: var(--primary); }
+.meter-chart .mc-house { fill: var(--ink); stroke: var(--surface-2); stroke-width: 1.2; }
+.meter-chart .mc-month { fill: var(--muted); font-size: 10px; }
+.meter-chart .mc-value { fill: var(--ink); font-size: 11px; font-weight: 600; }
+.meter-plan { padding: .6rem .8rem; border-radius: 10px; background: var(--surface-2); }
+.meter-plan.is-on { background: var(--ok-soft); }

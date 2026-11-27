@@ -10,13 +10,13 @@ $route('GET', '/admin/odecty/dalkove', function () {
     $end = date('Y-m-t', strtotime($start));
     $withData = (int) val('SELECT COUNT(DISTINCT unit_id) FROM readings WHERE read_date BETWEEN ? AND ?', [$start, $end]);
     $notices = [];
-    foreach (all("SELECT `key`, value FROM settings WHERE `key` LIKE 'meter_notice_2%' ORDER BY `key` DESC LIMIT 12") as $r) {
+    foreach (all("SELECT `key`, value FROM settings WHERE `key` LIKE 'meter\\_notice\\_2%' ESCAPE '\\' ORDER BY `key` DESC LIMIT 12") as $r) {
         $notices[substr($r['key'], 13)] = explode('|', $r['value']);
     }
     $token = setting('meter_api_token');
     render('admin/meters', ['title' => 'Dálkové odečty', 'remote' => remote_kinds(), 'prev' => $prev, 'withData' => $withData, 'units' => (int) val('SELECT COUNT(*) FROM units'),
         'bySource' => array_column(all('SELECT source, COUNT(*) n FROM readings WHERE read_date >= ? GROUP BY source', [date('Y-m-d', strtotime('-60 days'))]), 'n', 'source'),
-        'notices' => $notices, 'apiUrl' => $token !== '' ? absolute_url('/api/odecty/' . $token) : '', 'preview' => $_SESSION['meter_preview'] ?? null]);
+        'notices' => $notices, 'plan' => meter_notice_plan(), 'missing' => meter_units_missing($prev), 'apiUrl' => $token !== '' ? absolute_url('/api/odecty/' . $token) : '', 'preview' => $_SESSION['meter_preview'] ?? null]);
     unset($_SESSION['meter_preview']);
 });
 $route('POST', '/admin/odecty/dalkove', function () {
@@ -25,9 +25,14 @@ $route('POST', '/admin/odecty/dalkove', function () {
     if ($do === 'kinds') {
         $kinds = array_values(array_intersect(array_keys(READING_KINDS), (array) ($_POST['kinds'] ?? [])));
         meter_setting('remote_kinds', implode(',', $kinds) ?: '-');
-        meter_setting('meter_notice_auto', isset($_POST['auto']) ? '1' : '0');
-        audit('meter_settings', 'na dálku: ' . (implode(', ', array_map(fn($k) => READING_KINDS[$k], $kinds)) ?: 'nic') . ' · automatické upozornění ' . (isset($_POST['auto']) ? 'zapnuto' : 'vypnuto'));
+        meter_setting('meter_compare', isset($_POST['compare']) ? '1' : '0');
+        audit('meter_settings', 'na dálku: ' . (implode(', ', array_map(fn($k) => READING_KINDS[$k], $kinds)) ?: 'nic') . ' · srovnání s průměrem domu ' . (isset($_POST['compare']) ? 'zapnuto' : 'vypnuto'));
         flash('Nastavení dálkových odečtů je uložené.');
+    } elseif ($do === 'auto') {
+        meter_setting('meter_notice_auto', isset($_POST['auto']) ? '1' : '0');
+        audit('meter_settings', 'automatické měsíční upozornění ' . (isset($_POST['auto']) ? 'zapnuto' : 'vypnuto'));
+        flash(isset($_POST['auto']) ? 'Automatické upozornění je zapnuté.' : 'Automatické upozornění je vypnuté – posílejte ho ručně.', isset($_POST['auto']) ? 'ok' : 'info');
+        redirect('/admin/odecty/dalkove#upozorneni');
     } elseif ($do === 'token') {
         meter_setting('meter_api_token', bin2hex(random_bytes(20)));
         audit('meter_settings', 'nová adresa pro příjem dat');

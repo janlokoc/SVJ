@@ -101,7 +101,7 @@ $readingsPage = function () {
     }
     $rows = $mine ? all('SELECT r.*, u.name author FROM readings r LEFT JOIN users u ON u.id = r.user_id WHERE r.unit_id IN (' . implode(',', $mine) . ') ORDER BY r.read_date DESC, r.id DESC LIMIT 100') : [];
     render('readings', ['title' => 'Odečty měřidel', 'errors' => $errors, 'rows' => $rows, 'units' => array_intersect_key(unit_options(), array_flip($mine)),
-        'manualKinds' => array_diff_key(READING_KINDS, array_flip(remote_kinds())), 'remote' => remote_kinds(), 'monthly' => monthly_consumption($mine)]);
+        'manualKinds' => array_diff_key(READING_KINDS, array_flip(remote_kinds())), 'remote' => remote_kinds(), 'monthly' => monthly_consumption($mine), 'overview' => remote_kinds() ? meter_overview($mine) : []]);
 };
 $route('GET', '/odecty', $readingsPage);
 $route('POST', '/odecty', $readingsPage);

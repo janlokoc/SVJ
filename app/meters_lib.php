@@ -169,16 +169,21 @@ function monthly_consumption(array $unitIds, int $months = 12): array
     krsort($out);
     return $out;
 }
-/** Upozorní obyvatele e-mailem, že je na webu informace o spotřebě za měsíc (prokazatelné upozornění podle § 8a). Vrací počet odeslaných. */
-function meter_notice_send(string $ym): int
+/**
+ * Upozorní obyvatele e-mailem, že je na webu informace o spotřebě za měsíc (prokazatelné upozornění podle § 8a). Vrací počet odeslaných.
+ * $onlyNew: jen jednotkám, kterým data přišla až po předchozím upozornění za tento měsíc (dodatečné upozornění).
+ */
+function meter_notice_send(string $ym, bool $onlyNew = false): int
 {
     $start = $ym . '-01';
     $end = date('Y-m-t', strtotime($start));
     $units = array_map('intval', array_column(all('SELECT DISTINCT unit_id FROM readings WHERE read_date BETWEEN ? AND ?', [$start, $end]), 'unit_id'));
-    if (!$units) {
+    $done = array_map('intval', array_filter(explode(',', setting('meter_notice_units_' . $ym))));
+    $target = $onlyNew ? array_values(array_diff($units, $done)) : $units;
+    if (!$target) {
         return 0;
     }
-    $people = all('SELECT DISTINCT u.id, u.name, u.email FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.active = 1 AND uu.unit_id IN (' . implode(',', $units) . ')');
+    $people = all('SELECT DISTINCT u.id, u.name, u.email FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.active = 1 AND uu.unit_id IN (' . implode(',', $target) . ')');
     $month = month_label($ym);
     $sent = 0;
     $GLOBALS['MAIL_BULK'] = true;   // hromadné upozornění: nad limit hostingu čeká ve frontě
@@ -189,11 +194,17 @@ function meter_notice_send(string $ym): int
     }
     $GLOBALS['MAIL_BULK'] = false;
     push_notify(array_column($people, 'id'), site('name'), 'Spotřeba za ' . $month . ' je na webu.', '/odecty');
-    meter_setting('meter_notice_' . $ym, date('Y-m-d H:i') . '|' . $sent);
-    audit('meter_notice', 'informace o spotřebě za ' . $month . ' · odesláno ' . $sent . ' z ' . count($people));
+    $prev = explode('|', setting('meter_notice_' . $ym));
+    $total = $onlyNew && count($prev) === 2 ? (int) $prev[1] + $sent : $sent;
+    meter_setting('meter_notice_' . $ym, ($onlyNew && count($prev) === 2 ? $prev[0] : date('Y-m-d H:i')) . '|' . $total);
+    meter_setting('meter_notice_units_' . $ym, implode(',', array_values(array_unique([...$done, ...$target]))));
+    audit('meter_notice', ($onlyNew ? 'dodatečná ' : '') . 'informace o spotřebě za ' . $month . ' · odesláno ' . $sent . ' z ' . count($people));
     return $sent;
 }
-/** Denní úloha: když je zapnuté automatické upozorňování, pošle ho 5. den v měsíci za předchozí měsíc (jednou). */
+/**
+ * Denní úloha: když je zapnuté automatické upozorňování, pošle ho od 5. dne v měsíci za předchozí měsíc (jednou),
+ * a jednotkám, kterým data přijdou později, pošle dodatečné upozornění (nejvýš jednou za den).
+ */
 function meter_daily(): void
 {
     if (setting('meter_notice_auto') !== '1' || (int) date('j') < 5) {
@@ -202,7 +213,137 @@ function meter_daily(): void
     $ym = date('Y-m', strtotime('first day of last month'));
     if (setting('meter_notice_' . $ym) === '') {
         meter_notice_send($ym);
+    } elseif (setting('meter_notice_units_' . $ym) !== '') {   // starší záznam bez seznamu jednotek dodatečně neposílá (nevíme, komu už odešlo)
+        meter_notice_send($ym, true);
     }
+}
+/**
+ * Stav automatického upozornění pro obrazovku správce: ['on' => bool, 'month' => 'Y-m' (za který měsíc půjde další),
+ * 'date' => 'Y-m-d' (kdy nejdřív), 'waiting' => true když je termín za námi, ale data ještě nepřišla].
+ */
+function meter_notice_plan(?string $today = null): array
+{
+    $today ??= date('Y-m-d');
+    $last = date('Y-m', strtotime('first day of last month', strtotime($today)));
+    $sentLast = setting('meter_notice_' . $last) !== '';
+    if ((int) substr($today, 8, 2) >= 5 && !$sentLast) {
+        return ['on' => setting('meter_notice_auto') === '1', 'month' => $last, 'date' => $today, 'waiting' => true];
+    }
+    $month = (int) substr($today, 8, 2) < 5 && !$sentLast ? $last : substr($today, 0, 7);
+    return ['on' => setting('meter_notice_auto') === '1', 'month' => $month, 'date' => date('Y-m-05', strtotime($month . '-01 +1 month')), 'waiting' => false];
+}
+
+// ---------- Přehled pro obyvatele: graf, trend, srovnání s průměrem domu ----------
+
+/** Měřidla, u kterých má smysl srovnání mezi byty (indikátory topení ne: každý radiátor má jiný koeficient). */
+const METER_COMPARE_KINDS = ['sv', 'tv', 'teplo', 'plyn', 'el'];
+/** Průměr domu se ukáže jen tehdy, když v něm je aspoň tolik jednotek s daty – z menšího počtu by šlo dopočítat souseda. */
+const METER_COMPARE_MIN_UNITS = 5;
+
+function meter_unit_label(string $kind): string
+{
+    return match ($kind) { 'itn' => 'dílků', 'sv', 'tv', 'plyn' => 'm³', 'el' => 'kWh', default => '' };
+}
+function meter_compare_on(): bool
+{
+    return setting('meter_compare', '1') === '1';
+}
+/**
+ * Průměr domu na m² podlahové plochy za měsíc a druh měřidla: [průměr, počet jednotek] nebo null.
+ * Počítá se celková spotřeba / celková plocha jednotek, které mají plochu a nenulovou spotřebu (prázdné byty by průměr zkreslily
+ * a prozradily, že byt stojí). Pod METER_COMPARE_MIN_UNITS jednotek nic – průměr by prozradil souseda.
+ */
+function meter_house_average(array $houseMonthly, string $ym, string $kind, array $areas): ?array
+{
+    if (!in_array($kind, METER_COMPARE_KINDS, true)) {
+        return null;
+    }
+    $perUnit = [];
+    foreach ($houseMonthly[$ym] ?? [] as [$unitId, $k, , $use]) {
+        if ($k === $kind) {
+            $perUnit[$unitId] = ($perUnit[$unitId] ?? 0) + $use;
+        }
+    }
+    $use = $area = 0.0;
+    $n = 0;
+    foreach ($perUnit as $unitId => $u) {
+        if ($u > 0 && ($areas[$unitId] ?? 0) > 0) {
+            $use += $u;
+            $area += $areas[$unitId];
+            $n++;
+        }
+    }
+    return $n >= METER_COMPARE_MIN_UNITS ? [$use / $area, $n] : null;
+}
+/**
+ * Přehled pro obyvatele: jeden záznam na jednotku a druh měřidla (víc vodoměrů téhož druhu se sečte).
+ * [['unit' => id, 'kind' => k, 'series' => ['Y-m' => spotřeba] za 12 uzavřených měsíců (starší první), 'last' => 'Y-m', 'use' => spotřeba,
+ *   'yearAgo' => spotřeba téhož měsíce loni | null, 'total12' => součet, 'area' => m² | null, 'perM2' => | null,
+ *   'house' => ['Y-m' => průměr domu na m²] (jen když je srovnání zapnuté a dost jednotek), 'houseN' => počet jednotek v průměru za poslední měsíc]]
+ */
+function meter_overview(array $mine, ?string $now = null): array
+{
+    $now ??= date('Y-m-d');
+    $mine = array_values(array_filter(array_map('intval', $mine)));
+    if (!$mine) {
+        return [];
+    }
+    $months = [];
+    for ($i = 12; $i >= 1; $i--) {
+        $months[] = date('Y-m', strtotime(substr($now, 0, 7) . "-01 -$i months"));
+    }
+    $own = monthly_consumption($mine, 14);
+    $areas = array_map('floatval', array_column(all('SELECT id, area FROM units WHERE area IS NOT NULL AND area > 0'), 'area', 'id'));
+    $house = meter_compare_on() ? monthly_consumption(array_map('intval', array_column(all('SELECT id FROM units'), 'id')), 13) : [];
+    $by = [];
+    foreach ($own as $ym => $items) {
+        foreach ($items as [$unitId, $kind, , $use]) {
+            $by[$unitId . '|' . $kind][$ym] = ($by[$unitId . '|' . $kind][$ym] ?? 0) + $use;
+        }
+    }
+    $out = [];
+    foreach ($by as $key => $byMonth) {
+        [$unitId, $kind] = explode('|', $key);
+        $series = [];
+        foreach ($months as $ym) {
+            if (isset($byMonth[$ym])) {
+                $series[$ym] = $byMonth[$ym];
+            }
+        }
+        if (!$series) {
+            continue;
+        }
+        $last = array_key_last($series);
+        $ago = date('Y-m', strtotime($last . '-01 -1 year'));
+        $area = $areas[(int) $unitId] ?? null;
+        $houseAvg = [];
+        $houseN = 0;
+        foreach (array_keys($series) as $ym) {
+            if ($avg = meter_house_average($house, $ym, $kind, $areas)) {
+                $houseAvg[$ym] = $avg[0];
+                if ($ym === $last) {
+                    $houseN = $avg[1];
+                }
+            }
+        }
+        $out[] = ['unit' => (int) $unitId, 'kind' => $kind, 'series' => $series, 'last' => $last, 'use' => $series[$last],
+            'yearAgo' => $byMonth[$ago] ?? null, 'total12' => array_sum($series), 'area' => $area,
+            'perM2' => $area ? $series[$last] / $area : null, 'house' => $area ? $houseAvg : [], 'houseN' => $area ? $houseN : 0];
+    }
+    $order = array_flip(array_keys(READING_KINDS));
+    usort($out, fn($a, $b) => [$a['unit'], $order[$a['kind']] ?? 99] <=> [$b['unit'], $order[$b['kind']] ?? 99]);
+    return $out;
+}
+/** Rozdíl v procentech (zaokrouhlený), nebo null když není s čím srovnat. */
+function meter_delta(float $value, ?float $base): ?int
+{
+    return $base === null || $base <= 0 ? null : (int) round(($value - $base) / $base * 100);
+}
+/** Jednotky bez odečtu v daném měsíci (pro správce): [id => označení]. */
+function meter_units_missing(string $ym): array
+{
+    $have = array_flip(array_map('intval', array_column(all('SELECT DISTINCT unit_id FROM readings WHERE read_date BETWEEN ? AND ?', [$ym . '-01', date('Y-m-t', strtotime($ym . '-01'))]), 'unit_id')));
+    return array_diff_key(unit_options(), $have);
 }
 
 // ---------- Správce: nastavení, import, adresa pro příjem dat, upozornění ----------

@@ -10,6 +10,7 @@ final class MetersTest extends TestCase
 {
     private array $readingIds = [];
     private array $savedSettings = [];
+    private array $savedAreas = [];
 
     protected function tearDown(): void
     {
@@ -22,8 +23,25 @@ final class MetersTest extends TestCase
                 q('INSERT INTO settings (`key`, value) VALUES (?,?)', [$key, $value]);
             }
         }
+        foreach ($this->savedAreas as $id => $area) {
+            q('UPDATE units SET area = ? WHERE id = ?', [$area, $id]);
+        }
         setting('__reset');
-        $this->readingIds = $this->savedSettings = [];
+        $this->readingIds = $this->savedSettings = $this->savedAreas = [];
+    }
+
+    private function setArea(int $unit, ?float $area): void
+    {
+        if (!array_key_exists($unit, $this->savedAreas)) {
+            $this->savedAreas[$unit] = val('SELECT area FROM units WHERE id = ?', [$unit]);
+        }
+        q('UPDATE units SET area = ? WHERE id = ?', [$area, $unit]);
+    }
+
+    /** Konec měsíce před $n měsíci (Y-m-d). */
+    private static function endOf(int $n): string
+    {
+        return date('Y-m-t', strtotime(date('Y-m-01') . " -$n months"));
     }
 
     private function remember(string $key): void
@@ -323,5 +341,132 @@ final class MetersTest extends TestCase
         $this->assertStringContainsString('Spotřeba za březen 2019', mb_decode_mimeheader($mails[0]['subject']));
         $this->assertFalse($GLOBALS['MAIL_BULK'], 'bulk flag is reset');
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}\|' . $sent . '$/', setting('meter_notice_' . $ym));
+    }
+
+    // ---------- Přehled pro obyvatele: graf, loňsko, průměr domu ----------
+
+    public function testHouseAverageNeedsFiveUnitsSkipsEmptyAndHeatIndicators(): void
+    {
+        $ym = '2026-10';
+        $areas = [1 => 50.0, 2 => 70.0, 3 => 60.0, 4 => 40.0, 5 => 80.0, 6 => 55.0, 7 => 0.0];
+        $rows = [[1, 'tv', 'a', 5.0, 0], [2, 'tv', 'b', 7.0, 0], [3, 'tv', 'c', 3.0, 0], [4, 'tv', 'd', 4.0, 0], [6, 'tv', 'f', 0.0, 0], [7, 'tv', 'g', 9.0, 0]];
+        $this->assertNull(meter_house_average([$ym => $rows], $ym, 'tv', $areas), '4 jednotky s daty (nula a bez plochy se nepočítají) → nic');
+        $rows[] = [5, 'tv', 'e', 6.0, 0];
+        $rows[] = [5, 'tv', 'e2', 2.0, 0];   // dva vodoměry v jedné jednotce se sečtou
+        [$avg, $n] = meter_house_average([$ym => $rows], $ym, 'tv', $areas);
+        $this->assertSame(5, $n);
+        $this->assertEqualsWithDelta(27 / 300, $avg, 1e-9, 'celková spotřeba / celková plocha');
+        $itn = array_map(fn($r) => [$r[0], 'itn', $r[2], $r[3], 0], $rows);
+        $this->assertNull(meter_house_average([$ym => $itn], $ym, 'itn', $areas), 'indikátory topení se mezi byty nesrovnávají');
+    }
+
+    public function testOverviewSeriesYearAgoAndHouseComparison(): void
+    {
+        $this->remember('meter_compare');
+        q("DELETE FROM settings WHERE `key` = 'meter_compare'");
+        setting('__reset');
+        $units = array_map('intval', array_column(all('SELECT id FROM units ORDER BY id LIMIT 6'), 'id'));
+        $this->assertCount(6, $units, 'ukázkový dům má aspoň 6 jednotek');
+        $mine = $units[0];
+        foreach ($units as $i => $u) {
+            $this->setArea($u, 50.0 + $i * 10);
+            $meter = 'OV-' . $i . '-' . bin2hex(random_bytes(3));
+            // stav: 13 a 14 měsíců zpět (loňský měsíc), pak poslední dva měsíce
+            $this->addReading($u, 'tv', $meter, 10, self::endOf(14));
+            $this->addReading($u, 'tv', $meter, 12, self::endOf(13));
+            $this->addReading($u, 'tv', $meter, 20, self::endOf(2));
+            $this->addReading($u, 'tv', $meter, 20 + 3 + $i, self::endOf(1));
+        }
+        $all = meter_overview([$mine]);
+        $ov = array_values(array_filter($all, fn($m) => $m['kind'] === 'tv'))[0];
+        $last = substr(self::endOf(1), 0, 7);
+        $this->assertSame($last, $ov['last']);
+        $this->assertEquals(3.0, $ov['use']);
+        $this->assertEquals(2.0, $ov['yearAgo'], 'tentýž měsíc loni');
+        $this->assertSame(50, meter_delta($ov['use'], $ov['yearAgo']));
+        $this->assertEquals(50.0, $ov['area']);
+        $this->assertEqualsWithDelta(3 / 50, $ov['perM2'], 1e-9);
+        $this->assertGreaterThanOrEqual(6, $ov['houseN']);
+        $this->assertArrayHasKey($last, $ov['house']);
+        $this->assertLessThan(12, count($ov['series']) + 1, 'nejvýš 12 měsíců');
+        $this->assertArrayNotHasKey(substr(self::endOf(13), 0, 7), $ov['series'], 'graf jen za posledních 12 měsíců');
+
+        meter_setting('meter_compare', '0');
+        $off = array_values(array_filter(meter_overview([$mine]), fn($m) => $m['kind'] === 'tv'))[0];
+        $this->assertSame([], $off['house'], 'výbor srovnání vypnul');
+        $this->assertSame([], meter_overview([]));
+    }
+
+    public function testResidentPageShowsChartAndComparisonWithoutOtherFlats(): void
+    {
+        $m = ['unit' => 1, 'kind' => 'tv', 'series' => ['2026-09' => 2.5, '2026-10' => 3.0], 'last' => '2026-10', 'use' => 3.0, 'yearAgo' => 4.0,
+            'total12' => 5.5, 'area' => 50.0, 'perM2' => 0.06, 'house' => ['2026-09' => 0.05, '2026-10' => 0.08], 'houseN' => 7];
+        $view = function (array $data): string {
+            extract($data);
+            ob_start();
+            require dirname(__DIR__, 2) . '/app/views/readings.php';
+            return (string) ob_get_clean();
+        };
+        $html = $view(['units' => [1 => 'A/1'], 'remote' => ['tv'], 'manualKinds' => [], 'rows' => [], 'errors' => [],
+            'monthly' => ['2026-10' => [[1, 'tv', 'X', 3.0, 30.0]]], 'overview' => [$m]]);
+        $this->assertStringContainsString('<svg class="meter-chart"', $html);
+        $this->assertSame(2, substr_count($html, 'class="mc-bar'));
+        $this->assertSame(2, substr_count($html, 'class="mc-house"'), 'tečky průměru domu');
+        $this->assertStringContainsString('o 25 % méně než loni', $html);
+        $this->assertStringContainsString('o 25 % méně než průměr', $html);
+        $this->assertStringContainsString('(7 jednotek, bez údajů jednotlivých bytů)', $html);
+        $this->assertStringContainsString('Tabulka po měsících', $html);
+    }
+
+    public function testNoticePlanStates(): void
+    {
+        $this->remember('meter_notice_auto');
+        $this->remember('meter_notice_2030-10');
+        meter_setting('meter_notice_auto', '1');
+        q("DELETE FROM settings WHERE `key` = 'meter_notice_2030-10'");
+        setting('__reset');
+        $this->assertSame(['on' => true, 'month' => '2030-10', 'date' => '2030-11-27', 'waiting' => true], meter_notice_plan('2030-11-27'), 'termín je za námi, data chybí');
+        $this->assertSame(['on' => true, 'month' => '2030-10', 'date' => '2030-11-05', 'waiting' => false], meter_notice_plan('2030-11-03'));
+        meter_setting('meter_notice_2030-10', '2030-11-05 06:00|12');
+        $this->assertSame(['on' => true, 'month' => '2030-11', 'date' => '2030-12-05', 'waiting' => false], meter_notice_plan('2030-11-27'), 'za říjen odešlo, další za listopad 5. 12.');
+        meter_setting('meter_notice_auto', '0');
+        $this->assertFalse(meter_notice_plan('2030-11-27')['on']);
+    }
+
+    public function testLateDataGetFollowUpNoticeOnlyForNewUnits(): void
+    {
+        if ((int) val('SELECT COUNT(*) FROM push_subs') > 0) {
+            $this->markTestSkipped('push subscriptions present – push_notify() would contact a push service');
+        }
+        $ym = '2019-05';
+        $this->remember('meter_notice_' . $ym);
+        $this->remember('meter_notice_units_' . $ym);
+        $linked = array_map('intval', array_column(all('SELECT DISTINCT uu.unit_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 ORDER BY uu.unit_id LIMIT 2'), 'unit_id'));
+        $this->assertCount(2, $linked);
+        [$a, $b] = $linked;
+        $this->addReading($a, 'tv', 'L1', 5, $ym . '-31');
+        $first = meter_notice_send($ym);
+        $this->assertGreaterThan(0, $first);
+        $this->assertSame((string) $a, setting('meter_notice_units_' . $ym));
+        $this->assertSame(0, meter_notice_send($ym, true), 'nikdo nový → nic');
+        $before = count($this->mails());
+        $this->addReading($b, 'tv', 'L2', 7, $ym . '-31');
+        $late = meter_notice_send($ym, true);
+        $expected = (int) val('SELECT COUNT(DISTINCT u.id) FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.active = 1 AND uu.unit_id = ?', [$b]);
+        $this->assertSame($expected, $late, 'jen obyvatelé jednotky, které data přišla později');
+        $this->assertCount($before + $late, $this->mails());
+        $this->assertStringEndsWith('|' . ($first + $late), setting('meter_notice_' . $ym), 'součet odeslaných');
+        $this->assertSame($a . ',' . $b, setting('meter_notice_units_' . $ym));
+    }
+
+    public function testAdminScreenHasAutoSwitchInNoticeCard(): void
+    {
+        $s = (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/admin/meters.php');
+        $card = substr($s, (int) strpos($s, 'id="upozorneni"'));
+        $this->assertStringContainsString('name="auto"', $card, 'automatika je přímo v rámečku upozornění');
+        $this->assertStringContainsString('value="auto"', $card);
+        $this->assertStringContainsString('Poslat ručně', $card);
+        $this->assertStringNotContainsString('name="auto"', substr($s, 0, (int) strpos($s, 'id="upozorneni"')));
+        $this->assertStringContainsString('name="compare"', $s);
     }
 }

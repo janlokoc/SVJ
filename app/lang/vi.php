@@ -1204,4 +1204,17 @@ return [
     'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.' => 'Nhập ngày dọn vào theo lịch, hoặc đánh dấu “ngay lập tức”.',
     'Plochu sklepa zadejte v m² jako číslo, např. #.' => 'Nhập diện tích kho bằng m², ví dụ #.',
     'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.' => 'Nhập phụ phí đỗ xe bằng CZK (chỉ số), hoặc để trống.',
+    // Odečty: přehled spotřeby (11/2026)
+    'za {}' => 'cho {}',
+    'stejně jako loni' => 'bằng năm ngoái',
+    'o # % více než loni' => 'nhiều hơn # % so với năm ngoái',
+    'o # % méně než loni' => 'ít hơn # % so với năm ngoái',
+    'stejně jako průměr' => 'bằng mức trung bình',
+    'o # % více než průměr' => 'nhiều hơn # % so với mức trung bình',
+    'o # % méně než průměr' => 'ít hơn # % so với mức trung bình',
+    'Na m²: {} · průměr domu: {}' => 'Trên mỗi m²: {} · trung bình tòa nhà: {}',
+    'Za posledních {} měsíců celkem {}.' => 'Tổng cộng trong {} tháng qua: {}.',
+    'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Các chấm trên biểu đồ: mức trung bình của tòa nhà cho căn hộ cùng diện tích ({} căn, không có dữ liệu từng căn).',
+    'Tabulka po měsících' => 'Bảng theo tháng',
+    'Průměr domu pro byt Vaší velikosti: {}' => 'Trung bình tòa nhà cho căn hộ cùng diện tích: {}',
 ];

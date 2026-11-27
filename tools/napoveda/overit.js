@@ -202,12 +202,14 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     await owner.goto(T + '/odecty');
     const mt = await text(owner, '.meter-monthly');
     check(mt.includes('2,45') && mt.includes('86 dílků'), 'měsíční spotřeba spočítaná ze stavů'); step('Ze stavů na konci měsíců web spočítal měsíční spotřebu (teplá voda 2,45 m³, indikátory 86 dílků).');
+    check(await owner.locator('.meter-monthly svg.meter-chart').count() >= 1 && /Za posledních 2 měsíců celkem/.test(mt), 'graf spotřeby a součet za období'); step('Obyvatel vidí u každého měřidla graf spotřeby po měsících a součet za období.');
     await admin.goto(T + '/admin/odecty/dalkove');
-    await admin.click('#upozorneni button[type=submit]');
+    await admin.click('#upozorneni form:has([value=notice]) button');
     const fl = await text(admin, 'main'); check(/Upozornění/.test(fl), 'měsíční upozornění odesláno: ' + fl.slice(0, 120));
     const ml = fs.existsSync(MAIL) ? fs.readFileSync(MAIL, 'utf8') : ''; check(ml.includes('petr.novak@example.cz') || ml.includes('marie.novakova@example.cz'), 'e-mail s upozorněním vlastníkovi');
     // Automatické upozornění: zapnout, „zapomenout“ ruční odeslání a nechat proběhnout denní úlohu webu.
-    await admin.check('#nastaveni [name=auto]'); await admin.click('#nastaveni button[type=submit]');
+    await admin.check('#upozorneni [name=auto]'); await admin.click('#upozorneni form:has([name=auto]) button[type=submit]');
+    check((await text(admin, '#upozorneni .meter-plan')).includes('Zapnuto'), 'automatika zapnutá přímo v rámečku upozornění, stav s termínem'); step('Automatiku správce zapnul přímo v rámečku „Měsíční informace obyvatelům“; rámeček ukazuje, kdy a za jaký měsíc odejde další upozornění.');
     const ym = await admin.inputValue('#upozorneni [name=mesic]');
     run(`DELETE FROM settings WHERE key IN ('meter_notice_${ym}', 'last_daily')`);
     const before = fs.readFileSync(MAIL, 'utf8').length;

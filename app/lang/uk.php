@@ -1204,4 +1204,17 @@ return [
     'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.' => 'Вкажіть дату заселення як день у календарі або позначте «одразу».',
     'Plochu sklepa zadejte v m² jako číslo, např. #.' => 'Вкажіть площу підвалу в м² числом, напр. #.',
     'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.' => 'Вкажіть доплату за паркування в кронах (лише число) або залиште поле порожнім.',
+    // Odečty: přehled spotřeby (11/2026)
+    'za {}' => 'за {}',
+    'stejně jako loni' => 'як торік',
+    'o # % více než loni' => 'на # % більше, ніж торік',
+    'o # % méně než loni' => 'на # % менше, ніж торік',
+    'stejně jako průměr' => 'як середнє',
+    'o # % více než průměr' => 'на # % більше за середнє',
+    'o # % méně než průměr' => 'на # % менше за середнє',
+    'Na m²: {} · průměr domu: {}' => 'На м²: {} · середнє по будинку: {}',
+    'Za posledních {} měsíců celkem {}.' => 'Разом за останні {} місяців: {}.',
+    'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Точки на графіку: середнє по будинку для квартири Вашої площі ({} одиниць, без даних окремих квартир).',
+    'Tabulka po měsících' => 'Таблиця за місяцями',
+    'Průměr domu pro byt Vaší velikosti: {}' => 'Середнє по будинку для квартири Вашої площі: {}',
 ];

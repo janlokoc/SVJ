@@ -7,13 +7,27 @@
     <h2>Spotřeba po měsících</h2>
     <p class="hint"><?= e(implode(', ', array_map(fn($k) => READING_KINDS[$k], $remote))) ?> se odečítá na dálku. Spotřeba za měsíc je rozdíl stavů na konci měsíce a na konci předchozího měsíce.</p>
     <?php if (!$monthly): ?><p class="empty">Zatím tu nejsou data za celý měsíc. Objeví se, jakmile je pošle odečtová firma.</p><?php else: ?>
+    <?php foreach ($overview ?? [] as $m): $ul = meter_unit_label($m['kind']); $f = fn(float $v) => str_replace('.', ',', (string) round($v, $v >= 10 ? 1 : 2));
+      $yoy = $m['yearAgo'] !== null ? meter_delta($m['use'], $m['yearAgo']) : null;
+      $houseLast = $m['house'][$m['last']] ?? null; $vsHouse = $houseLast !== null && $m['perM2'] !== null ? meter_delta($m['perM2'], $houseLast) : null; ?>
+    <div class="meter-box">
+      <h3><?= e(READING_KINDS[$m['kind']] ?? $m['kind']) ?><?= count($units) > 1 ? ' · ' . e($units[$m['unit']] ?? '') : '' ?></h3>
+      <?php $yoyText = $yoy === null ? '' : ($yoy === 0 ? 'stejně jako loni' : ($yoy > 0 ? 'o ' . $yoy . ' % více než loni' : 'o ' . abs($yoy) . ' % méně než loni'));
+        $houseText = $vsHouse === null ? '' : ($vsHouse === 0 ? 'stejně jako průměr' : ($vsHouse > 0 ? 'o ' . $vsHouse . ' % více než průměr' : 'o ' . abs($vsHouse) . ' % méně než průměr')); ?>
+      <p class="meter-stat"><strong><?= e($f($m['use']) . ' ' . $ul) ?></strong> <span>za <?= e(month_label($m['last'])) ?></span><?php if ($yoyText !== ''): ?> <span class="meter-delta <?= $yoy > 0 ? 'is-up' : 'is-down' ?>"><?= e($yoyText) ?></span><?php endif ?></p>
+      <?php if ($houseText !== ''): ?><p class="meter-stat"><span>Na m²: <?= e($f($m['perM2']) . ' ' . $ul) ?> · průměr domu: <?= e($f($houseLast) . ' ' . $ul) ?></span> <span class="meter-delta <?= $vsHouse > 0 ? 'is-up' : 'is-down' ?>"><?= e($houseText) ?></span></p><?php endif ?>
+      <?php if (count($m['series']) > 1): require __DIR__ . '/_meter_chart.php'; endif ?>
+      <p class="hint"><span>Za posledních <?= count($m['series']) ?> měsíců celkem <?= e($f($m['total12']) . ' ' . $ul) ?>.</span><?php if ($m['house']): ?> <span>Tečky v grafu: průměr domu pro byt Vaší velikosti (<?= (int) $m['houseN'] ?> jednotek, bez údajů jednotlivých bytů).</span><?php endif ?></p>
+    </div>
+    <?php endforeach ?>
+    <details<?= ($overview ?? []) ? '' : ' open' ?>><summary>Tabulka po měsících</summary>
     <table class="table"><thead><tr><th>Měsíc</th><th>Měřidlo</th><th>Spotřeba</th><th>Stav na konci měsíce</th></tr></thead><tbody>
       <?php foreach ($monthly as $ym => $items): foreach ($items as $i => [$unitId, $kind, $meter, $use, $state]): ?><tr>
         <td data-label="Měsíc"><?= $i === 0 ? e(month_label($ym)) : '' ?></td>
         <td data-label="Měřidlo"><?= e(READING_KINDS[$kind] ?? $kind) ?><?= count($units) > 1 ? ' · ' . e($units[$unitId] ?? '') : '' ?><?= $meter !== '' ? ' <small class="muted">č. ' . e($meter) . '</small>' : '' ?></td>
         <td data-label="Spotřeba"><strong><?= e(str_replace('.', ',', (string) round($use, 3))) ?></strong> <?= $kind === 'itn' ? 'dílků' : (in_array($kind, ['sv', 'tv', 'plyn'], true) ? 'm³' : ($kind === 'el' ? 'kWh' : '')) ?></td>
         <td data-label="Stav na konci měsíce"><?= e(str_replace('.', ',', (string) $state)) ?></td></tr><?php endforeach; endforeach ?>
-    </tbody></table><?php endif ?>
+    </tbody></table></details><?php endif ?>
   </section>
   <?php endif ?>
   <?php if ($manualKinds): ?>

@@ -1204,4 +1204,17 @@ return [
     'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.' => 'Dátum nasťahovania zadajte ako deň v kalendári, alebo zaškrtnite „ihneď“.',
     'Plochu sklepa zadejte v m² jako číslo, např. #.' => 'Plochu pivnice zadajte v m² ako číslo, napr. #.',
     'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.' => 'Príplatok za parkovanie zadajte v Kč (len číslo), alebo pole nechajte prázdne.',
+    // Odečty: přehled spotřeby (11/2026)
+    'za {}' => 'za {}',
+    'stejně jako loni' => 'rovnako ako vlani',
+    'o # % více než loni' => 'o # % viac ako vlani',
+    'o # % méně než loni' => 'o # % menej ako vlani',
+    'stejně jako průměr' => 'rovnako ako priemer',
+    'o # % více než průměr' => 'o # % viac ako priemer',
+    'o # % méně než průměr' => 'o # % menej ako priemer',
+    'Na m²: {} · průměr domu: {}' => 'Na m²: {} · priemer domu: {}',
+    'Za posledních {} měsíců celkem {}.' => 'Za posledných {} mesiacov spolu {}.',
+    'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Bodky v grafe: priemer domu pre byt Vašej veľkosti ({} jednotiek, bez údajov jednotlivých bytov).',
+    'Tabulka po měsících' => 'Tabuľka po mesiacoch',
+    'Průměr domu pro byt Vaší velikosti: {}' => 'Priemer domu pre byt Vašej veľkosti: {}',
 ];

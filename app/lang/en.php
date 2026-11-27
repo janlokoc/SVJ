@@ -1204,4 +1204,17 @@ return [
     'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.' => 'Enter the move-in date as a calendar day, or tick “immediately”.',
     'Plochu sklepa zadejte v m² jako číslo, např. #.' => 'Enter the cellar area in m² as a number, e.g. #.',
     'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.' => 'Enter the parking surcharge in CZK (just the number), or leave the field empty.',
+    // Odečty: přehled spotřeby (11/2026)
+    'za {}' => 'for {}',
+    'stejně jako loni' => 'same as last year',
+    'o # % více než loni' => '# % more than last year',
+    'o # % méně než loni' => '# % less than last year',
+    'stejně jako průměr' => 'same as average',
+    'o # % více než průměr' => '# % more than average',
+    'o # % méně než průměr' => '# % less than average',
+    'Na m²: {} · průměr domu: {}' => 'Per m²: {} · building average: {}',
+    'Za posledních {} měsíců celkem {}.' => 'Total over the last {} months: {}.',
+    'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Dots in the chart: building average for a flat of your size ({} units, no data of individual flats).',
+    'Tabulka po měsících' => 'Table by month',
+    'Průměr domu pro byt Vaší velikosti: {}' => 'Building average for a flat of your size: {}',
 ];

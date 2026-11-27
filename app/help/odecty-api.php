@@ -41,7 +41,7 @@
 
 <h2>Co se stane s daty</h2>
 <ul>
-  <li>Obyvatel uvidí na stránce <strong>Odečty</strong> stavy svých měřidel se zdrojem „dálkový odečet“ a spotřebu po měsících.</li>
+  <li>Obyvatel uvidí na stránce <strong>Odečty</strong> stavy svých měřidel se zdrojem „dálkový odečet“ a u každého měřidla graf spotřeby po měsících se součtem za období (od druhého měsíce s daty, spotřeba je rozdíl stavů na konci měsíců).</li>
   <li>U měřidel odečítaných na dálku obyvatelé stav ručně nezadávají.</li>
-  <li>Web může obyvatele každý měsíc upozornit e-mailem na novou informaci o spotřebě (zákon č. 67/2013 Sb., § 8a).</li>
+  <li>Web může obyvatele každý měsíc upozornit e-mailem na novou informaci o spotřebě (zákon č. 67/2013 Sb., § 8a). Automatiku zapnete přímo v rámečku <strong>Měsíční informace obyvatelům</strong>; rámeček ukazuje, kdy a za jaký měsíc odejde další upozornění.</li>
 </ul>
