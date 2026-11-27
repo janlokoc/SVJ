@@ -10,7 +10,7 @@
     <label>Odkaz na videohovor
       <input type="url" name="hybrid_video_url" value="<?= e($h['video_url']) ?>" maxlength="500" placeholder="https://meet.jit.si/… nebo odkaz z Teams, Zoomu, Google Meet" inputmode="url"></label>
     <p class="actions"><button class="btn btn-small btn-ghost" type="button" data-jitsi-room="<?= e($jitsi) ?>">Vytvořit místnost Jitsi</button>
-      <span class="hint">Jitsi Meet je zdarma a bez registrace. Místnost dostane náhodný název; odkaz uvidí jen vlastníci, kteří se v den shromáždění připojí na webu.</span></p>
+      <span class="hint">Jitsi Meet je zdarma. Kdo místnost otevírá (předsedající), se musí přihlásit účtem Google, GitHub nebo Facebook; vlastníci se připojují bez účtu. Místnost dostane náhodný název a odkaz uvidí jen vlastníci, kteří se v den shromáždění připojí na webu.</span></p>
     <label class="check"><input type="checkbox" name="hybrid_statutes" value="1"<?= (int) $h['statutes_ok'] === 1 ? ' checked' : '' ?>>
       <span>Stanovy umožňují účast a hlasování technickými prostředky <small>Povinné. Bez takového ustanovení ve stanovách (§ 1206 odst. 2 občanského zákoníku) se online účast a hlasování nepočítají – shromáždění musí být prezenční.</small></span></label>
     <details class="hint"><summary>Vzorové ustanovení stanov</summary>

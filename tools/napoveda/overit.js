@@ -625,7 +625,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     }
 
     // ---------- Shromáždění online a hybridně ----------
-    begin('shromazdeni-online', 'Videohovor samotný (Jitsi Meet, Microsoft Teams, Zoom, Google Meet) jsme neověřovali – jde o cizí služby; ověřovací běh místo nich otevřel prázdnou zkušební stránku. Ověřeno je vše na webu: zapnutí pro dům, forma u termínu, připojení vlastníků s kódem z e-mailu, prezence, hlasování online, odchod a zápis.');
+    begin('shromazdeni-online', 'Videohovor samotný (Jitsi Meet, Microsoft Teams, Zoom, Google Meet) jsme neověřovali – jde o cizí služby; přihlášení předsedajícího na meet.jit.si a limit 25 připojení měsíčně jsou podle stránek Jitsi (oznámení 8/2023, podmínky 2020), neověřeno v provozu; ověřovací běh místo nich otevřel prázdnou zkušební stránku. Ověřeno je vše na webu: zapnutí pro dům, forma u termínu, připojení vlastníků s kódem z e-mailu, prezence, hlasování online, odchod a zápis.');
     {
       await admin.goto(T + '/admin/shromazdeni-online');
       check((await text(admin)).includes('Vzorové ustanovení stanov') && (await text(admin)).includes('technických prostředků'), 'vzorové ustanovení stanov na stránce');
@@ -636,10 +636,10 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       step('Administrace → Shromáždění online: povoleno pro dům i ověření kódem z e-mailu; stránka nabízí vzorové ustanovení stanov.');
       edition('standard'); await admin.goto(T + '/admin/terminy/novy');
       const std = await text(admin, 'fieldset.hybrid-fields');
-      check(std.includes('Online nebo hybridní forma stojí v edici Standard 490 Kč bez DPH za shromáždění a platí se z kreditu služeb') && std.includes('V edici Premium je v ceně'), 'cena v edici Standard: ' + std.slice(0, 300));
+      check(!std.includes('Kč') && std.includes('Vytvořit místnost Jitsi') && std.includes('přihlásit účtem Google, GitHub nebo Facebook'), 'edice Standard: online forma bez ceny, poznámka o přihlášení k Jitsi: ' + std.slice(0, 300));
       edition('premium', true); await admin.goto(T + '/admin/terminy/novy');
-      check(!(await text(admin, 'fieldset.hybrid-fields')).includes('490'), 'v edici Premium v ceně');
-      step('U termínu v edici Standard web uvádí cenu 490 Kč bez DPH za shromáždění z kreditu služeb; v edici Premium je v ceně (cenu neukazuje).');
+      check(!(await text(admin, 'fieldset.hybrid-fields')).includes('Kč'), 'v edici Premium v ceně');
+      step('U termínu ve Standardu i Premium je online forma v ceně (žádná cena); u tlačítka Vytvořit místnost Jitsi web upozorní, že předsedající se k Jitsi přihlásí účtem Google, GitHub nebo Facebook.');
       await admin.goto(T + '/admin/terminy/novy');
       await admin.fill('[name=title]', 'Mimořádné shromáždění vlastníků'); await admin.fill('[name=event_date]', today); await admin.fill('[name=event_time]', '18:00'); await admin.fill('[name=place]', 'Kočárkárna a online');
       await admin.fill('[name=program]', '- Zahájení shromáždění\n- Výměna vchodových dveří za nejvýše 180 000 Kč\n- Ukončení shromáždění');

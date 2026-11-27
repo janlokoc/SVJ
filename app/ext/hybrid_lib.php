@@ -12,7 +12,8 @@ declare(strict_types=1);
  * meeting_votes s method = 'online'. Kdo z online přítomných nehlasuje, počítá se jako „zdržel se“ (na místě platí
  * „kdo neřekne jinak, je pro“ – online by mlčení mohlo znamenat jen výpadek spojení).
  *
- * Videohovor samotný web neprovozuje ani nenahrává – jen ukládá odkaz. Veřejný Jitsi Meet (meet.jit.si) je zdarma,
+ * Videohovor samotný web neprovozuje ani nenahrává – jen ukládá odkaz. Veřejný Jitsi Meet (meet.jit.si) je zdarma (místnost
+ * otevírá přihlášený uživatel – Google/GitHub/Facebook; podle podmínek z 2020 limit 25 připojení měsíčně),
  * přesto je funkce v BETA_FEATURES ('shromazdeni-online', výchozí stav vypnuto), aby ji provozovatel nejdřív vyzkoušel.
  * Zapnutí pro dům: edice Standard a výš + přepínač správce v Administraci → Shromáždění online (nastavení 'hybrid_on').
  * Cena: v ceně edice Standard i Premium (11/2026) – provozovatele nic nestojí. Mechanismus platby z kreditu (price_online_meeting,
