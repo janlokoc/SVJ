@@ -733,24 +733,12 @@ final class ListingTest extends TestCase
         $this->assertStringNotContainsString(unit_name($this->unitRow('a')), $html);
     }
 
-    /** Současný nájemník inzerované jednotky (pozvaný na web) inzerát nevidí – ani v seznamu, ani na stránce, ani fotky. */
-    public function testTenantOfTheUnitDoesNotSeeListing(): void
+    /** Současný nájemník inzerované jednotky inzerát vidí (jako ostatní obyvatelé), ale nesmí ho upravovat ani zakládat. */
+    public function testTenantOfTheUnitSeesButCannotEdit(): void
     {
         $l = $this->published();
-        $this->assertTrue(listing_hidden_from($l, $this->u('tenant')));
-        $this->assertFalse(listing_can_view($l, $this->u('tenant')));
-        $this->assertFalse(listing_hidden_from($l, $this->u('owner')));
-        $this->assertTrue(listing_can_view($l, $this->u('owner')));
-        $this->assertTrue(listing_can_view($l, $this->u('other')), 'neighbour sees it');
-        $this->assertTrue(listing_can_view($l, null), 'public page stays public for visitors who are not logged in');
-        // Nájemník jiné jednotky inzerát vidí.
-        $this->users['tenant_b'] = $this->user('tenant', [$this->units['b']]);
-        $this->assertTrue(listing_can_view($l, $this->u('tenant_b')));
-        // „Nejdřív sousedé“: ani v době jen pro obyvatele ho nájemník té jednotky nevidí.
-        q('UPDATE listings SET public_from = ? WHERE id = ?', [date('Y-m-d H:i:s', $this->now + 86400), (int) $l['id']]);
-        $l = listing_get((int) $l['id']);
-        $this->assertSame('residents', listing_visibility($l, $this->now));
-        $this->assertFalse(listing_can_view($l, $this->u('tenant'), $this->now));
-        $this->assertTrue(listing_can_view($l, $this->u('other'), $this->now));
+        $this->assertTrue(listing_can_view($l, $this->u('tenant')));
+        $this->assertFalse(listing_can_manage($l, $this->u('tenant')));
+        $this->assertSame([], listing_owner_units($this->u('tenant')), 'no unit to create a listing for');
     }
 }

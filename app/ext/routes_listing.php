@@ -218,7 +218,7 @@ $route('GET', '/inzeraty', function () {
         not_found();
     }
     listing_ready();
-    $rows = array_values(array_filter(all("SELECT * FROM listings WHERE hidden = 0 AND status IN ('published','sold') ORDER BY published_at DESC"), fn($l) => listing_visibility($l) !== 'none' && !listing_hidden_from($l, $u)));
+    $rows = array_values(array_filter(all("SELECT * FROM listings WHERE hidden = 0 AND status IN ('published','sold') ORDER BY published_at DESC"), fn($l) => listing_visibility($l) !== 'none'));
     $covers = [];
     foreach ($rows as $l) {
         $covers[$l['id']] = one('SELECT * FROM listing_photos WHERE listing_id = ? ORDER BY sort, id LIMIT 1', [(int) $l['id']]);
