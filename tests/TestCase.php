@@ -24,6 +24,11 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $_SESSION = [];
         $_POST = $_GET = [];
         user(true);   // přihlášení z předchozího testu nesmí přetrvat
+        // Hodinový limit fronty e-mailů počítá odeslané zprávy všech testů dohromady; bez úklidu by podle pořadí testů
+        // (--order-by=random) hromadné zprávy v pozdějších testech začaly čekat ve frontě.
+        if (function_exists('mailq_pdo')) {
+            mailq_pdo()->exec('DELETE FROM mailq WHERE sent_at IS NOT NULL');
+        }
     }
     /** Přihlásí uživatele (bez hesla) jako v požadavku webu. */
     protected function loginAs(string $role = 'admin'): array

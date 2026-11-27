@@ -1,0 +1,53 @@
+From: Petr <{FROM}>
+To: odpovedi@example.cz
+Subject: Re: [#{TOKEN}]
+Message-ID: <multi-{MID}@x>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="OUTER"
+
+This is a multi-part message in MIME format.
+--OUTER
+Content-Type: multipart/alternative; boundary="INNER"
+
+--INNER
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Pos=C3=ADl=C3=A1m fotku kohoutku a protokol.
+
+-----Original Message-----
+From: vybor@example.cz
+Sent: Wednesday
+
+citace
+
+--INNER
+Content-Type: text/html; charset=utf-8
+
+<p>HTML verze, kterou nechceme</p>
+--INNER--
+--OUTER
+Content-Type: image/png; name="kohoutek.png"
+Content-Disposition: attachment; filename="kohoutek.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6
+kgAAAABJRU5ErkJggg==
+--OUTER
+Content-Type: application/pdf
+Content-Disposition: attachment;
+ filename*=UTF-8''protokol%20%C4%8D.%201.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKMSAwIG9iajw8L1R5cGUvQ2F0YWxvZy9QYWdlcyAyIDAgUj4+ZW5kb2JqIDIgMCBv
+Ymo8PC9UeXBlL1BhZ2VzL0tpZHNbXS9Db3VudCAwPj5lbmRvYmoKdHJhaWxlcjw8L1Jvb3QgMSAw
+IFI+PgolJUVPRgo=
+--OUTER
+Content-Type: image/png; name="logo.png"
+Content-Disposition: inline; filename="logo.png"
+Content-ID: <logo@x>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6
+kgAAAABJRU5ErkJggg==
+--OUTER--

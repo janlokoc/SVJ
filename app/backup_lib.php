@@ -4,11 +4,11 @@ declare(strict_types=1);
 /*
  * Úplná záloha dat služby pro pravidelné stažení mimo hosting (GitHub Actions ji zašifruje a uloží).
  * Obsah: databáze (konzistentní kopie přes VACUUM INTO), nahrané soubory, hlášení, klíče pro upozornění,
- * certifikáty a storage/config.php. Bez přihlášení (sessions), fronty e-mailů a dočasných souborů.
+ * certifikáty a storage/config.php. Bez přihlášení (sessions), fronty e-mailů a dočasných souborů (i příloh odpovědí e-mailem čekajících na web domu).
  * Adresa /zaloha/<klíč>, klíč v storage/config.php jako 'backup_key' (jiný než pro cron).
  */
 
-const BACKUP_SKIP = '~(^|/)([a-z-]*sessions|tmp)(/|$)|(^|/)mailq[.-]|\.lock$|\.tick$|\.pending$|(^|/)instalacni-kod|^obnova-2fa|^obnova-pristupu|^mail-staging\.log$|\.sqlite-(wal|shm|journal)$~';
+const BACKUP_SKIP = '~(^|/)([a-z-]*sessions|tmp)(/|$)|(^|/)mailq[.-]|\.lock$|\.tick$|\.pending$|(^|/)instalacni-kod|^obnova-2fa|^obnova-pristupu|^mail-staging\.log$|^inbound/files(/|$)|^inbound/pending-.*\.flag$|\.sqlite-(wal|shm|journal)$~';
 
 /** Sestaví ZIP se zálohou do dočasného souboru a vrátí jeho cestu (volající ho po odeslání smaže). */
 function backup_build(): string

@@ -453,8 +453,7 @@ $route('POST', '/admin/zavady/(\d+)', function (int $id) {
     $old = $t['status'];
     $t = one('SELECT * FROM tickets WHERE id = ?', [$id]);
     if ($message !== '') {
-        ticket_log_add($id, 'msg_admin', mb_substr($message, 0, 5000));
-        ticket_notify_author($t, $message);
+        ticket_admin_reply($t, null, $message);
     } elseif ($status !== $old && !empty($t['user_id'])) {
         push_notify([(int) $t['user_id']], site('name'), 'Vaše hlášení „' . $subject . '“: ' . mb_strtolower(TICKET_STATUS[$status]), '/zavady#z' . $id);
     }

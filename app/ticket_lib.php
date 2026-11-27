@@ -86,7 +86,10 @@ function ticket_partner_emails(): array
     }
     return array_column(pq('SELECT email FROM partner_users WHERE partner_id = ? AND active = 1 AND notify_tickets = 1', [(int) $t['partner_id']])->fetchAll(), 'email');
 }
-/** Upozornění správcům: nové hlášení, nebo odpověď obyvatele. */
+/**
+ * Upozornění správcům: nové hlášení, nebo odpověď obyvatele. Je-li zapnutý příjem odpovědí e-mailem (app/ext/inbound_lib.php),
+ * dostane každý aktivní správce domu vlastní značku vlákna – jeho odpověď na e-mail se uloží jako zpráva obyvateli.
+ */
 function ticket_notify_admins(array $t, string $what, string $text): void
 {
     $users = ticket_recipients($t);
@@ -101,14 +104,22 @@ function ticket_notify_admins(array $t, string $what, string $text): void
     $subject = $what . ': ' . $t['subject'] . ' – ' . site('name');
     $body = "Dobrý den,\n\n$what na webu " . site('name') . ":\n\n" . $t['subject'] . ($t['location'] !== '' ? ' (' . $t['location'] . ')' : '') . "\n\n" . $text
         . "\n\nVyřídit: " . absolute_url('/admin/zavady#z' . $t['id']);
+    $canAnswer = (int) ($t['user_id'] ?? 0) > 0;
     foreach (array_unique($emails) as $email) {
         if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            send_mail($email, $subject, $body);
+            $in = $canAnswer && function_exists('inbound_reply') && ticket_admin_by_email($email) ? inbound_reply('V', TENANT, (int) $t['id'], $email) : null;
+            $in ? send_mail($email, $subject . ' ' . $in['tag'], $body . "\nOdpovědět obyvateli můžete i přímo odpovědí na tento e-mail.\n\n" . $in['line'], null, null, null, $in['reply_to'])
+                : send_mail($email, $subject, $body);
         }
     }
     if (function_exists('push_notify')) {
         push_notify(array_column($users, 'id'), site('name'), $what . ': ' . $t['subject'], '/admin/zavady#z' . $t['id']);
     }
+}
+/** Aktivní správce domu s danou e-mailovou adresou (jen ten smí odpovídat obyvateli e-mailem), nebo null. */
+function ticket_admin_by_email(string $email): ?array
+{
+    return one("SELECT * FROM users WHERE LOWER(email) = ? AND role = 'admin' AND active = 1 ORDER BY id LIMIT 1", [strtolower(trim($email))]);
 }
 /** Zpráva správce obyvateli: e-mail a upozornění do telefonu. */
 function ticket_notify_author(array $t, string $text): void
@@ -118,12 +129,36 @@ function ticket_notify_author(array $t, string $text): void
         return;
     }
     if (filter_var($u['email'], FILTER_VALIDATE_EMAIL)) {
-        send_mail($u['email'], 'Odpověď na Vaše hlášení: ' . $t['subject'] . ' – ' . site('name'), "Dobrý den,\n\nk Vašemu hlášení „" . $t['subject'] . "“ přišla odpověď:\n\n" . $text
-            . "\n\nStav: " . mb_strtolower(TICKET_STATUS[$t['status']]) . "\nOdpovědět můžete na webu: " . absolute_url('/zavady#z' . $t['id']));
+        $in = function_exists('inbound_reply') ? inbound_reply('Z', TENANT, (int) $t['id'], (string) $u['email']) : null;
+        send_mail($u['email'], 'Odpověď na Vaše hlášení: ' . $t['subject'] . ' – ' . site('name') . ($in ? ' ' . $in['tag'] : ''), "Dobrý den,\n\nk Vašemu hlášení „" . $t['subject'] . "“ přišla odpověď:\n\n" . $text
+            . "\n\nStav: " . mb_strtolower(TICKET_STATUS[$t['status']]) . ($in ? "\nOdpovědět můžete přímo na tento e-mail, nebo na webu: " . absolute_url('/zavady#z' . $t['id']) . "\n\n" . $in['line']
+                : "\nOdpovědět můžete na webu: " . absolute_url('/zavady#z' . $t['id'])), null, null, null, $in['reply_to'] ?? null);
     }
     if (function_exists('push_notify')) {
         push_notify([(int) $u['id']], site('name'), 'Odpověď na hlášení „' . $t['subject'] . '“', '/zavady#z' . $t['id']);
     }
+}
+/**
+ * Odpověď obyvatele ve vlákně (web /zavady/{id}/odpoved i odpověď e-mailem): vyřešené hlášení se znovu otevře,
+ * zpráva se zapíše a správci (řešitel) dostanou upozornění.
+ */
+function ticket_author_reply(array $t, array $u, string $text): void
+{
+    ticket_ready();
+    $id = (int) $t['id'];
+    if ($t['status'] === 'done') {
+        q("UPDATE tickets SET status = 'in_progress', updated_at = datetime('now','localtime') WHERE id = ?", [$id]);
+        ticket_log_add($id, 'status', TICKET_STATUS['in_progress'] . ' (znovu otevřeno odpovědí obyvatele)', $u);
+        $t['status'] = 'in_progress';
+    }
+    ticket_log_add($id, 'msg_author', $text, $u);
+    ticket_notify_admins($t, 'Odpověď obyvatele', $u['name'] . ":\n" . $text);
+}
+/** Zpráva správce obyvateli (z administrace i odpovědí správce e-mailem): zápis do historie a upozornění obyvateli. */
+function ticket_admin_reply(array $t, ?array $by, string $message): void
+{
+    ticket_log_add((int) $t['id'], 'msg_admin', mb_substr($message, 0, 5000), $by);
+    ticket_notify_author($t, $message);
 }
 /** Denně: připomínka hlášení po termínu (řešiteli, jinak správcům) – jednou denně. */
 function ticket_daily(): void

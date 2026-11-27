@@ -185,19 +185,32 @@ function report_reply_url(array $r): string
  */
 function report_user_followup(array $r, array $who): array
 {
+    $body = mb_substr(trim(post('body')), 0, 5000);
+    $errors = report_followup_errors($r, $body);
+    $shot = $errors ? '' : report_store_shot($errors);
+    if ($errors) {
+        return $errors;
+    }
+    report_add_followup($r, $who, $body, $shot);
+    return [];
+}
+/** Kontrola doplnění od autora (z webu i z e-mailu): text a nejvýš 10 zpráv za hodinu. */
+function report_followup_errors(array $r, string $body): array
+{
     report_messages_ready();
     $errors = [];
-    $body = mb_substr(trim(post('body')), 0, 5000);
     if (mb_strlen($body) < 2) {
         $errors[] = 'Napište prosím, co chcete doplnit.';
     }
     if ((int) rq("SELECT COUNT(*) FROM report_messages WHERE report_id = ? AND author = 'user' AND created_at > ?", [$r['id'], date('Y-m-d H:i:s', time() - 3600)])->fetchColumn() >= 10) {
         $errors[] = 'K tomuto hlášení jste za poslední hodinu poslali hodně zpráv. Zkuste to prosím později.';
     }
-    $shot = $errors ? '' : report_store_shot($errors);
-    if ($errors) {
-        return $errors;
-    }
+    return $errors;
+}
+/** Uloží doplnění od autora do vlákna, vrátí hlášení mezi nová a upozorní provozovatele (web i odpověď e-mailem). */
+function report_add_followup(array $r, array $who, string $body, string $shot = ''): void
+{
+    report_messages_ready();
     $now = date('Y-m-d H:i:s');
     rq('INSERT INTO report_messages (report_id, author, by_name, body, screenshot, created_at) VALUES (?,?,?,?,?,?)', [$r['id'], 'user', $who['name'], $body, $shot, $now]);
     rq("UPDATE reports SET status = 'new', updated_at = ? WHERE id = ?", [$now, $r['id']]);
@@ -209,7 +222,6 @@ $body
 
 Vyřídit: " . platform_url('/sprava/hlaseni/' . $r['id']));
     }
-    return [];
 }
 /** Chybu webu (neošetřenou výjimku) zapíše mezi hlášení; opakování téže chyby jen zvýší počet. Nikdy nesmí sama selhat. */
 function report_auto(Throwable $e): void
@@ -257,11 +269,16 @@ function report_update(array $r, string $status, string $reply, string $note, st
     $notify = $reply !== '' || ($status !== $r['status'] && in_array($status, ['done', 'rejected', 'planned'], true));
     if (filter_var($r['user_email'], FILTER_VALIDATE_EMAIL) && $notify && $r['type'] !== 'auto') {
         $link = report_reply_url($r);
+        // Odpovědi e-mailem (app/ext/inbound_lib.php): značka vlákna v předmětu a v textu, odpověď jde do schránky pro odpovědi.
+        $in = function_exists('inbound_reply') ? inbound_reply('H', '', (int) $r['id'], (string) $r['user_email']) : null;
         $text = "Dobrý den,\n\nk Vašemu hlášení ze dne " . cz_date($r['created_at']) . " („" . mb_strimwidth($r['body'], 0, 120, '…') . "“):\n\nStav: " . REPORT_STATUS[$status] . ($reply !== '' ? "\n\n" . $reply : '')
-            . ($link !== '' ? "\n\nOdpovědět nebo něco doplnit můžete u hlášení na webu (po přihlášení):\n" . $link . "\nOdpověď na tento e-mail se k hlášení nepřipojí."
+            . ($link !== '' ? ($in ? "\n\nOdpovědět nebo něco doplnit můžete přímo odpovědí na tento e-mail, nebo u hlášení na webu (po přihlášení):\n" . $link
+                    : "\n\nOdpovědět nebo něco doplnit můžete u hlášení na webu (po přihlášení):\n" . $link . "\nOdpověď na tento e-mail se k hlášení nepřipojí.")
                 : ($r['type'] !== 'auto' && (int) $r['user_id'] === 0 ? "\n\nPokud chcete něco doplnit, odpovězte prosím na tento e-mail." : ''))
-            . "\n\nDěkujeme, že pomáháte web zlepšovat.";
-        reports_central() ? platform_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status], $text) : send_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status] . ' – ' . site('name'), $text);
+            . "\n\nDěkujeme, že pomáháte web zlepšovat." . ($in ? "\n\n" . $in['line'] : '');
+        $subject = 'Vaše hlášení: ' . REPORT_STATUS[$status] . ($in ? ' ' . $in['tag'] : '');
+        reports_central() ? platform_mail($r['user_email'], $subject, $text, $in['reply_to'] ?? null)
+            : send_mail($r['user_email'], 'Vaše hlášení: ' . REPORT_STATUS[$status] . ' – ' . site('name') . ($in ? ' ' . $in['tag'] : ''), $text, null, null, null, $in['reply_to'] ?? null);
     }
 }
 /** Pošle snímek hlášení, případně snímek ze zprávy ve vlákně ($msgId). */

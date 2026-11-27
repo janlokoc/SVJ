@@ -167,6 +167,10 @@ if (preg_match('~^/cron/([A-Za-z0-9_\-]{16,100})$~', $PATH, $cronKey) && ($IS_PL
     header('Content-Type: text/plain; charset=utf-8');
     header('Cache-Control: no-store');
     @set_time_limit(150);
+    // Odpovědi e-mailem (app/ext/inbound_lib.php) před frontou e-mailů – upozornění, která z nich vzniknou, odejdou hned.
+    if (function_exists('inbound_on') && inbound_on()) {
+        echo 'Odpovědi e-mailem: ' . inbound_run_summary(inbound_run(null, 30)) . "\n";
+    }
     [$sentQ, $badQ, $leftQ] = mailq_run(100, true);
     echo "E-maily z fronty: odesláno $sentQ, nepodařilo se $badQ, čeká $leftQ\n";
     if (platform_enabled()) {
@@ -177,6 +181,19 @@ if (preg_match('~^/cron/([A-Za-z0-9_\-]{16,100})$~', $PATH, $cronKey) && ($IS_PL
         daily_tasks();
         echo "Denní úlohy: hotovo\n";
     }
+    exit;
+}
+// Odpovědi e-mailem k závadám: běh nad schránkou (v konzoli platformy) je zařadil do fronty, web domu je tu převezme
+// a uloží ve svém kontextu (stejný klíč jako pro cron).
+if (!$IS_PLATFORM && platform_enabled() && preg_match('~^/cron/prichozi/([A-Za-z0-9_\-]{16,100})$~', $PATH, $cronKey)) {
+    $ck = (string) (app_config()['cron_key'] ?? '');
+    if ($ck === '' || !hash_equals($ck, $cronKey[1]) || !function_exists('inbound_apply_pending')) {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: text/plain; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo 'Odpovědi e-mailem: připojeno ' . inbound_apply_pending() . "\n";
     exit;
 }
 // Pravidelná záloha (GitHub Actions ji stáhne, zašifruje a uloží): tajný klíč 'backup_key' v config.php.
@@ -355,6 +372,15 @@ if ($PATH === '/favicon.ico') {
 // Úlohy jednou denně (připomenutí revizí) spustí první návštěva dne.
 if ($METHOD === 'GET' && !$needsSetup && !support_mode()) {
     daily_tasks();
+}
+// Odpovědi e-mailem čekající na tento web (když je nepřevzal požadavek z cronu): převezmou se po vyřízení požadavku.
+if (function_exists('inbound_marker') && !$IS_PLATFORM && !support_mode() && is_file(inbound_marker(TENANT))) {
+    register_shutdown_function(function () {
+        if (function_exists('fastcgi_finish_request')) {
+            fastcgi_finish_request();
+        }
+        inbound_apply_pending();
+    });
 }
 // Fronta e-mailů (limit hostingu): čekající zprávy odcházejí po vyřízení požadavku, nejvýš jednou za minutu.
 if (function_exists('mailq_run') && is_file(mailq_marker())) {

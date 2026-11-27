@@ -239,13 +239,7 @@ $route('POST', '/zavady/(\d+)/odpoved', function (int $id) {
         flash('Napište prosím zprávu (nejvýše 5000 znaků).', 'error');
         redirect('/zavady#z' . $id);
     }
-    if ($t['status'] === 'done') {
-        q("UPDATE tickets SET status = 'in_progress', updated_at = datetime('now','localtime') WHERE id = ?", [$id]);
-        ticket_log_add($id, 'status', TICKET_STATUS['in_progress'] . ' (znovu otevřeno odpovědí obyvatele)');
-        $t['status'] = 'in_progress';
-    }
-    ticket_log_add($id, 'msg_author', $text);
-    ticket_notify_admins($t, 'Odpověď obyvatele', $u['name'] . ":\n" . $text);
+    ticket_author_reply($t, $u, $text);
     flash('Odpověď jsme předali.');
     redirect('/zavady#z' . $id);
 });
