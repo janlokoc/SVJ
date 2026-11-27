@@ -43,7 +43,8 @@ $listingForm = function (int $unitId, int $id) use ($listingOwnerGuard) {
     $errors = $warnings = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         [$d, $errors] = listing_input($_POST, $unit);
-        $form = array_merge($form, $d, ['area' => $d['area'] ?? post('area'), 'outdoor_area' => $d['outdoor_area'] ?? post('outdoor_area')]);
+        $form = array_merge($form, $d, ['area' => $d['area'] ?? post('area'), 'outdoor_area' => $d['outdoor_area'] ?? post('outdoor_area'),
+            'features_post' => is_array($_POST['features'] ?? null) ? $_POST['features'] : []]);
         if (!$errors) {
             $id = listing_save($u, $unitId, $d, $id);
             foreach (array_map('intval', (array) ($_POST['photo_delete'] ?? [])) as $pid) {

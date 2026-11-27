@@ -2017,6 +2017,27 @@ tr.is-neg td { color: var(--accent); }
 .lst-hide { display: flex; gap: .4rem; flex-wrap: wrap; }
 .lst-hide input { min-width: 0; flex: 1 1 10rem; }
 .lst-reports { padding-left: 1.2rem; }
+/* Vybavení a příslušenství: formulář (skupiny) a přehled s fajfkami na stránce inzerátu */
+.lst-features-field legend small { font-weight: 400; color: var(--muted); }
+.lst-features-field > .hint { margin: 0; }
+.lst-fgroup { padding: .9rem 1rem; gap: .8rem; background: var(--surface); }
+.lst-fgroup legend { font-weight: 600; padding: 0 .3rem; }
+.lst-fgroup[hidden], [data-lst-needs][hidden], [data-lst-for][hidden] { display: none; }
+.lst-checks { display: flex; flex-wrap: wrap; gap: .6rem 1.4rem; }
+.lst-flabel { margin: 0 0 -.4rem; font-weight: 600; }
+.form .lst-check-inline { align-self: end; padding-bottom: .55rem; }
+.lst-features { margin: 0 0 2rem; }
+.lst-features h2 { margin-bottom: .75rem; }
+.lst-checklist { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.75rem; }
+.lst-checklist li { display: flex; align-items: baseline; gap: .55rem; min-width: 0; padding: .5rem 0; border-bottom: 1px dashed var(--line); }
+.lst-ftext { min-width: 0; overflow-wrap: anywhere; }
+.lst-mark { flex: none; width: 1.3rem; height: 1.3rem; display: inline-grid; place-items: center; border-radius: 50%; font-size: .8rem; font-weight: 800; background: var(--primary); color: #fff; transform: translateY(.1rem); }
+.lst-no .lst-mark { background: var(--surface-2); color: var(--muted); }
+.lst-no .lst-ftext { color: var(--muted); }
+.lst-fv { font-weight: 700; white-space: nowrap; }
+.lst-fnote { color: var(--muted); }
+.lst-fnote::before { content: "("; } .lst-fnote::after { content: ")"; }
+@media (max-width: 520px) { .lst-checklist { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 860px) {
   .lst-grid { grid-template-columns: minmax(0, 1fr); }
   .lst-photo { flex-basis: 92%; }

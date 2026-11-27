@@ -822,7 +822,7 @@ final class ListingTest extends TestCase
         $this->assertStringContainsString('<option value="terasa" selected>Terasa</option>', $html);
         $this->assertStringContainsString('name="outdoor_area" inputmode="decimal" value="15,5"', $html);
         $this->assertStringContainsString('data-lst-outdoor', $html);
-        $this->assertStringContainsString("'outdoor_type' => 'Balkon / lodžie', 'outdoor_area' => 'Plocha balkonu / lodžie (m²)'", (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/listing/form.php'),
+        $this->assertSame(['Balkon / lodžie', 'Plocha balkonu / lodžie (m²)'], [listing_ai_fields()['outdoor_type'], listing_ai_fields()['outdoor_area']],
             'AI pomocník dostane druh i plochu balkonu');
         $this->assertStringContainsString("[data-lst-outdoor]", (string) file_get_contents(dirname(__DIR__, 2) . '/assets/app.js'));
     }
@@ -882,5 +882,275 @@ final class ListingTest extends TestCase
         $this->assertStringNotContainsString(listing_path($draft), $html, 'no public link for a draft');
         $pub = listing_get($this->published()['id']);
         $this->assertSame('zveřejněný', listing_owner_state($pub));
+    }
+
+    // ---------- Vybavení a příslušenství (sloupec features, JSON podle LISTING_FEATURES) ----------
+
+    private function rentPost(array $features, array $over = []): array
+    {
+        return $this->post($over + ['type' => 'pronajem', 'price' => '18 500', 'fees' => '3 500', 'features' => $features]);
+    }
+
+    public function testFeaturesWhitelistAndTypeSpecificFields(): void
+    {
+        $raw = ['sklep' => '1', 'sklep_plocha' => '2,5 m²', 'parkovani' => 'garaz', 'parkovani_cena' => '1 500', 'komora' => '1', 'kolarna' => '',
+            'vytah' => 'ano', 'bezbarierovy' => '1', 'stav' => 'po_kompletni_renovaci', 'zarizeni' => 'castecne', 'spotrebice' => ['pracka', 'lednice', 'lednice', 'bazen', ['x']],
+            'vytapeni' => 'ustredni', 'internet' => 'optika', 'vlastnictvi' => 'osobni', 'kauce' => '37 000', 'min_doba' => '12', 'zvirata' => 'dohodou', 'nastehovani' => '2027-02-01',
+            'sauna' => '1', 'evil' => '<script>'];
+        // Prodej: údaje pro pronájem se ignorují (bez chyby), neznámé klíče a volby se zahodí.
+        [$d, $errors] = listing_input($this->post(['features' => $raw]), $this->unitRow('a'));
+        $this->assertSame([], $errors);
+        $this->assertSame(['sklep' => true, 'sklep_plocha' => 2.5, 'parkovani' => 'garaz', 'parkovani_cena' => 1500, 'komora' => true, 'vytah' => 'ano', 'bezbarierovy' => true,
+            'stav' => 'po_kompletni_renovaci', 'zarizeni' => 'castecne', 'spotrebice' => ['lednice', 'pracka'], 'vytapeni' => 'ustredni', 'internet' => 'optika', 'vlastnictvi' => 'osobni'],
+            json_decode($d['features'], true));
+        // Pronájem: vlastnictví se ignoruje, kauce, doba, zvířata a datum nastěhování se uloží.
+        [$d, $errors] = listing_input($this->rentPost($raw), $this->unitRow('a'));
+        $this->assertSame([], $errors);
+        $f = json_decode($d['features'], true);
+        $this->assertArrayNotHasKey('vlastnictvi', $f);
+        $this->assertSame([37000, 12, 'dohodou', '2027-02-01'], [$f['kauce'], $f['min_doba'], $f['zvirata'], $f['nastehovani']]);
+        // „ihned“ má přednost před datem; neplatné volby se nevyberou.
+        [$d] = listing_input($this->rentPost(['nastehovani' => '2027-02-01', 'ihned' => '1', 'zvirata' => 'krokodyl', 'parkovani' => 'hangar', 'vytah' => 'mozna']), $this->unitRow('a'));
+        $this->assertSame(['nastehovani' => 'ihned'], json_decode($d['features'], true));
+        // Závislé údaje bez hlavního se neuloží (plocha bez sklepa, příplatek bez parkování).
+        [$d] = listing_input($this->post(['features' => ['sklep_plocha' => '3', 'parkovani_cena' => '500']]), $this->unitRow('a'));
+        $this->assertSame('{}', $d['features']);
+        // Bez údaje (starší formulář) i s nesmyslným tvarem = prázdné.
+        foreach ([null, 'text', ['spotrebice' => 'lednice']] as $bad) {
+            [$d, $errors] = listing_input($this->post(['features' => $bad]), $this->unitRow('a'));
+            $this->assertSame([[], '{}'], [$errors, $d['features']]);
+        }
+        $this->assertSame(['prislusenstvi', 'dum', 'stav', 'prodej', 'pronajem'], array_keys(LISTING_FEATURE_GROUPS));
+        foreach (LISTING_FEATURES as $k => $def) {
+            $this->assertArrayHasKey($def['group'], LISTING_FEATURE_GROUPS, $k);
+        }
+    }
+
+    public function testFeatureNumbersAndDatesAreChecked(): void
+    {
+        $cases = [
+            ['kauce', 'abc', 'Kauci zadejte v Kč (jen číslo), nebo pole nechte prázdné.'],
+            ['kauce', '0', 'Kauci zadejte v Kč (jen číslo), nebo pole nechte prázdné.'],
+            ['kauce', '12345678', 'Kauci zadejte v Kč (jen číslo), nebo pole nechte prázdné.'],
+            ['min_doba', '0', 'Minimální dobu nájmu zadejte v měsících (1 až 120), nebo pole nechte prázdné.'],
+            ['min_doba', '121', 'Minimální dobu nájmu zadejte v měsících (1 až 120), nebo pole nechte prázdné.'],
+            ['min_doba', '6,5', 'Minimální dobu nájmu zadejte v měsících (1 až 120), nebo pole nechte prázdné.'],
+            ['nastehovani', '2027-02-30', 'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.'],
+            ['nastehovani', 'brzy', 'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.'],
+        ];
+        foreach ($cases as [$k, $v, $msg]) {
+            [, $errors] = listing_input($this->rentPost([$k => $v]), $this->unitRow('a'));
+            $this->assertSame([$msg], $errors, "$k = $v");
+            // U prodeje se pole pro pronájem vůbec nečtou.
+            [, $errors] = listing_input($this->post(['features' => [$k => $v]]), $this->unitRow('a'));
+            $this->assertSame([], $errors, "prodej: $k = $v");
+        }
+        [, $errors] = listing_input($this->post(['features' => ['sklep' => '1', 'sklep_plocha' => '500']]), $this->unitRow('a'));
+        $this->assertSame(['Plochu sklepa zadejte v m² jako číslo, např. 2,5.'], $errors);
+        [, $errors] = listing_input($this->post(['features' => ['parkovani' => 'garaz', 'parkovani_cena' => 'zdarma']]), $this->unitRow('a'));
+        $this->assertSame(['Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.'], $errors);
+        [$d, $errors] = listing_input($this->rentPost(['kauce' => '37 000 Kč', 'min_doba' => '120']), $this->unitRow('a'));
+        $this->assertSame([], $errors);
+        $this->assertSame(['kauce' => 37000, 'min_doba' => 120], json_decode($d['features'], true));
+    }
+
+    /** Uložené údaje se při čtení znovu ověří podle schématu (ruční zásah do databáze, změna typu inzerátu). */
+    public function testStoredFeaturesAreCleanedOnRead(): void
+    {
+        $id = $this->draft(['features' => ['sklep' => '1']]);
+        $this->assertSame(['sklep' => true], listing_features(listing_get($id)));
+        q('UPDATE listings SET features = ? WHERE id = ?', ['{"sklep":true,"evil":"<script>alert(1)</script>","stav":"<b>zruina</b>","kauce":5000,"spotrebice":["lednice","<i>"]}', $id]);
+        $this->assertSame(['sklep' => true], listing_features(listing_get($id)), 'prodej: kauce se neukáže, neplatné hodnoty pryč');
+        $this->assertNull(listing_publish($id, $this->now));
+        $html = $this->renderPage(listing_get($id));
+        $this->assertStringContainsString('<span class="lst-fl">Sklep</span>', $html);
+        $this->assertStringNotContainsString('<script>alert(1)', $html);
+        $this->assertStringNotContainsString('zruina', $html);
+        $this->assertStringNotContainsString('Kauce', $html);
+        foreach (['', 'null', '[1,2]', '{nejde', '"sklep"'] as $bad) {
+            $this->assertSame([], listing_features(['type' => 'prodej', 'features' => $bad]), $bad);
+        }
+        $this->assertSame([], listing_features(['type' => 'prodej']), 'starší řádek bez sloupce');
+    }
+
+    /** Starší tabulka inzerátů (s balkonem, bez vybavení) dostane sloupec features při prvním použití. */
+    public function testFeaturesColumnAddedToOldTable(): void
+    {
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec("CREATE TABLE listings (id INTEGER PRIMARY KEY AUTOINCREMENT, unit_id INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT '', outdoor_type TEXT NOT NULL DEFAULT '', outdoor_area REAL, status TEXT NOT NULL DEFAULT '')");
+        $pdo->exec("INSERT INTO listings (unit_id, type, outdoor_type, status) VALUES (3, 'prodej', 'balkon', 'published')");
+        listing_ready($pdo);
+        $cols = array_column($pdo->query('PRAGMA table_info(listings)')->fetchAll(\PDO::FETCH_ASSOC), 'name');
+        $this->assertContains('features', $cols);
+        $row = $pdo->query('SELECT * FROM listings')->fetch(\PDO::FETCH_ASSOC);
+        $this->assertSame(['{}', 'balkon'], [$row['features'], $row['outdoor_type']]);
+        $this->assertSame([], listing_features($row));
+        $this->assertSame([], listing_feature_items($row + ['price' => 0]));
+        // Nová tabulka má sloupec rovnou.
+        $fresh = new \PDO('sqlite::memory:');
+        listing_ready($fresh);
+        $this->assertContains('features', array_column($fresh->query('PRAGMA table_info(listings)')->fetchAll(\PDO::FETCH_ASSOC), 'name'));
+    }
+
+    public function testFeaturesChecklistOnPublicPage(): void
+    {
+        $l = $this->published($this->rentPost(['sklep' => '1', 'sklep_plocha' => '2', 'parkovani' => 'stani_kryte', 'parkovani_cena' => '800', 'kolarna' => '1', 'vytah' => 'ne',
+            'stav' => 'dobry', 'spotrebice' => ['lednice', 'mycka'], 'internet' => 'dsl', 'kauce' => '37000', 'min_doba' => '12', 'zvirata' => 'dohodou', 'ihned' => '1']));
+        $html = $this->renderPage($l);
+        $this->assertStringContainsString('<h2 id="lst-features-h">Vybavení a příslušenství</h2>', $html);
+        $this->assertStringContainsString("<span class=\"lst-fl\">Sklep</span><span class=\"lst-fsep\"> · </span><span class=\"lst-fv\">2\u{a0}m²</span>", $html);
+        $this->assertStringContainsString("<span class=\"lst-fl\">Kryté parkovací stání</span><span class=\"lst-fsep\"> · </span><span>příplatek</span> <span class=\"lst-fv\">800\u{a0}Kč / měsíc</span>", $html);
+        $this->assertStringContainsString("<span class=\"lst-fl\">Kauce</span><span class=\"lst-fsep\">: </span><span class=\"lst-fv\">37\u{a0}000\u{a0}Kč</span> <small class=\"lst-fnote\">2 nájmy</small>", $html);
+        $this->assertStringContainsString('<span class="lst-fl">Minimální doba nájmu</span><span class="lst-fsep">: </span><span class="lst-fv">12 měsíců</span>', $html);
+        $this->assertStringContainsString('<span class="lst-fl">Domácí zvířata</span><span class="lst-fsep">: </span><span class="lst-fv">dohodou</span>', $html);
+        $this->assertStringContainsString('<span class="lst-fl">K nastěhování</span><span class="lst-fsep">: </span><span class="lst-fv">ihned</span>', $html);
+        $this->assertMatchesRegularExpression('~<li class="lst-no"><span class="lst-mark" aria-hidden="true">–</span>\s*<span class="lst-ftext"><span class="lst-fl">Bez výtahu</span>~u', $html);
+        foreach (['Kolárna', 'V dobrém stavu', 'Lednice', 'Myčka', 'Internet DSL'] as $item) {
+            $this->assertMatchesRegularExpression('~<li><span class="lst-mark" aria-hidden="true">✓</span>\s*<span class="lst-ftext"><span class="lst-fl">' . preg_quote($item, '~') . '</span></span></li>~u', $html, $item);
+        }
+        // Vynechané: co vlastník nevyplnil, se neukáže.
+        foreach (['Komora', 'Trouba', 'Vytápění', 'topení', 'Vlastnictví', 'Bezbariérový'] as $absent) {
+            $this->assertStringNotContainsString($absent, $html, $absent);
+        }
+        // Pořadí podle schématu: příslušenství, dům, stav, pronájem.
+        $this->assertLessThan(strpos($html, '>Kauce<'), strpos($html, 'Bez výtahu'));
+        $this->assertLessThan(strpos($html, 'Bez výtahu'), strpos($html, '>Sklep<'));
+        // Kauce, která není násobkem nájmu, je bez počtu nájmů; datum nastěhování jako datum.
+        q('UPDATE listings SET features = ? WHERE id = ?', ['{"kauce":40000,"nastehovani":"2027-02-01","zvirata":"ne","vytah":"ano"}', $l['id']]);
+        $html = $this->renderPage(listing_get((int) $l['id']));
+        $this->assertStringContainsString("<span class=\"lst-fv\">40\u{a0}000\u{a0}Kč</span></span>", $html);
+        $this->assertStringContainsString('<span class="lst-fv">1. 2. 2027</span>', $html);
+        $this->assertMatchesRegularExpression('~<li class="lst-no"><span class="lst-mark" aria-hidden="true">–</span>\s*<span class="lst-ftext"><span class="lst-fl">Domácí zvířata</span><span class="lst-fsep">: </span><span class="lst-fv">ne</span>~u', $html);
+        $this->assertMatchesRegularExpression('~<li><span class="lst-mark" aria-hidden="true">✓</span>\s*<span class="lst-ftext"><span class="lst-fl">Výtah</span>~u', $html);
+        // Bez údajů žádný oddíl.
+        q("UPDATE listings SET features = '{}' WHERE id = ?", [$l['id']]);
+        $this->assertStringNotContainsString('lst-features', $this->renderPage(listing_get((int) $l['id'])));
+        $this->assertSame(['1 nájem', '3 nájmy', '5 nájmů', '1 měsíc', '4 měsíce', '24 měsíců'], [listing_plural(1, 'nájem', 'nájmy', 'nájmů'), listing_plural(3, 'nájem', 'nájmy', 'nájmů'),
+            listing_plural(5, 'nájem', 'nájmy', 'nájmů'), listing_plural(1, 'měsíc', 'měsíce', 'měsíců'), listing_plural(4, 'měsíc', 'měsíce', 'měsíců'), listing_plural(24, 'měsíc', 'měsíce', 'měsíců')]);
+        // Na telefonu jeden sloupec (žádné vodorovné posouvání).
+        $css = (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css');
+        $this->assertStringContainsString('@media (max-width: 520px) { .lst-checklist { grid-template-columns: minmax(0, 1fr); } }', $css);
+    }
+
+    public function testFeaturesInShareTextAndLinkPreview(): void
+    {
+        $l = $this->published($this->rentPost(['sklep' => '1', 'sklep_plocha' => '2,5', 'parkovani' => 'garaz', 'parkovani_cena' => '1500', 'vytah' => 'ano',
+            'spotrebice' => ['mycka', 'lednice'], 'internet' => 'dsl', 'kauce' => '37000', 'zvirata' => 'dohodou', 'ihned' => '1'], ['description' => 'Světlý byt u parku, klidná ulice, dobrá dostupnost.']));
+        $share = listing_share_text($l);
+        $this->assertStringContainsString("\nVybavení: sklep 2,5 m², garáž – příplatek 1 500 Kč / měsíc, výtah, lednice, myčka, internet DSL, kauce 37 000 Kč (2 nájmy), domácí zvířata dohodou, k nastěhování ihned\nCena: 18 500 Kč / měsíc", $share);
+        $this->assertStringNotContainsString("\u{a0}", $share);
+        $og = listing_meta($l, listing_photos((int) $l['id']))['og:description'];
+        $this->assertStringContainsString('sklep, garáž, výtah, lednice, myčka, internet DSL', $og);
+        $this->assertStringNotContainsString('kauce', $og, 'náhled odkazu jen klíčová slova');
+        $this->assertSame('sklep, garáž, výtah, lednice, myčka, internet DSL', listing_features_text($l, true));
+        // V náhledu nejvýše LISTING_FEATURES_SHORT_MAX klíčových slov (Bazoš dostane všechno).
+        $many = ['type' => 'pronajem', 'price' => 18500, 'features' => '{"sklep":true,"komora":true,"kolarna":true,"vytah":"ano","bezbarierovy":true,"stav":"novostavba","zarizeni":"zarizeny","spotrebice":["lednice","mycka","trouba"]}'];
+        $this->assertSame('sklep, komora / půda, kolárna, výtah, bezbariérový přístup, novostavba, zařízený, lednice', listing_features_text($many, true));
+        $this->assertStringEndsWith('lednice, myčka, trouba', listing_features_text($many));
+        // Bez vybavení zůstává text jako dřív.
+        q("UPDATE listings SET features = '{}' WHERE id = ?", [$l['id']]);
+        $l = listing_get((int) $l['id']);
+        $this->assertStringNotContainsString('Vybavení:', listing_share_text($l));
+        $this->assertSame('', listing_features_text($l));
+    }
+
+    public function testAiHelperGetsFeatures(): void
+    {
+        $f = listing_ai_fields();
+        $this->assertSame('Sklep', $f['features[sklep]']);
+        $this->assertSame('Spotřebiče', $f['features[spotrebice][]']);
+        $this->assertSame('Kauce v Kč', $f['features[kauce]']);
+        $this->assertSame('K nastěhování ihned', $f['features[ihned]']);
+        $this->assertSame('Energetická třída', $f['energy']);
+        foreach (LISTING_FEATURES as $k => $def) {
+            $this->assertTrue(isset($f["features[$k]"]) || isset($f["features[$k][]"]), $k);
+        }
+        // Formulář je předá AI pomocníkovi (obě políčka: text inzerátu i krátký text pro sdílení).
+        $this->assertSame(1, substr_count((string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/listing/form.php'), '$aiFieldsListing = listing_ai_fields();'));
+        $aiShow = true; $aiUrl = '/ai-text'; $aiTarget = 'textarea[name=description]'; $aiTasks = ['listing']; $aiContext = listing_ai_context(); $aiFields = $f;
+        ob_start();
+        require dirname(__DIR__, 2) . '/app/views/_ai_mini.php';
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('&quot;features[spotrebice][]&quot;:&quot;Spotřebiče&quot;', $html);
+        // app.js: u zaškrtávacích polí „ano“ nebo popisky zaškrtnutých, nevybraná volba se neposílá.
+        $js = (string) file_get_contents(dirname(__DIR__, 2) . '/assets/app.js');
+        $this->assertStringContainsString("name.endsWith('[]')", $js);
+        $this->assertStringContainsString("el.value !== '' && el.selectedIndex >= 0", $js);
+        $this->assertStringContainsString('vybavení a příslušenství – sklep, parkování, výtah', AI_TASKS['listing'][1]);
+    }
+    private function renderForm(array $l, array $errors = []): string
+    {
+        $unit = $this->unitRow('a');
+        $photos = [];
+        $penb = listing_penb();
+        ob_start();
+        require dirname(__DIR__, 2) . '/app/views/ext/listing/form.php';
+        return (string) ob_get_clean();
+    }
+
+    public function testFormShowsFeatureGroups(): void
+    {
+        $l = listing_get($this->draft($this->rentPost(['sklep' => '1', 'sklep_plocha' => '2,5', 'parkovani' => 'garaz', 'spotrebice' => ['trouba'], 'zvirata' => 'ne', 'nastehovani' => '2027-03-01'])));
+        $html = $this->renderForm($l);
+        $this->assertStringContainsString('<input type="checkbox" name="features[sklep]" value="1" checked>', $html);
+        $this->assertStringContainsString('<input type="checkbox" name="features[komora]" value="1">', $html);
+        $this->assertStringContainsString('name="features[sklep_plocha]" inputmode="decimal" value="2,5"', $html);
+        $this->assertStringContainsString('<option value="garaz" selected>Garáž</option>', $html);
+        $this->assertStringContainsString('<input type="checkbox" name="features[spotrebice][]" value="trouba" checked>', $html);
+        $this->assertStringContainsString('<option value="ne" selected>ne</option>', $html);
+        $this->assertStringContainsString('name="features[nastehovani]" value="2027-03-01"', $html);
+        $this->assertStringContainsString('<fieldset class="lst-fgroup" data-lst-for="prodej">', $html);
+        $this->assertStringContainsString('<fieldset class="lst-fgroup" data-lst-for="pronajem">', $html);
+        $this->assertStringContainsString('<label data-lst-needs="features[sklep]">', $html);
+        $this->assertStringNotContainsString(' onchange=', $html, 'bez inline JS (CSP)');
+        $js = (string) file_get_contents(dirname(__DIR__, 2) . '/assets/app.js');
+        foreach (['[data-lst-for]', '[data-lst-needs]', '[data-lst-move-now]'] as $needle) {
+            $this->assertStringContainsString($needle, $js);
+        }
+        // Po chybě zůstane v poli, co vlastník napsal.
+        $html = $this->renderForm(array_merge($l, ['features_post' => ['kauce' => 'hodně']]));
+        $this->assertStringContainsString('name="features[kauce]" inputmode="numeric" value="hodně"', $html);
+    }
+
+    /** Výtah se do nového inzerátu předvyplní z posledního jiného inzerátu v domě, který ho uvádí. */
+    public function testLiftPrefilledFromOtherListingInHouse(): void
+    {
+        $this->assertSame('', listing_house_lift());
+        $this->assertSame('{}', listing_defaults($this->unitRow('a'), $this->u('owner'))['features']);
+        $this->draft(['features' => ['vytah' => 'ano']], 0, 'b');
+        $this->assertSame('ano', listing_house_lift());
+        $newer = $this->draft(['features' => ['vytah' => 'ne', 'sklep' => '1']], 0, 'b');
+        $this->draft(['features' => ['sklep' => '1']], 0, 'b');   // ještě novější bez údaje o výtahu nic nemění
+        $this->assertSame('ne', listing_house_lift());
+        $this->assertSame('ano', listing_house_lift($newer), 'vlastní inzerát se nepočítá');
+        $def = listing_defaults($this->unitRow('a'), $this->u('owner'));
+        $this->assertSame(['vytah' => 'ne'], listing_features($def), 'jen výtah, ne sklep');
+        $html = $this->renderForm($def);
+        $this->assertStringContainsString('<select name="features[vytah]"><option value="">– neuvedeno –</option><option value="ano">Výtah</option><option value="ne" selected>Bez výtahu</option></select>', $html);
+    }
+
+    /** Popisky a hodnoty vybavení (skládané v PHP) jsou přeložené ve všech jazycích webu. */
+    public function testFeatureTextsAreTranslated(): void
+    {
+        $texts = ['– neuvedeno –', 'Kauce', 'Minimální doba nájmu', 'K nastěhování', 'ihned', '2 nájmy', '1 nájem', '5 nájmů', '1 měsíc', '3 měsíce', '12 měsíců', '/ měsíc',
+            "800\u{a0}Kč / měsíc", 'Kauci zadejte v Kč (jen číslo), nebo pole nechte prázdné.', 'Minimální dobu nájmu zadejte v měsících (1 až 120), nebo pole nechte prázdné.',
+            'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.', 'Plochu sklepa zadejte v m² jako číslo, např. 2,5.',
+            'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.'];
+        foreach (LISTING_FEATURES as $def) {
+            $texts[] = $def['label'];
+            foreach ($def['options'] ?? [] as $o) {
+                $texts[] = $o;
+            }
+        }
+        foreach (LISTING_FEATURE_GROUPS as $g) {
+            $texts[] = $g;
+        }
+        foreach (array_unique($texts) as $text) {
+            foreach (['en', 'sk', 'uk', 'vi'] as $lang) {
+                // Slovensky může text vyjít stejně (Garáž, 2 nájmy) – pak musí být aspoň ve slovníku (i jako vzor s #).
+                $inSk = isset(lang_dictionary('sk')[$text]) || isset(lang_dictionary('sk')[(string) preg_replace('/\d+(?:[.,]\d+)*/', '#', $text)]);
+                $this->assertTrue(t($text, $lang) !== $text || ($lang === 'sk' && $inSk), "$lang: $text");
+            }
+        }
     }
 }

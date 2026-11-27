@@ -57,6 +57,17 @@ $service = plan_managed() ? pset('service_name') : '';
           <?php else: ?><span>neuvedena</span><?php endif ?>
         </dd></div>
       </dl>
+      <?php if ($featureItems = listing_feature_items($l)): ?>
+      <section class="lst-features" aria-labelledby="lst-features-h">
+        <h2 id="lst-features-h">Vybavení a příslušenství</h2>
+        <ul class="lst-checklist">
+          <?php foreach ($featureItems as $it): ?>
+            <li<?= $it['no'] ? ' class="lst-no"' : '' ?>><span class="lst-mark" aria-hidden="true"><?= $it['no'] ? '–' : '✓' ?></span>
+              <span class="lst-ftext"><span class="lst-fl"><?= e($it['label']) ?></span><?php if ($it['value'] !== ''): ?><span class="lst-fsep"><?= $it['sep'] === '·' ? ' · ' : ': ' ?></span><?php if ($it['note'] === 'příplatek'): ?><span>příplatek</span> <?php endif ?><span class="lst-fv"><?= e($it['value']) ?></span><?php if ($it['note'] !== '' && $it['note'] !== 'příplatek'): ?> <small class="lst-fnote"><?= e($it['note']) ?></small><?php endif ?><?php endif ?></span></li>
+          <?php endforeach ?>
+        </ul>
+      </section>
+      <?php endif ?>
       <h2>Popis</h2>
       <div class="prose" translate="no"><?= format_text((string) $l['description']) ?></div>
     </div>

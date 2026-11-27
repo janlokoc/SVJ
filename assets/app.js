@@ -270,10 +270,18 @@ document.querySelectorAll('.ai-box').forEach((box) => {
     if (box.dataset.aiFields) {
       try {
         Object.entries(JSON.parse(box.dataset.aiFields)).forEach(([name, label]) => {
-          const el = form.querySelector('[name="' + name + '"]');
+          const els = Array.from(form.querySelectorAll('[name="' + name + '"]'));
+          const el = els[0];
           if (!el || el.closest('[hidden]')) return;   // skryté pole (např. plocha balkonu u „bez balkonu“) do kontextu nepatří
-          // U výběru čitelný text volby („Zasklená lodžie“), ne její kód.
-          const v = (el.tagName === 'SELECT' && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : el.value).trim();
+          let v;
+          if (el.type === 'checkbox') {
+            // Zaškrtávací pole: jedno = „ano“, skupina (name[]) = popisky zaškrtnutých („Lednice, Myčka“).
+            const on = els.filter((x) => x.checked);
+            v = name.endsWith('[]') ? on.map((x) => (x.closest('label') || x).textContent.trim()).join(', ') : (on.length ? 'ano' : '');
+          } else {
+            // U výběru čitelný text volby („Zasklená lodžie“), ne její kód; nevybraná volba („– neuvedeno –“) se neposílá.
+            v = (el.tagName === 'SELECT' ? (el.value !== '' && el.selectedIndex >= 0 ? el.options[el.selectedIndex].text : '') : el.value).trim();
+          }
           if (v) context += (context ? '\n' : '') + label + ': ' + v;
         });
       } catch (e) { /* bez kontextu */ }
@@ -429,6 +437,21 @@ document.querySelectorAll('[data-lst-type]').forEach((sel) => {
   const fees = sel.form.querySelector('.lst-fees');
   const sync = () => { if (fees) fees.hidden = sel.value !== 'pronajem'; };
   sel.addEventListener('change', sync); sync();
+});
+// Inzerát: části jen pro prodej / pronájem (data-lst-for) a pole závislá na jiném (data-lst-needs: plocha sklepa jen se sklepem)
+document.querySelectorAll('form.lst-form').forEach((form) => {
+  const type = form.querySelector('[data-lst-type]');
+  const now = form.querySelector('[data-lst-move-now]');
+  const date = form.querySelector('[data-lst-move-date]');
+  const sync = () => {
+    form.querySelectorAll('[data-lst-for]').forEach((el) => { el.hidden = !!type && el.dataset.lstFor !== type.value; });
+    form.querySelectorAll('[data-lst-needs]').forEach((el) => {
+      const c = form.querySelector('[name="' + el.dataset.lstNeeds + '"]');
+      el.hidden = !!c && (c.type === 'checkbox' ? !c.checked : c.value === '');
+    });
+    if (now && date) date.disabled = now.checked;   // „ihned“ = bez data
+  };
+  form.addEventListener('change', sync); sync();
 });
 document.querySelectorAll('[data-lst-outdoor]').forEach((sel) => {
   const area = sel.form.querySelector('.lst-outdoor-area');

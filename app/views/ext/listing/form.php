@@ -6,7 +6,23 @@ $areaValue = is_numeric($area) ? str_replace('.', ',', (string) (float) $area) :
 $outdoor = listing_outdoor_type($l);
 $oArea = $l['outdoor_area'] ?? null;
 $outdoorValue = is_numeric($oArea) ? str_replace('.', ',', (string) (float) $oArea) : (string) $oArea;
-$aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' => 'Podlahová plocha bytu (m²)', 'outdoor_type' => 'Balkon / lodžie', 'outdoor_area' => 'Plocha balkonu / lodžie (m²)', 'floor' => 'Patro', 'price' => 'Cena v Kč', 'fees' => 'Poplatky v Kč za měsíc', 'energy' => 'Energetická třída'];
+$aiFieldsListing = listing_ai_fields();   // vč. vybavení a příslušenství (app/ext/listing_lib.php)
+// Vybavení a příslušenství: uložené údaje; po chybě ve formuláři textová pole tak, jak je vlastník napsal.
+$feat = listing_features($l);
+$fPost = is_array($l['features_post'] ?? null) ? $l['features_post'] : null;
+$fText = function (string $k, string $stored) use ($fPost): string {
+    return $fPost !== null ? (is_string($fPost[$k] ?? null) ? $fPost[$k] : '') : $stored;
+};
+$fCheck = fn(string $k) => !empty($feat[$k]) ? ' checked' : '';
+$fSelect = function (string $k) use ($feat): void {
+    echo '<select name="' . e(listing_feature_name($k)) . '"><option value="">– neuvedeno –</option>';
+    foreach (LISTING_FEATURES[$k]['options'] as $v => $label) {
+        echo '<option value="' . e($v) . '"' . (($feat[$k] ?? '') === $v ? ' selected' : '') . '>' . e($label) . '</option>';
+    }
+    echo '</select>';
+};
+$sklepArea = isset($feat['sklep_plocha']) ? str_replace('.', ',', (string) (float) $feat['sklep_plocha']) : '';
+$moveDate = isset($feat['nastehovani']) && $feat['nastehovani'] !== 'ihned' ? $feat['nastehovani'] : '';
 ?>
 <div class="wrap page narrow">
   <p class="crumbs"><a href="<?= url('/inzeraty/moje') ?>">← Moje inzeráty</a></p>
@@ -36,6 +52,65 @@ $aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' =
     </div>
     <p class="hint">Plocha bytu je podlahová plocha bez balkonu a lodžie – ty uveďte zvlášť, v inzerátu se ukážou vedle sebe.</p>
     <p class="hint">Plochu a patro jsme předvyplnili z evidence výboru. Zájemci Vám píší přes formulář na webu – zprávy chodí na Váš e-mail.</p>
+
+    <fieldset class="lst-features-field">
+      <legend>Vybavení a příslušenství <small>(nepovinné)</small></legend>
+      <p class="hint">Vyplňte, co platí. V inzerátu se ukáže jako přehled s fajfkami; co nevyplníte, se nezobrazí.</p>
+      <fieldset class="lst-fgroup">
+        <legend>Příslušenství</legend>
+        <div class="lst-checks">
+          <label class="check"><input type="checkbox" name="features[sklep]" value="1"<?= $fCheck('sklep') ?>> <span>Sklep</span></label>
+          <label class="check"><input type="checkbox" name="features[komora]" value="1"<?= $fCheck('komora') ?>> <span>Komora / půda</span></label>
+          <label class="check"><input type="checkbox" name="features[kolarna]" value="1"<?= $fCheck('kolarna') ?>> <span>Kolárna</span></label>
+        </div>
+        <div class="form-row">
+          <label data-lst-needs="features[sklep]">Plocha sklepa (m²) <input type="text" name="features[sklep_plocha]" inputmode="decimal" value="<?= e($fText('sklep_plocha', $sklepArea)) ?>" maxlength="10" placeholder="Např. 2,5"></label>
+          <label>Parkování <?php $fSelect('parkovani') ?></label>
+          <label data-lst-needs="features[parkovani]"><span>Příplatek za parkování</span> <span data-lst-for="pronajem">(Kč / měsíc)</span><span data-lst-for="prodej">(Kč)</span>
+            <input type="text" name="features[parkovani_cena]" inputmode="numeric" value="<?= e($fText('parkovani_cena', isset($feat['parkovani_cena']) ? (string) $feat['parkovani_cena'] : '')) ?>" maxlength="12" placeholder="V ceně = nevyplňujte"></label>
+        </div>
+      </fieldset>
+      <fieldset class="lst-fgroup">
+        <legend>Dům</legend>
+        <div class="form-row">
+          <label>Výtah <?php $fSelect('vytah') ?></label>
+          <label class="check lst-check-inline"><input type="checkbox" name="features[bezbarierovy]" value="1"<?= $fCheck('bezbarierovy') ?>> <span>Bezbariérový přístup</span></label>
+        </div>
+      </fieldset>
+      <fieldset class="lst-fgroup">
+        <legend>Stav a vybavení bytu</legend>
+        <div class="form-row">
+          <label>Stav bytu <?php $fSelect('stav') ?></label>
+          <label>Zařízení <?php $fSelect('zarizeni') ?></label>
+        </div>
+        <div class="form-row">
+          <label>Vytápění <?php $fSelect('vytapeni') ?></label>
+          <label>Připojení k internetu <?php $fSelect('internet') ?></label>
+        </div>
+        <p class="lst-flabel">Spotřebiče</p>
+        <div class="lst-checks">
+          <?php foreach (LISTING_FEATURES['spotrebice']['options'] as $k => $label): ?><label class="check"><input type="checkbox" name="features[spotrebice][]" value="<?= e($k) ?>"<?= in_array($k, $feat['spotrebice'] ?? [], true) ? ' checked' : '' ?>> <span><?= e($label) ?></span></label><?php endforeach ?>
+        </div>
+      </fieldset>
+      <fieldset class="lst-fgroup" data-lst-for="prodej">
+        <legend>Prodej</legend>
+        <div class="form-row">
+          <label>Vlastnictví <?php $fSelect('vlastnictvi') ?></label>
+        </div>
+      </fieldset>
+      <fieldset class="lst-fgroup" data-lst-for="pronajem">
+        <legend>Pronájem</legend>
+        <div class="form-row">
+          <label>Kauce (Kč) <input type="text" name="features[kauce]" inputmode="numeric" value="<?= e($fText('kauce', isset($feat['kauce']) ? (string) $feat['kauce'] : '')) ?>" maxlength="12" placeholder="Např. 37 000"></label>
+          <label>Minimální doba nájmu (měsíce) <input type="text" name="features[min_doba]" inputmode="numeric" value="<?= e($fText('min_doba', isset($feat['min_doba']) ? (string) $feat['min_doba'] : '')) ?>" maxlength="3" placeholder="Např. 12"></label>
+          <label>Domácí zvířata <?php $fSelect('zvirata') ?></label>
+        </div>
+        <div class="form-row lst-move">
+          <label>K nastěhování od <input type="date" name="features[nastehovani]" value="<?= e($fText('nastehovani', $moveDate)) ?>" data-lst-move-date></label>
+          <label class="check lst-check-inline"><input type="checkbox" name="features[ihned]" value="1"<?= ($feat['nastehovani'] ?? '') === 'ihned' ? ' checked' : '' ?> data-lst-move-now> <span>ihned</span></label>
+        </div>
+      </fieldset>
+    </fieldset>
 
     <fieldset class="lst-energy-field">
       <legend>Energetická náročnost</legend>

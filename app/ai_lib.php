@@ -34,7 +34,7 @@ const AI_TASKS = [
         . 'U shromáždění vlastníků připomeň, že kdo nemůže přijít, může se nechat zastoupit na základě plné moci, a že pro usnášeníschopnost je potřeba přítomnost vlastníků s potřebným podílem hlasů. '
         . 'Na podklady a potvrzení účasti odkaž přesně adresou z kontextu – jiné adresy nevymýšlej. Text níže jsou poznámky nebo koncept výboru; co v nich je navíc, zapracuj.'],
     // Inzerát vlastníka bytu (app/ext/listing_lib.php): údaje z formuláře přicházejí jako kontext.
-    'listing' => ['Napsat inzerát', 'Z poznámek vlastníka níže a z údajů v kontextu (typ inzerátu, dispozice, podlahová plocha bytu, balkon / lodžie a jejich plocha – uveď je zvlášť, nesčítej je, patro, cena, energetická třída, lokalita) napiš text inzerátu na prodej nebo pronájem bytu. '
+    'listing' => ['Napsat inzerát', 'Z poznámek vlastníka níže a z údajů v kontextu (typ inzerátu, dispozice, podlahová plocha bytu, balkon / lodžie a jejich plocha – uveď je zvlášť, nesčítej je, patro, cena, energetická třída, lokalita, vybavení a příslušenství – sklep, parkování, výtah, stav, zařízení a spotřebiče, vytápění, internet, u pronájmu kauce, minimální doba nájmu, domácí zvířata a termín nastěhování) napiš text inzerátu na prodej nebo pronájem bytu. '
         . 'Tento text nepíše výbor, ale vlastník bytu, a čtou ho zájemci o byt – piš poutavě, ale věcně a pravdivě, česky, bez superlativů a bez emoji. '
         . 'Začni krátkým shrnutím (co, kde, jak velké), pak popis bytu, domu a okolí, nakonec praktické informace (dostupnost, k nastěhování, vybavení). '
         . 'Použij jen fakta z poznámek a kontextu; nic nevymýšlej (žádné vybavení, rekonstrukce, výhled, parkování, sklep ani MHD, pokud nejsou uvedené). '

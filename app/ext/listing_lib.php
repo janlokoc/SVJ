@@ -70,7 +70,7 @@ function listing_ready(?PDO $pdo = null): void
         // public_from: od kdy inzerát vidí i nepřihlášení (Nejdřív sousedé); expires_on: poslední den zveřejnění.
         'listings' => "CREATE TABLE listings ($id, unit_id $int, user_id $int, type {$s(10)}, price $big, fees $big, layout {$s(10)}, area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL')
             . ", floor {$s(10)}, description $text, share_text $text, contact_name {$s(120)}, energy_class {$s(1)}, energy_source {$s(10)}, neighbours_first $int, status {$s(10)}, hidden $int,"
-            . " outdoor_type {$s(20)}, outdoor_area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL') . ","
+            . " outdoor_type {$s(20)}, outdoor_area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL') . ", features " . ($mysql ? 'TEXT NULL' : "TEXT NOT NULL DEFAULT '{}'") . ","
             . " hidden_reason {$s(500)}, created_at {$s(19)}, updated_at {$s(19)}, published_at {$s(19)}, public_from {$s(19)}, expires_on {$s(10)}, reminded_on {$s(10)}, sold_at {$s(19)})$end",
         'listing_photos' => "CREATE TABLE listing_photos ($id, listing_id $int, filename {$s(80)}, thumb {$s(80)}, width $int, height $int, sort $int, caption {$s(120)})$end",
         // Záznamy pro omezení počtu zpráv a hlášení z jedné adresy (mažou se po dni).
@@ -100,7 +100,7 @@ function listing_ready(?PDO $pdo = null): void
             $pdo->exec("ALTER TABLE listing_photos ADD COLUMN caption {$s(120)}");
         }
     }
-    // Balkon / lodžie (přidáno 11/2026) – starší tabulka sloupce nemá.
+    // Balkon / lodžie a vybavení (přidáno 11/2026) – starší tabulka sloupce nemá.
     if (in_array('listings', $have, true)) {
         $cols = $mysql ? array_map('strval', $pdo->query('SHOW COLUMNS FROM listings')->fetchAll(PDO::FETCH_COLUMN))
             : array_column($pdo->query('PRAGMA table_info(listings)')->fetchAll(PDO::FETCH_ASSOC), 'name');
@@ -109,6 +109,10 @@ function listing_ready(?PDO $pdo = null): void
         }
         if (!in_array('outdoor_area', $cols, true)) {
             $pdo->exec('ALTER TABLE listings ADD COLUMN outdoor_area ' . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL'));
+        }
+        // Vybavení a příslušenství (přidáno 11/2026): JSON podle LISTING_FEATURES.
+        if (!in_array('features', $cols, true)) {
+            $pdo->exec('ALTER TABLE listings ADD COLUMN features ' . ($mysql ? 'TEXT NULL' : "TEXT NOT NULL DEFAULT '{}'"));
         }
     }
     if (!in_array('listings', $have, true)) {
@@ -384,7 +388,7 @@ function listing_photo_url(array $photo, bool $thumb = false): string
 /** Krátký popis (pro náhled při sdílení): plocha, patro, lokalita a začátek textu. */
 function listing_summary(array $l, int $len = 160): string
 {
-    $facts = array_filter([listing_area_text($l), $l['floor'] !== '' ? $l['floor'] . '. patro' : '', listing_locality()], fn($x) => $x !== '');
+    $facts = array_filter([listing_area_text($l), $l['floor'] !== '' ? $l['floor'] . '. patro' : '', listing_locality(), listing_features_text($l, true)], fn($x) => $x !== '');
     $head = implode(' · ', $facts);
     return trim($head . ($head !== '' ? '. ' : '') . excerpt((string) $l['description'], max(40, $len - mb_strlen($head))));
 }
@@ -418,6 +422,9 @@ function listing_share_text(array $l): string
     if ($facts) {
         $lines[] = implode(', ', $facts);
     }
+    if (($features = listing_features_text($l)) !== '') {
+        $lines[] = 'Vybavení: ' . $features;
+    }
     $lines[] = 'Cena: ' . listing_price_label($l) . ((int) $l['fees'] > 0 && $l['type'] === 'pronajem' ? ' + poplatky ' . listing_money((int) $l['fees']) . ' / měsíc' : '');
     $lines[] = '';
     $lines[] = trim((string) ($l['share_text'] ?? '')) !== '' ? trim((string) $l['share_text']) : excerpt((string) $l['description'], 400);
@@ -429,6 +436,237 @@ function listing_share_text(array $l): string
 function listing_ai_context(): string
 {
     return 'Lokalita: ' . listing_locality() . "\nDům: bytový dům ve společenství vlastníků";
+}
+/**
+ * Pole formuláře, která AI pomocník přidá do kontextu ([name => popis]). Čte je app.js z formuláře v okamžiku kliknutí
+ * (u výběru text volby, u zaškrtávacích polí jejich popisky); skrytá pole (druhý typ inzerátu) vynechá.
+ */
+function listing_ai_fields(): array
+{
+    $f = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' => 'Podlahová plocha bytu (m²)', 'outdoor_type' => 'Balkon / lodžie', 'outdoor_area' => 'Plocha balkonu / lodžie (m²)',
+        'floor' => 'Patro', 'price' => 'Cena v Kč', 'fees' => 'Poplatky v Kč za měsíc', 'energy' => 'Energetická třída'];
+    foreach (LISTING_FEATURES as $k => $def) {
+        $f[listing_feature_name($k) . ($def['kind'] === 'multi' ? '[]' : '')] = $def['ai'] ?? $def['label'];
+    }
+    $f['features[ihned]'] = 'K nastěhování ihned';
+    return $f;
+}
+
+// ---------- Vybavení a příslušenství (od 11/2026) ----------
+
+/*
+ * Nepovinné standardní údaje o bytu v jednom sloupci listings.features (JSON). Schéma je whitelist: jiné klíče a hodnoty
+ * se neuloží. kind: bool (zaškrtnuto = true), choice (jedna z options), multi (seznam z options), area (m²), int (celé
+ * číslo min–max), move (k nastěhování: 'ihned' nebo datum). only: jen u prodeje / pronájmu; needs: jen když je vyplněný jiný údaj.
+ */
+const LISTING_FEATURE_GROUPS = ['prislusenstvi' => 'Příslušenství', 'dum' => 'Dům', 'stav' => 'Stav a vybavení bytu', 'prodej' => 'Prodej', 'pronajem' => 'Pronájem'];
+const LISTING_FEATURES = [
+    'sklep' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Sklep'],
+    'sklep_plocha' => ['kind' => 'area', 'group' => 'prislusenstvi', 'label' => 'Plocha sklepa (m²)', 'needs' => 'sklep', 'max' => 200],
+    'parkovani' => ['kind' => 'choice', 'group' => 'prislusenstvi', 'label' => 'Parkování', 'options' => ['garaz' => 'Garáž', 'stani_kryte' => 'Kryté parkovací stání', 'stani_venkovni' => 'Venkovní parkovací stání']],
+    'parkovani_cena' => ['kind' => 'int', 'group' => 'prislusenstvi', 'label' => 'Příplatek za parkování (Kč)', 'needs' => 'parkovani', 'min' => 1, 'max' => 99999999],
+    'komora' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Komora / půda'],
+    'kolarna' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Kolárna'],
+    'vytah' => ['kind' => 'choice', 'group' => 'dum', 'label' => 'Výtah', 'options' => ['ano' => 'Výtah', 'ne' => 'Bez výtahu']],
+    'bezbarierovy' => ['kind' => 'bool', 'group' => 'dum', 'label' => 'Bezbariérový přístup'],
+    'stav' => ['kind' => 'choice', 'group' => 'stav', 'label' => 'Stav bytu', 'options' => ['novostavba' => 'Novostavba', 'po_kompletni_renovaci' => 'Po kompletní renovaci',
+        'po_castecne_renovaci' => 'Po částečné renovaci', 'dobry' => 'V dobrém stavu', 'pred_rekonstrukci' => 'Před rekonstrukcí']],
+    'zarizeni' => ['kind' => 'choice', 'group' => 'stav', 'label' => 'Zařízení', 'options' => ['nezarizeny' => 'Nezařízený', 'castecne' => 'Částečně zařízený', 'zarizeny' => 'Zařízený']],
+    'spotrebice' => ['kind' => 'multi', 'group' => 'stav', 'label' => 'Spotřebiče', 'options' => ['lednice' => 'Lednice', 'mycka' => 'Myčka', 'trouba' => 'Trouba', 'sporak' => 'Sporák',
+        'pracka' => 'Pračka', 'mikrovlnka' => 'Mikrovlnná trouba']],
+    'vytapeni' => ['kind' => 'choice', 'group' => 'stav', 'label' => 'Vytápění', 'options' => ['ustredni' => 'Ústřední topení', 'dalkove' => 'Dálkové vytápění', 'plynovy_kotel' => 'Plynový kotel',
+        'elektricke' => 'Elektrické topení', 'jine' => 'Jiné vytápění']],
+    'internet' => ['kind' => 'choice', 'group' => 'stav', 'label' => 'Připojení k internetu', 'options' => ['optika' => 'Optický internet', 'kabel' => 'Kabelový internet', 'dsl' => 'Internet DSL', 'zadny' => 'Bez internetu']],
+    'vlastnictvi' => ['kind' => 'choice', 'group' => 'prodej', 'label' => 'Vlastnictví', 'only' => 'prodej', 'options' => ['osobni' => 'Osobní vlastnictví', 'druzstevni' => 'Družstevní vlastnictví']],
+    'kauce' => ['kind' => 'int', 'group' => 'pronajem', 'label' => 'Kauce (Kč)', 'only' => 'pronajem', 'min' => 1, 'max' => 9999999, 'ai' => 'Kauce v Kč'],
+    'min_doba' => ['kind' => 'int', 'group' => 'pronajem', 'label' => 'Minimální doba nájmu (měsíce)', 'only' => 'pronajem', 'min' => 1, 'max' => 120],
+    'zvirata' => ['kind' => 'choice', 'group' => 'pronajem', 'label' => 'Domácí zvířata', 'only' => 'pronajem', 'options' => ['ano' => 'ano', 'ne' => 'ne', 'dohodou' => 'dohodou']],
+    'nastehovani' => ['kind' => 'move', 'group' => 'pronajem', 'label' => 'K nastěhování od', 'only' => 'pronajem'],
+];
+
+const LISTING_FEATURES_SHORT_MAX = 8;   // nejvýše tolik klíčových slov o vybavení v náhledu odkazu (og:description)
+/** Název pole ve formuláři: features[sklep]. */
+function listing_feature_name(string $key): string
+{
+    return 'features[' . $key . ']';
+}
+/** Vyčistí údaje podle schématu (whitelist, typ inzerátu, závislosti); používá se při ukládání i čtení. */
+function listing_features_clean(array $f, string $type): array
+{
+    $out = [];
+    foreach (LISTING_FEATURES as $k => $def) {
+        $v = $f[$k] ?? null;
+        if ($v === null || (isset($def['only']) && $def['only'] !== $type) || (isset($def['needs']) && !isset($out[$def['needs']]))) {
+            continue;
+        }
+        $ok = match ($def['kind']) {
+            'bool' => $v === true,
+            'choice' => is_string($v) && isset($def['options'][$v]),
+            'multi' => is_array($v) && $v !== [] && !array_diff($v, array_keys($def['options'])),
+            'area' => (is_float($v) || is_int($v)) && $v > 0 && $v <= ($def['max'] ?? 10000),
+            'int' => is_int($v) && $v >= $def['min'] && $v <= $def['max'],
+            'move' => $v === 'ihned' || (is_string($v) && valid_date($v)),
+        };
+        if ($ok) {
+            // Spotřebiče vždy v pořadí schématu a bez opakování.
+            $out[$k] = $def['kind'] === 'multi' ? array_values(array_intersect(array_keys($def['options']), $v)) : ($def['kind'] === 'area' ? (float) $v : $v);
+        }
+    }
+    return $out;
+}
+/** Údaje z inzerátu (sloupec features); poškozený nebo starší záznam = prázdné. */
+function listing_features(array $l): array
+{
+    $raw = $l['features'] ?? '';
+    $f = is_array($raw) ? $raw : json_decode((string) $raw, true);
+    return is_array($f) ? listing_features_clean($f, (string) ($l['type'] ?? 'prodej')) : [];
+}
+function listing_features_json(array $f): string
+{
+    return $f ? (string) json_encode($f, JSON_UNESCAPED_UNICODE) : '{}';
+}
+/**
+ * Údaje z formuláře ($post['features']): [vyčištěné údaje, chyby]. Neznámé klíče a volby se zahodí, údaje pro druhý typ
+ * inzerátu (prodej / pronájem) se ignorují; chybně zadaná čísla a data vrátí srozumitelnou chybu.
+ */
+function listing_features_input(mixed $raw, string $type): array
+{
+    $raw = is_array($raw) ? $raw : [];
+    $s = fn(string $k) => is_string($raw[$k] ?? null) ? trim($raw[$k]) : '';
+    $f = [];
+    $errors = [];
+    foreach (LISTING_FEATURES as $k => $def) {
+        if (isset($def['only']) && $def['only'] !== $type) {
+            continue;
+        }
+        switch ($def['kind']) {
+            case 'bool':
+                if ($s($k) !== '' && $s($k) !== '0') {
+                    $f[$k] = true;
+                }
+                break;
+            case 'choice':
+                if (isset($def['options'][$s($k)])) {
+                    $f[$k] = $s($k);
+                }
+                break;
+            case 'multi':
+                $f[$k] = array_values(array_filter(is_array($raw[$k] ?? null) ? $raw[$k] : [], fn($x) => is_string($x) && isset($def['options'][$x])));
+                break;
+            case 'area':
+                $a = unit_area_parse($s($k));
+                if ($a === false || (is_float($a) && $a > $def['max'])) {
+                    $errors[] = 'Plochu sklepa zadejte v m² jako číslo, např. 2,5.';
+                } elseif ($a !== null) {
+                    $f[$k] = $a;
+                }
+                break;
+            case 'int':
+                $v = str_replace([' ', "\u{a0}", '.', 'Kč', 'kč', ',-'], '', $s($k));
+                if ($v === '') {
+                    break;
+                }
+                if (!preg_match('/^\d{1,9}$/', $v) || (int) $v < $def['min'] || (int) $v > $def['max']) {
+                    $errors[] = match ($k) {
+                        'min_doba' => 'Minimální dobu nájmu zadejte v měsících (1 až 120), nebo pole nechte prázdné.',
+                        'kauce' => 'Kauci zadejte v Kč (jen číslo), nebo pole nechte prázdné.',
+                        default => 'Příplatek za parkování zadejte v Kč (jen číslo), nebo pole nechte prázdné.',
+                    };
+                } else {
+                    $f[$k] = (int) $v;
+                }
+                break;
+            case 'move':
+                if ($s('ihned') !== '' && $s('ihned') !== '0') {
+                    $f[$k] = 'ihned';
+                } elseif ($s($k) !== '') {
+                    if (valid_date($s($k)) && $s($k) >= '2000-01-01' && $s($k) <= '2100-12-31') {
+                        $f[$k] = $s($k);
+                    } else {
+                        $errors[] = 'Datum nastěhování zadejte jako den v kalendáři, nebo zaškrtněte „ihned“.';
+                    }
+                }
+                break;
+        }
+    }
+    return [listing_features_clean($f, $type), $errors];
+}
+/** Výtah naposledy uvedený v jiném inzerátu v domě ('ano' / 'ne' / '') – předvyplní se do nového inzerátu. */
+function listing_house_lift(int $exceptId = 0): string
+{
+    listing_ready();
+    foreach (all("SELECT type, features FROM listings WHERE id <> ? AND features LIKE '%\"vytah\"%' ORDER BY id DESC LIMIT 20", [$exceptId]) as $row) {
+        $v = listing_features($row)['vytah'] ?? '';
+        if ($v !== '') {
+            return $v;
+        }
+    }
+    return '';
+}
+/** „1 nájem“, „2 nájmy“, „5 nájmů“ (stejně měsíce). */
+function listing_plural(int $n, string $one, string $few, string $many): string
+{
+    return $n . ' ' . ($n === 1 ? $one : ($n >= 2 && $n <= 4 ? $few : $many));
+}
+/**
+ * Položky pro přehled „Vybavení a příslušenství“ v pořadí schématu: [label, value (text u řádku s hodnotou), note
+ * (doplněk: „2 nájmy“, u parkování „příplatek“ před částkou), no (záporná položka – bez fajfky), sep (oddělovač
+ * popisku a hodnoty)]. Prázdné údaje se vynechají.
+ */
+function listing_feature_items(array $l): array
+{
+    $f = listing_features($l);
+    $rent = ($l['type'] ?? '') === 'pronajem';
+    $items = [];
+    $add = function (string $label, string $value = '', string $note = '', bool $no = false, string $sep = ':') use (&$items): void {
+        $items[] = ['label' => $label, 'value' => $value, 'note' => $note, 'no' => $no, 'sep' => $sep];
+    };
+    foreach (LISTING_FEATURES as $k => $def) {
+        if (!isset($f[$k]) || isset($def['needs'])) {
+            continue;
+        }
+        $v = $f[$k];
+        match ($k) {
+            'sklep' => $add('Sklep', unit_area_label($f['sklep_plocha'] ?? null), '', false, '·'),
+            'parkovani' => $add($def['options'][$v], isset($f['parkovani_cena']) ? listing_money($f['parkovani_cena']) . ($rent ? ' / měsíc' : '') : '', isset($f['parkovani_cena']) ? 'příplatek' : '', false, '·'),
+            'vytah' => $add($def['options'][$v], '', '', $v === 'ne'),
+            'spotrebice' => array_map(fn($x) => $add($def['options'][$x]), $v),
+            'kauce' => $add('Kauce', listing_money($v), (int) $l['price'] > 0 && $v % (int) $l['price'] === 0 && $v / (int) $l['price'] <= 6
+                ? listing_plural(intdiv($v, (int) $l['price']), 'nájem', 'nájmy', 'nájmů') : ''),
+            'min_doba' => $add('Minimální doba nájmu', listing_plural($v, 'měsíc', 'měsíce', 'měsíců')),
+            'zvirata' => $add('Domácí zvířata', $def['options'][$v], '', $v === 'ne'),
+            'nastehovani' => $add('K nastěhování', $v === 'ihned' ? 'ihned' : cz_date($v)),
+            default => $def['kind'] === 'bool' ? $add($def['label']) : $add($def['options'][$v]),
+        };
+    }
+    return $items;
+}
+/** Malé první písmeno (popisky v souvislém textu: „Garáž“ → „garáž“, „Internet DSL“ → „internet DSL“). */
+function listing_lcfirst(string $s): string
+{
+    return mb_strtolower(mb_substr($s, 0, 1)) . mb_substr($s, 1);
+}
+/**
+ * Údaje v jednom řádku pro sdílení. $short: jen hlavní klíčová slova pro náhled odkazu („sklep, garáž, výtah, lednice,
+ * myčka“); jinak se všemi hodnotami pro Bazoš („sklep 2 m², garáž – příplatek 1 500 Kč / měsíc, …, kauce 30 000 Kč (2 nájmy)“).
+ */
+function listing_features_text(array $l, bool $short = false): string
+{
+    $parts = [];
+    foreach (listing_feature_items($l) as $it) {
+        if ($short && $it['value'] !== '' && !in_array($it['label'], ['Sklep'], true) && $it['note'] !== 'příplatek') {
+            continue;   // u náhledu bez kauce, doby nájmu, zvířat a data nastěhování
+        }
+        $t = listing_lcfirst($it['label']);
+        if (!$short && $it['value'] !== '') {
+            $t .= $it['note'] === 'příplatek' ? ' – příplatek ' . $it['value'] : ' ' . $it['value'] . ($it['note'] !== '' ? ' (' . $it['note'] . ')' : '');
+        }
+        $parts[] = $t;
+    }
+    if ($short) {
+        $parts = array_slice($parts, 0, LISTING_FEATURES_SHORT_MAX);   // náhled odkazu má jen kolem 160 znaků
+    }
+    return str_replace("\u{a0}", ' ', implode(', ', $parts));
 }
 
 // ---------- Formulář ----------
@@ -474,6 +712,9 @@ function listing_input(array $post, array $unit, ?string $today = null): array
         }
         $d['outdoor_area'] = is_float($oa) ? $oa : null;
     }
+    [$features, $fErrors] = listing_features_input($post['features'] ?? [], $d['type']);
+    $d['features'] = listing_features_json($features);
+    $errors = [...$errors, ...$fErrors];
     if (mb_strlen($d['description']) < 30) {
         $errors[] = 'Napište popis bytu (aspoň pár vět).';
     }
@@ -496,11 +737,12 @@ function listing_input(array $post, array $unit, ?string $today = null): array
     }
     return [$d, $errors];
 }
-/** Výchozí hodnoty nového inzerátu (patro a plocha z evidence jednotky, jméno z účtu). */
+/** Výchozí hodnoty nového inzerátu (patro a plocha z evidence jednotky, jméno z účtu, výtah z posledního inzerátu v domě). */
 function listing_defaults(array $unit, array $user): array
 {
     $penb = listing_penb();
     return ['id' => 0, 'unit_id' => (int) $unit['id'], 'type' => 'prodej', 'price' => '', 'fees' => '', 'layout' => '', 'area' => $unit['area'] ?? null, 'outdoor_type' => 'none', 'outdoor_area' => null, 'floor' => (string) $unit['floor'],
+        'features' => listing_features_json(($lift = listing_house_lift()) !== '' ? ['vytah' => $lift] : []),
         'description' => '', 'share_text' => '', 'contact_name' => (string) $user['name'], 'energy_class' => $penb['valid'] ? $penb['class'] : '', 'energy_source' => $penb['valid'] ? 'budova' : '',
         'neighbours_first' => 0, 'status' => 'draft', 'hidden' => 0, 'hidden_reason' => '', 'expires_on' => '', 'public_from' => '', 'published_at' => '', 'sold_at' => ''];
 }
@@ -512,6 +754,9 @@ function listing_save(array $user, int $unitId, array $d, int $id = 0): int
     $cols = ['type' => $d['type'], 'price' => $d['price'], 'fees' => $d['fees'], 'layout' => $d['layout'], 'area' => $d['area'], 'floor' => $d['floor'], 'description' => $d['description'], 'share_text' => $d['share_text'],
         'contact_name' => $d['contact_name'], 'energy_class' => $d['energy_class'], 'energy_source' => $d['energy_source'], 'neighbours_first' => $d['neighbours_first'],
         'outdoor_type' => $d['outdoor_type'] ?? 'none', 'outdoor_area' => $d['outdoor_area'] ?? null, 'updated_at' => $now];
+    if (isset($d['features'])) {
+        $cols['features'] = $d['features'];
+    }
     if ($id) {
         q('UPDATE listings SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_keys($cols))) . ' WHERE id = ?', [...array_values($cols), $id]);
         return $id;
