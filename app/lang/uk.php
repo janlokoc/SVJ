@@ -1217,4 +1217,5 @@ return [
     'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Точки на графіку: середнє по будинку для квартири Вашої площі ({} одиниць, без даних окремих квартир).',
     'Tabulka po měsících' => 'Таблиця за місяцями',
     'Průměr domu pro byt Vaší velikosti: {}' => 'Середнє по будинку для квартири Вашої площі: {}',
+    'Data za {} od odečtové firmy zatím nedorazila. Výbor o tom ví a řeší to – až přijdou, dáme Vám vědět.' => 'Дані за {} від компанії, що знімає показники, ще не надійшли. Правління про це знає і вирішує – щойно надійдуть, повідомимо Вас.',
 ];

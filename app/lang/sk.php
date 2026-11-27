@@ -1217,4 +1217,5 @@ return [
     'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Bodky v grafe: priemer domu pre byt Vašej veľkosti ({} jednotiek, bez údajov jednotlivých bytov).',
     'Tabulka po měsících' => 'Tabuľka po mesiacoch',
     'Průměr domu pro byt Vaší velikosti: {}' => 'Priemer domu pre byt Vašej veľkosti: {}',
+    'Data za {} od odečtové firmy zatím nedorazila. Výbor o tom ví a řeší to – až přijdou, dáme Vám vědět.' => 'Údaje za {} od odpočtovej firmy zatiaľ neprišli. Výbor o tom vie a rieši to – keď prídu, dáme Vám vedieť.',
 ];

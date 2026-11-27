@@ -6,6 +6,7 @@
   <section class="card meter-monthly">
     <h2>Spotřeba po měsících</h2>
     <p class="hint"><?= e(implode(', ', array_map(fn($k) => READING_KINDS[$k], $remote))) ?> se odečítá na dálku. Spotřeba za měsíc je rozdíl stavů na konci měsíce a na konci předchozího měsíce.</p>
+    <?php if (($lateMonth ?? '') !== ''): ?><p class="note">Data za <?= e(month_label($lateMonth)) ?> od odečtové firmy zatím nedorazila. Výbor o tom ví a řeší to – až přijdou, dáme Vám vědět.</p><?php endif ?>
     <?php if (!$monthly): ?><p class="empty">Zatím tu nejsou data za celý měsíc. Objeví se, jakmile je pošle odečtová firma.</p><?php else: ?>
     <?php foreach ($overview ?? [] as $m): $ul = meter_unit_label($m['kind']); $f = fn(float $v) => str_replace('.', ',', (string) round($v, $v >= 10 ? 1 : 2));
       $yoy = $m['yearAgo'] !== null ? meter_delta($m['use'], $m['yearAgo']) : null;

@@ -246,8 +246,8 @@ if ($dbProblem !== null) {
 }
 
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
-// Adresa pro příjem odečtů ze strojů (odečtová firma, sběrnice) se ověřuje tajným klíčem v adrese, ne formulářovým tokenem.
-if ($METHOD === 'POST' && !preg_match('~^/api/odecty/[a-f0-9]{40}$~', $PATH) && $PATH !== '/sso/callback/apple') {
+// Adresa pro příjem odečtů ze strojů (odečtová firma, sběrnice) se ověřuje tajným klíčem (hlavička nebo adresa), ne formulářovým tokenem.
+if ($METHOD === 'POST' && !preg_match('~^/api/odecty(/[a-f0-9]{40})?$~', $PATH) && $PATH !== '/sso/callback/apple') {
     check_csrf();
 }
 

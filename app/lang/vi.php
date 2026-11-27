@@ -1217,4 +1217,5 @@ return [
     'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Các chấm trên biểu đồ: mức trung bình của tòa nhà cho căn hộ cùng diện tích ({} căn, không có dữ liệu từng căn).',
     'Tabulka po měsících' => 'Bảng theo tháng',
     'Průměr domu pro byt Vaší velikosti: {}' => 'Trung bình tòa nhà cho căn hộ cùng diện tích: {}',
+    'Data za {} od odečtové firmy zatím nedorazila. Výbor o tom ví a řeší to – až přijdou, dáme Vám vědět.' => 'Dữ liệu tháng {} từ công ty đọc chỉ số chưa đến. Ban quản trị đã biết và đang xử lý – khi có dữ liệu, chúng tôi sẽ báo cho bạn.',
 ];

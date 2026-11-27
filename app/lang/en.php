@@ -1217,4 +1217,5 @@ return [
     'Tečky v grafu: průměr domu pro byt Vaší velikosti ({} jednotek, bez údajů jednotlivých bytů).' => 'Dots in the chart: building average for a flat of your size ({} units, no data of individual flats).',
     'Tabulka po měsících' => 'Table by month',
     'Průměr domu pro byt Vaší velikosti: {}' => 'Building average for a flat of your size: {}',
+    'Data za {} od odečtové firmy zatím nedorazila. Výbor o tom ví a řeší to – až přijdou, dáme Vám vědět.' => 'Data for {} from the meter reading company has not arrived yet. The committee knows and is dealing with it – we will let you know when it comes.',
 ];

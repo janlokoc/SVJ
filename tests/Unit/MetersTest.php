@@ -191,26 +191,34 @@ final class MetersTest extends TestCase
 
     // ---------- meter_rows_save ----------
 
-    public function testRowsSaveInsertsThenOverwritesSameDay(): void
+    public function testRowsSaveInsertsThenOverwritesSameDayWithHistory(): void
     {
         $meter = 'EL-' . bin2hex(random_bytes(4));
+        $d1 = date('Y-m-d', strtotime('-10 days'));
+        $d2 = date('Y-m-d', strtotime('-5 days'));
         $checked = meter_rows_check([
-            ['unit' => 'B/4', 'meter_no' => $meter, 'kind' => 'el', 'amount' => '100', 'date' => '2026-10-01'],
-            ['unit' => 'B/4', 'meter_no' => $meter, 'kind' => 'el', 'amount' => '150', 'date' => '2026-10-15'],
-            ['unit' => 'nic', 'meter_no' => '', 'kind' => 'el', 'amount' => '1', 'date' => '2026-10-01'],
+            ['unit' => 'B/4', 'meter_no' => $meter, 'kind' => 'el', 'amount' => '100', 'date' => $d1],
+            ['unit' => 'B/4', 'meter_no' => $meter, 'kind' => 'el', 'amount' => '150', 'date' => $d2],
+            ['unit' => 'nic', 'meter_no' => '', 'kind' => 'el', 'amount' => '1', 'date' => $d1],
         ]);
+        $this->remember('meter_notice_' . substr($d1, 0, 7));
+        q('DELETE FROM settings WHERE `key` = ?', ['meter_notice_' . substr($d1, 0, 7)]);
+        setting('__reset');
         try {
-            $this->assertSame([2, 0], meter_rows_save($checked, 'import'));
+            $this->assertSame([2, 0, 0], meter_rows_save($checked, 'import'));
             $checked[0][1]['amount'] = 101.0;
-            $this->assertSame([0, 2], meter_rows_save($checked, 'api'));
+            $this->assertSame([0, 1, 0], meter_rows_save($checked, 'api'), 'beze změny se nepřepisuje');
             $rows = all('SELECT amount, read_date, source, user_id FROM readings WHERE meter_no = ? ORDER BY read_date', [$meter]);
             $this->assertCount(2, $rows);
             $this->assertEquals(101, $rows[0]['amount']);
             $this->assertSame('api', $rows[0]['source']);
             $this->assertNull($rows[0]['user_id']);
             $this->assertEquals(150, $rows[1]['amount']);
+            $h = one('SELECT * FROM reading_history WHERE meter_no = ? ORDER BY id DESC', [$meter]);
+            $this->assertEquals([100, 'import', 101, 'api'], [(float) $h['old_amount'], $h['old_source'], (float) $h['new_amount'], $h['new_source']], 'původní hodnota je v historii');
         } finally {
             q('DELETE FROM readings WHERE meter_no = ?', [$meter]);
+            q('DELETE FROM reading_history WHERE meter_no = ?', [$meter]);
         }
     }
 

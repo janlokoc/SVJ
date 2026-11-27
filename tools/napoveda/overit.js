@@ -54,9 +54,9 @@ const mailsSince = (since = 0, to = '') => (fs.existsSync(MAILFILE) ? fs.readFil
   const subject = ((/^Subject: (.*(?:\r?\n[ \t].*)*)/m.exec(m) || [])[1] || '').replace(/\r?\n[ \t]+/g, '').replace(/=\?UTF-8\?B\?([^?]*)\?=/gi, (_, b) => Buffer.from(b, 'base64').toString('utf8'));
   return { to: (/^To: (.*)$/m.exec(m) || [])[1].trim(), subject, body: qpDecode(m) };
 });
-const post = (url, body, type) => new Promise((resolve, reject) => {
+const post = (url, body, type, extra = {}) => new Promise((resolve, reject) => {
   const u = new URL(url);
-  const req = http.request({ host: '127.0.0.1', port: PORT, path: u.pathname, method: 'POST', headers: { Host: u.host, 'X-Forwarded-Proto': 'https', 'Content-Type': type, 'Content-Length': Buffer.byteLength(body) } }, (res) => {
+  const req = http.request({ host: '127.0.0.1', port: PORT, path: u.pathname, method: 'POST', headers: { Host: u.host, 'X-Forwarded-Proto': 'https', 'Content-Type': type, 'Content-Length': Buffer.byteLength(body), ...extra } }, (res) => {
     let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => resolve({ status: res.statusCode, body: d }));
   });
   req.on('error', reject); req.end(body);
@@ -174,35 +174,73 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     begin('odecty-api');
     await admin.goto(T + '/admin/odecty/dalkove');
     await admin.click('#prijem button:has-text("Zapnout")');
-    const api = await admin.inputValue('#prijem input');
-    check(/\/api\/odecty\/[a-f0-9]{40}$/.test(api), 'adresa pro příjem'); step('Správce zapnul automatický příjem a získal adresu.');
-    await admin.$eval('#prijem input', (x) => { x.value = x.value.replace(/[a-f0-9]{40}$/, '••••••••••••••••'); });
-    await shot(admin.locator('#prijem'), 'api-1-adresa.jpg');
+    const key = await admin.inputValue('#prijem input[aria-label="Klíč pro příjem dat"]');
+    const api = T + '/api/odecty';
+    check(/^[a-f0-9]{40}$/.test(key) && (await text(admin, '#prijem')).includes('/api/odecty'), 'adresa a zvlášť klíč pro příjem'); step('Správce zapnul automatický příjem a získal adresu a zvlášť klíč (klíč doporučujeme předat firmě jinou cestou než adresu).');
+    await admin.$eval('#prijem input[aria-label="Klíč pro příjem dat"]', (x) => { x.value = '••••••••••••••••'; });
+    await shot(admin.locator('#prijem'), 'api-1-adresa.jpg', 700);
+    const auth = { Authorization: 'Bearer ' + key };
     const unit = sql(`SELECT entrance || '/' || number FROM units WHERE id = ${ownerUnit}`);
     const day = new Date().toISOString().slice(0, 10);
-    const jsonReq = JSON.stringify([{ unit, meter_no: 'TV-104233', kind: 'tv', amount: 41.27, date: day }, { unit: 'Z/99', kind: 'tv', amount: 3, date: day }], null, 2);
-    const r1 = await post(api, jsonReq, 'application/json');
-    check(r1.status === 200 && JSON.parse(r1.body).saved === 1 && JSON.parse(r1.body).errors.length === 1, 'JSON: 1 uloženo, 1 chyba');
-    const csvReq = `jednotka;číslo měřidla;druh;stav;datum odečtu\n${unit};TV-104233;teplá voda;42,05;${day}`;
-    const r2 = await post(api, csvReq, 'text/csv');
-    check(r2.status === 200 && JSON.parse(r2.body).ok === true, 'CSV přijato');
-    const r4 = await post(api, JSON.stringify([{ meter_no: 'TV-104233', kind: 'tv', amount: 43.5, date: new Date(Date.now() - 86400000).toISOString().slice(0, 10) }]), 'application/json');
+    const jsonReq = JSON.stringify([{ unit, meter_no: 'TV-104233', kind: 'tv', amount: 44.27, date: day }, { unit: 'Z/99', kind: 'tv', amount: 3, date: day }], null, 2);
+    const r1 = await post(api, jsonReq, 'application/json', auth);
+    check(r1.status === 200 && JSON.parse(r1.body).saved === 1 && JSON.parse(r1.body).errors.length === 1, 'JSON s klíčem v hlavičce: 1 uloženo, 1 chyba ' + r1.body);
+    const csvReq = `jednotka;číslo měřidla;druh;stav;datum odečtu\n${unit};TV-104233;teplá voda;45,05;${day}`;
+    const r2 = await post(api, csvReq, 'text/csv', { 'X-Api-Key': key });
+    check(r2.status === 200 && JSON.parse(r2.body).updated === 1, 'CSV s hlavičkou X-Api-Key přepsalo stav ' + r2.body);
+    const r4 = await post(api, JSON.stringify([{ meter_no: 'TV-104233', kind: 'tv', amount: 44.5, date: new Date(Date.now() - 86400000).toISOString().slice(0, 10) }]), 'application/json', auth);
     check(r4.status === 200 && JSON.parse(r4.body).saved === 1, 'jednotku lze vynechat, když web zná číslo měřidla');
-    const r3 = await post(api.replace(/[a-f0-9]{40}$/, '0'.repeat(40)), '[]', 'application/json');
+    const rOld = await post(api + '/' + key, '[]', 'application/json');
+    check(rOld.status === 200, 'starší adresa s klíčem v adrese funguje');
+    const r3 = await post(api, '[]', 'application/json', { Authorization: 'Bearer ' + '0'.repeat(40) });
     check(r3.status === 403, 'špatný klíč odmítnut');
-    step('Poslán JSON (1 řádek uložen, 1 s chybou), CSV (stav přepsán), JSON jen s číslem měřidla (uložen) a požadavek se špatným klíčem (odmítnut 403).');
-    fs.writeFileSync(path.join(OUT, 'api-ukazka.json'), JSON.stringify({ unit, jsonRequest: jsonReq, jsonResponse: JSON.stringify(JSON.parse(r1.body), null, 2), csvRequest: csvReq, csvResponse: JSON.stringify(JSON.parse(r2.body), null, 2), badStatus: r3.status, badResponse: r3.body }, null, 2) + '\n');
+    const rNo = await post(api, '[]', 'application/json');
+    check(rNo.status === 403, 'bez klíče odmítnuto');
+    step('Poslán JSON s klíčem v hlavičce Authorization (1 řádek uložen, 1 s chybou), CSV s hlavičkou X-Api-Key (stav přepsán), JSON jen s číslem měřidla (uložen); starší adresa s klíčem v adrese funguje; špatný klíč i chybějící klíč odmítnuty (403).');
+    // Podezřelý řádek: pokles stavu → neuloží se, čeká na schválení.
+    const heldSince = mailLen();
+    const rHeld = await post(api, JSON.stringify([{ unit, meter_no: 'TV-104233', kind: 'tv', amount: 30, date: day }]), 'application/json', auth);
+    check(rHeld.status === 200 && JSON.parse(rHeld.body).held === 1 && JSON.parse(rHeld.body).updated === 0, 'pokles stavu zadržen ke schválení ' + rHeld.body);
+    const heldMails = mailsSince(heldSince); check(heldMails.some((m) => m.subject.startsWith('Odečty ke schválení')), 'správcům přišel e-mail o odečtu ke schválení: ' + JSON.stringify(heldMails.map((m) => m.subject)));
+    await admin.goto(T + '/admin/odecty/dalkove');
+    const pend = await text(admin, '#ke-schvaleni'); check(pend.includes('nižší než předchozí') && pend.includes('30'), 'správce vidí zadržený odečet s důvodem');
+    await shot(admin.locator('#ke-schvaleni'), 'api-2-schvaleni.jpg', 500);
+    await admin.click('#ke-schvaleni button[value=reject]');
+    check(sql(`SELECT amount FROM readings WHERE meter_no = 'TV-104233' AND read_date = '${day}'`) === '45.05' && sql("SELECT COUNT(*) FROM reading_pending") === '0', 'zamítnutý odečet se neuložil, platí původní stav');
+    step('Řádek se stavem nižším než předchozí odečet se neuložil: odpověď ho vrátila jako „held“, správcům přišel e-mail a v administraci je v části „Odečty ke schválení“ s důvodem; po „Zamítnout“ zůstal původní stav.');
+    // Povolené IP adresy: z jiné adresy odmítnuto, i se správným klíčem.
+    await admin.fill('#prijem [name=ips]', '203.0.113.10'); await admin.click('#prijem form:has([name=ips]) button');
+    const rIp = await post(api, '[]', 'application/json', auth);
+    check(rIp.status === 403 && rIp.body.includes('IP'), 'z nepovolené IP odmítnuto i se správným klíčem');
+    await admin.fill('#prijem [name=ips]', ''); await admin.click('#prijem form:has([name=ips]) button');
+    check((await post(api, '[]', 'application/json', auth)).status === 200, 'po vymazání seznamu zase přijato');
+    const pr = await text(admin, '#prijem'); check(/Poslední příjem dat/.test(pr) && /Neúspěšné pokusy za 7 dní: [1-9]/.test(pr), 'správce vidí poslední příjem a neúspěšné pokusy');
+    step('Se seznamem povolených IP adres web odmítl data z jiné adresy (403) i se správným klíčem; v administraci je vidět poslední příjem dat (kdy, odkud, kolik řádků) a počet neúspěšných pokusů.');
+    fs.writeFileSync(path.join(OUT, 'api-ukazka.json'), JSON.stringify({ unit, jsonRequest: jsonReq, jsonResponse: JSON.stringify(JSON.parse(r1.body), null, 2), csvRequest: csvReq, csvResponse: JSON.stringify(JSON.parse(r2.body), null, 2), heldResponse: JSON.stringify(JSON.parse(rHeld.body), null, 2), badStatus: r3.status, badResponse: r3.body }, null, 2) + '\n');
     await owner.goto(T + '/odecty');
     const ot = await text(owner); check(ot.includes('Spotřeba po měsících') && ot.includes('dálkový odečet'), 'obyvatel vidí dálkový odečet'); step('Obyvatel vidí na stránce Odečty přijaté stavy se zdrojem „dálkový odečet“.');
     // Data za celé měsíce: stavy ke konci posledních tří měsíců (teplá voda a indikátory topení) → měsíční spotřeba.
     const endOf = (back) => { const d = new Date(); const x = new Date(d.getFullYear(), d.getMonth() - back + 1, 0); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
     const series = [[7, 28.90, 1150], [6, 31.20, 1185], [5, 33.40, 1195], [4, 35.80, 1200], [3, 38.10, 1210], [2, 40.35, 1302], [1, 42.80, 1388]].flatMap(([m, tv, itn]) => [{ unit, meter_no: 'TV-104233', kind: 'tv', amount: tv, date: endOf(m) }, { unit, meter_no: 'ITN-5521', kind: 'itn', amount: itn, date: endOf(m) }]);
-    const r5 = await post(api, JSON.stringify(series), 'application/json');
+    const r5 = await post(api, JSON.stringify(series), 'application/json', auth);
     check(r5.status === 200 && JSON.parse(r5.body).errors.length === 0, 'stavy za sedm měsíců přijaty');
     await owner.goto(T + '/odecty');
     const mt = await text(owner, '.meter-monthly');
     check(mt.includes('2,45') && mt.includes('86 dílků'), 'měsíční spotřeba spočítaná ze stavů'); step('Ze stavů na konci měsíců web spočítal měsíční spotřebu (teplá voda 2,45 m³, indikátory 86 dílků).');
     check(await owner.locator('.meter-monthly svg.meter-chart').count() >= 1 && /Za posledních 6 měsíců celkem/.test(mt), 'graf spotřeby a součet za období'); step('Obyvatel vidí u každého měřidla graf spotřeby po měsících a součet za období.');
+    // Chybějící data: měřidlo, které předminulý měsíc data poslalo, za minulý měsíc mlčí.
+    const rMiss = await post(api, JSON.stringify([{ unit, meter_no: 'TV-200917', kind: 'tv', amount: 12.4, date: endOf(2) }]), 'application/json', auth);
+    check(rMiss.status === 200 && JSON.parse(rMiss.body).saved === 1, 'druhé měřidlo jen za předminulý měsíc');
+    await admin.goto(T + '/admin/odecty/dalkove');
+    const miss = await text(admin, '#chybi'); check(miss.includes('chybí data') && miss.includes('(počet: 1)') && miss.includes('200917'), 'správce vidí chybějící měřidlo: ' + miss.slice(0, 160));
+    await admin.fill('#chybi [name=firm_email]', 'odecty@example.org'); await admin.click('#chybi form:has([name=firm_email]) button');
+    await admin.click('#chybi button[value=ask-firm]');
+    const mf = fs.readFileSync(MAIL, 'utf8'); check(/To: .*odecty@example\.org/.test(mf), 'odečtové firmě odešla žádost o doplnění');
+    check((await text(admin, '#chybi')).includes('Odečtovou firmu jste požádali'), 'zaznamenáno, kdy byla firma požádána');
+    await shot(admin.locator('#chybi'), 'api-3-chybi.jpg', 700);
+    await owner.goto(T + '/odecty');
+    check(new Date().getDate() < 3 || (await text(owner, '.meter-monthly')).includes('zatím nedorazila'), 'obyvatel vidí, že data za minulý měsíc chybí a výbor to řeší');
+    step('Když měřidlo, které předminulý měsíc posílalo data, za minulý měsíc mlčí: správce ho vidí v části „Když data nedorazí“, tlačítkem odeslal odečtové firmě e-mail se seznamem chybějících měřidel a obyvatel na stránce Odečty vidí, že data zatím nedorazila a výbor je řeší.');
     await admin.goto(T + '/admin/odecty/dalkove');
     await admin.click('#upozorneni form:has([value=notice]) button');
     const fl = await text(admin, 'main'); check(/Upozornění/.test(fl), 'měsíční upozornění odesláno: ' + fl.slice(0, 120));
