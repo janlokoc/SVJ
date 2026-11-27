@@ -2021,3 +2021,7 @@ tr.is-neg td { color: var(--accent); }
 }
 @media print { .lst-share, .lst-contact form, .lst-foot a { display: none; } .lst-gallery { flex-wrap: wrap; overflow: visible; } .lst-photo { flex-basis: 48%; } }
 .lst-copy textarea, .lst-copy input { margin-bottom: .5rem; }
+
+/* Konzole a portál: položky menu a počty na jednom řádku */
+.site-nav li a { white-space: nowrap; }
+.site-nav li a .count { vertical-align: baseline; }

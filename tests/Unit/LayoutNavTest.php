@@ -30,4 +30,16 @@ final class LayoutNavTest extends TestCase
         $this->assertStringNotContainsString("' · beta'", $s);
         $this->assertStringContainsString('.admin-nav .plan-tag.tag-beta', (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css'));
     }
+
+    /** Konzole: nahoře nejvýš 5 hlavních položek, ostatní pod „Další“ (menu se vejde na jeden řádek). */
+    public function testConsoleMenuHasMoreDropdown(): void
+    {
+        $s = (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/platform/layout.php');
+        $this->assertStringContainsString('<summary>Další</summary>', $s);
+        $this->assertSame(1, preg_match('~\$consoleMain = \[(.*?)\];\n~s', $s, $m));
+        $this->assertLessThanOrEqual(5, substr_count($m[1], "['/"));
+        foreach (['/vyuziti', '/kredit', '/rejstriky', '/zajem', '/zaznamy'] as $p) {
+            $this->assertStringContainsString("['" . $p . "'", $s, $p . ' still reachable');
+        }
+    }
 }

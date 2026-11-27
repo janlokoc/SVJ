@@ -21,17 +21,23 @@
     <?php if ($super): ?>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="hlavni-menu"><?= icon('menu') ?><span>Menu</span></button>
     <nav class="site-nav" id="hlavni-menu" aria-label="Menu platformy">
+      <?php
+      // Hlavní položky nahoře, méně časté pod „Další“ – menu se vejde na jeden řádek.
+      $claimed = (int) pq("SELECT COUNT(*) FROM payments WHERE status = 'claimed'")->fetchColumn();
+      $newReports = reports_open_count();
+      $consoleMain = [['/', 'Společenství', $path === '/' || str_starts_with($path, '/svj'), 0], ['/platby', 'Platby', str_starts_with($path, '/platby'), $claimed],
+          ['/partneri', 'Partneři', str_starts_with($path, '/partneri'), 0], ['/hlaseni', 'Hlášení', str_starts_with($path, '/hlaseni'), $newReports],
+          ['/nastaveni', 'Nastavení', $path === '/nastaveni', 0]];
+      $consoleMore = [['/vyuziti', 'Využití funkcí'], ['/kredit', 'Kredit služeb'], ['/rejstriky', 'Rejstříky'], ['/zajem', 'Zájem o funkce'], ['/zaznamy', 'Záznamy']];
+      $moreActive = in_array($path, array_column($consoleMore, 0), true);
+      ?>
       <ul>
-        <li><a href="<?= url('/') ?>"<?= $path === '/' || str_starts_with($path, '/svj') ? ' aria-current="page"' : '' ?>>Společenství</a></li>
-        <li><a href="<?= url('/platby') ?>"<?= str_starts_with($path, '/platby') ? ' aria-current="page"' : '' ?>>Platby<?php $claimed = (int) pq("SELECT COUNT(*) FROM payments WHERE status = 'claimed'")->fetchColumn(); if ($claimed): ?> <span class="count"><?= $claimed ?></span><?php endif ?></a></li>
-        <li><a href="<?= url('/partneri') ?>"<?= str_starts_with($path, '/partneri') ? ' aria-current="page"' : '' ?>>Partneři</a></li>
-        <li><a href="<?= url('/hlaseni') ?>"<?= str_starts_with($path, '/hlaseni') ? ' aria-current="page"' : '' ?>>Hlášení<?php $newReports = reports_open_count(); if ($newReports): ?> <span class="count"><?= $newReports ?></span><?php endif ?></a></li>
-        <li><a href="<?= url('/vyuziti') ?>"<?= $path === '/vyuziti' ? ' aria-current="page"' : '' ?>>Využití</a></li>
-        <li><a href="<?= url('/rejstriky') ?>"<?= $path === '/rejstriky' ? ' aria-current="page"' : '' ?>>Rejstříky</a></li>
-        <li><a href="<?= url('/kredit') ?>"<?= $path === '/kredit' ? ' aria-current="page"' : '' ?>>Kredit</a></li>
-        <li><a href="<?= url('/zajem') ?>"<?= $path === '/zajem' ? ' aria-current="page"' : '' ?>>Zájem o funkce</a></li>
-        <li><a href="<?= url('/nastaveni') ?>"<?= $path === '/nastaveni' ? ' aria-current="page"' : '' ?>>Nastavení služby</a></li>
-        <li><a href="<?= url('/zaznamy') ?>"<?= $path === '/zaznamy' ? ' aria-current="page"' : '' ?>>Záznamy</a></li>
+        <?php foreach ($consoleMain as [$href, $label, $active, $count]): ?>
+        <li><a href="<?= url($href) ?>"<?= $active ? ' aria-current="page"' : '' ?>><?= e($label) ?><?php if ($count): ?> <span class="count"><?= $count ?></span><?php endif ?></a></li>
+        <?php endforeach ?>
+        <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Další</summary>
+          <ul><?php foreach ($consoleMore as [$href, $label]): ?><li><a href="<?= url($href) ?>"<?= $path === $href ? ' aria-current="page"' : '' ?>><?= e($label) ?></a></li><?php endforeach ?></ul>
+        </details></li>
       </ul>
       <div class="nav-user">
         <a class="user-link" href="<?= url('/ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($super['name']) ?></strong><small>hlavní správce</small></span></a>
