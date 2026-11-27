@@ -1,7 +1,9 @@
 # Pravidla pro vývoj webu SVJ
 
 - Komunikace s provozovatelem česky, formálně (Vy), stručně; poctivě rozlišovat „ověřeno“ a „neověřeno“.
-- Vývoj jen na větvi `claude/svj-web-redesign-admin-1m52yt` (staging). `main` je produkce – nic tam bez výslovného souhlasu.
+- Vývoj jen na větvi `claude/svj-web-redesign-admin-1m52yt` (staging). `main` je produkce – **Claude do `main` nikdy nepushuje**.
+  Do produkce jde změna jen tlačítkem provozovatele: GitHub → Actions → „Uvolnit staging do produkce“ → Run workflow
+  (`.github/workflows/uvolneni.yml`; ověří zelený staging a posune `main`). Claude po nasazení na staging napíše, co je ke kontrole.
 - Ceny se uvádějí jen bez DPH (i na veřejném ceníku, rozhodnutí provozovatele 11/2026); DPH se dopočítá až na faktuře.
 
 ## Nápověda (od 11/2026 závazné)
