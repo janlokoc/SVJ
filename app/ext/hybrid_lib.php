@@ -15,9 +15,8 @@ declare(strict_types=1);
  * Videohovor samotný web neprovozuje ani nenahrává – jen ukládá odkaz. Veřejný Jitsi Meet (meet.jit.si) je zdarma,
  * přesto je funkce v BETA_FEATURES ('shromazdeni-online', výchozí stav vypnuto), aby ji provozovatel nejdřív vyzkoušel.
  * Zapnutí pro dům: edice Standard a výš + přepínač správce v Administraci → Shromáždění online (nastavení 'hybrid_on').
- * Cena: v edici Premium v ceně; v edici Standard price_online_meeting (výchozí 490 Kč bez DPH) za shromáždění z kreditu služeb
- * (app/ext/credit_lib.php) – strhne se, když výbor přepne termín na hybridní/online formu (jednou za termín). Přepne-li ho
- * zpět na prezenční před začátkem a nikdo se zatím nepřipojil, částka se vrátí.
+ * Cena: v ceně edice Standard i Premium (11/2026) – provozovatele nic nestojí. Mechanismus platby z kreditu (price_online_meeting,
+ * strhne se při přepnutí termínu na online formu, vrací se při přepnutí zpět) zůstává jen pro případ, že by provozovatel cenu v pset nastavil.
  */
 
 const HYBRID_BETA = 'shromazdeni-online';

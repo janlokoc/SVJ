@@ -54,9 +54,18 @@ function rej_visible(string $feature): bool
     return function_exists('beta_visible') && beta_visible($feature);
 }
 /** Smí ji dům používat (viditelná + edice Premium)? */
+/** Edice, od které funkci dům smí používat: insolvence od Standardu (rejstřík je zdarma), katastr a exekuce Premium. */
+const REJ_EDITION = ['insolvence' => 'standard', 'katastr' => 'premium', 'exekuce' => 'premium'];
+function rej_edition_ok(string $feature): bool
+{
+    if (!function_exists('plan_managed') || !plan_managed()) {
+        return true;
+    }
+    return (EDITION_RANK[plan_edition()] ?? 0) >= EDITION_RANK[REJ_EDITION[$feature] ?? 'premium'];
+}
 function rej_allowed(string $feature): bool
 {
-    return rej_visible($feature) && rej_premium();
+    return rej_visible($feature) && rej_edition_ok($feature);
 }
 function rej_nav_visible(): bool
 {
@@ -218,7 +227,7 @@ function rej_summary(): array
     }
     if (rej_visible('insolvence')) {
         $persons = all('SELECT isir_found FROM rej_persons');
-        $out['insolvence'] = ['allowed' => rej_premium(), 'companies' => function_exists('isir_company_units') ? count(isir_company_units()) : 0,
+        $out['insolvence'] = ['allowed' => rej_edition_ok('insolvence'), 'companies' => function_exists('isir_company_units') ? count(isir_company_units()) : 0,
             'company_hits' => count(array_filter((array) json_decode(setting('isir_results'), true), fn($r) => !empty($r['found']))),
             'persons' => count($persons), 'person_hits' => count(array_filter($persons, fn($p) => (array) json_decode((string) $p['isir_found'], true) !== [])),
             'last' => explode('|', setting('rej_isir_last'), 3)];

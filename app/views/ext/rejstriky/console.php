@@ -1,6 +1,6 @@
 <div class="wrap page">
   <header class="page-head"><h1>Katastr a rejstříky</h1>
-    <p class="lead">Placený doplněk edice Premium: sledování změn v katastru (dálkový přístup ČÚZK), insolvence vlastníků (ISIR, zdarma) a lustrace exekucí (Centrální evidence exekucí). Zapíná se v <a href="<?= url('/nastaveni') ?>#beta">Nastavení služby → Nové funkce</a>.</p></header>
+    <p class="lead">Sledování změn v katastru (dálkový přístup ČÚZK, placený doplněk edice Premium), insolvence vlastníků (ISIR, zdarma, edice Standard i Premium) a lustrace exekucí (Centrální evidence exekucí). Zapíná se v <a href="<?= url('/nastaveni') ?>#beta">Nastavení služby → Nové funkce</a>.</p></header>
   <div class="two-col">
     <section class="card">
       <h2>Propojení</h2>

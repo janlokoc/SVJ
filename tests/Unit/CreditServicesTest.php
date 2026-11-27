@@ -41,11 +41,20 @@ final class CreditServicesTest extends TestCase
 
     #[RunInSeparateProcess]
     #[PreserveGlobalState(false)]
-    public function testStandardPaysOnlineMeetingOnceAndGetsRefundWhenSwitchedBack(): void
+    public function testOnlineMeetingFreeInStandardUnlessPriceSet(): void
     {
         $this->prepare('standard');
         $this->assertSame('standard', plan_edition());
         $this->assertTrue(hybrid_available());
+        // Výchozí stav (11/2026): shromáždění online je v ceně i ve Standardu – nic se nestrhává.
+        $this->assertFalse(hybrid_paid());
+        $free = $this->event(12);
+        $this->assertSame([], hybrid_event_check(self::online(), $free), 'bez kreditu jde online i ve Standardu');
+        hybrid_event_store($free, self::online(), 1);
+        $this->assertSame('online', hybrid_event($free)['form']);
+        $this->assertSame(0, credit_balance_h(TENANT));
+        // Kdyby provozovatel cenu v nastavení zavedl, platí se z kreditu jednou za termín.
+        pset_save('price_online_meeting', '490');
         $this->assertTrue(hybrid_paid());
         $this->assertSame(49000, hybrid_price_h());
         $id = $this->event(10);

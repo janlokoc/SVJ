@@ -2,7 +2,7 @@
   <header class="page-head"><h1>Katastr a rejstříky</h1>
     <p class="lead">Výbor se včas dozví o prodeji bytu, novém spoluvlastníkovi, insolvenci nebo exekuci vlastníka – a stihne přihlásit pohledávku nebo upravit evidenci.</p></header>
   <?php if (!$premium): ?>
-  <div class="card"><p>Hlídání katastru a rejstříků je součástí edice Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
+  <div class="card"><p>Hlídání katastru a lustrace exekucí jsou součástí edice Premium (hlídání insolvencí je i ve Standardu). <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
   <?php endif ?>
   <div class="two-col">
     <?php if (isset($sum['katastr'])): $k = $sum['katastr']; ?>
@@ -21,7 +21,7 @@
       <p>Hlídané firmy: <?= (int) $i['companies'] ?><?= $i['company_hits'] ? ', s řízením: <strong>' . (int) $i['company_hits'] . '</strong>' : '' ?><br>
         Hlídané fyzické osoby: <?= (int) $i['persons'] ?><?= $i['person_hits'] ? ', s řízením: <strong>' . (int) $i['person_hits'] . '</strong>' : '' ?>
         <?= ($i['last'][0] ?? '') !== '' ? '<br><small class="muted">Poslední kontrola osob ' . e($i['last'][0]) . ': ' . e($i['last'][2] ?? '') . '</small>' : '' ?></p>
-      <p class="hint">Insolvenční rejstřík je zdarma, hlídání je v ceně edice Premium.</p>
+      <p class="hint">Insolvenční rejstřík je zdarma, hlídání je v ceně edice Standard i Premium.</p>
       <p><a class="btn btn-small" href="<?= url('/admin/insolvence') ?>">Otevřít</a></p>
     </section>
     <?php endif ?>

@@ -149,7 +149,7 @@ final class ModGSiteTest extends TestCase
         $this->assertStringNotContainsString('/srovnani', $html, 'vypnuté srovnání se neodkazuje');
 
         $html = $this->view('platform/_editions', ['edView' => 'landing']);
-        $this->assertStringContainsString("2\u{a0}407,90\u{a0}Kč s DPH", $html, 'cena s DPH vedle ceny bez DPH');
+        $this->assertStringNotContainsString('s DPH', $html, 'jen ceny bez DPH');
         $this->assertStringContainsString('Pro domy do 12 jednotek', $html);
     }
 

@@ -160,7 +160,7 @@ final class ModGPricingTest extends TestCase
         $this->assertSame('', price_vat_html(0));
         $this->setPset('vat_payer', '1');
         $this->setPset('vat_rate', '21');
-        $this->assertStringContainsString("2\u{a0}407,90\u{a0}Kč s DPH", price_vat_html(1990));
+        $this->assertSame('', price_vat_html(1990), 'public prices are shown without VAT only');
         $this->assertSame(2407.9, price_gross(1990));
     }
 

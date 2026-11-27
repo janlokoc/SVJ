@@ -140,7 +140,7 @@ function isir_run(bool $notify = true): array
 /** Denně: jednou týdně ověří IČO vlastníků (jen v edici Premium a když provozovatel hlídání zapnul). */
 function isir_daily(): void
 {
-    if (!isir_enabled() || (function_exists('plan_managed') && plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'])) {
+    if (!isir_enabled() || (function_exists('plan_managed') && plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['standard'])) {
         return;
     }
     $last = substr(setting('isir_last'), 0, 10);

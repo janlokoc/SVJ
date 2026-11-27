@@ -319,13 +319,13 @@ $route('GET', '/admin/insolvence', function () {
     if (!beta_visible('insolvence')) {
         not_found();
     }
-    $premium = !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['premium'];
+    $premium = !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['standard'];   // hlídání insolvencí: Standard i Premium
     render('admin/insolvency', ['title' => 'Insolvence vlastníků', 'premium' => $premium, 'units' => $premium ? isir_company_units() : [],
         'results' => (array) json_decode(setting('isir_results'), true), 'last' => explode('|', setting('isir_last'), 3)]);
 });
 $route('POST', '/admin/insolvence', function () {
     require_admin();
-    if (!beta_visible('insolvence') || (plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['premium'])) {
+    if (!beta_visible('insolvence') || (plan_managed() && EDITION_RANK[plan_edition()] < EDITION_RANK['standard'])) {
         redirect('/admin/insolvence');
     }
     if (post('action') === 'save') {

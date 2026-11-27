@@ -278,6 +278,10 @@ SQL);
         platform_beta_2026_11($pdo);
         $pdo->exec('PRAGMA user_version = 29;');
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 30) {
+        // Shromáždění online je v ceně edice Standard i Premium – dřívější výchozí cena 490 Kč (uložená z konzole) se ruší.
+        $pdo->exec("DELETE FROM platform_settings WHERE key = 'price_online_meeting' AND value = '490'; PRAGMA user_version = 30;");
+    }
     return $pdo;
 }
 /** Vypnuté funkce beta programu (i nikdy nenastavené) přepne do bety; spuštěné ('on') a starší zapnuté hlídání insolvencí nechá. */
@@ -1866,7 +1870,7 @@ const PLANNED_FEATURES = [
     'ai-zapis-nahravka' => ['Zápis ze shromáždění z nahrávky', 'Nahrajete zvukový záznam schůze a AI z něj připraví zápis. (Zápis z poznámek a z nahraného přepisu už funguje.)', 'Premium · platí se AI kredity', 'Zápis z nahrávky'],
     'sms' => ['SMS upozornění', 'Důležitá oznámení a pozvánky i vlastníkům, kteří nečtou e-mail.', 'z kreditu služeb · 1,50 Kč za SMS, v Premium 100 SMS ročně v ceně', 'SMS upozornění'],
     'katastr' => ['Hlídání změn v katastru', 'Web sám pozná, že se u jednotky změnil vlastník, a upozorní výbor.', 'Premium · 1 490 Kč ročně za dům', 'Hlídání katastru'],
-    'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Premium · v ceně', 'Hlídání insolvencí'],
+    'insolvence' => ['Hlídání insolvencí a exekucí', 'Upozornění, když se vlastník ocitne v insolvenčním rejstříku, aby výbor stihl přihlásit pohledávku.', 'Standard i Premium · v ceně', 'Hlídání insolvencí'],
     'bankid' => ['Hlasování s bankovní identitou', 'Ověření hlasujícího přes banku pro rozhodnutí, kde záleží na průkaznosti.', 'z kreditu služeb · 19 Kč za ověřený hlas', 'Bankovní identita'],
 ];
 /** Které funkce beta programu „připravovanou“ funkci nahrazují: jakmile je některá vidět, mezi připravovanými se už nenabízí. */

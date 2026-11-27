@@ -26,7 +26,7 @@ const CREDIT_KINDS = ['topup' => 'Dobití', 'sms' => 'SMS zprávy', 'exekuce' =>
 /** Služby, které čerpají kredit (souhrn spotřeby). */
 const CREDIT_SERVICES = ['sms', 'exekuce', 'bankid', 'online'];
 /** Výchozí nastavení provozovatele (pset): měsíce platnosti, hranice upozornění (haléře), ceny v Kč bez DPH, SMS v Premium. */
-const CREDIT_DEFAULTS = ['credit_valid_months' => 24, 'credit_low_h' => 10000, 'bankid_price' => 19, 'price_online_meeting' => 490, 'sms_free_premium' => 100];
+const CREDIT_DEFAULTS = ['credit_valid_months' => 24, 'credit_low_h' => 10000, 'bankid_price' => 19, 'price_online_meeting' => 0, 'sms_free_premium' => 100];
 /** Nabízené částky dobití (Kč bez DPH) a nejmenší vlastní částka. */
 const CREDIT_TOPUPS = [300, 500, 1000, 2000];
 const CREDIT_TOPUP_MIN = 300;
@@ -483,7 +483,6 @@ function credit_console_fields(): array
         'sms_free_premium' => ['SMS v ceně edice Premium (kusů za kalendářní rok)', '', fn() => credit_setting('sms_free_premium')],
         'rej_price_exekuce' => ['Lustrace exekucí – cena za dotaz (Kč)', 'Kč', fn() => rej_price('rej_price_exekuce')],
         'bankid_price' => ['Bank iD – cena za ověřený hlas (Kč)', 'Kč', fn() => credit_setting('bankid_price')],
-        'price_online_meeting' => ['Shromáždění online v edici Standard – cena za shromáždění (Kč, Premium v ceně)', 'Kč', fn() => credit_setting('price_online_meeting')],
         'rej_price_katastr_house' => ['Sledování katastru – za dům a rok vč. 1 LV (Kč, doplněk k předplatnému)', 'Kč', fn() => rej_price('rej_price_katastr_house')],
         'rej_price_katastr_lv_extra' => ['Sledování katastru – každý další LV a rok (Kč)', 'Kč', fn() => rej_price('rej_price_katastr_lv_extra')],
         'rej_katastr_days' => ['Sledování katastru – kontrola každých (dní)', '', fn() => rej_price('rej_katastr_days')],
@@ -500,14 +499,13 @@ function credit_price_list(): array
     $sms = function_exists('sms_price_h') ? sms_price_h() : 150;
     $free = credit_setting('sms_free_premium');
     $rows = [
-        ['key' => 'sms', 'name' => 'SMS zpráva', 'desc' => 'Naléhavá oznámení vlastníkům a kódy pro potvrzení hlasu.' . ($free ? ' V edici Premium ' . $free . ' SMS ročně v ceně.' : ''), 'h' => $sms, 'unit' => 'za SMS', 'credit' => true],
-        ['key' => 'exekuce', 'name' => 'Lustrace v Centrální evidenci exekucí', 'desc' => 'Na kliknutí výboru, platí se jen úspěšný dotaz.', 'h' => (function_exists('rej_price') ? rej_price('rej_price_exekuce') : 99) * 100, 'unit' => 'za dotaz', 'credit' => true],
-        ['key' => 'bankid', 'name' => 'Ověření hlasu přes Bank iD', 'desc' => 'Hlasování mimo zasedání s ověřením totožnosti přes banku.', 'h' => credit_setting('bankid_price') * 100, 'unit' => 'za ověřený hlas', 'credit' => true],
-        ['key' => 'shromazdeni-online', 'name' => 'Shromáždění online nebo hybridně', 'desc' => 'V edici Premium v ceně.', 'h' => credit_setting('price_online_meeting') * 100, 'unit' => 'za shromáždění (Standard)', 'credit' => true],
+        ['key' => 'sms', 'name' => 'SMS zpráva', 'desc' => 'Naléhavá oznámení vlastníkům a kódy pro potvrzení hlasu.' . ($free ? ' V edici Premium ' . $free . ' SMS ročně v ceně.' : ''), 'h' => $sms, 'unit' => 'za každou odeslanou SMS, z kreditu', 'credit' => true],
+        ['key' => 'exekuce', 'name' => 'Lustrace v Centrální evidenci exekucí', 'desc' => 'Na kliknutí výboru, platí se jen úspěšný dotaz.', 'h' => (function_exists('rej_price') ? rej_price('rej_price_exekuce') : 99) * 100, 'unit' => 'za každý dotaz, z kreditu', 'credit' => true],
+        ['key' => 'bankid', 'name' => 'Ověření hlasu přes Bank iD', 'desc' => 'Hlasování mimo zasedání s ověřením totožnosti přes banku.', 'h' => credit_setting('bankid_price') * 100, 'unit' => 'za každý ověřený hlas, z kreditu', 'credit' => true],
     ];
     if (function_exists('rej_katastr_year_price')) {
         $rows[] = ['key' => 'katastr', 'name' => 'Sledování změn v katastru', 'desc' => 'Edice Premium. Kontrola listu vlastnictví každých ' . max(1, rej_price('rej_katastr_days')) . ' dní; každý další LV '
-            . money_czk(rej_price('rej_price_katastr_lv_extra')) . ' ročně. Platí se s ročním předplatným (při zapnutí v průběhu roku poměrná část).', 'h' => rej_katastr_year_price(1) * 100, 'unit' => 'za dům a rok vč. 1 LV', 'credit' => false];
+            . money_czk(rej_price('rej_price_katastr_lv_extra')) . ' ročně. Při zapnutí v průběhu roku se platí jen poměrná část.', 'h' => rej_katastr_year_price(1) * 100, 'unit' => 'ročně za dům vč. 1 LV, s předplatným', 'credit' => false];
     }
     return $rows;
 }

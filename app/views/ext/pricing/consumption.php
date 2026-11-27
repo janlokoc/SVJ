@@ -46,7 +46,7 @@ $std = edition_price('standard');
     <details class="lp-faq"><summary>Stačí, když výbor pošle tabulku všem e-mailem?</summary><p>Podle výkladu MMR obyčejný e-mail bez předchozí písemné dohody nestačí a údaje o spotřebě jsou citlivé – tabulka s cizími byty do hromadného e-mailu nepatří. Web dá každému přístup jen k jeho jednotce.</p></details>
     <details class="lp-faq"><summary>Co když někdo nemá internet?</summary><p>Obyvatel si může písemně vyžádat informace v listinné podobě; náklady na tisk a doručení pak podle výkladu MMR hradí on. Ostatní dostávají informaci na webu.</p></details>
     <details class="lp-faq"><summary>Umíte načíst data od naší odečtové firmy?</summary><p>Web přijímá stavy měřidel ve formátu JSON nebo CSV na tajnou adresu, nebo ze souboru, který nahraje správce. Formát je popsaný v nápovědě; odečtové firmy obvykle umějí export do CSV. Pošlete nám ukázku jejich souboru a ověříme to s Vámi.</p></details>
-    <details class="lp-faq"><summary>Kolik to stojí?</summary><p>Edice Standard <?= money_czk($std) ?> ročně bez DPH<?= vat_payer() ? ' (' . money_czk2(price_gross($std)) . ' s DPH)' : '' ?>. Zkušební doba <?= PLAN_TRIAL_DAYS ?> dní je zdarma a nic se automaticky nestrhává. <a href="<?= url('/cenik') ?>">Celý ceník</a></p></details>
+    <details class="lp-faq"><summary>Kolik to stojí?</summary><p>Edice Standard <?= money_czk($std) ?> ročně bez DPH<?= false ? '' : '' ?>. Zkušební doba <?= PLAN_TRIAL_DAYS ?> dní je zdarma a nic se automaticky nestrhává. <a href="<?= url('/cenik') ?>">Celý ceník</a></p></details>
   </div>
 </section>
 

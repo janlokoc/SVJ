@@ -83,7 +83,7 @@ final class CreditTest extends TestCase
             $this->assertContains($c, $cols);
         }
         $this->assertContains('addons', array_column(platform_db()->query('PRAGMA table_info(payments)')->fetchAll(), 'name'));
-        $this->assertSame(['credit_valid_months' => 24, 'credit_low_h' => 10000, 'bankid_price' => 19, 'price_online_meeting' => 490, 'sms_free_premium' => 100], CREDIT_DEFAULTS);
+        $this->assertSame(['credit_valid_months' => 24, 'credit_low_h' => 10000, 'bankid_price' => 19, 'price_online_meeting' => 0, 'sms_free_premium' => 100], CREDIT_DEFAULTS);
         foreach (array_keys(CREDIT_DEFAULTS) as $k) {
             $this->pset($k, null);
             $this->assertSame(CREDIT_DEFAULTS[$k], credit_setting($k));
@@ -328,10 +328,10 @@ final class CreditTest extends TestCase
         $this->assertSame(-4800, credit_totals($from, $to)['refund'] ?? null);
         // nastavení cen v konzoli: klíče a aktuální hodnoty
         $f = credit_console_fields();
-        foreach (['sms_price_h', 'rej_price_exekuce', 'bankid_price', 'price_online_meeting', 'rej_price_katastr_house', 'rej_price_katastr_lv_extra', 'credit_valid_months', 'credit_low_h', 'sms_free_premium'] as $k) {
+        $this->assertArrayNotHasKey('price_online_meeting', $f, 'online meetings are included, no price in the console');
+        foreach (['sms_price_h', 'rej_price_exekuce', 'bankid_price', 'rej_price_katastr_house', 'rej_price_katastr_lv_extra', 'credit_valid_months', 'credit_low_h', 'sms_free_premium'] as $k) {
             $this->assertArrayHasKey($k, $f);
         }
-        $this->assertSame(490, ($f['price_online_meeting'][2])());
     }
 
     // ---------- Obrazovky ----------
@@ -373,7 +373,7 @@ final class CreditTest extends TestCase
         $this->assertStringContainsString('Lustrace v Centrální evidenci exekucí', $html);
     }
 
-    public function testPublicPricingShowsServicesWithAndWithoutVat(): void
+    public function testPublicPricingShowsServicesWithoutVat(): void
     {
         $this->pset('vat_payer', '1');
         $this->pset('vat_rate', '21');
@@ -387,13 +387,17 @@ final class CreditTest extends TestCase
         $this->assertMatchesRegularExpression('~Lustrace v Centrální evidenci exekucí</strong><br>~', $html, 'spuštěná funkce bez štítku');
         $this->assertMatchesRegularExpression('~Ověření hlasu přes Bank iD</strong> <span class="tag">připravujeme</span>~', $html);
         $this->assertStringContainsString('99 Kč', $html);
-        $this->assertStringContainsString('119,79 Kč', $html, '99 Kč + 21 % DPH');
-        $this->assertStringContainsString('592,90 Kč', $html, 'online shromáždění 490 Kč s DPH');
+        $this->assertStringNotContainsString('119,79 Kč', $html, 'only prices without VAT');
+        $this->assertStringNotContainsString('s DPH', $html);
+        $this->assertStringContainsString('za každý dotaz, z kreditu', $html, 'unit says per use');
+        $this->assertStringContainsString('ročně za dům vč. 1 LV', $html, 'unit says per year');
         $this->assertStringContainsString('1 490 Kč', $html);
-        $this->assertStringContainsString('1 802,90 Kč', $html, 'katastr s DPH');
+        $this->assertStringNotContainsString('490 Kč</strong><br><small class="muted">za shromáždění', $html, 'online meeting has no price');
         $this->assertStringContainsString('1,50 Kč', $html);
         $this->assertStringContainsString('Hlídání insolvencí vlastníků', $html);
         $this->assertStringContainsString('v ceně – Premium', $html);
+        $this->assertMatchesRegularExpression('~Hlídání insolvencí vlastníků.*?v ceně – Standard i Premium~s', $html);
+        $this->assertMatchesRegularExpression('~Shromáždění online nebo hybridně.*?v ceně – Standard i Premium~s', $html);
         $this->assertStringContainsString('v ceně – všechny edice', $html);
         $this->assertStringContainsString('300 Kč', $html, 'nejmenší dobití');
     }
@@ -518,7 +522,6 @@ final class CreditTest extends TestCase
         $this->assertStringContainsString('Lustrace exekucí', $html);
         $this->assertStringContainsString('Sledování změn v katastru (2 LV)', $html);
         $this->assertStringContainsString('2 480 Kč', $html);
-        $this->assertStringContainsString('name="price_online_meeting"', $html);
         $this->assertStringContainsString('value="1.5"', $html, 'cena SMS v Kč');
         $this->assertStringContainsString('Vrátit zůstatek', $html);
         $html = $render('ext/credit/addons_card', ['t' => $t, 'iban' => null]);

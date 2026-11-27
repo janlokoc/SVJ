@@ -176,4 +176,25 @@ final class ModERejstrikyTest extends TestCase
         $this->assertStringContainsString('oprávněn', $html, 'GDPR legal basis is explained');
         $this->assertStringContainsString('neověřen', mb_strtolower($html), 'unverified steps are marked');
     }
+
+    /** Hlídání insolvencí je v edici Standard i Premium (rejstřík je zdarma); katastr a exekuce jen Premium. Vlastní proces: edice se v požadavku pamatuje. */
+    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[\PHPUnit\Framework\Attributes\PreserveGlobalState(false)]
+    public function testInsolvencyFromStandardOthersPremium(): void
+    {
+        $this->pset('beta_insolvence', 'on');
+        $this->pset('beta_katastr', 'on');
+        $this->pset('beta_exekuce', 'on');
+        $orig = pq("SELECT billing, plan, paid_until, trial_ends FROM tenants WHERE slug = 'dum'")->fetch();
+        try {
+            pq("UPDATE tenants SET billing = 1, plan = 'standard', paid_until = ?, trial_ends = '' WHERE slug = 'dum'", [date('Y-m-d', strtotime('+100 day'))]);
+            $this->assertSame('standard', plan_edition());
+            $this->assertTrue(rej_allowed('insolvence'));
+            $this->assertFalse(rej_allowed('katastr'));
+            $this->assertFalse(rej_allowed('exekuce'));
+            $this->assertSame(['insolvence' => 'standard', 'katastr' => 'premium', 'exekuce' => 'premium'], REJ_EDITION, 'free edition has none');
+        } finally {
+            pq('UPDATE tenants SET billing = ?, plan = ?, paid_until = ?, trial_ends = ? WHERE slug = \'dum\'', [$orig['billing'], $orig['plan'], $orig['paid_until'], $orig['trial_ends']]);
+        }
+    }
 }

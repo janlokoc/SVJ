@@ -8,8 +8,8 @@ $rejGate = function (string $feature, bool $write = false): array {
     if (!rej_visible($feature)) {
         not_found();
     }
-    if ($write && !rej_premium()) {
-        flash('Tato funkce je součástí edice Premium.', 'error');
+    if ($write && !rej_edition_ok($feature)) {
+        flash('Tato funkce je součástí edice ' . EDITIONS[REJ_EDITION[$feature] ?? 'premium'] . '.', 'error');
         redirect('/admin/rejstriky');
     }
     return $u;

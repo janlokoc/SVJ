@@ -117,7 +117,7 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
 <section class="lpx-section" id="cenik">
   <div class="wrap">
     <h2>Kolik to stojí</h2>
-    <p class="lpx-intro">Ceny jsou bez DPH<?= vat_payer() ? ', pod nimi cena s DPH' : '' ?>. Placené edice se platí ročně převodem a jejich funkce si můžete <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušet.</p>
+    <p class="lpx-intro">Ceny jsou bez DPH. Placené edice se platí ročně převodem a jejich funkce si můžete <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušet.</p>
     <div class="lpx-prices">
       <?php foreach (EDITIONS as $ek => $en): $price = edition_price($ek); [$who, $points] = $editions[$ek] ?? ['', []]; ?>
         <div class="lpx-price<?= $ek === 'standard' ? ' is-main' : '' ?>">

@@ -1,4 +1,4 @@
-<p>Web může za výbor hlídat, jestli se u domu něco nezměnilo v <strong>katastru nemovitostí</strong>, jestli se některý vlastník neocitl v <strong>insolvenci</strong>, a na Vaše kliknutí ověří vlastníka v <strong>Centrální evidenci exekucí</strong>. Vše najdete v administraci v části <strong>Dům a lidé → Katastr a rejstříky</strong>. Funkce patří k edici Premium.</p>
+<p>Web může za výbor hlídat, jestli se u domu něco nezměnilo v <strong>katastru nemovitostí</strong>, jestli se některý vlastník neocitl v <strong>insolvenci</strong>, a na Vaše kliknutí ověří vlastníka v <strong>Centrální evidenci exekucí</strong>. Vše najdete v administraci v části <strong>Dům a lidé → Katastr a rejstříky</strong>. Katastr a exekuce patří k edici Premium, hlídání insolvencí je i v edici Standard.</p>
 
 <h2>1. Změny v katastru</h2>
 <ol>

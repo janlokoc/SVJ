@@ -97,16 +97,16 @@ function free_size_limited(?array $t): bool
 
 // ---------- Ceny s DPH na veřejném ceníku ----------
 
-/** Cena s DPH vedle ceny bez DPH (HTML). Neplátce: cena je konečná. */
+/**
+ * Dovětek k ceně na veřejném webu. Ceny se uvádějí jen bez DPH (rozhodnutí provozovatele 11/2026), proto u plátce nic;
+ * neplátce DPH upozorní, že cena je konečná.
+ */
 function price_vat_html(int $base): string
 {
-    if ($base <= 0) {
+    if ($base <= 0 || vat_payer()) {
         return '';
     }
-    if (!vat_payer()) {
-        return '<small class="vat-incl">konečná cena, nejsme plátci DPH</small>';
-    }
-    return '<small class="vat-incl">' . money_czk2(vat_split($base, vat_rate_now())['total']) . ' s DPH</small>';
+    return '<small class="vat-incl">konečná cena, nejsme plátci DPH</small>';
 }
 /** Cena s DPH jako číslo (neplátce = stejná). */
 function price_gross(int $base): float

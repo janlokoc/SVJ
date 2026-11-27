@@ -4,7 +4,7 @@ $sum = ['h' => 0];
 ?>
 <div class="wrap page">
   <header class="page-head"><h1>Kredit služeb</h1>
-    <p class="lead">Předplacený kredit domů v Kč (bez DPH) na služby podle spotřeby: SMS, lustrace exekucí, ověření hlasu přes Bank iD a online shromáždění v edici Standard. Dobití se platí zálohovou fakturou (Platby → potvrdit platbu); kredit se pak připíše sám. Kredit platí <?= credit_setting('credit_valid_months') ?> měsíců od dobití.</p></header>
+    <p class="lead">Předplacený kredit domů v Kč (bez DPH) na služby podle spotřeby: SMS, lustrace exekucí a ověření hlasu přes Bank iD (shromáždění online je v ceně edic). Dobití se platí zálohovou fakturou (Platby → potvrdit platbu); kredit se pak připíše sám. Kredit platí <?= credit_setting('credit_valid_months') ?> měsíců od dobití.</p></header>
 
   <section class="card" id="domy">
     <h2>Zůstatky domů</h2>
@@ -56,7 +56,7 @@ $sum = ['h' => 0];
 
   <form method="post" class="card form" id="ceny"><?= csrf_field() ?><input type="hidden" name="action" value="prices">
     <h2>Ceny služeb a doplňků</h2>
-    <p class="hint">Ceny bez DPH. Na veřejném ceníku se ukážou i s DPH. Změna platí pro další čerpání; zaplacené faktury se nemění.</p>
+    <p class="hint">Ceny bez DPH (tak se ukazují i na veřejném ceníku). Změna platí pro další čerpání; zaplacené faktury se nemění.</p>
     <?php foreach ($fields as $key => [$label, $unit, $get]): $v = $get(); ?>
       <label><?= e($label) ?> <input type="text" name="<?= e($key) ?>" inputmode="decimal" maxlength="9" value="<?= e($unit === 'h' ? rtrim(rtrim(number_format($v / 100, 2, '.', ''), '0'), '.') : (string) $v) ?>"></label>
     <?php endforeach ?>

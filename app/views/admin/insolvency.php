@@ -3,7 +3,7 @@
     <p class="lead">Web jednou týdně ověří v insolvenčním rejstříku vlastníky jednotek, kteří jsou firmy, a když se u některého objeví řízení, pošle správcům e-mail. Na přihlášení pohledávky (dlužných záloh) má společenství zpravidla jen dva měsíce od rozhodnutí o úpadku.</p></header>
   <?php $betaKey = 'insolvence'; require __DIR__ . '/_beta.php'; ?>
   <?php if (!$premium): ?>
-  <div class="card"><p>Hlídání insolvencí je součástí edice Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
+  <div class="card"><p>Hlídání insolvencí je součástí edice Standard a Premium. <a href="<?= url('/admin/predplatne') ?>#edice">Předplatné</a></p></div>
   <?php else: ?>
   <p class="hint">Firmy, družstva a obce se hlídají podle IČO. Fyzické osoby rejstřík dohledává podle jména a data narození – ty doplníte níže v části <a href="#osoby">Fyzické osoby</a>.
     <?= ($last[0] ?? '') !== '' ? 'Poslední kontrola ' . e($last[0]) . ': ' . e($last[2] ?? '') . '.' : '' ?></p>
