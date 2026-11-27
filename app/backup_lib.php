@@ -11,6 +11,47 @@ declare(strict_types=1);
 const BACKUP_SKIP = '~(^|/)([a-z-]*sessions|tmp)(/|$)|(^|/)mailq[.-]|\.lock$|\.tick$|\.pending$|(^|/)instalacni-kod|^obnova-2fa|^obnova-pristupu|^mail-staging\.log$|^inbound/files(/|$)|^inbound/pending-.*\.flag$|\.sqlite-(wal|shm|journal)$~';
 
 /** Sestaví ZIP se zálohou do dočasného souboru a vrátí jeho cestu (volající ho po odeslání smaže). */
+/** Neúspěšných pokusů o stažení zálohy z jedné adresy za hodinu, po kterých se adresa na hodinu zablokuje. */
+const BACKUP_FAIL_LIMIT = 5;
+
+function backup_fail_file(): string
+{
+    return ROOT_STORAGE . '/backup-fails.json';
+}
+/** Pokusy z adresy za poslední hodinu. */
+function backup_fails(string $ip): int
+{
+    $all = is_file(backup_fail_file()) ? (array) json_decode((string) file_get_contents(backup_fail_file()), true) : [];
+    return count(array_filter((array) ($all[$ip] ?? []), fn($t) => $t > time() - 3600));
+}
+function backup_blocked(string $ip): bool
+{
+    return backup_fails($ip) >= BACKUP_FAIL_LIMIT;
+}
+/**
+ * Ověří klíč zálohy z hlavičky X-Backup-Key. Klíč v adrese (/zaloha/<klíč>) se už nepřijímá – pokus se jen zapíše.
+ * Neúspěch se zaznamená (soubor + záznamy platformy) a po BACKUP_FAIL_LIMIT pokusech za hodinu je adresa zablokovaná.
+ */
+function backup_auth_ok(string $header, bool $keyInUrl, string $ip): bool
+{
+    if (backup_blocked($ip)) {
+        return false;
+    }
+    $key = (string) (app_config()['backup_key'] ?? '');
+    $ok = !$keyInUrl && $key !== '' && strlen($key) >= 32 && $header !== '' && hash_equals($key, $header);
+    if (!$ok) {
+        $all = is_file(backup_fail_file()) ? (array) json_decode((string) file_get_contents(backup_fail_file()), true) : [];
+        $all = array_filter(array_map(fn($l) => array_values(array_filter((array) $l, fn($t) => $t > time() - 86400)), $all));
+        $all[$ip][] = time();
+        @file_put_contents(backup_fail_file(), json_encode(array_slice($all, -500, null, true)), LOCK_EX);
+        $why = $keyInUrl ? 'klíč v adrese (už se nepřijímá)' : ($header === '' ? 'chybí klíč' : 'špatný klíč');
+        error_log('SVJ web, záloha: odmítnuto z ' . $ip . ' – ' . $why);
+        if (function_exists('platform_log') && function_exists('platform_enabled') && platform_enabled()) {
+            platform_log('Záloha: odmítnutý pokus', $ip . ' · ' . $why);
+        }
+    }
+    return $ok;
+}
 function backup_build(): string
 {
     if (!class_exists('ZipArchive')) {

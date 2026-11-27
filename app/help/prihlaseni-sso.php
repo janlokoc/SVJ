@@ -7,7 +7,7 @@
   <li>Vrátíte se na web domu už přihlášení. Máte-li zapnuté <strong>dvoufázové ověření</strong>, web se ještě zeptá na kód z aplikace v telefonu – stejně jako po zadání hesla.</li>
 </ol>
 <?= help_fig('sso-1-prihlaseni.jpg', 'Přihlášení: tlačítka poskytovatelů pod formulářem.') ?>
-<p class="callout"><strong>Účet tím nevznikne.</strong> Přihlásit se tak může jen ten, komu už výbor účet založil (pozvánkou nebo odkazem pro přiřazení k jednotce) a kdo pozvánku přijal. Web Vás pozná podle e-mailu, který Vám poskytovatel potvrdil jako ověřený – musí to být stejný e-mail, na který máte účet zde.</p>
+<p class="callout"><strong>Účet tím nevznikne.</strong> Přihlásit se tak může jen ten, komu už výbor účet založil (pozvánkou nebo odkazem pro přiřazení k jednotce) a kdo pozvánku přijal. Web Vás pozná podle e-mailu, který Vám poskytovatel potvrdil jako ověřený – musí to být stejný e-mail, na který máte účet zde. <strong>Facebook</strong> ověření e-mailu výslovně nepotvrzuje, proto ho web podle e-mailu nepozná: účet Facebook si nejdřív jednou propojte (viz níže), pak se jím přihlásíte.</p>
 
 <h2>Jiný e-mail nebo skrytý e-mail Apple: propojte si účet</h2>
 <p>Používáte u Googlu, Microsoftu nebo Facebooku jiný e-mail, než na který Vám výbor účet založil? Nebo jste u Apple zvolili <em>Skrýt můj e-mail</em>? Pak si účet jednou propojte:</p>

@@ -906,6 +906,10 @@ function user(bool $reload = false): ?array
         if ($u && !hash_equals(pw_fingerprint($u['password_hash']), (string) ($_SESSION['pv'] ?? ''))) {
             $u = null;
         }
+        // Účet pracovníka správcovské firmy funguje jen po vstupu z partnerského portálu (ne heslem, odkazem ani SSO).
+        if ($u && function_exists('partner_session_ok') && !partner_session_ok((int) $u['id'])) {
+            $u = null;
+        }
         if (!$u) {
             unset($_SESSION['uid'], $_SESSION['pv']);
         }
@@ -1873,6 +1877,9 @@ function parse_user_import(string $text): array
 /** Vystaví účtu, který ještě nemá heslo, pozvánku a pošle ji e-mailem. Vrací [odesláno?, odkaz]. */
 function send_account_invite(array $user): array
 {
+    if (function_exists('partner_tenant_user_ids') && in_array((int) $user['id'], partner_tenant_user_ids(), true)) {
+        return [false, ''];   // pracovník partnera se do domu dostane jen z partnerského portálu
+    }
     $days = setting_int('invite_days', 14, 1, 90);
     $token = bin2hex(random_bytes(32));
     q('UPDATE users SET invite_hash = ?, invite_expires = ? WHERE id = ?', [hash('sha256', $token), date('Y-m-d H:i:s', time() + $days * 86400), $user['id']]);
@@ -2035,9 +2042,25 @@ function audit_chain_check(): array
 
 // ---------- Zapomenuté heslo ----------
 
+/**
+ * Jednorázový odkaz uložený v nastavení: spotřebuje ho jen správný token (bezpečnost 11/2026 – dřív ho smazal
+ * i pokus se špatným tokenem, takže šlo platný odkaz zneplatnit). Smazání je podmíněné původní hodnotou, takže
+ * ho dvě souběžná otevření nepoužijí obě. $check dostane uloženou hodnotu a vrací, zda token sedí.
+ */
+function setting_consume(string $key, callable $check): ?string
+{
+    $value = (string) (one('SELECT value FROM settings WHERE `key` = ?', [$key])['value'] ?? '');
+    if ($value === '' || !$check($value)) {
+        return null;
+    }
+    return q('DELETE FROM settings WHERE `key` = ? AND value = ?', [$key, $value])->rowCount() === 1 ? $value : null;
+}
 /** Pošle odkaz na nastavení nového hesla (platí hodinu). Účtu, který heslo ještě nemá, pošle znovu pozvánku. */
 function send_password_reset(array $user): bool
 {
+    if (function_exists('partner_tenant_user_ids') && in_array((int) $user['id'], partner_tenant_user_ids(), true)) {
+        return true;   // účet pracovníka partnera: heslo ani pozvánka se neposílá, vstup je jen z partnerského portálu (stejná odpověď kvůli výčtu účtů)
+    }
     if ($user['password_hash'] === NO_PASSWORD) {
         return send_account_invite($user)[0];
     }

@@ -14,11 +14,9 @@ if ($super) {
     header('Cache-Control: no-store, private');
 }
 $GLOBALS['SUPER'] = $super;
-$blocked = function (): bool {
-    pq('DELETE FROM attempts WHERE at < ?', [time() - 900]);
-    return (int) pq('SELECT COUNT(*) FROM attempts WHERE ip = ?', [client_ip()])->fetchColumn() >= 8;
-};
-$failed = fn() => pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [client_ip(), time()]);
+// Ochrana proti hádání hesel: z jedné adresy i na jeden účet (bezpečnost 11/2026 – dřív jen podle adresy).
+$blocked = fn(string $account = ''): bool => platform_login_blocked($account);
+$failed = fn(string $account = '') => platform_login_failed($account);
 $signIn = function (array $a): never {
     session_regenerate_id(true);
     $_SESSION = ['t' => '#platform', 'sid' => (int) $a['id'], 'pv' => pw_fingerprint($a['password_hash']), 'seen' => time()];
@@ -104,25 +102,25 @@ if (!$super) {
         if ($METHOD === 'POST' && $a && post('action') === 'recovery' && $recovery) {
             $file = glob(ROOT_STORAGE . '/obnova-2fa-*.txt')[0] ?? '';
             $want = $file !== '' ? trim((string) file_get_contents($file)) : '';
-            if (!$blocked() && $want !== '' && hash_equals($want, strtoupper(preg_replace('/\s+/', '', post('recovery_code'))))) {
+            if (!$blocked($a['email']) && $want !== '' && hash_equals($want, strtoupper(preg_replace('/\s+/', '', post('recovery_code'))))) {
                 unlink($file);
                 pq('UPDATE super_admins SET totp_secret = NULL, totp_enabled = 0, totp_last = 0 WHERE id = ?', [$a['id']]);
                 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova 2FA: dvoufázové ověření vypnuto kódem ze serveru', '']);
                 $signIn(pq('SELECT * FROM super_admins WHERE id = ?', [$a['id']])->fetch());
             }
-            $failed();
+            $failed($a['email']);
             $error = 'Kód ze souboru nesouhlasí.';
             http_response_code(422);
             render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true, 'recovery' => true]);
             exit;
         }
         if ($METHOD === 'POST' && $a) {
-            $step = $blocked() ? null : totp_verify((string) $a['totp_secret'], post('code'), (int) $a['totp_last']);
+            $step = $blocked($a['email']) ? null : totp_verify((string) $a['totp_secret'], post('code'), (int) $a['totp_last']);
             if ($step !== null) {
                 pq('UPDATE super_admins SET totp_last = ? WHERE id = ?', [$step, $a['id']]);
                 $signIn($a);
             }
-            $failed();
+            $failed($a['email']);
             $error = 'Kód není správný nebo už vypršel.';
             http_response_code(422);
         }
@@ -130,12 +128,12 @@ if (!$super) {
         exit;
     }
     if ($METHOD === 'POST' && $PATH === '/prihlaseni') {
-        if ($blocked()) {
+        if ($blocked(trim(post('email')))) {
             $error = 'Příliš mnoho neúspěšných pokusů. Zkuste to znovu za 15 minut.';
         } else {
             $a = pq('SELECT * FROM super_admins WHERE lower(email) = lower(?)', [trim(post('email'))])->fetch();
             if (!password_verify((string) ($_POST['password'] ?? ''), $a['password_hash'] ?? '$2y$10$5iGzRBULwQkdHVH7LcQeruy9PLnpzCeVdDqlNNyrbTAr6ZReT.NXy') || !$a) {
-                $failed();
+                $failed(trim(post('email')));
                 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Neúspěšné přihlášení', post('email')]);
                 $error = 'Nesprávný e-mail nebo heslo.';
             } elseif ($a['totp_enabled']) {

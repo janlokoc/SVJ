@@ -118,7 +118,7 @@ Jednorázové nastavení:
 ### Záloha
 
 Workflow `.github/workflows/zaloha.yml` každý den stáhne z webu úplnou zálohu
-(`/zaloha/<klíč>`: databáze, nahrané soubory, hlášení, `config.php`; bez
+(`/zaloha`, klíč v hlavičce `X-Backup-Key`: databáze, nahrané soubory, hlášení, `config.php`; bez
 přihlášení a fronty e-mailů), ověří ji, **zašifruje veřejným klíčem age**
 a uloží jako artefakt běhu na 30 dní. Soukromý klíč má jen provozovatel.
 
@@ -132,7 +132,10 @@ Nastavení:
    jako `'backup_key' => '…'` (jiný než pro cron).
 3. GitHub → Settings → Secrets and variables → Actions: secret `BACKUP_URL`
    = `https://spolecnyweb.cz/zaloha/<klíč>`, variable `BACKUP_AGE_RECIPIENT`
-   = veřejný klíč `age1…`.
+   = veřejný klíč `age1…`. Workflow klíč z adresy oddělí a pošle v hlavičce
+   `X-Backup-Key` – samotná adresa s klíčem server nepřijme (klíč by se uložil
+   do záznamů serveru). Po 5 neúspěšných pokusech za hodinu server adresu
+   odesílatele na hodinu zablokuje; pokusy jsou v Záznamech konzole.
 4. Actions → Záloha dat → Run workflow (první zkouška).
 
 Obnovení: v Actions stáhnout artefakt, `age -d -i spolecnyweb-zaloha.key

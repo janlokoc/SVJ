@@ -255,6 +255,56 @@ final class PartnerTest extends TestCase
         $this->assertSame('Přístup k webu ukončen – SVJ Odebrání', $mail[0]['subject']);
     }
 
+    /** Bezpečnost 11/2026: vypnutý pracovník už nesmí do domů – ani přes „zapomenuté heslo“ či pozvánku. */
+    public function testDisabledWorkerLosesHouseAccountsAndCannotUseLocalLogin(): void
+    {
+        $p = $this->partner();
+        $t = $this->attach($p, $this->house('SVJ Vypnutí'));
+        $t2 = $this->attach($p, $this->house('SVJ Vypnutí 2'));
+        $pu = $this->worker($p);
+        partner_enter_link($pu, $p, $t);
+        partner_enter_link($pu, $p, $t2);
+        $this->assertSame(2, partner_worker_disable_houses($p, strtoupper($pu['email'])));
+        foreach ([$t, $t2] as $house) {
+            $uid = (int) array_values(json_decode(tenant_settings($house['slug'])['partner_users'], true))[0];
+            $this->assertSame(0, (int) tenant_pdo($house['slug'])->query("SELECT active FROM users WHERE id = $uid")->fetchColumn());
+        }
+        $this->assertSame(1, (int) json_decode(tenant_settings($t['slug'])['partner_login'], true)['pu'] > 0 ? 1 : 0, 'odkaz nese id pracovníka');
+
+        // Ve webu domu (zde testovací dům): účet namapovaný na pracovníka partnera.
+        $uid = (int) val("SELECT id FROM users WHERE role = 'admin' ORDER BY id DESC LIMIT 1");
+        $prev = setting('partner_users');
+        q("DELETE FROM settings WHERE `key` = 'partner_users'");
+        q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['partner_users', json_encode(['x@example.org' => $uid])]);
+        setting('__reset');
+        try {
+            unset($_SESSION['partner_pu']);
+            $this->assertFalse(partner_session_ok($uid), 'bez vstupu z portálu nefunguje');
+            $this->assertTrue(partner_session_ok($uid + 100000), 'běžné účty se netýká');
+            $_SESSION['partner_pu'] = (int) $pu['id'];
+            $this->assertTrue(partner_session_ok($uid));
+            $gone = $this->worker($p, 'Bývalý pracovník');
+            pq('UPDATE partner_users SET active = 0 WHERE id = ?', [$gone['id']]);
+            $_SESSION['partner_pu'] = (int) $gone['id'];
+            $this->assertFalse(partner_session_ok($uid), 'vypnutý pracovník – ani otevřená relace už neplatí');
+            $before = count($this->mails());
+            $this->assertTrue(send_password_reset(one('SELECT * FROM users WHERE id = ?', [$uid])), 'stejná odpověď jako u jiných účtů');
+            $this->assertSame([false, ''], send_account_invite(one('SELECT * FROM users WHERE id = ?', [$uid])));
+            $this->assertCount($before, $this->mails(), 'žádný e-mail s heslem ani pozvánkou');
+            $src = (string) file_get_contents(dirname(__DIR__, 2) . '/app/lib.php');
+            $this->assertStringContainsString("!partner_session_ok((int) \$u['id'])", $src, 'kontrola v user() – platí pro heslo, odkaz i SSO');
+        } finally {
+            unset($_SESSION['partner_pu']);
+            q("DELETE FROM settings WHERE `key` = 'partner_users'");
+            if ($prev !== '') {
+                q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['partner_users', $prev]);
+            }
+            setting('__reset');
+        }
+        $portal = (string) file_get_contents(dirname(__DIR__, 2) . '/app/partner_portal.php');
+        $this->assertStringContainsString('partner_worker_disable_houses($partner', $portal, 'vypnutí v portálu vypne i účty v domech');
+    }
+
     // ---------- Vstup do administrace domu ----------
 
     public function testEnterLinkCreatesPasswordlessAdminAndStoresNext(): void

@@ -138,6 +138,34 @@ function partner_revoke(array $t, string $by): void
             . " Již zaplacené předplatné domu zůstává v platnosti; další období si společenství hradí samo.");
     }
 }
+/**
+ * Vypnutý pracovník partnera: jeho účty správce ve webech všech domů partnera se vypnou (bezpečnost 11/2026 – dřív zůstaly
+ * aktivní a šlo se do nich dostat přes „zapomenuté heslo“). Při dalším vstupu z portálu (aktivní pracovník) se účet zase zapne.
+ */
+function partner_worker_disable_houses(array $partner, string $email): int
+{
+    $n = 0;
+    foreach (partner_tenants((int) $partner['id'], '') as $t) {
+        $map = (array) json_decode((string) (tenant_settings($t['slug'])['partner_users'] ?? ''), true);
+        if (isset($map[strtolower($email)])) {
+            $n += tenant_pdo($t['slug'])->exec('UPDATE users SET active = 0 WHERE id = ' . (int) $map[strtolower($email)]);
+        }
+    }
+    return $n;
+}
+/** Smí účet pracovníka partnera ve webu domu fungovat? Jen v relaci otevřené z partnerského portálu aktivním pracovníkem. */
+function partner_session_ok(int $uid): bool
+{
+    if (!in_array($uid, partner_tenant_user_ids(), true)) {
+        return true;
+    }
+    $pu = (int) ($_SESSION['partner_pu'] ?? 0);
+    static $active = [];
+    if ($pu <= 0 || !function_exists('pq')) {
+        return false;
+    }
+    return $active[$pu] ??= (bool) pq('SELECT 1 FROM partner_users WHERE id = ? AND active = 1', [$pu])->fetchColumn();
+}
 /** Id účtů pracovníků partnera ve webu domu (nezapočítávají se do limitu správců). */
 function partner_tenant_user_ids(): array
 {
@@ -175,7 +203,7 @@ function partner_enter_link(array $pu, array $partner, array $t, string $next = 
         $pdo->prepare("UPDATE users SET name = ?, role = 'admin', active = 1 WHERE id = ?")->execute([$display, $uid]);
     }
     $token = bin2hex(random_bytes(32));
-    tenant_set($t['slug'], 'partner_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => $uid, 'by' => $display, 'next' => $next], JSON_UNESCAPED_UNICODE));
+    tenant_set($t['slug'], 'partner_login', json_encode(['hash' => hash('sha256', $token), 'expires' => time() + 120, 'uid' => $uid, 'pu' => (int) $pu['id'], 'by' => $display, 'next' => $next], JSON_UNESCAPED_UNICODE));
     return ['link' => tenant_url($t, '/spravce-vstup/' . $token)];
 }
 

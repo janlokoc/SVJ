@@ -196,11 +196,11 @@ if (!$IS_PLATFORM && platform_enabled() && preg_match('~^/cron/prichozi/([A-Za-z
     echo 'Odpovědi e-mailem: připojeno ' . inbound_apply_pending() . "\n";
     exit;
 }
-// Pravidelná záloha (GitHub Actions ji stáhne, zašifruje a uloží): tajný klíč 'backup_key' v config.php.
-if (preg_match('~^/zaloha/([A-Za-z0-9_\-]{32,100})$~', $PATH, $bk) && ($IS_PLATFORM || !platform_enabled())) {
-    $key = (string) (app_config()['backup_key'] ?? '');
-    if ($key === '' || strlen($key) < 32 || !hash_equals($key, $bk[1])) {
-        http_response_code(404);
+// Pravidelná záloha (GitHub Actions ji stáhne, zašifruje a uloží): tajný klíč 'backup_key' v config.php, posílá se
+// v hlavičce X-Backup-Key na adresu /zaloha (bezpečnost 11/2026: klíč v adrese se ukládal do záznamů serverů, proto už neplatí).
+if (preg_match('~^/zaloha(/[A-Za-z0-9_\-]{32,100})?$~', $PATH) && ($IS_PLATFORM || !platform_enabled())) {
+    if (!backup_auth_ok((string) ($_SERVER['HTTP_X_BACKUP_KEY'] ?? ''), $PATH !== '/zaloha', client_ip())) {
+        http_response_code(backup_blocked(client_ip()) ? 429 : 404);
         exit;
     }
     backup_send();

@@ -1,6 +1,6 @@
 # Pravidelná záloha dat ze serveru mimo hosting.
 #
-# Každý den stáhne z webu úplnou zálohu (adresa /zaloha/<klíč>), ověří, že je celá, ZAŠIFRUJE ji veřejným
+# Každý den stáhne z webu úplnou zálohu (adresa /zaloha, klíč v hlavičce X-Backup-Key), ověří, že je celá, ZAŠIFRUJE ji veřejným
 # klíčem age a uloží jako artefakt běhu (drží se 30 dní). Rozšifrovat ji jde jen soukromým klíčem provozovatele,
 # který na GitHubu není – GitHub ani nikdo s přístupem k repozitáři data nepřečte.
 #
@@ -34,7 +34,12 @@ jobs:
         run: |
           test -n "$BACKUP_URL" || { echo "Chybí secret BACKUP_URL."; exit 1; }
           umask 077
-          curl -fsS --retry 3 --retry-delay 20 --max-time 900 -o zaloha.zip "$BACKUP_URL"
+          # Klíč jde v hlavičce X-Backup-Key (v adrese by se uložil do záznamů serveru). BACKUP_URL může mít klíč
+          # na konci adresy (…/zaloha/<klíč>) – oddělí se a pošle v hlavičce.
+          KEY="${BACKUP_URL##*/zaloha/}"; BASE="${BACKUP_URL%/zaloha/*}/zaloha"
+          [ "$KEY" != "$BACKUP_URL" ] && [ -n "$KEY" ] || { echo "BACKUP_URL má tvar https://…/zaloha/<klíč>."; exit 1; }
+          echo "::add-mask::$KEY"
+          curl -fsS --retry 3 --retry-delay 20 --max-time 900 -H "X-Backup-Key: $KEY" -o zaloha.zip "$BASE"
           unzip -tq zaloha.zip
           unzip -l zaloha.zip | tail -1
           unzip -Z1 zaloha.zip | grep -qE '^storage/(platform-|svj-).*\.sqlite$' || { echo "V záloze chybí databáze – záloha je neúplná."; exit 1; }

@@ -95,7 +95,7 @@ function sso_provider_config(string $p): ?array
     $c = (array) sso_config()[$p];
     return match ($p) {
         'microsoft' => $c + ['tenant' => 'common'],
-        'facebook' => $c + ['graph_version' => 'v23.0', 'trust_email' => true],
+        'facebook' => $c + ['graph_version' => 'v23.0', 'trust_email' => false],   // bezpečnost 11/2026: e-mailu z Facebooku nevěříme, jen propojenému účtu
         default => $c,
     };
 }
@@ -780,7 +780,8 @@ function sso_platform_resolve(string $kind, array $id): array
     $link = pq('SELECT * FROM platform_sso WHERE kind = ? AND provider = ? AND subject = ?', [$kind, $id['provider'], $id['subject']])->fetch();
     $u = $link ? $find('u.id = ?', [(int) $link['user_id']]) : null;
     if (!$u) {
-        if ($id['email'] === '' || !$id['email_verified']) {
+        // Konzole a partnerský portál: Facebook jen přes propojený účet, nikdy podle e-mailu (ten Facebook výslovně neověřuje).
+        if ($id['email'] === '' || !$id['email_verified'] || $id['provider'] === 'facebook') {
             return ['error' => 'unverified'];
         }
         $u = $find('lower(u.email) = lower(?)', [$id['email']]);

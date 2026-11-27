@@ -114,6 +114,8 @@ final class ModISsoAccountsTest extends ModISsoCase
         // Propojení.
         $this->assertNull(sso_platform_link('partner', (int) $pu['id'], self::identity('apple', 'ap-1', 'r@privaterelay.appleid.com')));
         $this->assertSame((int) $pu['id'], (int) sso_platform_resolve('partner', self::identity('apple', 'ap-1', 'r@privaterelay.appleid.com'))['user']['id']);
+        $this->assertSame('unverified', sso_platform_resolve('partner', self::identity('facebook', 'fb-1', $pu['email']))['error'], 'Facebook v portálu jen přes propojený účet');
+        $this->assertSame('unverified', sso_platform_resolve('super', self::identity('facebook', 'fb-2', $pu['email']))['error']);
         $this->assertSame('linked_other', sso_platform_link('partner', (int) $inv['id'], self::identity('apple', 'ap-1')));
         $this->assertSame(['apple'], array_keys(sso_platform_links('partner', (int) $pu['id'])));
         $this->assertTrue(sso_platform_unlink('partner', (int) $pu['id'], 'apple'));

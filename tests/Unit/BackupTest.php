@@ -165,4 +165,35 @@ final class BackupTest extends TestCase
         // pomocné kopie databází jsou smazané
         $this->assertSame([], glob(ROOT_STORAGE . '/tmp/db-*.sqlite') ?: []);
     }
+
+    // ---------- Klíč zálohy (bezpečnost 11/2026) ----------
+
+    public function testBackupKeyOnlyInHeaderFailuresLoggedAndBlocked(): void
+    {
+        $key = (string) (app_config()['backup_key'] ?? '');
+        @unlink(backup_fail_file());
+        $ip = '192.0.2.77';
+        try {
+            if (strlen($key) >= 32) {
+                $this->assertTrue(backup_auth_ok($key, false, $ip), 'správný klíč v hlavičce');
+                $this->assertFalse(backup_auth_ok($key, true, $ip), 'klíč v adrese se už nepřijímá');
+            }
+            $this->assertFalse(backup_auth_ok('', false, $ip));
+            $this->assertFalse(backup_auth_ok(str_repeat('x', 40), false, $ip));
+            $this->assertSame(strlen($key) >= 32 ? 3 : 2, backup_fails($ip));
+            while (backup_fails($ip) < BACKUP_FAIL_LIMIT) {
+                backup_auth_ok('špatně', false, $ip);
+            }
+            $this->assertTrue(backup_blocked($ip));
+            $this->assertFalse(backup_auth_ok($key !== '' ? $key : 'x', false, $ip), 'zablokovaná adresa neprojde ani se správným klíčem');
+            $this->assertFalse(backup_blocked('192.0.2.78'));
+        } finally {
+            @unlink(backup_fail_file());
+        }
+        $idx = (string) file_get_contents(dirname(__DIR__, 2) . '/index.php');
+        $this->assertStringContainsString("HTTP_X_BACKUP_KEY", $idx);
+        $wf = (string) file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/zaloha.yml');
+        $this->assertStringContainsString('-H "X-Backup-Key: $KEY"', $wf);
+        $this->assertStringContainsString('::add-mask::$KEY', $wf);
+    }
 }

@@ -21,11 +21,9 @@ $GLOBALS['PARTNER_USER'] = $pu;
 $GLOBALS['PARTNER'] = $partner;
 $plog = fn(string $action, string $detail = '') => pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)',
     [date('Y-m-d H:i:s'), $pu['email'] ?? '', client_ip(), 'Partner' . ($partner ? ' ' . $partner['name'] : '') . ': ' . $action, mb_substr($detail, 0, 500)]);
-$blocked = function (): bool {
-    pq('DELETE FROM attempts WHERE at < ?', [time() - 900]);
-    return (int) pq('SELECT COUNT(*) FROM attempts WHERE ip = ?', [client_ip()])->fetchColumn() >= 8;
-};
-$failed = fn() => pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [client_ip(), time()]);
+// Ochrana proti hádání hesel: z jedné adresy i na jeden účet (bezpečnost 11/2026 – dřív jen podle adresy).
+$blocked = fn(string $account = ''): bool => platform_login_blocked($account);
+$failed = fn(string $account = '') => platform_login_failed($account);
 $signIn = function (array $u) use ($logout): never {
     session_regenerate_id(true);
     $logout();
@@ -95,12 +93,12 @@ if (!$pu) {
     if ($PATH === '/overeni' && $pending && time() - $pending['at'] < 300) {
         $u = pq('SELECT * FROM partner_users WHERE id = ? AND active = 1', [$pending['id']])->fetch();
         if ($METHOD === 'POST' && $u) {
-            $step = $blocked() ? null : totp_verify((string) $u['totp_secret'], post('code'), (int) $u['totp_last']);
+            $step = $blocked($u['email']) ? null : totp_verify((string) $u['totp_secret'], post('code'), (int) $u['totp_last']);
             if ($step !== null) {
                 pq('UPDATE partner_users SET totp_last = ? WHERE id = ?', [$step, $u['id']]);
                 $signIn($u);
             }
-            $failed();
+            $failed($u['email']);
             $error = 'Kód není správný nebo už vypršel.';
             http_response_code(422);
         }
@@ -108,12 +106,12 @@ if (!$pu) {
         exit;
     }
     if ($METHOD === 'POST' && $PATH === '/prihlaseni') {
-        if ($blocked()) {
+        if ($blocked(post('email'))) {
             $error = 'Příliš mnoho neúspěšných pokusů. Zkuste to znovu za 15 minut.';
         } else {
             $u = pq('SELECT u.* FROM partner_users u JOIN partners p ON p.id = u.partner_id WHERE u.email = ? AND u.active = 1 AND p.active = 1', [post('email')])->fetch();
             if (!$u || !password_verify((string) ($_POST['password'] ?? ''), $u['password_hash'])) {
-                $failed();
+                $failed(post('email'));
                 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), '', client_ip(), 'Partner: neúspěšné přihlášení', post('email')]);
                 $error = 'Nesprávný e-mail nebo heslo.';
             } elseif ($u['totp_enabled']) {
@@ -614,8 +612,10 @@ if ($PATH === '/tym') {
                 redirect('/tym');
             }
         } elseif (post('action') === 'disable' && (int) post('id') !== (int) $pu['id']) {
+            $worker = pq('SELECT * FROM partner_users WHERE id = ? AND partner_id = ?', [(int) post('id'), $partner['id']])->fetch();
             pq('UPDATE partner_users SET active = 0 WHERE id = ? AND partner_id = ?', [(int) post('id'), $partner['id']]);
-            $plog('vypnutí účtu pracovníka', (string) (int) post('id'));
+            $houses = $worker ? partner_worker_disable_houses($partner, (string) $worker['email']) : 0;
+            $plog('vypnutí účtu pracovníka', (string) (int) post('id') . ' · vypnuté účty v domech: ' . $houses);
             flash('Účet je vypnutý. Do portálu ani do domů se už nepřihlásí.', 'info');
             redirect('/tym');
         }

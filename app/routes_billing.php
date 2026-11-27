@@ -4,10 +4,11 @@ declare(strict_types=1);
 // Web společenství na platformě: první přihlášení po registraci a stránka Předplatné s výzvou k platbě.
 
 $route('GET', '/vitejte/([a-f0-9]{64})', function (string $token) {
-    [$hash, $expires] = explode('|', setting('signup_login') . '|');
-    q("DELETE FROM settings WHERE `key` = 'signup_login'");   // odkaz platí jen jednou
+    // Odkaz platí jen jednou; spotřebuje ho jen správný token (špatný pokus platný odkaz nezruší).
+    $v = setting_consume('signup_login', fn($v) => hash_equals(explode('|', $v . '|')[0], hash('sha256', $token)));
+    [$hash, $expires] = explode('|', ($v ?? '') . '|');
     $admin = one("SELECT * FROM users WHERE role = 'admin' AND active = 1 ORDER BY id LIMIT 1");
-    if ($hash === '' || !hash_equals($hash, hash('sha256', $token)) || time() > (int) $expires || !$admin) {
+    if ($v === null || time() > (int) $expires || !$admin) {
         flash('Odkaz pro první přihlášení už neplatí. Přihlaste se prosím e-mailem a heslem z registrace.', 'info');
         redirect('/prihlaseni');
     }
@@ -21,8 +22,7 @@ $route('GET', '/vitejte/([a-f0-9]{64})', function (string $token) {
 
 // Vstup podpory provozovatele: jednorázový odkaz z konzole platformy, platí 2 minuty.
 $route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
-    $d = (array) json_decode(setting('support_login'), true);
-    q("DELETE FROM settings WHERE `key` = 'support_login'");
+    $d = (array) json_decode((string) setting_consume('support_login', fn($v) => hash_equals((string) (json_decode($v, true)['hash'] ?? ''), hash('sha256', $token))), true);
     $u = isset($d['uid']) ? one('SELECT * FROM users WHERE id = ? AND active = 1', [(int) $d['uid']]) : null;
     if (!$u || !hash_equals((string) ($d['hash'] ?? ''), hash('sha256', $token)) || time() > (int) ($d['expires'] ?? 0)) {
         flash('Odkaz pro vstup podpory už neplatí. Vytvořte v konzoli platformy nový.', 'error');
@@ -36,8 +36,7 @@ $route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
 
 // Vstup pracovníka správcovské firmy (partnera): jednorázový odkaz z partnerského portálu, platí 2 minuty.
 $route('GET', '/spravce-vstup/([a-f0-9]{64})', function (string $token) {
-    $d = (array) json_decode(setting('partner_login'), true);
-    q("DELETE FROM settings WHERE `key` = 'partner_login'");
+    $d = (array) json_decode((string) setting_consume('partner_login', fn($v) => hash_equals((string) (json_decode($v, true)['hash'] ?? ''), hash('sha256', $token))), true);
     $t = tenant_row(TENANT);
     $u = isset($d['uid']) && in_array((int) $d['uid'], partner_tenant_user_ids(), true) ? one("SELECT * FROM users WHERE id = ? AND active = 1 AND role = 'admin'", [(int) $d['uid']]) : null;
     if (!$u || !$t || $t['partner_status'] !== 'active' || !hash_equals((string) ($d['hash'] ?? ''), hash('sha256', $token)) || time() > (int) ($d['expires'] ?? 0)) {
@@ -46,6 +45,7 @@ $route('GET', '/spravce-vstup/([a-f0-9]{64})', function (string $token) {
     }
     login_user($u);
     $_SESSION['partner'] = (string) ($d['by'] ?? $u['name']);
+    $_SESSION['partner_pu'] = (int) ($d['pu'] ?? 0);   // účet pracovníka platí jen v takto otevřené relaci (partner_session_ok)
     q("UPDATE users SET last_login_at = datetime('now','localtime') WHERE id = ?", [$u['id']]);
     audit('partner_login', (string) ($d['by'] ?? $u['name']));
     $next = (string) ($d['next'] ?? '');

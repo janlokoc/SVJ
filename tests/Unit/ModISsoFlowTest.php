@@ -33,7 +33,7 @@ final class ModISsoFlowTest extends ModISsoCase
         unset($GLOBALS['SSO_CONFIG']['microsoft']['tenant']);
         $this->assertSame('common', sso_provider_config('microsoft')['tenant']);
         $this->assertSame('v23.0', sso_provider_config('facebook')['graph_version']);
-        $this->assertTrue(sso_provider_config('facebook')['trust_email']);
+        $this->assertFalse(sso_provider_config('facebook')['trust_email'], 'e-mailu z Facebooku se ve výchozím stavu nevěří (bezpečnost 11/2026)');
     }
 
     public function testEnabledPerPlaceAndBetaStage(): void
@@ -340,7 +340,7 @@ final class ModISsoFlowTest extends ModISsoCase
             'https://graph.facebook.com/v23.0/me' => self::ok(['id' => '10220000', 'name' => 'Jana T', 'email' => 'jana@example.org']),
         ]);
         $h = sso_handoff_take(sso_callback('facebook', ['state' => $q['state'], 'code' => 'fb-code'])['token'], 'site', 'dum');
-        $this->assertSame(['10220000', 'jana@example.org', true], [$h['identity']['subject'], $h['identity']['email'], $h['identity']['email_verified']]);
+        $this->assertSame(['10220000', 'jana@example.org', false], [$h['identity']['subject'], $h['identity']['email'], $h['identity']['email_verified']], 'výchozí: e-mailu z Facebooku nevěříme');
         parse_str((string) parse_url($this->requests[0]['url'], PHP_URL_QUERY), $tq);
         $this->assertSame(['1234567890', 'fb-secret-XYZ', 'fb-code', $flow['verifier'], 'http://test.invalid/sso/callback/facebook'],
             [$tq['client_id'], $tq['client_secret'], $tq['code'], $tq['code_verifier'], $tq['redirect_uri']]);
@@ -348,10 +348,10 @@ final class ModISsoFlowTest extends ModISsoCase
         $this->assertSame('id,name,email', $mq['fields']);
         $this->assertSame(hash_hmac('sha256', 'EAAB-token', 'fb-secret-XYZ'), $mq['appsecret_proof']);
 
-        // Bez důvěry v e-mail z Facebooku jde jen o propojený účet.
-        $GLOBALS['SSO_CONFIG']['facebook']['trust_email'] = false;
+        // Provozovatel může důvěru v e-mail z Facebooku výslovně zapnout.
+        $GLOBALS['SSO_CONFIG']['facebook']['trust_email'] = true;
         [$q] = $this->begin('facebook');
-        $this->assertFalse(sso_handoff_take(sso_callback('facebook', ['state' => $q['state'], 'code' => 'k'])['token'], 'site', 'dum')['identity']['email_verified']);
+        $this->assertTrue(sso_handoff_take(sso_callback('facebook', ['state' => $q['state'], 'code' => 'k'])['token'], 'site', 'dum')['identity']['email_verified']);
         // Bez přístupového tokenu → chyba.
         $this->fakeHttp(['https://graph.facebook.com/' => self::ok(['error' => ['message' => 'x']])]);
         [$q] = $this->begin('facebook');

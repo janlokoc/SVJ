@@ -571,6 +571,25 @@ function tenant_stats(string $slug): array
         return ['ready' => false, 'error' => true];
     }
 }
+/** Zástupná „adresa“ v tabulce attempts pro počítání neúspěchů na jeden účet (bez osobního údaje v čitelné podobě). */
+function platform_login_account_key(string $account): string
+{
+    return 'a:' . substr(hash('sha256', mb_strtolower(trim($account))), 0, 40);
+}
+/** Konzole a partnerský portál: nejvýše 8 chyb z jedné adresy a 10 chyb na jeden účet za 15 minut. */
+function platform_login_blocked(string $account = ''): bool
+{
+    pq('DELETE FROM attempts WHERE at < ?', [time() - 900]);
+    return (int) pq('SELECT COUNT(*) FROM attempts WHERE ip = ?', [client_ip()])->fetchColumn() >= 8
+        || (trim($account) !== '' && (int) pq('SELECT COUNT(*) FROM attempts WHERE ip = ?', [platform_login_account_key($account)])->fetchColumn() >= 10);
+}
+function platform_login_failed(string $account = ''): void
+{
+    pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [client_ip(), time()]);
+    if (trim($account) !== '') {
+        pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [platform_login_account_key($account), time()]);
+    }
+}
 function platform_log(string $action, string $detail = ''): void
 {
     pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $GLOBALS['SUPER']['email'] ?? '', client_ip(), $action, mb_substr($detail, 0, 500)]);

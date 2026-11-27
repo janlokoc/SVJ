@@ -46,7 +46,7 @@ return [
     // 'inbound' => ['host' => 'imap.example.cz', 'port' => 993, 'secure' => 'ssl', 'user' => 'odpovedi@vase-domena.cz',
     //               'password' => '…', 'address' => 'odpovedi@vase-domena.cz', 'folder' => 'INBOX', 'keep_days' => 30],
 
-    // Pravidelná záloha (GitHub Actions stahuje https://vase-domena.cz/zaloha/<klíč>), klíč aspoň 32 znaků: `openssl rand -hex 32`.
+    // Pravidelná záloha (GitHub Actions stahuje https://vase-domena.cz/zaloha s klíčem v hlavičce X-Backup-Key), klíč aspoň 32 znaků: `openssl rand -hex 32`.
     // 'backup_key' => '…',
 
     // Limit odesílání e-mailů za hodinu pro celou službu (Český hosting: nejvýš 1 000 na doménu, doporučeno ~200).
