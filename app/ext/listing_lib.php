@@ -216,9 +216,23 @@ function listing_visibility(array $l, ?int $now = null): string
     }
     return $l['public_from'] !== '' && strtotime($l['public_from']) > $now ? 'residents' : 'public';
 }
-/** Smí návštěvník inzerát vidět? Vlastník jednotky a správci vidí i nezveřejněný (jako náhled). */
+/**
+ * Je přihlášený uživatel současný nájemník (nebo jiný nevlastník) inzerované jednotky? Ten inzerát na webu nevidí –
+ * vlastník byt prodává nebo pronajímá dál a nájemník se to nemá dozvědět z webu domu.
+ */
+function listing_hidden_from(array $l, ?array $user): bool
+{
+    if (!$user || ($user['kind'] ?? 'owner') === 'owner' || ($user['role'] ?? '') === 'admin') {
+        return false;
+    }
+    return (bool) val('SELECT COUNT(*) FROM user_units WHERE user_id = ? AND unit_id = ?', [(int) $user['id'], (int) $l['unit_id']]);
+}
+/** Smí návštěvník inzerát vidět? Vlastník jednotky a správci vidí i nezveřejněný (jako náhled); nájemník té jednotky ne. */
 function listing_can_view(array $l, ?array $user, ?int $now = null): bool
 {
+    if (listing_hidden_from($l, $user)) {
+        return false;
+    }
     $v = listing_visibility($l, $now);
     return $v === 'public' || ($v === 'residents' && $user) || listing_can_manage($l, $user) || ($user['role'] ?? '') === 'admin';
 }
