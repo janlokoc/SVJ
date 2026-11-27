@@ -109,6 +109,7 @@
     <p class="hint" id="fronta-emailu"><strong>Odesílání e-mailů (všechny weby):</strong> za poslední hodinu <?= $mq['sent'] ?> z limitu <?= $mq['limits']['hour'] ?> (hromadné zprávy nejvýš <?= $mq['limits']['bulk'] ?> za hodinu).
       <?= $mq['pending'] ? 'Ve frontě čeká <strong>' . $mq['pending'] . '</strong>' . ($mq['bulk'] ? ' (hromadných ' . $mq['bulk'] . ')' : '') . ', nejstarší od ' . e(cz_datetime($mq['oldest'])) . '. Odcházejí postupně při návštěvách webů.' : 'Fronta je prázdná.' ?>
       <?= $mq['failed'] ? ' Za posledních 24 hodin se nepodařilo odeslat ' . $mq['failed'] . ' zpráv.' : '' ?> Limity: <code>'mail' =&gt; ['per_hour' =&gt; 800, 'bulk_per_hour' =&gt; 200]</code> v storage/config.php.</p>
+    <p class="hint">Odpovědi lidí na upozornění k hlášením a závadám: <a href="#odpovedi-emailem">Odpovědi e-mailem</a>.</p>
     <h2 id="provozovatel">Provozovatel</h2>
     <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
     <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
@@ -156,6 +157,7 @@
       <p class="hint">Pro průkaznou zkoušku zadejte IČO firmy, o které víte, že v rejstříku je (najdete ji na isir.justice.cz) – a pro srovnání i IČO bez řízení.</p>
       <button class="btn btn-ghost" type="submit">Vyzkoušet spojení</button></form>
   </section>
+  <?php if (function_exists('inbound_status')) { $s = inbound_status(); require __DIR__ . '/../ext/inbound/console.php'; } ?>
   <?= function_exists('sso_console_section') ? sso_console_section() : '' ?>
   <section class="card" id="beta">
     <h2>Nové funkce (beta program)</h2>

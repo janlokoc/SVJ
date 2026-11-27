@@ -64,6 +64,9 @@ final class BackupTest extends TestCase
             'tenants/dum/data-abc.sqlite-wal',
             'tenants/dum/data-abc.sqlite-shm',
             'platform-abc.sqlite-journal',
+            'inbound/files/0123abcd.bin',
+            'inbound/pending-dum.flag',
+            'inbound/run.lock',
         ];
         foreach ($skipped as $rel) {
             $this->assertSame(1, preg_match(BACKUP_SKIP, $rel), "'$rel' must be skipped");
@@ -86,6 +89,9 @@ final class BackupTest extends TestCase
             'tenants/dum/reports/hlaseni-1.json',
             'certs/dum.test.invalid.pem',
             'sitemail.log',
+            'inbound/secret.key',
+            'inbound/inbound-0123abcd.sqlite',
+            'tenants/dum/uploads/inbound-plan.pdf',
         ];
         foreach ($kept as $rel) {
             $this->assertSame(0, preg_match(BACKUP_SKIP, $rel), "'$rel' must be kept");

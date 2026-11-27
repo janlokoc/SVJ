@@ -765,11 +765,12 @@ function platform_url(string $path = '/'): string
     return ($https ? 'https' : 'http') . '://' . platform_domain() . $port . $path;
 }
 /** E-mail jménem provozovatele služby (registrace, předplatné). Bez nastaveného odesílatele se neposílá nic. */
-function platform_mail(string $to, string $subject, string $text): bool
+function platform_mail(string $to, string $subject, string $text, ?string $replyTo = null): bool
 {
-    // Odpovědi na e-maily služby chodí na kontaktní adresu provozovatele, ne do schránky odesílatele.
+    // Odpovědi na e-maily služby chodí na kontaktní adresu provozovatele, ne do schránky odesílatele
+    // (u odpovědí na hlášení na schránku pro odpovědi, je-li zapnutá – app/ext/inbound_lib.php).
     return send_mail($to, $subject, $text . "\n\n" . pset('service_name') . "\n" . platform_url() . "\n", null, pset('mail_from'), pset('service_name'),
-        filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('contact_email') : null);
+        $replyTo ?? (filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('contact_email') : null));
 }
 function ascii_text(string $s): string
 {

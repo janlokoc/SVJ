@@ -38,6 +38,14 @@ return [
     // i u webů, kam ten den nikdo nepřišel. Klíč: náhodný řetězec (např. `openssl rand -hex 20`).
     // 'cron_key' => '…',
 
+    // Odpovědi e-mailem: odpověď na upozornění (hlášení provozovateli, závady) se sama připojí ke správnému vláknu.
+    // Jedna schránka pro celou službu; web ji čte přes IMAP při každém volání cronu výše. Bez této sekce je funkce vypnutá
+    // a e-maily uvádějí, že odpověď na e-mail se nepřipojí. Zpracované zprávy jdou do složky Zpracovano, odmítnuté
+    // do Nezpracovano; obojí se po keep_days dnech maže (0 = zpracované hned). Na zkušebním webu ('env' => 'staging')
+    // se schránka použije jen s 'staging_ok' => true – staging nesmí číst produkční schránku (použijte jinou).
+    // 'inbound' => ['host' => 'imap.example.cz', 'port' => 993, 'secure' => 'ssl', 'user' => 'odpovedi@vase-domena.cz',
+    //               'password' => '…', 'address' => 'odpovedi@vase-domena.cz', 'folder' => 'INBOX', 'keep_days' => 30],
+
     // Pravidelná záloha (GitHub Actions stahuje https://vase-domena.cz/zaloha/<klíč>), klíč aspoň 32 znaků: `openssl rand -hex 32`.
     // 'backup_key' => '…',
 

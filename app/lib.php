@@ -939,16 +939,28 @@ function store_upload(array $f): array|string
             ? 'Soubor je příliš velký (limit serveru je ' . ini_get('upload_max_filesize') . ').'
             : 'Soubor se nepodařilo nahrát.';
     }
-    if ($limitError = plan_limit_error('storage', (int) ceil(((int) ($f['size'] ?? 0)) / 1048576))) {
+    $orig = basename((string) $f['name']);
+    if ($error = upload_check($orig, (string) $f['tmp_name'], (int) ($f['size'] ?? 0))) {
+        return $error;
+    }
+    $name = bin2hex(random_bytes(16)) . '.' . strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+    if (!move_uploaded_file($f['tmp_name'], UPLOAD_DIR . '/' . $name)) {
+        return 'Soubor se nepodařilo uložit. Zkontrolujte práva zápisu do složky storage.';
+    }
+    return [$name, $orig, (int) filesize(UPLOAD_DIR . '/' . $name)];
+}
+/** Kontrola souboru před uložením (limit úložiště, povolená přípona, obsah odpovídá příponě); vrací text chyby, nebo null. */
+function upload_check(string $orig, string $path, int $size): ?string
+{
+    if ($limitError = plan_limit_error('storage', (int) ceil($size / 1048576))) {
         return $limitError;
     }
-    $orig = basename((string) $f['name']);
     $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
     if (!in_array($ext, ALLOWED_EXT, true)) {
         return 'Nepovolený typ souboru. Povolené jsou: ' . implode(', ', ALLOWED_EXT) . '.';
     }
     // Obsah musí odpovídat příponě – přejmenovaný program nebo skript se nenahraje.
-    $mime = (string) (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
+    $mime = (string) (new finfo(FILEINFO_MIME_TYPE))->file($path);
     $expected = ['pdf' => ['application/pdf'], 'jpg' => ['image/jpeg'], 'jpeg' => ['image/jpeg'], 'png' => ['image/png']][$ext]
         ?? ['application/zip', 'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-office', 'application/octet-stream', 'application/x-ole-storage', 'application/CDFV2',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -956,11 +968,26 @@ function store_upload(array $f): array|string
     if (!in_array($mime, $expected, true)) {
         return 'Obsah souboru neodpovídá jeho příponě (.' . $ext . '). Soubor nebyl nahrán.';
     }
-    $name = bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!move_uploaded_file($f['tmp_name'], UPLOAD_DIR . '/' . $name)) {
+    return null;
+}
+/** Uloží soubor z paměti (např. přílohu e-mailu) se stejnými kontrolami jako nahraný soubor; vrací [filename, original_name, size], nebo text chyby. */
+function store_file_data(string $orig, string $data): array|string
+{
+    $orig = basename(str_replace('\\', '/', $orig));
+    $tmp = UPLOAD_DIR . '/.tmp-' . bin2hex(random_bytes(8));
+    if (@file_put_contents($tmp, $data) === false) {
         return 'Soubor se nepodařilo uložit. Zkontrolujte práva zápisu do složky storage.';
     }
-    return [$name, $orig, (int) filesize(UPLOAD_DIR . '/' . $name)];
+    if ($error = upload_check($orig, $tmp, strlen($data))) {
+        @unlink($tmp);
+        return $error;
+    }
+    $name = bin2hex(random_bytes(16)) . '.' . strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+    if (!@rename($tmp, UPLOAD_DIR . '/' . $name)) {
+        @unlink($tmp);
+        return 'Soubor se nepodařilo uložit.';
+    }
+    return [$name, $orig, strlen($data)];
 }
 /** Převede $_FILES['x'] s atributem multiple na seznam jednotlivých souborů. */
 function uploaded_list(string $key): array
@@ -1206,7 +1233,7 @@ function mail_deliver(array $msg): bool
 {
     // Testy: zprávy se jen zapíší do souboru (SVJ_MAIL_CAPTURE), nic se neodešle.
     if (($capture = getenv('SVJ_MAIL_CAPTURE')) && PHP_SAPI === 'cli') {
-        file_put_contents($capture, json_encode(['to' => $msg['to'], 'subject' => $msg['subject'], 'body' => $msg['body']], JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+        file_put_contents($capture, json_encode(['to' => $msg['to'], 'subject' => $msg['subject'], 'body' => $msg['body'], 'reply_to' => (string) ($msg['headers']['Reply-To'] ?? '')], JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
         $GLOBALS['MAIL_LAST'] = 'capture';
         return true;
     }

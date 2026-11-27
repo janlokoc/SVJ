@@ -18,6 +18,7 @@ trait ModEHelper
     {
         parent::setUp();
         rej_ready();
+        rej_usage_ready();   // tabulka spotřeby platformy i pro test, který v náhodném pořadí běží jako první
         $this->modeUnits = all('SELECT * FROM units ORDER BY id');
         $this->calls = [];
         $this->pset('rej_cee_token', null);

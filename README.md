@@ -112,6 +112,8 @@ Jednorázové nastavení:
    odcházely i v noci, nastavte v klientské sekci **Cron → Webcron** volání
    `https://spolecnyweb.cz/cron/<klíč>` každých 15–30 minut a stejný klíč
    zapište do `storage/config.php` jako `'cron_key' => '…'`.
+   Cron také vyzvedává odpovědi e-mailem (sekce `inbound`, viz `config.example.php`
+   a UKOLY-PROVOZOVATELE.md) – s ní ho spouštějte každých 5–15 minut.
 
 ### Záloha
 

@@ -79,3 +79,37 @@ mají sazbu 21 %) a čerpání se nefakturuje znovu. Tento režim, text faktury 
 
 Až budou první platící zákazníci: u každé služby výše přepnout `beta_*` z `off` na `beta` (jen Premium) a sledovat náklady
 v konzoli (Kredit služeb, AI tokeny, Rejstříky). Na `on` až po ověření na skutečném domě.
+
+## 7. Odpovědi e-mailem (schránka pro odpovědi)
+
+Funkce je hotová a otestovaná unit testy, **bez nastavení je vypnutá** (e-maily dál píšou, že odpověď na e-mail se nepřipojí).
+Po zapnutí se odpověď na e-mail připojí ke správnému vláknu: odpověď autora hlášení na e-mail od podpory (jako „Moje hlášení“,
+hlášení se vrátí mezi nová), odpověď obyvatele na zprávu výboru k závadě (jako odpověď na webu, vyřešená závada se znovu otevře,
+výbor dostane upozornění) a odpověď správce domu na upozornění o závadě (uloží se jako zpráva obyvateli).
+
+1. **Schránka:** u hostingu založte schránku, např. `odpovedi@spolecnyweb.cz` (u Českého hostingu v klientské sekci
+   u domény v části e-mailů – přesný název položek jsem **neověřil**). Schránku používejte jen pro tuto funkci.
+2. **Údaje IMAP:** server, port a šifrování najdete u schránky v klientské sekci nebo v nápovědě hostingu.
+   Obvyklé je port 993 se SSL – adresu serveru (např. `imap.<něco>.cz`) jsem pro Český hosting **neověřil**.
+3. **Do `storage/config.php` na produkci** (heslo jen sem, nikam jinam):
+   ```php
+   'inbound' => ['host' => 'IMAP-SERVER', 'port' => 993, 'secure' => 'ssl', 'user' => 'odpovedi@spolecnyweb.cz',
+                 'password' => 'HESLO-SCHRANKY', 'address' => 'odpovedi@spolecnyweb.cz', 'folder' => 'INBOX', 'keep_days' => 30],
+   ```
+   `keep_days`: po kolika dnech se zpracované a odmítnuté e-maily ve schránce smažou (0 = zpracované hned).
+   Plus-adresy (`odpovedi+značka@…`) jsou vypnuté – zapněte `'plus' => true` jen tehdy, když ověříte, že je hosting doručuje.
+4. **Webcron:** stávající volání `https://spolecnyweb.cz/cron/<klíč>` (klíč `cron_key`) schránku kontroluje při každém
+   spuštění. Doporučuji ho spouštět **každých 5–15 minut** (o tolik se odpověď nejvýš zpozdí); každý běh zpracuje nejvýš
+   20 zpráv (`max_per_run`) a trvá nejvýš 30 s.
+5. **Kontrola:** konzole → Nastavení služby → **Odpovědi e-mailem** (stav, poslední kontrola, počty za 7 dní, poslední
+   chyba, odmítnuté zprávy) a tlačítko **Zkontrolovat schránku teď**.
+6. **Zkouška od začátku do konce:** v konzoli odpovězte na své zkušební hlášení (Hlášení → odpověď) → v e-mailu klikněte
+   na Odpovědět, napište text a odešlete → v konzoli „Zkontrolovat schránku teď“ → text je ve vlákně hlášení a hlášení je
+   mezi novými. Pro závady totéž na webu domu: výbor napíše obyvateli zprávu u závady, obyvatel odpoví na e-mail, odpověď
+   je u závady (Závady a požadavky) a výbor dostal upozornění.
+7. **Staging:** má vlastní `storage/config.php`. Sekci `inbound` tam dávejte jen s **jinou schránkou** (např.
+   `odpovedi-test@…`) a s `'staging_ok' => true` – bez toho je funkce na stagingu vypnutá, takže produkční schránku nikdy
+   nepřečte. Staging posílá e-maily jen na `staging_mail`; aby odpověď prošla, musí mít zkušební uživatel (autor hlášení
+   / obyvatel) stejnou adresu jako `staging_mail` – odpověď z jiné adresy se odmítne (značka je vázaná na adresu příjemce).
+8. **GDPR:** do zásad doplnit, že odpovědi e-mailem se ukládají do vlákna (jen text, u závad i přílohy, u hlášení snímek);
+   původní e-maily zůstávají ve schránce nejvýš `keep_days` dní, záznam o zpracování (odesílatel, výsledek, bez textu) 30 dní.
