@@ -7,7 +7,7 @@ $previewTable = function (array $pv) use ($fields): void { ?>
   <?php foreach (array_slice($pv['rows'], 0, 300) as $r): ?><tr<?= $r['errors'] ? ' class="is-unmatched"' : ($r['action'] === 'skip' ? ' class="is-off"' : '') ?>>
     <td data-label="Řádek"><?= (int) $r['line'] ?></td><td data-label="Jednotka"><strong><?= e($r['label']) ?></strong></td>
     <?php foreach ($fields as $f => $label): if (in_array($f, ['house', 'unit', 'entrance'], true)) continue; $v = $r['values'][$f] ?? null; ?>
-      <td data-label="<?= e($label) ?>"><?= $v === null ? '<span class="muted">—</span>' : e(is_float($v) ? number_format($v, 2, ',', ' ') . ' Kč' : $v) ?></td><?php endforeach ?>
+      <td data-label="<?= e($label) ?>"><?= $v === null ? '<span class="muted">—</span>' : e($f === 'area' ? unit_area_label($v) : (is_float($v) ? number_format($v, 2, ',', ' ') . ' Kč' : $v)) ?></td><?php endforeach ?>
     <td data-label="Výsledek"><?php if ($r['errors']): ?><span class="status status-new">chyba</span> <small><?= e(implode(' ', $r['errors'])) ?></small>
       <?php elseif ($r['action'] === 'create'): ?><span class="status">nová</span><?php elseif ($r['action'] === 'update'): ?><span class="status status-done">uloží se</span><?php else: ?><span class="muted">přeskočí se</span><?php endif ?>
       <?= $r['warnings'] && !$r['errors'] ? '<br><small class="muted">' . e(implode(' ', $r['warnings'])) . '</small>' : '' ?></td></tr><?php endforeach ?>

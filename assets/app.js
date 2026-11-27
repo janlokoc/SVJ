@@ -418,6 +418,38 @@ document.querySelectorAll('[data-copy]').forEach((btn) => btn.addEventListener('
 }));
 document.querySelectorAll('[data-select-all]').forEach((f) => f.addEventListener('focus', () => f.select()));
 
+// Inzerát: poplatky jen u pronájmu; fotky se před odesláním zmenší (z telefonu mají 3–8 MB), server je pak znovu zpracuje
+document.querySelectorAll('[data-lst-type]').forEach((sel) => {
+  const fees = sel.form.querySelector('.lst-fees');
+  const sync = () => { if (fees) fees.hidden = sel.value !== 'pronajem'; };
+  sel.addEventListener('change', sync); sync();
+});
+document.querySelectorAll('input[type=file][data-shrink-photos]').forEach((input) => {
+  let busy = false;
+  input.addEventListener('change', async () => {
+    if (busy || typeof DataTransfer !== 'function' || !window.createImageBitmap) return;
+    busy = true;
+    const dt = new DataTransfer();
+    for (const f of Array.from(input.files)) {
+      let out = f;
+      try {
+        if (/^image\/(jpeg|png|webp)$/.test(f.type)) {
+          const img = await createImageBitmap(f);
+          const scale = Math.min(1, 2000 / Math.max(img.width, img.height));
+          if (scale < 1 || f.size > 1500 * 1024) {
+            const c = document.createElement('canvas'); c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+            const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+            const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.86));
+            if (blob && blob.size < f.size) out = new File([blob], (f.name.replace(/\.\w+$/, '') || 'fotka') + '.jpg', { type: 'image/jpeg' });
+          }
+        }
+      } catch (e) { /* původní soubor */ }
+      dt.items.add(out);
+    }
+    input.files = dt.files; busy = false;
+  });
+});
+
 
 // Prezence na shromáždění: přepnutí přítomnosti se hned uloží a přepočítá podíly
 document.querySelectorAll('.presence-form').forEach((form) => {

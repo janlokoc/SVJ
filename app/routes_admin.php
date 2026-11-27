@@ -740,7 +740,7 @@ $route('POST', '/admin/jednotky/hromadne', function () {
 $unitForm = function (int $id = 0) {
     require_admin();
     $unit = $id ? (one('SELECT * FROM units WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => '', 'owner_contact' => ''];
+        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => '', 'owner_contact' => '', 'area' => null];
     $userIds = $id ? array_map('intval', array_column(all('SELECT user_id FROM user_units WHERE unit_id = ?', [$id]), 'user_id')) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
@@ -748,18 +748,23 @@ $unitForm = function (int $id = 0) {
             'entrance' => in_array(post('entrance'), entrances(), true) ? post('entrance') : '',
             'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'), 'owner_contact' => mb_substr(post('owner_contact'), 0, 2000),
         ]);
+        $area = unit_area_parse(post('area'));
+        $unit['area'] = $area === false ? post('area') : $area;
         $userIds = array_map('intval', (array) ($_POST['users'] ?? []));
         if ($unit['number'] === '' || mb_strlen($unit['number']) > 10) {
             $errors[] = 'Vyplňte číslo jednotky (nejvýše 10 znaků).';
         } elseif (val('SELECT 1 FROM units WHERE entrance = ? AND number = ? AND id <> ?', [$unit['entrance'], $unit['number'], $id])) {
             $errors[] = 'Jednotka s tímto vchodem a číslem už existuje.';
         }
+        if ($area === false) {
+            $errors[] = 'Plochu zadejte v m² jako číslo, např. 54,3 (nebo pole nechte prázdné).';
+        }
         if (!$errors) {
-            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact']];
+            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact'], $area];
             if ($id) {
-                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ?, area = ? WHERE id = ?', [...$args, $id]);
             } else {
-                q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact) VALUES (?,?,?,?,?,?,?)', $args);
+                q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact, area) VALUES (?,?,?,?,?,?,?,?)', $args);
                 $id = (int) db()->lastInsertId();
             }
             q('DELETE FROM user_units WHERE unit_id = ?', [$id]);

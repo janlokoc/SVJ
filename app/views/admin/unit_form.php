@@ -9,7 +9,11 @@
       <label>Číslo jednotky <input type="text" name="number" value="<?= e($unit['number']) ?>" maxlength="10" required></label>
       <label>Patro <input type="text" name="floor" value="<?= e($unit['floor']) ?>" maxlength="10"></label>
     </div>
-    <label>Spoluvlastnický podíl <input type="text" name="share" value="<?= e($unit['share']) ?>" placeholder="Např. 652/100000"></label>
+    <div class="form-row">
+      <label>Spoluvlastnický podíl <input type="text" name="share" value="<?= e($unit['share']) ?>" placeholder="Např. 652/100000"></label>
+      <label>Plocha (m²) <input type="text" name="area" inputmode="decimal" value="<?= e(is_numeric($unit['area'] ?? null) ? str_replace('.', ',', (string) (float) $unit['area']) : (string) ($unit['area'] ?? '')) ?>" maxlength="10" placeholder="Např. 54,3"></label>
+    </div>
+    <p class="hint">Podlahová plocha jednotky (nepovinné). Vlastník ji vidí ve svém účtu a předvyplní se mu do inzerátu; měnit ji může jen výbor.</p>
     <label>Vlastník dle evidence <input type="text" name="owner_note" value="<?= e($unit['owner_note']) ?>" placeholder="Např. Novákovi (SJM)"></label>
     <p class="hint">Jméno vlastníka podle katastru nebo evidence SVJ. Vyplňte i tehdy, když vlastník účet na webu nemá.</p>
     <label>Adresa pro doručování <textarea name="owner_contact" rows="3" placeholder="Jméno a adresa každého vlastníka na samostatném řádku"><?= e($unit['owner_contact']) ?></textarea></label>

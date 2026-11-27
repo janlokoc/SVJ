@@ -4,12 +4,13 @@
   <?php if (!$units): ?><p class="empty">Zatím tu není žádná jednotka. Přidejte je jednotlivě, nebo najednou formulářem níže.</p><?php else: ?>
   <label class="table-filter">Hledat <input type="search" data-filter="#units-table tbody" data-filter-rows="tr" placeholder="Číslo jednotky nebo jméno…"></label>
   <table class="table" id="units-table">
-    <thead><tr><th>Jednotka</th><th>Patro</th><th>Podíl</th><th>Vlastník dle evidence</th><th>Účty na webu</th><th></th></tr></thead>
+    <thead><tr><th>Jednotka</th><th>Patro</th><th>Plocha</th><th>Podíl</th><th>Vlastník dle evidence</th><th>Účty na webu</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($units as $un): ?>
       <tr>
         <td data-label="Jednotka"><a href="<?= url('/admin/jednotky/' . $un['id']) ?>"><strong><?= e(unit_name($un)) ?></strong></a></td>
         <td data-label="Patro"><?= e($un['floor']) ?></td>
+        <td data-label="Plocha"><?= e(unit_area_label($un['area'] ?? null)) ?></td>
         <td data-label="Podíl"><?= e($un['share']) ?></td>
         <td data-label="Vlastník dle evidence"><?= e($un['owner_note']) ?></td>
         <td data-label="Účty na webu"><?php foreach ($people[$un['id']] ?? [] as $p): ?><div><a href="<?= url('/admin/uzivatele/' . $p['id']) ?>"><?= e($p['name']) ?></a> <small><?= mb_strtolower(KINDS[$p['kind']]) ?><?= $p['pending'] ? ', pozván(a)' : '' ?><?= $p['active'] ? '' : ', vypnutý' ?></small></div><?php endforeach ?></td>

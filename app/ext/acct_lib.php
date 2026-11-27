@@ -32,7 +32,7 @@ declare(strict_types=1);
  */
 
 const ACCT_TARGETS = [
-    'units' => ['Jednotky, podíly a vlastníci', ['unit' => 'Jednotka', 'entrance' => 'Vchod', 'share' => 'Podíl', 'owner' => 'Vlastník', 'contact' => 'Adresa / kontakt', 'floor' => 'Patro']],
+    'units' => ['Jednotky, podíly a vlastníci', ['unit' => 'Jednotka', 'entrance' => 'Vchod', 'share' => 'Podíl', 'owner' => 'Vlastník', 'contact' => 'Adresa / kontakt', 'floor' => 'Patro', 'area' => 'Plocha (m²)']],
     'accounts' => ['Předpisy záloh a stavy účtů', ['unit' => 'Jednotka', 'entrance' => 'Vchod', 'vs' => 'Variabilní symbol', 'prescribed' => 'Měsíční předpis (záloha)', 'balance' => 'Stav účtu (saldo)', 'note' => 'Poznámka']],
 ];
 /** Názvy sloupců (bez diakritiky, malými písmeny) – pořadí polí je zároveň pořadí přednosti při odhadu. */
@@ -46,6 +46,7 @@ const ACCT_SYNONYMS = [
     'balance' => ['saldo', 'stav uctu', 'stav konta', 'stav', 'zustatek', 'nedoplatek preplatek', 'preplatek nedoplatek', 'konecny stav', 'saldo k datu', 'balance', 'account balance'],
     'owner' => ['vlastnik', 'vlastnici', 'jmeno vlastnika', 'vlastnik jmeno', 'majitel', 'prijmeni a jmeno', 'jmeno a prijmeni', 'jmeno', 'nazev', 'owner', 'owner name', 'name'],
     'contact' => ['adresa pro dorucovani', 'korespondencni adresa', 'adresa', 'kontakt', 'e mail', 'email', 'telefon', 'contact', 'address'],
+    'area' => ['plocha', 'podlahova plocha', 'plocha jednotky', 'vymera', 'm2', 'area', 'floor area'],
     'floor' => ['patro', 'podlazi', 'floor'],
     'note' => ['poznamka', 'pozn', 'note'],
 ];
@@ -1099,6 +1100,10 @@ function acct_preview(PDO $pdo, array $house, string $target, array $table, arra
                     $row['values'][$f] = mb_substr($v, 0, $len);
                 }
             }
+            if (($v = $get($r, 'area')) !== '') {
+                $area = unit_area_parse($v);
+                $area === false || $area === null ? $row['errors'][] = 'Plochu „' . $v . '“ nerozumíme (čekáme m², např. 54,3).' : $row['values']['area'] = $area;
+            }
             if (!$id) {
                 if ($num === '' || mb_strlen($num) > 20 || !preg_match('/^[\p{L}\p{N}][\p{L}\p{N} .\-]*$/u', $num)) {
                     $row['errors'][] = 'Jednotku „' . $unitText . '“ jsme nenašli a nejde z ní poznat číslo.';
@@ -1160,8 +1165,8 @@ function acct_apply(PDO $pdo, string $target, array $preview, string $asOf): arr
             }
             $v = $r['values'];
             if ($target === 'units') {
-                $cols = array_intersect_key(['share' => $v['share'] ?? null, 'owner_note' => $v['owner'] ?? null, 'owner_contact' => $v['contact'] ?? null, 'floor' => $v['floor'] ?? null],
-                    array_filter(['share' => isset($v['share']), 'owner_note' => isset($v['owner']), 'owner_contact' => isset($v['contact']), 'floor' => isset($v['floor'])]));
+                $cols = array_intersect_key(['share' => $v['share'] ?? null, 'owner_note' => $v['owner'] ?? null, 'owner_contact' => $v['contact'] ?? null, 'floor' => $v['floor'] ?? null, 'area' => $v['area'] ?? null],
+                    array_filter(['share' => isset($v['share']), 'owner_note' => isset($v['owner']), 'owner_contact' => isset($v['contact']), 'floor' => isset($v['floor']), 'area' => isset($v['area'])]));
                 if ($r['action'] === 'create') {
                     $all = ['entrance' => $r['entrance'], 'number' => $r['number']] + $cols;
                     $pdo->prepare('INSERT INTO units (' . implode(', ', array_keys($all)) . ') VALUES (' . implode(',', array_fill(0, count($all), '?')) . ')')->execute(array_values($all));

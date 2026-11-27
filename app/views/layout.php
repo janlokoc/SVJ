@@ -3,6 +3,12 @@ $path = $GLOBALS['PATH'];
 $u = user();
 $nav = ['/' => 'Úvod', '/aktuality' => 'Aktuality', '/dokumenty' => 'Dokumenty', '/kontakty' => 'Kontakty'];
 $more = $u ? ['/zpravy' => 'Zprávy', '/diskuze' => 'Diskuze', '/zavady' => 'Závady a požadavky', '/hlasovani' => 'Hlasování', '/ankety' => 'Ankety', '/terminy' => 'Termíny', '/platby' => 'Platby a zálohy', '/odecty' => 'Odečty měřidel', '/rezervace' => 'Rezervace'] + (function_exists('ai_available') && ai_available() ? ['/asistent' => 'AI asistent'] : []) : [];
+// Rozšíření: položky menu Pro obyvatele z modulů ($GLOBALS['EXT_RESIDENT_NAV'][adresa] = [název, nepovinně funkce „ukázat?“]).
+foreach ($u ? (array) ($GLOBALS['EXT_RESIDENT_NAV'] ?? []) : [] as $extHref => $extItem) {
+    if (!isset($extItem[1]) || ($extItem[1])()) {
+        $more[$extHref] = $extItem[0];
+    }
+}
 // Schované části webu z menu vypadnou.
 $hiddenPaths = [];
 foreach (FEATURES as $key => [$label, $public, $adminPaths]) {
@@ -71,7 +77,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e(!empty($title) ? $title . ' · ' . site('name') : trim(site('name') . ' ' . site('accent'))) ?></title>
-<meta name="description" content="<?= e(site('full')) ?> – aktuality, dokumenty a kontakty.">
+<meta name="description" content="<?= e($GLOBALS['PAGE_META']['description'] ?? site('full') . ' – aktuality, dokumenty a kontakty.') ?>">
+<?= page_meta_html((array) ($GLOBALS['PAGE_META'] ?? [])) ?>
 <link rel="icon" href="<?= asset('favicon.svg') ?>" type="image/svg+xml">
 <link rel="manifest" href="<?= url('/manifest.webmanifest') ?>">
 <link rel="apple-touch-icon" href="<?= url('/apple-touch-icon.png') ?>?v=<?= e(substr(md5(site_look_used() . site_logo_used()), 0, 8)) ?>">

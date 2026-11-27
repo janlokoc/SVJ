@@ -169,6 +169,7 @@ function db_mysql(string $tenant): PDO
         schema_v14($pdo, true);
         schema_v15($pdo, true);
         schema_v16($pdo, true);
+        schema_v17($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -219,7 +220,16 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 16) {
         schema_v16($pdo, true);
     }
+    if ($mysqlVersion < 17) {
+        schema_v17($pdo, true);
+    }
     return $pdo;
+}
+/** Sedmnáctá verze databáze: podlahová plocha jednotky v m² (nepovinná; NULL = nezadáno). */
+function schema_v17(PDO $pdo, bool $mysql): void
+{
+    $pdo->exec('ALTER TABLE units ADD COLUMN area ' . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL'));
+    $mysql ? $pdo->exec("UPDATE settings SET value = '17' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 17');
 }
 /** Šestnáctá verze databáze: text z dokumentů pro hledání (NULL = zatím nepřečteno). */
 function schema_v16(PDO $pdo, bool $mysql): void
@@ -390,6 +400,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v14($pdo, false);
         schema_v15($pdo, false);
         schema_v16($pdo, false);
+        schema_v17($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -525,6 +536,9 @@ SQL);
     }
     if ($version < 16) {
         schema_v16($pdo, false);
+    }
+    if ($version < 17) {
+        schema_v17($pdo, false);
     }
     return $pdo;
 }
@@ -712,6 +726,27 @@ function render(string $view, array $data = []): void
     require __DIR__ . '/views/' . ($GLOBALS['LAYOUT'] ?? 'layout') . '.php';
     $html = ob_get_clean();
     echo page_translatable() ? translate_html($html, current_lang()) : $html;
+}
+/**
+ * Značky do <head> jedné stránky (náhled při sdílení na Facebooku či WhatsAppu, kanonická adresa). Trasa je nastaví
+ * do $GLOBALS['PAGE_META'] před render(): ['description' => …, 'canonical' => url, 'og:title' => …, 'twitter:card' => …].
+ * Klíče og:* jsou atribut property, ostatní name; vše se escapuje.
+ */
+function page_meta_html(array $meta): string
+{
+    $out = '';
+    foreach ($meta as $k => $v) {
+        $k = (string) $k;
+        if ($v === null || $v === '' || !preg_match('/^[a-z][a-z0-9:_]*$/', $k)) {
+            continue;
+        }
+        if ($k === 'canonical') {
+            $out .= '<link rel="canonical" href="' . e($v) . '">' . "\n";
+        } elseif ($k !== 'description') {
+            $out .= '<meta ' . (str_starts_with($k, 'og:') ? 'property' : 'name') . '="' . e($k) . '" content="' . e($v) . '">' . "\n";
+        }
+    }
+    return $out;
 }
 function flash(?string $msg = null, string $type = 'ok'): ?array
 {
@@ -1389,6 +1424,28 @@ function unit_name(array $unit): string
 function user_unit_ids(int $userId): array
 {
     return array_map('intval', array_column(all('SELECT unit_id FROM user_units WHERE user_id = ?', [$userId]), 'unit_id'));
+}
+/** Plocha jednotky z formuláře nebo importu („54,3“, „54.3 m²“): číslo, null (prázdné), nebo false (nečitelné / mimo 1–10 000 m²). */
+function unit_area_parse(string $s): float|null|false
+{
+    $s = trim(preg_replace('/\s*m(²|2)\s*$/iu', '', str_replace("\u{a0}", ' ', trim($s))));
+    if ($s === '') {
+        return null;
+    }
+    $s = str_replace([' ', ','], ['', '.'], $s);
+    if (!preg_match('/^\d{1,5}(\.\d{1,2})?$/', $s) || (float) $s < 1 || (float) $s > 10000) {
+        return false;
+    }
+    return round((float) $s, 2);
+}
+/** Plocha k zobrazení („54,3 m²“); bez plochy prázdný text. */
+function unit_area_label(mixed $area): string
+{
+    if ($area === null || $area === '' || (float) $area <= 0) {
+        return '';
+    }
+    $f = (float) $area;
+    return str_replace('.', ',', rtrim(rtrim(number_format($f, 2, '.', ''), '0'), '.')) . "\u{a0}m²";
 }
 function all_units(): array
 {

@@ -309,7 +309,7 @@ $route('POST', '/ai-text', function () {
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
     @set_time_limit(120);
-    echo json_encode(ai_run_resident($u, post('task'), mb_substr((string) ($_POST['text'] ?? ''), 0, 20001)), JSON_UNESCAPED_UNICODE);
+    echo json_encode(ai_run_resident($u, post('task'), mb_substr((string) ($_POST['text'] ?? ''), 0, 20001), mb_substr((string) ($_POST['context'] ?? ''), 0, 4000)), JSON_UNESCAPED_UNICODE);
     exit;
 });
 
