@@ -1072,4 +1072,6 @@ return [
     'Inzerát je uložený, ale některé fotky se nenahrály: {}' => 'The listing has been saved, but some photos were not uploaded: {}',
     'Napsat inzerát' => 'Write listing',
     'Zkrátit pro Facebook' => 'Shorten for Facebook',
+    'Popis fotky' => 'Photo caption',
+    'Popis fotky, např. Kuchyň' => 'Photo caption, e.g. Kitchen',
 ];

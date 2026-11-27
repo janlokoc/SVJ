@@ -1072,4 +1072,6 @@ return [
     'Inzerát je uložený, ale některé fotky se nenahrály: {}' => 'Оголошення збережено, але деякі фото не завантажилися: {}',
     'Napsat inzerát' => 'Написати оголошення',
     'Zkrátit pro Facebook' => 'Скоротити для Facebook',
+    'Popis fotky' => 'Підпис до фото',
+    'Popis fotky, např. Kuchyň' => 'Підпис до фото, напр. Кухня',
 ];

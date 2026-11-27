@@ -741,4 +741,37 @@ final class ListingTest extends TestCase
         $this->assertFalse(listing_can_manage($l, $this->u('tenant')));
         $this->assertSame([], listing_owner_units($this->u('tenant')), 'no unit to create a listing for');
     }
+
+    /** Popis fotky: uloží se (oříznutý, bez řídicích znaků), zobrazí se na stránce a jako alt; cizí fotky se nezmění. */
+    public function testPhotoCaptions(): void
+    {
+        $l = $this->published();
+        $photos = listing_photos((int) $l['id']);
+        $other = listing_get($this->draft([], 3, 'b'));
+        $foreign = listing_photos((int) $other['id'])[0];
+        listing_photo_captions((int) $l['id'], [
+            $photos[0]['id'] => "  Kuchyň <b>nová</b>\n ",
+            $photos[1]['id'] => str_repeat('x', 300),
+            $foreign['id'] => 'cizí',
+        ]);
+        $photos = listing_photos((int) $l['id']);
+        $this->assertSame('Kuchyň <b>nová</b>', $photos[0]['caption']);
+        $this->assertSame(LISTING_CAPTION_MAX, mb_strlen($photos[1]['caption']));
+        $this->assertSame('', (string) listing_photos((int) $other['id'])[0]['caption'], 'photo of another listing untouched');
+        $this->assertSame('Kuchyň <b>nová</b>', listing_photo_alt($photos[0], 0, 3));
+        $this->assertSame('Fotka 3 z 3', listing_photo_alt($photos[2], 2, 3));
+        $html = $this->renderPage(listing_get((int) $l['id']));
+        $this->assertStringContainsString('<span class="lst-caption">Kuchyň &lt;b&gt;nová&lt;/b&gt;</span>', $html);
+        $this->assertStringContainsString('alt="Kuchyň &lt;b&gt;nová&lt;/b&gt;"', $html);
+        $this->assertStringNotContainsString('<b>nová</b>', $html);
+    }
+
+    /** Starší tabulka fotek bez sloupce caption dostane sloupec při prvním použití. */
+    public function testCaptionColumnAddedToOldTable(): void
+    {
+        $pdo = new \PDO('sqlite::memory:');
+        $pdo->exec("CREATE TABLE listing_photos (id INTEGER PRIMARY KEY AUTOINCREMENT, listing_id INTEGER NOT NULL DEFAULT 0, filename TEXT NOT NULL DEFAULT '', thumb TEXT NOT NULL DEFAULT '', width INTEGER NOT NULL DEFAULT 0, height INTEGER NOT NULL DEFAULT 0, sort INTEGER NOT NULL DEFAULT 0)");
+        listing_ready($pdo);
+        $this->assertContains('caption', array_column($pdo->query('PRAGMA table_info(listing_photos)')->fetchAll(\PDO::FETCH_ASSOC), 'name'));
+    }
 }

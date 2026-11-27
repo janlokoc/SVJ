@@ -1072,4 +1072,6 @@ return [
     'Inzerát je uložený, ale některé fotky se nenahrály: {}' => 'Tin đăng đã được lưu nhưng một số ảnh chưa tải lên được: {}',
     'Napsat inzerát' => 'Viết tin đăng',
     'Zkrátit pro Facebook' => 'Rút gọn cho Facebook',
+    'Popis fotky' => 'Mô tả ảnh',
+    'Popis fotky, např. Kuchyň' => 'Mô tả ảnh, ví dụ: Nhà bếp',
 ];

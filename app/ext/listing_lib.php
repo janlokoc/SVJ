@@ -65,7 +65,7 @@ function listing_ready(?PDO $pdo = null): void
         'listings' => "CREATE TABLE listings ($id, unit_id $int, user_id $int, type {$s(10)}, price $big, fees $big, layout {$s(10)}, area " . ($mysql ? 'DECIMAL(8,2) NULL' : 'REAL')
             . ", floor {$s(10)}, description $text, share_text $text, contact_name {$s(120)}, energy_class {$s(1)}, energy_source {$s(10)}, neighbours_first $int, status {$s(10)}, hidden $int,"
             . " hidden_reason {$s(500)}, created_at {$s(19)}, updated_at {$s(19)}, published_at {$s(19)}, public_from {$s(19)}, expires_on {$s(10)}, reminded_on {$s(10)}, sold_at {$s(19)})$end",
-        'listing_photos' => "CREATE TABLE listing_photos ($id, listing_id $int, filename {$s(80)}, thumb {$s(80)}, width $int, height $int, sort $int)$end",
+        'listing_photos' => "CREATE TABLE listing_photos ($id, listing_id $int, filename {$s(80)}, thumb {$s(80)}, width $int, height $int, sort $int, caption {$s(120)})$end",
         // Záznamy pro omezení počtu zpráv a hlášení z jedné adresy (mažou se po dni).
         'listing_hits' => "CREATE TABLE listing_hits ($id, kind {$s(10)}, ip {$s(45)}, listing_id $int, at $big)$end",
         'listing_reports' => "CREATE TABLE listing_reports ($id, listing_id $int, reason $text, created_at {$s(19)})$end",
@@ -73,6 +73,14 @@ function listing_ready(?PDO $pdo = null): void
     foreach ($tables as $name => $ddl) {
         if (!in_array($name, $have, true)) {
             $pdo->exec($ddl);
+        }
+    }
+    // Popis fotky (přidán 11/2026) – starší tabulka sloupec nemá.
+    if (in_array('listing_photos', $have, true)) {
+        $cols = $mysql ? array_map('strval', $pdo->query('SHOW COLUMNS FROM listing_photos')->fetchAll(PDO::FETCH_COLUMN))
+            : array_column($pdo->query('PRAGMA table_info(listing_photos)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+        if (!in_array('caption', $cols, true)) {
+            $pdo->exec("ALTER TABLE listing_photos ADD COLUMN caption {$s(120)}");
         }
     }
     if (!in_array('listings', $have, true)) {
@@ -278,6 +286,21 @@ function listing_slug(array $l): string
 function listing_path(array $l): string
 {
     return '/inzerat/' . (int) $l['id'] . '-' . listing_slug($l);
+}
+const LISTING_CAPTION_MAX = 120;
+/** Uloží popisky fotek inzerátu ([id fotky => text]); fotky jiného inzerátu se nezmění. */
+function listing_photo_captions(int $listingId, array $captions): void
+{
+    foreach ($captions as $pid => $text) {
+        $text = mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', is_string($text) ? $text : '')), 0, LISTING_CAPTION_MAX);
+        q('UPDATE listing_photos SET caption = ? WHERE id = ? AND listing_id = ?', [$text, (int) $pid, $listingId]);
+    }
+}
+/** Text pro alt a popisek fotky: popis od vlastníka, jinak „Fotka n z m“. */
+function listing_photo_alt(array $p, int $i, int $count): string
+{
+    $c = trim((string) ($p['caption'] ?? ''));
+    return $c !== '' ? $c : 'Fotka ' . ($i + 1) . ' z ' . $count;
 }
 function listing_photos(int $listingId): array
 {

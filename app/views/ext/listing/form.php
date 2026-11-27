@@ -57,7 +57,8 @@ $aiFieldsListing = ['type' => 'Typ inzerátu', 'layout' => 'Dispozice', 'area' =
       <?php if ($photos): ?>
         <ul class="lst-photo-edit">
           <?php foreach ($photos as $i => $p): ?>
-            <li><img src="<?= url(listing_photo_url($p, true)) ?>" alt="Fotka <?= $i + 1 ?>" width="160" height="120">
+            <li><img src="<?= url(listing_photo_url($p, true)) ?>" alt="<?= e(listing_photo_alt($p, $i, count($photos))) ?>" width="160" height="120">
+              <label class="lst-caption-field"><span class="sr-only">Popis fotky</span><input type="text" name="photo_caption[<?= (int) $p['id'] ?>]" value="<?= e((string) ($p['caption'] ?? '')) ?>" maxlength="<?= LISTING_CAPTION_MAX ?>" placeholder="Popis fotky, např. Kuchyň"></label>
               <label class="check"><input type="radio" name="cover" value="<?= $p['id'] ?>"<?= $i === 0 ? ' checked' : '' ?>> <span>Úvodní</span></label>
               <label class="check"><input type="checkbox" name="photo_delete[]" value="<?= $p['id'] ?>"> <span>Smazat</span></label></li>
           <?php endforeach ?>

@@ -58,6 +58,7 @@ $listingForm = function (int $unitId, int $id) use ($listingOwnerGuard) {
                     $warnings[] = '„' . basename((string) $f['name']) . '“: ' . $err;
                 }
             }
+            listing_photo_captions($id, (array) ($_POST['photo_caption'] ?? []));
             if ((int) post('cover')) {
                 listing_photo_cover($id, (int) post('cover'));
             }

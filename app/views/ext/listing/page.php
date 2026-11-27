@@ -36,7 +36,7 @@ $service = plan_managed() ? pset('service_name') : '';
   <div class="lst-gallery" role="region" aria-label="Fotky" tabindex="0">
     <?php foreach ($photos as $i => $p): ?>
       <a class="lst-photo" href="<?= url(listing_photo_url($p)) ?>"><img src="<?= url(listing_photo_url($p)) ?>" srcset="<?= url(listing_photo_url($p, true)) ?> 480w, <?= url(listing_photo_url($p)) ?> <?= (int) $p['width'] ?>w"
-        sizes="(max-width: 760px) 92vw, 60vw" width="<?= (int) $p['width'] ?>" height="<?= (int) $p['height'] ?>" alt="Fotka <?= $i + 1 ?> z <?= count($photos) ?>"<?= $i ? ' loading="lazy"' : '' ?>></a>
+        sizes="(max-width: 760px) 92vw, 60vw" width="<?= (int) $p['width'] ?>" height="<?= (int) $p['height'] ?>" alt="<?= e(listing_photo_alt($p, $i, count($photos))) ?>"<?= $i ? ' loading="lazy"' : '' ?>><?php if (trim((string) ($p['caption'] ?? '')) !== ''): ?><span class="lst-caption"><?= e($p['caption']) ?></span><?php endif ?></a>
     <?php endforeach ?>
   </div>
   <p class="hint lst-swipe">Fotek: <?= count($photos) ?>. Další zobrazíte posunutím do strany.</p>
