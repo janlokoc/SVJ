@@ -1,6 +1,18 @@
 <div class="wrap page">
   <header class="page-head row"><h1>Inzeráty</h1><?php if ($canCreate): ?><span class="actions"><a class="btn" href="<?= url('/inzeraty/moje') ?>">Moje inzeráty</a></span><?php endif ?></header>
   <p class="lead">Byty v domě, které jejich vlastníci prodávají nebo pronajímají. Třeba se ozve někdo ze známých.</p>
+  <?php if (!empty($mine)): ?>
+  <section class="card lst-mine-box">
+    <h2 class="h-small">Vaše inzeráty</h2>
+    <ul class="plain-list">
+      <?php foreach ($mine as $m): ?>
+        <li><strong><?= e(listing_title($m)) ?></strong> · <span class="muted"><?= e(listing_owner_state($m)) ?></span>
+          · <a href="<?= url('/inzeraty/' . (int) $m['id'] . '/upravit') ?>">Upravit</a><?php if (listing_visibility($m) !== 'none'): ?> · <a href="<?= url(listing_path($m)) ?>">Zobrazit</a><?php endif ?></li>
+      <?php endforeach ?>
+    </ul>
+    <?php if (array_filter($mine, fn($m) => $m['status'] === 'draft')): ?><p class="hint">Koncept vidíte jen Vy. Ostatním se ukáže, až ho zveřejníte tlačítkem „Uložit a zveřejnit“.</p><?php endif ?>
+  </section>
+  <?php endif ?>
   <?php if (!$rows): ?>
     <p class="empty">Teď v domě žádný byt na prodej ani k pronájmu není.</p>
   <?php else: ?>

@@ -2057,3 +2057,6 @@ tr.is-neg td { color: var(--accent); }
 .lst-inq-phone { margin-top: 1.25rem; }
 .lst-inq-archive { margin-top: 1rem; }
 .lst-inq-badge { margin: 0 0 1rem; }
+
+.lst-mine-box { margin-bottom: 1.5rem; }
+.lst-mine-box ul { margin: .4rem 0 0; }

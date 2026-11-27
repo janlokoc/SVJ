@@ -862,4 +862,25 @@ final class ListingTest extends TestCase
         $this->assertSame(['', null, 54.3], [$row['outdoor_type'], $row['outdoor_area'], (float) $row['area']]);
         $this->assertSame('none', listing_outdoor_type($row));
     }
+
+    /** Přehled Inzeráty ukáže vlastníkovi i jeho koncept („Vaše inzeráty“), ostatním ne. */
+    public function testOverviewShowsOwnersOwnListings(): void
+    {
+        $draft = listing_get($this->draft());
+        $mine = listing_mine($this->u('owner'));
+        $this->assertSame([(int) $draft['id']], array_map(fn($l) => (int) $l['id'], $mine));
+        $this->assertSame('koncept', listing_owner_state($draft));
+        $this->assertSame([], listing_mine($this->u('tenant')));
+        $this->assertSame([], listing_mine($this->u('other')));
+        $rows = []; $covers = []; $canCreate = true;
+        ob_start();
+        require dirname(__DIR__, 2) . '/app/views/ext/listing/list.php';
+        $html = (string) ob_get_clean();
+        $this->assertStringContainsString('Vaše inzeráty', $html);
+        $this->assertStringContainsString('/inzeraty/' . $draft['id'] . '/upravit', $html);
+        $this->assertStringContainsString('Koncept vidíte jen Vy', $html);
+        $this->assertStringNotContainsString(listing_path($draft), $html, 'no public link for a draft');
+        $pub = listing_get($this->published()['id']);
+        $this->assertSame('zveřejněný', listing_owner_state($pub));
+    }
 }

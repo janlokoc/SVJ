@@ -213,6 +213,27 @@ function listing_owner_units(?array $user): array
     }
     return all('SELECT un.* FROM units un JOIN user_units uu ON uu.unit_id = un.id WHERE uu.user_id = ? ORDER BY un.entrance, un.number + 0, un.number', [(int) $user['id']]);
 }
+/** Inzeráty jednotek vlastníka (kromě vypršelých), nejnovější první – rámeček „Vaše inzeráty“ v přehledu. */
+function listing_mine(?array $user): array
+{
+    $ids = array_map(fn($u) => (int) $u['id'], listing_owner_units($user));
+    if (!$ids) {
+        return [];
+    }
+    listing_ready();
+    return all('SELECT * FROM listings WHERE unit_id IN (' . implode(',', $ids) . ") AND status <> 'expired' ORDER BY id DESC");
+}
+/** Stav inzerátu pro vlastníka jedním slovem (koncept / jen pro sousedy / zveřejněný / skrytý výborem …). */
+function listing_owner_state(array $l, ?int $now = null): string
+{
+    if ((int) $l['hidden']) {
+        return 'skrytý výborem';
+    }
+    if ($l['status'] === 'published') {
+        return listing_visibility($l, $now) === 'residents' ? 'zveřejněný – zatím jen pro sousedy' : 'zveřejněný';
+    }
+    return mb_strtolower(LISTING_STATUS[$l['status']] ?? $l['status']);
+}
 function listing_owns_unit(?array $user, int $unitId): bool
 {
     return in_array($unitId, array_map(fn($u) => (int) $u['id'], listing_owner_units($user)), true);

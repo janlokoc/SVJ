@@ -1119,4 +1119,12 @@ return [
     'Zpráva je v archivu.' => 'Tin nhắn đã được lưu trữ.',
     'Zpráva je zpět mezi zájemci.' => 'Tin nhắn đã trở lại danh sách hiện tại.',
     'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. #.' => 'Nhập diện tích ban công, lô gia, sân thượng hoặc vườn trước nhà theo m², ví dụ #.',
+    'Vaše inzeráty' => 'Tin đăng của bạn',
+    'Zobrazit' => 'Xem',
+    'Koncept vidíte jen Vy. Ostatním se ukáže, až ho zveřejníte tlačítkem „Uložit a zveřejnit“.' => 'Chỉ bạn thấy bản nháp. Người khác sẽ thấy sau khi bạn đăng bằng nút “Lưu và đăng”.',
+    'zveřejněný' => 'đã đăng',
+    'zveřejněný – zatím jen pro sousedy' => 'đã đăng – tạm thời chỉ hàng xóm',
+    'skrytý výborem' => 'bị ban quản trị ẩn',
+    'koncept' => 'bản nháp',
+    'prodáno / pronajato' => 'đã bán / đã cho thuê',
 ];

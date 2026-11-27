@@ -1119,4 +1119,12 @@ return [
     'Zpráva je v archivu.' => 'Повідомлення в архіві.',
     'Zpráva je zpět mezi zájemci.' => 'Повідомлення повернуто до поточних.',
     'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. #.' => 'Вкажіть площу балкона, лоджії, тераси або палісадника в м², напр. #.',
+    'Vaše inzeráty' => 'Ваші оголошення',
+    'Zobrazit' => 'Переглянути',
+    'Koncept vidíte jen Vy. Ostatním se ukáže, až ho zveřejníte tlačítkem „Uložit a zveřejnit“.' => 'Чернетку бачите лише ви. Іншим вона з’явиться після публікації кнопкою «Зберегти й опублікувати».',
+    'zveřejněný' => 'опубліковано',
+    'zveřejněný – zatím jen pro sousedy' => 'опубліковано – поки лише для сусідів',
+    'skrytý výborem' => 'приховано комітетом',
+    'koncept' => 'чернетка',
+    'prodáno / pronajato' => 'продано / здано',
 ];

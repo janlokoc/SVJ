@@ -268,7 +268,7 @@ $route('GET', '/inzeraty', function () {
     foreach ($rows as $l) {
         $covers[$l['id']] = one('SELECT * FROM listing_photos WHERE listing_id = ? ORDER BY sort, id LIMIT 1', [(int) $l['id']]);
     }
-    render('ext/listing/list', ['title' => 'Inzeráty', 'rows' => $rows, 'covers' => $covers, 'canCreate' => (bool) listing_owner_units($u)]);
+    render('ext/listing/list', ['title' => 'Inzeráty', 'rows' => $rows, 'covers' => $covers, 'canCreate' => (bool) listing_owner_units($u), 'mine' => listing_mine($u)]);
 });
 
 // ---------- Výbor ----------

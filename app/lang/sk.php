@@ -1119,4 +1119,12 @@ return [
     'Zpráva je v archivu.' => 'Správa je v archíve.',
     'Zpráva je zpět mezi zájemci.' => 'Správa je späť medzi záujemcami.',
     'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. #.' => 'Zadajte plochu balkóna, lodžie, terasy alebo predzáhradky v m², napr. #.',
+    'Vaše inzeráty' => 'Vaše inzeráty',
+    'Zobrazit' => 'Zobraziť',
+    'Koncept vidíte jen Vy. Ostatním se ukáže, až ho zveřejníte tlačítkem „Uložit a zveřejnit“.' => 'Koncept vidíte len Vy. Ostatným sa ukáže, keď ho zverejníte tlačidlom „Uložiť a zverejniť“.',
+    'zveřejněný' => 'zverejnený',
+    'zveřejněný – zatím jen pro sousedy' => 'zverejnený – zatiaľ len pre susedov',
+    'skrytý výborem' => 'skrytý výborom',
+    'koncept' => 'koncept',
+    'prodáno / pronajato' => 'predané / prenajaté',
 ];

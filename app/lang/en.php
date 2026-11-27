@@ -1119,4 +1119,12 @@ return [
     'Zpráva je v archivu.' => 'The message has been archived.',
     'Zpráva je zpět mezi zájemci.' => 'The message is back among the current ones.',
     'Zadejte plochu balkonu, lodžie, terasy nebo předzahrádky v m², např. #.' => 'Enter the area of the balcony, loggia, terrace or front garden in m², e.g. #.',
+    'Vaše inzeráty' => 'Your listings',
+    'Zobrazit' => 'View',
+    'Koncept vidíte jen Vy. Ostatním se ukáže, až ho zveřejníte tlačítkem „Uložit a zveřejnit“.' => 'Only you can see a draft. Others will see it once you publish it with “Save and publish”.',
+    'zveřejněný' => 'published',
+    'zveřejněný – zatím jen pro sousedy' => 'published – neighbours only for now',
+    'skrytý výborem' => 'hidden by the committee',
+    'koncept' => 'draft',
+    'prodáno / pronajato' => 'sold / rented',
 ];
