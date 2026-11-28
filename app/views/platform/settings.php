@@ -187,7 +187,7 @@
     <p>Novou funkci můžete nejdřív pustit jen edici Premium (slib „přístup k novým funkcím ještě před spuštěním“ v ceníku). Premium domy ji uvidí se štítkem <span class="tag tag-beta">Beta</span>, výzvou k ohlasu a v kartě „Vyzkoušejte“. Až je vyladěná, přepněte ji na <em>spuštěno</em> – pak ji dostanou edice, pro které je určená.</p>
     <form method="post" action="<?= url('/nastaveni/beta') ?>" class="form"><?= csrf_field() ?>
       <table class="table"><thead><tr><th>Funkce</th><th>Stav</th></tr></thead><tbody>
-        <?php foreach (BETA_FEATURES as $bk => [$bn]): ?><tr><td data-label="Funkce"><?= e($bn) ?></td>
+        <?php foreach (BETA_FEATURES as $bk => [$bn]): ?><tr><td data-label="Funkce"><?= e($bn) ?><?= beta_ready($bk) ? '' : '<br><small class="muted">Chybí přístupy ke službě (config.php nebo brána) – domy ji uvidí jen v Připravujeme, i když ji zapnete.</small>' ?></td>
           <td data-label="Stav"><select name="stage[<?= e($bk) ?>]" aria-label="Stav: <?= e($bn) ?>"><?php foreach (BETA_STAGES as $sk => $sl): ?><option value="<?= $sk ?>"<?= beta_stage($bk) === $sk ? ' selected' : '' ?>><?= e($sl) ?></option><?php endforeach ?></select></td></tr><?php endforeach ?>
       </tbody></table>
       <div class="actions"><button class="btn" type="submit">Uložit</button></div></form>

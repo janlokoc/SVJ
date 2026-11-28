@@ -23,6 +23,8 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
         $this->mailStart = is_file($f) ? count(file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)) : 0;
         $_SESSION = [];
         $_POST = $_GET = [];
+        // Funkce v betě se zkoušejí bez přístupů k cizím službám; připravenost (beta_ready) má vlastní test.
+        $GLOBALS['BETA_READY_ALL'] = true;
         user(true);   // přihlášení z předchozího testu nesmí přetrvat
         // Hodinový limit fronty e-mailů počítá odeslané zprávy všech testů dohromady; bez úklidu by podle pořadí testů
         // (--order-by=random) hromadné zprávy v pozdějších testech začaly čekat ve frontě.

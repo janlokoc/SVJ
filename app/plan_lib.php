@@ -265,11 +265,31 @@ function beta_premium(): bool
 {
     return !function_exists('plan_managed') || !plan_managed() || EDITION_RANK[plan_edition()] >= EDITION_RANK['premium'];
 }
-/** Vidí toto společenství funkci? Spuštěnou ano (o edici rozhoduje funkce sama), v betě jen Premium. */
+/**
+ * Má funkce vše, co ke svému běhu potřebuje od provozovatele (smlouva a přístupy k bráně nebo registru v config.php)?
+ * Bez toho by ji dům „vyzkoušel“ a nefungovala by – proto zůstává mezi připravovanými funkcemi (11/2026).
+ * Funkce bez cizí služby (hlídání insolvencí z veřejného ISIR, online shromáždění) jsou připravené vždy.
+ */
+function beta_ready(string $key): bool
+{
+    if (!empty($GLOBALS['BETA_READY_ALL'])) {
+        return true;   // jen unit testy: chování funkcí se zkouší bez přístupů k cizím službám
+    }
+    return match ($key) {
+        'sms' => function_exists('sms_gateway_ready') && function_exists('sms_provider_name') && sms_gateway_ready() && (sms_provider_name() !== 'log' || is_staging()),
+        'bank-psd2' => function_exists('psd2_configured') && psd2_configured(),
+        'katastr' => function_exists('rej_katastr_configured') && rej_katastr_configured(),
+        'exekuce' => function_exists('rej_cee_configured') && rej_cee_configured(),
+        'sso' => function_exists('sso_configured') && sso_configured() !== [],
+        'bankid' => function_exists('bankid_config') && bankid_config() !== null,
+        default => true,
+    };
+}
+/** Vidí toto společenství funkci? Spuštěnou ano (o edici rozhoduje funkce sama), v betě jen Premium – a jen když je funkce připravená. */
 function beta_visible(string $key): bool
 {
     $s = beta_stage($key);
-    return $s === 'on' || ($s === 'beta' && beta_premium());
+    return ($s === 'on' || ($s === 'beta' && beta_premium())) && beta_ready($key);
 }
 function beta_is(string $key): bool
 {
