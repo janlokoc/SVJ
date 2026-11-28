@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-/** Naplní novou databázi obsahem převzatým z původního webu svjtabor48.webnode.cz. */
+/** Naplní novou databázi ukázkovým obsahem (dokumenty a aktuality převzaté z veřejného webu svjtabor48.webnode.cz; kontakty a údaje smyšlené). */
 function seed_database(PDO $pdo): void
 {
     $seed = json_decode(file_get_contents(__DIR__ . '/seed.json'), true);
@@ -24,12 +24,12 @@ function seed_database(PDO $pdo): void
     }
 
     $contacts = [
-        ['vybor', 'Předseda SVJ', 'MgA. Bohdan Jeřábek', '604 524 971', 'bohdan.jerabek@centrum.cz', ''],
-        ['vybor', 'Místopředseda SVJ', 'David Skyba', '605 239 976', 'david.skyba@dmb-stavby.cz', 'Zástupce vchodu 48 C'],
-        ['vybor', 'Člen výboru', 'Mgr. Jan Pavlík, Ph.D.', '608 771 429', 'velkykorys@gmail.com', 'Zástupce vchodu 48 A'],
-        ['sprava', 'Účetní', 'Z - CONSULT s.r.o., Ing. Jarmila Zaviačičová, MBA', '604 371 173', 'zaviacicova@z-consult.cz', ''],
+        ['vybor', 'Předseda SVJ', 'Ing. Pavel Novotný', '777 123 451', 'predseda@example.cz', ''],
+        ['vybor', 'Místopředseda SVJ', 'Martin Dvořák', '777 123 452', 'mistopredseda@example.cz', 'Zástupce vchodu 48 C'],
+        ['vybor', 'Člen výboru', 'Mgr. Lucie Malá', '777 123 453', 'vybor@example.cz', 'Zástupce vchodu 48 A'],
+        ['sprava', 'Účetní', 'Účetnictví Příklad s.r.o., Ing. Jana Veselá', '777 123 454', 'ucetni@example.cz', ''],
         ['havarie', 'Voda, plyn, elektřina, topení', 'Teplárny Brno', '545 161 545', '', ''],
-        ['havarie', 'Elektro', 'Bořivoj Kubík', '724 014 061', 'borivoj.kubik@eon.cz', 'Klusáčkova 1'],
+        ['havarie', 'Elektro', 'Elektro Servis (příklad)', '777 123 455', 'elektro@example.cz', ''],
     ];
     $st = $pdo->prepare('INSERT INTO contacts (grp, role, name, phone, email, note, sort) VALUES (?,?,?,?,?,?,?)');
     foreach ($contacts as $i => $c) {
@@ -42,8 +42,8 @@ function seed_database(PDO $pdo): void
     $settings = [
         'intro' => 'Web Společenství vlastníků jednotek Tábor 48 a–d. Najdete tu aktuální oznámení výboru, pozvánky a zápisy ze shromáždění, dokumenty společenství a kontakty na výbor i havarijní servis.',
         'address' => 'Tábor 48 a–d, Brno',
-        'ico' => '29236916',
-        'account' => '2200506953/2010',
+        'ico' => '12345678',
+        'account' => '123456789/0800',
         'emergency_note' => "V případě jakékoliv závady či problému v domě volejte uvedená čísla.\n\n**Objednání havarijního servisu musí odsouhlasit alespoň jeden člen výboru** – kromě stavů ohrožujících život nebo hrozící nenávratné škody na majetku. Neschválený výjezd servisní služby hradí objednatel.",
         'forum_note' => 'Diskuze není oficiální komunikační kanál s výborem – členové výboru nejsou povinni reagovat. Uveďte prosím, kterého vchodu či bytu se příspěvek týká. Vulgární a urážlivé příspěvky správce maže.',
         'webmaster_email' => '',
