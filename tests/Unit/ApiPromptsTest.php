@@ -26,6 +26,7 @@ final class ApiPromptsTest extends TestCase
         }
         $this->assertStringContainsString('obyvatelům nic neposílej', $prompts[0][2]);
         $this->assertStringContainsString('na nic se mě neptej', $prompts[0][2], 'asistent rozhoduje podle pravidel, neptá se');
+        $this->assertStringContainsString('Dokumenty: všechny nahraj jen pro přihlášené', $prompts[0][2]);
         foreach (array_keys(CATEGORIES) as $cat) {
             $this->assertStringContainsString('(' . $cat . ')', $prompts[0][2], 'pravidla znají kategorii ' . $cat);
         }

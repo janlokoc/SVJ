@@ -144,7 +144,7 @@
     "checks": 10,
     "steps": [
       "Správce v API a napojení vytvořil klíč „Převod starého webu“ s oprávněními documents:write, events:write, contacts:write a posts:write; klíč swk_… se ukázal jednou.",
-      "Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ pro obyvatele a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.",
+      "Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ (asistent ho poslal jako veřejný, web ho uložil jen pro přihlášené) a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.",
       "AI asistent přes MCP (initialize, tools/list) viděl jen nástroje podle oprávnění klíče (bez účtů obyvatel) a nástrojem import_contacts převedl havarijní kontakt, který se ukázal v Kontaktech.",
       "Volání jsou vidět v části Poslední volání; po kliknutí na Zrušit klíč přestal okamžitě platit (401).",
       "Na stránce Převod ze starého webu vytvořilo jedno tlačítko klíč s oprávněními pro převod (včetně revizí), stránka nabízí zadání přes MCP i přes API a tlačítko „Převod je hotový – zrušit klíč“ klíč zrušilo."

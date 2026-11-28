@@ -65,6 +65,14 @@ final class ApiImportTest extends TestCase
         [$id2, $created2] = api_document_save(['ext_id' => 'd-' . $this->tag, 'title' => 'Stanovy (úplné znění)'], null);
         $this->assertSame([$id, false], [$id2, $created2], 'stejné ext_id = úprava bez nového souboru');
         $this->assertSame('Chybí soubor', api_document_save(['title' => 'x'], null));
+        $f2 = store_file_data('verejny.pdf', $pdf);
+        [$pubId] = api_document_save(['ext_id' => 'dp-' . $this->tag, 'title' => 'Má být veřejný', 'visibility' => 'public'], $f2);
+        $this->assertSame('residents', (string) val('SELECT visibility FROM documents WHERE id = ?', [$pubId]), 'dokument z API je vždy jen pro přihlášené');
+        q("UPDATE documents SET visibility = 'public' WHERE id = ?", [$pubId]);   // výbor ho zveřejnil
+        api_document_save(['ext_id' => 'dp-' . $this->tag, 'title' => 'Má být veřejný (znovu)'], null);
+        $this->assertSame('public', (string) val('SELECT visibility FROM documents WHERE id = ?', [$pubId]), 'opakovaný převod zveřejnění výboru nezruší');
+        @unlink(UPLOAD_DIR . '/' . $f2[0]);
+        q('DELETE FROM documents WHERE id = ?', [$pubId]);
         $this->assertStringContainsString('neexistuje', (string) api_document_save(['unit' => 'NENI/999'], $file));
         $this->assertIsString(store_file_data('virus.pdf', 'MZ not a pdf'), 'obsah musí odpovídat příponě');
         @unlink(UPLOAD_DIR . '/' . $file[0]);

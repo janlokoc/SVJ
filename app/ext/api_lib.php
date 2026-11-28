@@ -453,11 +453,13 @@ function api_document_save(array $m, ?array $file): array|string
         }
         $unitId = (int) $un['id'];
     }
-    $vis = $unitId ? 'residents' : (($m['visibility'] ?? '') === 'residents' ? 'residents' : 'public');
+    // Dokument z API/MCP (převod, AI asistent) je vždy jen pro přihlášené – zveřejnit ho může výbor sám (11/2026).
+    $vis = 'residents';
     $title = mb_substr(trim((string) ($m['title'] ?? '')), 0, 200) ?: ($file ? pathinfo($file[1], PATHINFO_FILENAME) : 'Dokument');
     $ext = api_ext($m);
     if ($id = api_ref('document', $ext, 'documents')) {
-        q('UPDATE documents SET title = ?, category = ?, visibility = ?, doc_date = ?, unit_id = ? WHERE id = ?', [$title, $cat, $vis, $date ?: null, $unitId, $id]);
+        // Viditelnost se při opakovaném převodu nemění – co výbor mezitím zveřejnil, zůstane zveřejněné.
+        q('UPDATE documents SET title = ?, category = ?, doc_date = ?, unit_id = ? WHERE id = ?', [$title, $cat, $date ?: null, $unitId, $id]);
         if ($file) {
             $old = (string) val('SELECT filename FROM documents WHERE id = ?', [$id]);
             if ($old !== '') {
@@ -647,7 +649,7 @@ function api_prompts(): array
     $mcp = absolute_url('/mcp');
     // Pravidla, podle kterých asistent rozhoduje sám – správce se nemusí na nic ptát (11/2026).
     $rules = "\n\nRozhoduj sám podle těchto pravidel a na nic se mě neptej; sporné případy rozhodni podle nich a vypiš je na konci:\n"
-        . "- Viditelnost: dokumenty a aktuality s osobními údaji (jména vlastníků, seznamy, zápisy ze shromáždění, vyúčtování, smlouvy s cenami) jen pro přihlášené (visibility residents); ostatní veřejně (public).\n"
+        . "- Dokumenty: všechny nahraj jen pro přihlášené (visibility residents) – web je tak stejně uloží; zveřejnit je může výbor sám. Aktuality s osobními údaji (jména, telefony) jen pro přihlášené, ostatní veřejně.\n"
         . "- Kategorie dokumentů: stanovy a smlouvy (zakladni), pozvánky (pozvanky), zápisy (zapisy), účetní závěrky (uzaverky), revizní a technické zprávy, PENB, návody k zařízením (technicke), nabídky a projekty (nabidky), formuláře (formulare), ostatní (oznameni).\n"
         . "- Texty aktualit vyčisti od zbytků webu (menu, patičky, „číst dál“), obsah neměň.\n"
         . "- Revize a kontroly s datem (plyn, elektro, hromosvod, hydranty, hasicí přístroje, komíny, výtahy…) zapiš nástrojem import_maintenance (naposledy provedeno, interval v měsících nebo příští termín) – web pak termín hlídá. Do termínů (events) je nedávej.\n"

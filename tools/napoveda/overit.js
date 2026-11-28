@@ -923,12 +923,12 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       check(r1.status === 200 && JSON.parse(r1.body).created === 1 && JSON.parse(r1b.body).updated === 1 && sql("SELECT COUNT(*) FROM events WHERE title = 'Jarní úklid sklepů (převod)'") === '1', 'termín: vytvořen a podruhé jen upraven: ' + r1.body + r1b.body);
       const pdf = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n').toString('base64');
       const m0 = mailLen();
-      const r2 = await call('POST', T + '/api/v1/documents', JSON.stringify({ ext_id: 'old-doc-1', filename: 'domovni-rad.pdf', content_base64: pdf, title: 'Domovní řád (převod)', category: 'zakladni', date: '2018-03-01', visibility: 'residents' }), 'application/json', key);
+      const r2 = await call('POST', T + '/api/v1/documents', JSON.stringify({ ext_id: 'old-doc-1', filename: 'domovni-rad.pdf', content_base64: pdf, title: 'Domovní řád (převod)', category: 'zakladni', date: '2018-03-01', visibility: 'public' }), 'application/json', key);
       const r3 = await call('PUT', T + '/api/v1/posts', JSON.stringify([{ ext_id: 'old-post-1', title: 'Výměna vodoměrů (převod)', body: 'Proběhla výměna vodoměrů.', published_at: '2019-05-02' }]), 'application/json', key);
       check(r2.status === 201 && r3.status === 200 && JSON.parse(r3.body).created === 1 && mailLen() === m0, 'dokument a starší aktualita uloženy, nikomu nic neodešlo: ' + r2.body + r3.body);
       await owner.goto(T + '/dokumenty');
-      check((await text(owner)).includes('Domovní řád (převod)'), 'obyvatel vidí převedený dokument');
-      step('Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ pro obyvatele a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.');
+      check((await text(owner)).includes('Domovní řád (převod)') && sql("SELECT visibility FROM documents WHERE title = 'Domovní řád (převod)'") === 'residents', 'obyvatel vidí převedený dokument; i když asistent poslal „public“, je jen pro přihlášené');
+      step('Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ (asistent ho poslal jako veřejný, web ho uložil jen pro přihlášené) a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.');
       const mcp = (m) => call('POST', T + '/mcp', JSON.stringify(m), 'application/json', key).then((r) => JSON.parse(r.body));
       const init = await mcp({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'overeni', version: '1' } } });
       const tl = (await mcp({ jsonrpc: '2.0', id: 2, method: 'tools/list' })).result.tools.map((t) => t.name);
@@ -941,7 +941,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       check((await text(admin)).includes('termíny: nových 1') && (await text(admin)).includes('mcp: import_contacts'), 'volání jsou v Posledních voláních');
       await admin.evaluate(() => { const h = [...document.querySelectorAll('h2')].find((x) => x.textContent.includes('Poslední volání')); if (h) window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 80); });
       await shot(admin.locator('section.card:has(h2:has-text("Poslední volání"))'), 'api-2-volani.jpg', 700);
-      await admin.locator('tr:has-text("Převod starého webu") button').click();
+      await admin.locator('tr:has-text("Převod starého webu") button:has-text("Zrušit")').click();
       const r4 = await call('PUT', T + '/api/v1/events', '[]', 'application/json', key);
       check(r4.status === 401, 'zrušený klíč přestal platit: ' + r4.status);
       step('Volání jsou vidět v části Poslední volání; po kliknutí na Zrušit klíč přestal okamžitě platit (401).');
