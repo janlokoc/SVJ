@@ -50,6 +50,7 @@
         <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
         <li><a href="<?= url('/pro-spravce') ?>">Pro správcovské firmy</a></li>
         <li><a href="<?= url('/cenik') ?>#pripravujeme">Připravujeme</a></li>
+        <?php if (pset_int('referral_reward', 0, 100000)): ?><li><a href="<?= url('/doporuceni') ?>">Doporučte nás</a></li><?php endif ?>
         <li><a href="<?= url('/registrace') ?>">Založit web</a></li></ul></div>
       <div><h2 class="footer-head">Smlouvy a bezpečnost</h2><ul>
         <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>

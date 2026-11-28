@@ -116,7 +116,7 @@
       <?php endforeach ?>
     </tbody></table>
     <?php endif ?>
-    <p class="hint">Kredit získáte, jakmile doporučené společenství poprvé zaplatí roční edici, za každé jednou. Celkem jste získali <?= money_czk($ref['earned']) ?>, z toho uplatnili <?= money_czk($ref['used']) ?>. Kredit se nevyplácí v penězích.</p>
+    <p class="hint"><a href="<?= e(platform_url('/doporuceni')) ?>">Jak doporučení funguje a podmínky</a>. Kredit získáte, jakmile doporučené společenství poprvé zaplatí roční edici, za každé jednou. Celkem jste získali <?= money_czk($ref['earned']) ?>, z toho uplatnili <?= money_czk($ref['used']) ?>. Kredit se nevyplácí v penězích.</p>
   </div>
   <?php endif ?>
 

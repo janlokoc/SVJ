@@ -21,6 +21,10 @@ if ($METHOD === 'GET' && $PATH === '/mesicni-informace-o-spotrebe') {
     render('ext/pricing/consumption', ['title' => 'Měsíční informace o spotřebě tepla a teplé vody']);
     exit;
 }
+if ($METHOD === 'GET' && $PATH === '/doporuceni' && pset_int('referral_reward', 0, 100000)) {
+    render('ext/pricing/referral', ['title' => 'Doporučte nás – odměna za každé společenství']);
+    exit;
+}
 if ($METHOD === 'GET' && $PATH === '/pro-spravce/program') {
     render('ext/pricing/program', ['title' => 'Partnerský program pro správcovské firmy']);
     exit;

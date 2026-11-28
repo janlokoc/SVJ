@@ -11,13 +11,20 @@
   <table class="table price-table"><tbody>
     <?php if (pset_int('price_storage', 0, 1000000)): ?><tr><td><strong>Úložiště navíc</strong><br><small class="muted">Když dokumentům přestane stačit místo edice. V kterékoli edici, objednává se v administraci.</small></td><td class="t-actions"><strong><?= pset_int('storage_pack_mb', 1, 100000) ?> MB za <?= money_czk(pset_int('price_storage', 0, 1000000)) ?> / rok</strong></td></tr><?php endif ?>
     <?php if (pset_int('price_ai_pack', 0, 1000000)): ?><tr><td><strong>AI kredity</strong><br><small class="muted">Další dotazy na AI asistenta a AI pomocníka, když se vyčerpá měsíční limit edice. Kredity nepropadají; objednávají se v administraci.</small></td><td class="t-actions"><strong><?= number_format(pset_int('ai_pack', 1, 100000), 0, ',', "\u{a0}") ?> dotazů za <?= money_czk(pset_int('price_ai_pack', 0, 1000000)) ?></strong></td></tr><?php endif ?>
-    <?php if (pset_int('referral_reward', 0, 100000)): ?><tr><td><strong>Sleva za doporučení</strong><br><small class="muted">Doporučte web jinému společenství. Když si zaplatí edici, odečteme Vám slevu z příští roční platby<?= pset_int('referral_welcome', 0, 100000) ? ' a jim ' . money_czk(pset_int('referral_welcome', 0, 100000)) . ' z první' : '' ?>. Odkaz najdete v administraci.</small></td><td class="t-actions"><strong>− <?= money_czk(pset_int('referral_reward', 0, 100000)) ?> za každé</strong></td></tr><?php endif ?>
     <tr><td><strong>Převod obsahu ze starého webu</strong><br><small class="muted">Aktuality, dokumenty, kontakty a texty přeneseme za Vás. Objednává se v administraci, v kterékoli edici; hotovo do 5 pracovních dnů od platby.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_migration', 0, 1000000)) ?> jednorázově</strong></td></tr>
     <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'převod obsahu') || str_contains(mb_strtolower($line), 'vlastní doména') || str_contains($line, 'AI Plus')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
       <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
     <?php endforeach ?>
   </tbody></table>
   <?php if (function_exists('credit_price_list')) { require __DIR__ . '/../ext/credit/pricing_rows.php'; } /* kredit služeb a doplňky */ ?>
+
+  <?php if ($refRwd = pset_int('referral_reward', 0, 100000)): $refWel = pset_int('referral_welcome', 0, 100000); ?>
+  <div class="ref-promo" id="doporuceni">
+    <div><h3>Doporučte nás a ušetřete <?= money_czk($refRwd) ?> za každé společenství</h3>
+      <p>Pošlete svůj odkaz z administrace jinému SVJ. Když si zaplatí edici, odečteme Vám <?= money_czk($refRwd) ?> z příští platby<?= $refWel ? ' a jim ' . money_czk($refWel) . ' z první' : '' ?>. Počet doporučení není omezený.</p></div>
+    <a class="btn" href="<?= url('/doporuceni') ?>">Jak doporučení funguje</a>
+  </div>
+  <?php endif ?>
 
   <h3 class="lp-sub" id="pripravujeme">Připravujeme</h3>
   <p class="muted">Na těchto funkcích pracujeme. Klikněte na tu, která Vás zajímá – dozvíte se, co přesně bude dělat a jaký problém řeší. Podle zájmu rozhodujeme, co udělat dřív.</p>
