@@ -6,12 +6,16 @@
     <h2><?= $todo ? 'Před spuštěním zbývá doplnit (' . count($todo) . ')' : 'Vše potřebné je vyplněno' ?></h2>
     <?php if ($todo): ?>
     <ol><?php foreach ($todo as [$what, $why, $anchor]): ?><li><a href="#<?= $anchor ?>"><strong><?= e($what) ?></strong></a> – <?= e($why) ?></li><?php endforeach ?></ol>
-    <p class="hint">Formulář níže vyplňujte odshora dolů; uložit ho můžete kdykoli a pokračovat později. Služba běží i bez těchto údajů, ale zákazníkům by chyběly.</p>
+    <p class="hint">Kliknutím otevřete příslušnou část nastavení; uložit můžete kdykoli a pokračovat později. Služba běží i bez těchto údajů, ale zákazníkům by chyběly.</p>
     <?php else: ?><p class="muted">Provozovatel, platby, e-maily i právní texty jsou připravené.</p><?php endif ?>
   </section>
   <?php require __DIR__ . '/../_errors.php'; ?>
-  <form method="post" class="card form">
+  <nav class="chips set-tabs" aria-label="Části nastavení" hidden>
+    <?php foreach (['sluzba' => 'Služba', 'ceny' => 'Ceny a edice', 'platby' => 'Platby a faktury', 'emaily' => 'E-maily', 'ai' => 'AI', 'funkce' => 'Funkce a napojení', 'pravni' => 'Právní texty', 'zaloha' => 'Záloha nastavení'] as $gk => $gn): ?><a href="#<?= $gk ?>" data-set-tab="<?= $gk ?>"><?= $gn ?></a><?php endforeach ?>
+  </nav>
+  <form method="post" class="card form" id="set-form">
     <?= csrf_field() ?>
+    <div class="set-part" data-group="sluzba" id="sluzba">
     <h2>Služba a registrace</h2>
     <label>Název služby <input type="text" name="service_name" value="<?= e($v['service_name']) ?>" required></label>
     <label class="check"><input type="checkbox" name="signup_open"<?= $v['signup_open'] === '1' ? ' checked' : '' ?>> <span>Registrace je otevřená <small>Kdokoli si může z úvodní stránky sám založit web společenství. Po vypnutí zakládáte weby jen Vy.</small></span></label>
@@ -22,6 +26,26 @@
     <p class="hint">Potom web přejde na edici Zdarma. Nic se nemaže ani nepozastavuje.</p>
     <label>Nepoužívaný web v edici Zdarma smazat po (dní od posledního přihlášení) <input type="number" name="delete_days" value="<?= e($v['delete_days']) ?>" min="0" max="3650" required></label>
     <p class="hint">Kontaktní osobě přijde upozornění 14 dní a 3 dny před smazáním a potvrzení po něm; bez prokazatelně odeslaného upozornění se nic nemaže a přihlášení lhůtu vynuluje. 0 = nemazat. Všechna upozornění najdete v části Záznamy.</p>
+    </div>
+    <div class="set-part" data-group="sluzba" id="provozovatel">
+    <h2>Provozovatel</h2>
+    <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
+    <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
+    <label>Sídlo <input type="text" name="op_address" value="<?= e($v['op_address']) ?>" placeholder="Ulice 1, 602 00 Brno"></label>
+    <div class="form-row">
+      <label>IČO <input type="text" name="op_ico" value="<?= e($v['op_ico']) ?>"></label>
+      <label>DIČ (u plátce DPH povinné) <input type="text" name="op_dic" value="<?= e($v['op_dic']) ?>"></label>
+      <label>Telefon <input type="text" name="op_phone" value="<?= e($v['op_phone']) ?>"></label>
+    </div>
+    <label>Zápis v rejstříku <input type="text" name="op_register" value="<?= e($v['op_register']) ?>" placeholder="Zapsáno u Krajského soudu v Brně, oddíl C, vložka 12345"></label>
+    <label>Kde jsou data uložena (zobrazí se v častých otázkách) <input type="text" name="hosting_note" value="<?= e($v['hosting_note']) ?>" placeholder="Servery v České republice, denní zálohy na druhé místo v EU."></label>
+    </div>
+    <div class="set-part" data-group="sluzba" id="vyhledavace">
+    <h2>Vyhledávače</h2>
+    <label>Ověření v Google Search Console <small class="muted">(nepovinné)</small> <input type="text" name="google_verification" value="<?= e($v['google_verification']) ?>" placeholder="kód z meta značky google-site-verification" maxlength="100"></label>
+    <p class="hint">V Search Console zvolte ověření „Značka HTML“ a sem vložte jen kód z atributu content. Mapa stránek pro vyhledávače je na <code><?= e(platform_url('/sitemap.xml')) ?></code>.</p>
+    </div>
+    <div class="set-part" data-group="ceny" id="ceny">
     <h2>Edice a ceny</h2>
     <input type="hidden" name="period" value="year">
     <div class="form-row">
@@ -51,7 +75,44 @@
     <?php /* Vlastní doménu už nenabízíme – hodnoty zůstávají jen pro weby, které ji mají (prodloužení). */ ?>
     <input type="hidden" name="price_domain" value="<?= e($v['price_domain']) ?>"><input type="hidden" name="domain_dns" value="<?= e($v['domain_dns']) ?>">
     <?php require __DIR__ . '/../ext/pricing/settings.php'; /* modul G: ceny podle velikosti, jednorázové hlasování, srovnání, aplikace */ ?>
-    <h2 id="ai">AI pomocník a AI asistent</h2>
+    <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
+    </div>
+    <div class="set-part" data-group="ceny" id="partneri">
+    <h2>Partneři – množstevní sleva</h2>
+    <label>Sleva podle počtu domů ve správě partnera <textarea name="partner_discounts" rows="4"><?= e($v['partner_discounts']) ?></textarea></label>
+    <p class="hint">Na každý řádek „od kolika domů : sleva v %“, např. <code>5:10</code> znamená 10 % od 5 domů. Platí pro společnou fakturu partnera ze součtu cen všech domů na ní.</p>
+    </div>
+    <div class="set-part" data-group="platby" id="platby">
+    <h2>Platby</h2>
+    <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
+    <p class="hint">Z čísla účtu se vytváří QR platba. Dokud není vyplněné, vidí správci společenství jen informaci, že platební údaje dostanou e-mailem.</p>
+    <label>Název příjemce (nepovinné) <input type="text" name="recipient" value="<?= e($v['recipient']) ?>" maxlength="35"></label>
+    </div>
+    <div class="set-part" data-group="platby" id="faktury">
+    <h2>Faktury a DPH</h2>
+    <label class="check"><input type="checkbox" name="vat_payer"<?= $v['vat_payer'] === '1' ? ' checked' : '' ?>> <span>Provozovatel je plátce DPH <small>Faktury pak budou daňové doklady s DIČ, základem daně a DPH. <strong>Ceny v tomto nastavení jsou bez DPH</strong> – daň se připočte k částce, kterou zákazník platí, a ceník to uvádí.</small></span></label>
+    <div class="form-row">
+      <label>Sazba DPH (%) <input type="number" name="vat_rate" value="<?= e($v['vat_rate']) ?>" min="0" max="100" required></label>
+      <label>Splatnost zálohové faktury (dní) <input type="number" name="invoice_due_days" value="<?= e($v['invoice_due_days']) ?>" min="0" max="90" required></label>
+    </div>
+    <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
+    <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby; datem plnění je den přijetí platby. Zálohová faktura před platbou není daňovým dokladem. <?php $vs = vat_split(edition_price('standard'), (int) $v['vat_rate']) ?><?= $v['vat_payer'] === '1' ? 'Při ceně ' . money_czk(edition_price('standard')) . ' zákazník zaplatí ' . money_czk2($vs['total']) . ' (z toho DPH ' . money_czk2($vs['vat']) . ').' : 'Neplátce nechává poznámku „Dodavatel není plátcem DPH.“' ?> Podobu dokladů si nechte potvrdit účetní.</p>
+    </div>
+    <div class="set-part" data-group="emaily" id="kontakt">
+    <h2>Kontakt a e-maily</h2>
+    <div class="form-row">
+      <label>Kontaktní e-mail (zobrazuje se na webu) <input type="email" name="contact_email" value="<?= e($v['contact_email']) ?>"></label>
+      <label>Odesílatel e-mailů služby <input type="email" name="mail_from" value="<?= e($v['mail_from']) ?>"></label>
+    </div>
+    <p class="hint">Z adresy odesílatele chodí potvrzení registrace, připomenutí konce zkušební doby a potvrzení plateb. Bez ní se tyto e-maily neposílají. Nově založené weby ji dostanou jako výchozího odesílatele.</p>
+    <?php $mq = mailq_status(); ?>
+    <p class="hint" id="fronta-emailu"><strong>Odesílání e-mailů (všechny weby):</strong> za poslední hodinu <?= $mq['sent'] ?> z limitu <?= $mq['limits']['hour'] ?> (hromadné zprávy nejvýš <?= $mq['limits']['bulk'] ?> za hodinu).
+      <?= $mq['pending'] ? 'Ve frontě čeká <strong>' . $mq['pending'] . '</strong>' . ($mq['bulk'] ? ' (hromadných ' . $mq['bulk'] . ')' : '') . ', nejstarší od ' . e(cz_datetime($mq['oldest'])) . '. Odcházejí postupně při návštěvách webů.' : 'Fronta je prázdná.' ?>
+      <?= $mq['failed'] ? ' Za posledních 24 hodin se nepodařilo odeslat ' . $mq['failed'] . ' zpráv.' : '' ?> Limity: <code>'mail' =&gt; ['per_hour' =&gt; 800, 'bulk_per_hour' =&gt; 200]</code> v storage/config.php.</p>
+    <p class="hint">Odpovědi lidí na upozornění k hlášením a závadám: <a href="#odpovedi-emailem">Odpovědi e-mailem</a>.</p>
+    </div>
+    <div class="set-part" data-group="ai" id="ai">
+    <h2>AI pomocník a AI asistent</h2>
     <?php $aiLib = function_exists('ai_sdk_ready') && ai_sdk_ready(); $aiKey = function_exists('ai_settings') && ai_settings()['key'] !== ''; ?>
     <ul class="ai-status">
       <li class="<?= $aiLib ? 'is-ok' : 'is-debt' ?>"><?= $aiLib ? '✓' : '✗' ?> Knihovna Anthropic na serveru<?= $aiLib ? '' : ' – chybí: ve složce webu spusťte <code>composer install</code>' ?></li>
@@ -91,56 +152,18 @@
       <p class="actions"><button class="btn btn-ghost" type="submit" form="ai-test-form"<?= $aiLib && $aiKey ? '' : ' disabled aria-describedby="ai-test-why"' ?>>Vyzkoušet spojení s Claude</button></p>
       <?php if (!$aiLib || !$aiKey): ?><p class="hint" id="ai-test-why">Zkoušku spojení jde spustit, až budou oba body výše splněné (✓): <?= !$aiLib ? 'chybí knihovna' : '' ?><?= !$aiLib && !$aiKey ? ' a ' : '' ?><?= !$aiKey ? 'chybí klíč v storage/config.php' : '' ?>.</p><?php endif ?>
     </div>
-    <label>Ceník podpory a úprav (jedna položka na řádek: název | cena) <textarea name="pricelist" rows="7"><?= e($v['pricelist']) ?></textarea></label>
-    <h2 id="platby">Platby</h2>
-    <label>Číslo účtu pro platby <input type="text" name="account" value="<?= e($v['account']) ?>" placeholder="19-2000145399/0800 nebo IBAN"></label>
-    <p class="hint">Z čísla účtu se vytváří QR platba. Dokud není vyplněné, vidí správci společenství jen informaci, že platební údaje dostanou e-mailem.</p>
-    <label>Název příjemce (nepovinné) <input type="text" name="recipient" value="<?= e($v['recipient']) ?>" maxlength="35"></label>
-    <h2 id="vyhledavace">Vyhledávače</h2>
-    <label>Ověření v Google Search Console <small class="muted">(nepovinné)</small> <input type="text" name="google_verification" value="<?= e($v['google_verification']) ?>" placeholder="kód z meta značky google-site-verification" maxlength="100"></label>
-    <p class="hint">V Search Console zvolte ověření „Značka HTML“ a sem vložte jen kód z atributu content. Mapa stránek pro vyhledávače je na <code><?= e(platform_url('/sitemap.xml')) ?></code>.</p>
-    <h2 id="kontakt">Kontakt a e-maily</h2>
-    <div class="form-row">
-      <label>Kontaktní e-mail (zobrazuje se na webu) <input type="email" name="contact_email" value="<?= e($v['contact_email']) ?>"></label>
-      <label>Odesílatel e-mailů služby <input type="email" name="mail_from" value="<?= e($v['mail_from']) ?>"></label>
     </div>
-    <p class="hint">Z adresy odesílatele chodí potvrzení registrace, připomenutí konce zkušební doby a potvrzení plateb. Bez ní se tyto e-maily neposílají. Nově založené weby ji dostanou jako výchozího odesílatele.</p>
-    <?php $mq = mailq_status(); ?>
-    <p class="hint" id="fronta-emailu"><strong>Odesílání e-mailů (všechny weby):</strong> za poslední hodinu <?= $mq['sent'] ?> z limitu <?= $mq['limits']['hour'] ?> (hromadné zprávy nejvýš <?= $mq['limits']['bulk'] ?> za hodinu).
-      <?= $mq['pending'] ? 'Ve frontě čeká <strong>' . $mq['pending'] . '</strong>' . ($mq['bulk'] ? ' (hromadných ' . $mq['bulk'] . ')' : '') . ', nejstarší od ' . e(cz_datetime($mq['oldest'])) . '. Odcházejí postupně při návštěvách webů.' : 'Fronta je prázdná.' ?>
-      <?= $mq['failed'] ? ' Za posledních 24 hodin se nepodařilo odeslat ' . $mq['failed'] . ' zpráv.' : '' ?> Limity: <code>'mail' =&gt; ['per_hour' =&gt; 800, 'bulk_per_hour' =&gt; 200]</code> v storage/config.php.</p>
-    <p class="hint">Odpovědi lidí na upozornění k hlášením a závadám: <a href="#odpovedi-emailem">Odpovědi e-mailem</a>.</p>
-    <h2 id="provozovatel">Provozovatel</h2>
-    <p class="hint">Zobrazuje se v patičce úvodní stránky, u obchodních podmínek a jako dodavatel na fakturách.</p>
-    <label>Název nebo jméno <input type="text" name="op_name" value="<?= e($v['op_name']) ?>" placeholder="Weby pro domy s.r.o."></label>
-    <label>Sídlo <input type="text" name="op_address" value="<?= e($v['op_address']) ?>" placeholder="Ulice 1, 602 00 Brno"></label>
-    <div class="form-row">
-      <label>IČO <input type="text" name="op_ico" value="<?= e($v['op_ico']) ?>"></label>
-      <label>DIČ (u plátce DPH povinné) <input type="text" name="op_dic" value="<?= e($v['op_dic']) ?>"></label>
-      <label>Telefon <input type="text" name="op_phone" value="<?= e($v['op_phone']) ?>"></label>
-    </div>
-    <label>Zápis v rejstříku <input type="text" name="op_register" value="<?= e($v['op_register']) ?>" placeholder="Zapsáno u Krajského soudu v Brně, oddíl C, vložka 12345"></label>
-    <label>Kde jsou data uložena (zobrazí se v častých otázkách) <input type="text" name="hosting_note" value="<?= e($v['hosting_note']) ?>" placeholder="Servery v České republice, denní zálohy na druhé místo v EU."></label>
-    <h2 id="faktury">Faktury a DPH</h2>
-    <label class="check"><input type="checkbox" name="vat_payer"<?= $v['vat_payer'] === '1' ? ' checked' : '' ?>> <span>Provozovatel je plátce DPH <small>Faktury pak budou daňové doklady s DIČ, základem daně a DPH. <strong>Ceny v tomto nastavení jsou bez DPH</strong> – daň se připočte k částce, kterou zákazník platí, a ceník to uvádí.</small></span></label>
-    <div class="form-row">
-      <label>Sazba DPH (%) <input type="number" name="vat_rate" value="<?= e($v['vat_rate']) ?>" min="0" max="100" required></label>
-      <label>Splatnost zálohové faktury (dní) <input type="number" name="invoice_due_days" value="<?= e($v['invoice_due_days']) ?>" min="0" max="90" required></label>
-    </div>
-    <label>Poznámka na faktuře <input type="text" name="invoice_note" value="<?= e($v['invoice_note']) ?>"></label>
-    <p class="hint">Faktura se vystaví sama, jakmile v části Platby potvrdíte přijetí platby; datem plnění je den přijetí platby. Zálohová faktura před platbou není daňovým dokladem. <?php $vs = vat_split(edition_price('standard'), (int) $v['vat_rate']) ?><?= $v['vat_payer'] === '1' ? 'Při ceně ' . money_czk(edition_price('standard')) . ' zákazník zaplatí ' . money_czk2($vs['total']) . ' (z toho DPH ' . money_czk2($vs['vat']) . ').' : 'Neplátce nechává poznámku „Dodavatel není plátcem DPH.“' ?> Podobu dokladů si nechte potvrdit účetní.</p>
-    <h2 id="partneri">Partneři – množstevní sleva</h2>
-    <label>Sleva podle počtu domů ve správě partnera <textarea name="partner_discounts" rows="4"><?= e($v['partner_discounts']) ?></textarea></label>
-    <p class="hint">Na každý řádek „od kolika domů : sleva v %“, např. <code>5:10</code> znamená 10 % od 5 domů. Platí pro společnou fakturu partnera ze součtu cen všech domů na ní.</p>
-    <h2 id="podminky">Obchodní podmínky</h2>
+    <div class="set-part" data-group="pravni" id="podminky">
+    <h2>Obchodní podmínky</h2>
     <p class="hint">Výchozí text je návrh. Před otevřením registrace ho nechte projít právníkem. Formátování: řádek začínající ## je nadpis, **tučně**.</p>
     <label class="check"><input type="checkbox" name="legal_checked"<?= $v['legal_checked'] === '1' ? ' checked' : '' ?>> <span>Obchodní podmínky a smlouvu o zpracování údajů jsme zkontrolovali <small>Texty níže jsou vzor; před spuštěním je nechte projít právníkem a upravte podle své situace.</small></span></label>
     <label>Obchodní podmínky <textarea name="terms" rows="12"><?= e($v['terms']) ?></textarea></label>
     <label>Smlouva o zpracování osobních údajů <textarea name="dpa" rows="12"><?= e($v['dpa']) ?></textarea></label>
-    <div class="actions"><button class="btn btn-big" type="submit">Uložit</button></div>
+    </div>
+    <div class="actions set-save"><button class="btn btn-big" type="submit">Uložit</button></div>
   </form>
 <form id="ai-test-form" method="post" action="<?= url('/nastaveni/ai-test') ?>" hidden><?= csrf_field() ?></form>
-  <section class="card" id="isir">
+  <section class="card set-part" data-group="funkce" id="isir">
     <h2>Insolvenční rejstřík</h2>
     <p>Hlídání insolvencí vlastníků-firem (podle IČO) přes veřejnou webovou službu insolvenčního rejstříku. Je zdarma. Zapněte ho, až zkouška níže z tohoto serveru projde – ukáže, co rejstřík skutečně vrátil.</p>
     <p>Stav: <strong><?= e(BETA_STAGES[beta_stage('insolvence')]) ?></strong> – mění se v části <a href="#beta">Nové funkce (beta program)</a> níže.</p>
@@ -157,9 +180,9 @@
       <p class="hint">Pro průkaznou zkoušku zadejte IČO firmy, o které víte, že v rejstříku je (najdete ji na isir.justice.cz) – a pro srovnání i IČO bez řízení.</p>
       <button class="btn btn-ghost" type="submit">Vyzkoušet spojení</button></form>
   </section>
-  <?php if (function_exists('inbound_status')) { $s = inbound_status(); require __DIR__ . '/../ext/inbound/console.php'; } ?>
-  <?= function_exists('sso_console_section') ? sso_console_section() : '' ?>
-  <section class="card" id="beta">
+  <?php if (function_exists('inbound_status')) { $s = inbound_status(); ?><div class="set-part" data-group="emaily"><?php require __DIR__ . '/../ext/inbound/console.php'; ?></div><?php } ?>
+  <?php if (function_exists('sso_console_section')): ?><div class="set-part" data-group="funkce"><?= sso_console_section() ?></div><?php endif ?>
+  <section class="card set-part" data-group="funkce" id="beta">
     <h2>Nové funkce (beta program)</h2>
     <p>Novou funkci můžete nejdřív pustit jen edici Premium (slib „přístup k novým funkcím ještě před spuštěním“ v ceníku). Premium domy ji uvidí se štítkem <span class="tag tag-beta">Beta</span>, výzvou k ohlasu a v kartě „Vyzkoušejte“. Až je vyladěná, přepněte ji na <em>spuštěno</em> – pak ji dostanou edice, pro které je určená.</p>
     <form method="post" action="<?= url('/nastaveni/beta') ?>" class="form"><?= csrf_field() ?>
@@ -169,7 +192,7 @@
       </tbody></table>
       <div class="actions"><button class="btn" type="submit">Uložit</button></div></form>
   </section>
-  <section class="card" id="prenos">
+  <section class="card set-part" data-group="zaloha" id="prenos">
     <h2>Přenos nastavení na jiný web služby</h2>
     <p>Např. ze skutečného webu na zkušební: stáhněte nastavení zde a na druhém webu ho načtěte. Přenesou se jen údaje z této stránky (provozovatel, účet, ceny, limity, texty a podmínky) – žádná společenství, uživatelé ani platby. Klíč pro AI ani přístup pro AI k hlášením se nepřenášejí.</p>
     <div class="actions"><a class="btn" href="<?= url('/nastaveni/export') ?>">Stáhnout nastavení</a></div>

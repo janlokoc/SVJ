@@ -854,3 +854,54 @@ document.querySelectorAll('.lst-gallery').forEach((gal) => {
   dlg.addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) show(i + (dx < 0 ? 1 : -1)); x0 = null; });
   if (links.length < 2) dlg.querySelectorAll('.lst-v-prev, .lst-v-next').forEach((b) => { b.hidden = true; });
 });
+
+// Konzole → Nastavení služby: části v záložkách (bez JS se ukáže vše pod sebou). Jeden formulář – skryté části se odesílají také.
+document.addEventListener('DOMContentLoaded', () => {
+  const tabs = document.querySelector('.set-tabs');
+  if (!tabs) return;
+  const parts = [...document.querySelectorAll('.set-part')];
+  const form = document.getElementById('set-form');
+  const groups = [...tabs.querySelectorAll('[data-set-tab]')].map((a) => a.dataset.setTab);
+  const groupOf = (id) => {
+    if (groups.includes(id)) return id;
+    const el = id && document.getElementById(id);
+    const part = el && el.closest('.set-part');
+    return part ? part.dataset.group : null;
+  };
+  const show = (g, scrollTo) => {
+    parts.forEach((p) => { p.hidden = p.dataset.group !== g; });
+    if (form) form.hidden = !form.querySelector('.set-part:not([hidden])');
+    tabs.querySelectorAll('[data-set-tab]').forEach((a) => { if (a.dataset.setTab === g) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    try { sessionStorage.setItem('set-tab', g); } catch (e) { /* bez úložiště */ }
+    const target = scrollTo && document.getElementById(scrollTo);
+    if (target && !groups.includes(scrollTo)) target.scrollIntoView({ block: 'start' });
+  };
+  const fromHash = () => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    const g = groupOf(id);
+    if (g) { show(g, id); return true; }
+    return false;
+  };
+  tabs.hidden = false;
+  tabs.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-set-tab]');
+    if (!a) return;
+    e.preventDefault();
+    show(a.dataset.setTab);
+    history.replaceState(null, '', '#' + a.dataset.setTab);
+  });
+  window.addEventListener('hashchange', fromHash);
+  let saved = null;
+  try { saved = sessionStorage.getItem('set-tab'); } catch (e) { /* bez úložiště */ }
+  if (!fromHash()) show(groups.includes(saved) ? saved : groups[0]);
+  // Povinné pole v jiné záložce: otevřít ji, ať prohlížeč chybu ukáže (u skrytého pole by odeslání tiše selhalo).
+  let shown = false;
+  if (form) {
+    form.addEventListener('invalid', (e) => {
+      if (shown) return;
+      shown = true;
+      show(e.target.closest('.set-part').dataset.group);
+      setTimeout(() => { shown = false; }, 0);
+    }, true);
+  }
+});

@@ -2124,3 +2124,5 @@ tr.is-neg td { color: var(--accent); }
 .integ-form { margin-top: 1.2rem; }
 .ledger-items { width: 100%; border-collapse: collapse; }
 .ledger-items td { padding: .4rem .2rem; border-bottom: 1px solid var(--line); }
+.set-tabs { margin-bottom: 1.25rem; }
+.set-part[hidden] { display: none !important; }
