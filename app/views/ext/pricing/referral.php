@@ -20,7 +20,7 @@ $welcome = pset_int('referral_welcome', 0, 100000);
   <p>V administraci průběžně vidíte, kolikrát někdo odkaz otevřel, kdo se zaregistroval, kdo zkouší placené funkce a za koho už máte kredit.</p>
 </section>
 
-<section class="wrap lp-section narrow" id="podminky">
+<section class="wrap lp-section" id="podminky">
   <h2>Podmínky</h2>
   <ul>
     <li>Odměna je za každé doporučené společenství jednou – ve chvíli, kdy poprvé zaplatí roční edici. Počet doporučení není omezený, kredity se sčítají.</li>
