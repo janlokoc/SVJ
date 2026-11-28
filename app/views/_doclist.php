@@ -9,6 +9,7 @@
       </span>
       <span class="doc-go"><?= icon('download') ?></span>
     </a>
+    <?php if ($docAdmin ??= function_exists('is_admin') && is_admin()): ?><a class="doc-edit" href="<?= url('/admin/dokumenty/' . $d['id']) ?>" title="Upravit dokument (název, kategorie, viditelnost)"><?= icon('edit') ?><span class="sr-only">Upravit</span></a><?php endif ?>
   </li>
 <?php endforeach ?>
 </ul>

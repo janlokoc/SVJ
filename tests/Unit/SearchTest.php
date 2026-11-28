@@ -120,6 +120,25 @@ final class SearchTest extends TestCase
         $this->assertSame('', pdf_text_builtin('not a pdf'));
     }
 
+    /** Písmo bez ToUnicode s vlastním kódováním (/Differences): české znaky na jiných bajtech – dřív „z±kona“. */
+    public function testPdfTextBuiltinDifferencesEncoding(): void
+    {
+        $content = "BT /F1 12 Tf (z\261kona \350\355slo zm\354ny \276\341dost) Tj ET";
+        $pdf = "%PDF-1.4\n"
+            . "3 0 obj\n<< /Type /Page /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n"
+            . "4 0 obj\n<< /Length " . strlen($content) . " >>\nstream\n$content\nendstream\nendobj\n"
+            . "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding 6 0 R >>\nendobj\n"
+            . "6 0 obj\n<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [177 /aacute 190 /zcaron 225 /aacute 232 /ccaron /eacute 236 /ecaron /iacute] >>\nendobj\n";
+        $out = pdf_text_builtin($pdf);
+        $this->assertStringContainsString('zákona', $out);
+        $this->assertStringContainsString('číslo', $out);
+        $this->assertStringContainsString('změny', $out);
+        $this->assertStringContainsString('žádost', $out);
+        $this->assertSame('ů', pdf_glyph_char('uring'));
+        $this->assertSame('ř', pdf_glyph_char('uni0159'));
+        $this->assertNull(pdf_glyph_char('g123'));
+    }
+
     public function testIndexPendingFillsContent(): void
     {
         $name = bin2hex(random_bytes(16));

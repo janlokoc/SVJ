@@ -161,6 +161,37 @@ function pdf_text_builtin(string $pdf): string
             }
         }
     }
+    // Písma bez ToUnicode s vlastním kódováním (/Encoding … /Differences [kód /název_znaku …]) – typicky české znaky
+    // přemapované na jiné bajty (11/2026: oznámení distributora se četlo jako „z±kona“). Základ WinAnsi, rozdíly podle názvů znaků.
+    foreach ($objects as $num => $obj) {
+        if (isset($cmaps[$num]) || !preg_match('/\/Type\s*\/Font/', $obj)) {
+            continue;
+        }
+        $enc = $obj;
+        if (preg_match('/\/Encoding\s+(\d+)\s+0\s+R/', $obj, $er) && isset($objects[(int) $er[1]])) {
+            $enc = $objects[(int) $er[1]];
+        }
+        if (!preg_match('/\/Differences\s*\[(.*?)\]/s', $enc, $dm)) {
+            continue;
+        }
+        $map = [];
+        for ($c = 32; $c < 256; $c++) {
+            $map[sprintf('%02x', $c)] = mb_convert_encoding(chr($c), 'UTF-8', 'Windows-1252');
+        }
+        $code = 0;
+        foreach (preg_split('/(?=\/)|\s+/', trim($dm[1]), -1, PREG_SPLIT_NO_EMPTY) as $tok) {
+            if (ctype_digit($tok)) {
+                $code = (int) $tok;
+            } elseif ($tok[0] === '/') {
+                $ch = pdf_glyph_char(substr($tok, 1));
+                if ($ch !== null && $code < 256) {
+                    $map[sprintf('%02x', $code)] = $ch;
+                }
+                $code++;
+            }
+        }
+        $cmaps[$num] = $map;
+    }
     // Názvy písem v jednotlivých stránkách → převodní tabulka.
     $fontMap = [];
     foreach ($objects as $num => $obj) {
@@ -234,9 +265,39 @@ function pdf_text_builtin(string $pdf): string
     }
     return $out;
 }
+/** Znak podle názvu glyfu PDF (Adobe Glyph List – podmnožina pro češtinu a slovenštinu, uniXXXX, písmena a číslice). */
+function pdf_glyph_char(string $name): ?string
+{
+    static $agl = ['space' => ' ', 'aacute' => 'á', 'Aacute' => 'Á', 'ccaron' => 'č', 'Ccaron' => 'Č', 'dcaron' => 'ď', 'Dcaron' => 'Ď', 'eacute' => 'é', 'Eacute' => 'É',
+        'ecaron' => 'ě', 'Ecaron' => 'Ě', 'iacute' => 'í', 'Iacute' => 'Í', 'ncaron' => 'ň', 'Ncaron' => 'Ň', 'oacute' => 'ó', 'Oacute' => 'Ó', 'rcaron' => 'ř', 'Rcaron' => 'Ř',
+        'scaron' => 'š', 'Scaron' => 'Š', 'tcaron' => 'ť', 'Tcaron' => 'Ť', 'uacute' => 'ú', 'Uacute' => 'Ú', 'uring' => 'ů', 'Uring' => 'Ů', 'yacute' => 'ý', 'Yacute' => 'Ý',
+        'zcaron' => 'ž', 'Zcaron' => 'Ž', 'lacute' => 'ĺ', 'Lacute' => 'Ĺ', 'lcaron' => 'ľ', 'Lcaron' => 'Ľ', 'racute' => 'ŕ', 'Racute' => 'Ŕ', 'adieresis' => 'ä', 'Adieresis' => 'Ä',
+        'ocircumflex' => 'ô', 'Ocircumflex' => 'Ô', 'odieresis' => 'ö', 'udieresis' => 'ü', 'section' => '§', 'endash' => '–', 'emdash' => '—', 'quotedblbase' => '„', 'quotedblleft' => '“',
+        'quotedblright' => '”', 'quoteright' => '’', 'quoteleft' => '‘', 'bullet' => '•', 'degree' => '°', 'period' => '.', 'comma' => ',', 'colon' => ':', 'semicolon' => ';',
+        'hyphen' => '-', 'slash' => '/', 'parenleft' => '(', 'parenright' => ')', 'percent' => '%', 'quotesingle' => "'", 'quotedbl' => '"', 'exclam' => '!', 'question' => '?',
+        'at' => '@', 'ampersand' => '&', 'plus' => '+', 'equal' => '=', 'underscore' => '_', 'nbspace' => ' ', 'uni00A0' => ' ', 'ellipsis' => '…', 'multiply' => '×', 'Euro' => '€',
+        'zero' => '0', 'one' => '1', 'two' => '2', 'three' => '3', 'four' => '4', 'five' => '5', 'six' => '6', 'seven' => '7', 'eight' => '8', 'nine' => '9'];
+    if (isset($agl[$name])) {
+        return $agl[$name];
+    }
+    if (preg_match('/^[A-Za-z]$/', $name)) {
+        return $name;
+    }
+    if (preg_match('/^(?:uni|u)([0-9A-Fa-f]{4,6})$/', $name, $m)) {
+        return mb_chr((int) hexdec($m[1]), 'UTF-8') ?: null;
+    }
+    return null;
+}
 /** Doplní text u dokumentů, které ho ještě nemají (postupně, aby se stránka nezdržela). */
+const PDF_TEXT_VERSION = '2';   // 2 = písma s vlastním kódováním (/Differences); při zvýšení se PDF přečtou znovu
 function search_index_pending(int $limit = 15, float $seconds = 4.0): int
 {
+    if (setting('pdf_text_v') !== PDF_TEXT_VERSION) {
+        q("UPDATE documents SET content = NULL WHERE filename IS NOT NULL AND filename <> '' AND (lower(original_name) LIKE '%.pdf' OR lower(filename) LIKE '%.pdf')");
+        q('DELETE FROM settings WHERE `key` = ?', ['pdf_text_v']);
+        q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['pdf_text_v', PDF_TEXT_VERSION]);
+        setting('__reset');
+    }
     $start = microtime(true);
     $n = 0;
     foreach (all("SELECT id, filename, original_name FROM documents WHERE content IS NULL AND filename IS NOT NULL AND filename <> '' LIMIT " . (int) $limit) as $d) {

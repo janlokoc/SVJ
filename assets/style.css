@@ -2193,3 +2193,6 @@ tr.is-neg td { color: var(--accent); }
 .cal-feed summary { cursor: pointer; font-weight: 600; }
 .done-form { display: inline-flex; gap: .4rem; align-items: center; }
 .done-form input[type=date] { padding: .2rem .4rem; min-height: 0; font-size: .9rem; width: auto; }
+.doc-list li { position: relative; }
+.doc-edit { position: absolute; right: .55rem; bottom: .45rem; padding: .2rem; border-radius: 6px; color: var(--muted); line-height: 0; }
+.doc-edit:hover { color: var(--primary); background: var(--soft); }
