@@ -1,5 +1,9 @@
 <?php /* Sekce v Nastavení webu (app/views/admin/settings.php): průkaz energetické náročnosti budovy a inzeráty vlastníků. Vlastní formulář (soubor PDF). */
 $penb = listing_penb();
+if (isset($_SESSION['penb_form'])) {   // po chybě ukázat, co správce vyplnil
+    $penb = array_merge($penb, array_intersect_key((array) $_SESSION['penb_form'], ['class' => 1, 'until' => 1]));
+    unset($_SESSION['penb_form']);
+}
 $penbDoc = (int) setting('penb_doc_id') ? one('SELECT * FROM documents WHERE id = ?', [(int) setting('penb_doc_id')]) : null;
 $penbFile = preg_match('/^[a-f0-9]{32}\.pdf$/', setting('penb_file')) ? setting('penb_file') : '';
 ?>
@@ -12,11 +16,11 @@ $penbFile = preg_match('/^[a-f0-9]{32}\.pdf$/', setting('penb_file')) ? setting(
       <label>Platí do <input type="date" name="penb_valid_until" value="<?= e($penb['until']) ?>"></label>
     </div>
     <p class="hint">Třídu (A–G) a datum platnosti najdete na první straně průkazu. Vlastníkům se třída sama doplní do inzerátů. 90 dní před koncem platnosti pošleme správcům připomínku.</p>
-    <?php if ($penb['class'] !== '' && !$penb['valid']): ?><p class="callout">Průkaz skončil <?= e(cz_date($penb['until'])) ?>. Vlastníci teď v inzerátech uvádějí třídu sami.</p><?php endif ?>
+    <?php if ($penb['class'] !== '' && $penb['until'] !== '' && !$penb['valid']): ?><p class="callout">Průkaz skončil <?= e(cz_date($penb['until'])) ?>. Vlastníci teď v inzerátech uvádějí třídu sami.</p><?php endif ?>
     <?php if ($penbDoc): ?><p>Nahraný průkaz: <a href="<?= url('/soubor/' . $penbDoc['id']) ?>"><?= e($penbDoc['original_name']) ?></a> <small class="muted">(v Dokumentech pro přihlášené obyvatele)</small></p>
     <?php elseif ($penbFile !== ''): ?><p>Nahraný průkaz: <a href="<?= url('/admin/nastaveni/penb') ?>"><?= e(setting('penb_file_name')) ?></a> <small class="muted">(vidí jen správci)</small></p><?php endif ?>
     <label>Průkaz v PDF (nepovinné) <input type="file" name="penb_pdf" accept="application/pdf,.pdf"></label>
-    <label class="check"><input type="checkbox" name="penb_offer"<?= $penbFile === '' ? ' checked' : '' ?>> <span>Nabídnout průkaz vlastníkům v Dokumentech <small>Bude vidět přihlášeným obyvatelům (v kategorii Stanovy a smlouvy) – hodí se vlastníkům, kteří byt prodávají nebo pronajímají.</small></span></label>
+    <label class="check"><input type="checkbox" name="penb_offer"<?= $penbFile === '' ? ' checked' : '' ?>> <span>Nabídnout průkaz vlastníkům v Dokumentech <small>Bude vidět přihlášeným obyvatelům (v kategorii Revize a technická dokumentace) – hodí se vlastníkům, kteří byt prodávají nebo pronajímají.</small></span></label>
     <?php if ($penbDoc || $penbFile !== ''): ?><label class="check"><input type="checkbox" name="penb_remove"> <span>Smazat nahraný průkaz</span></label><?php endif ?>
   </fieldset>
   <fieldset>

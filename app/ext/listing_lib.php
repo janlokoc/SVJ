@@ -194,7 +194,7 @@ function listing_penb_file(?array $stored, bool $offer, bool $remove = false): v
     }
     if ($offer && $file !== '') {
         // Soubor se stane dokumentem pro přihlášené obyvatele (spravuje se pak i v části Dokumenty).
-        q("INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?, 'zakladni', 'residents', ?, ?, ?, ?)",
+        q("INSERT INTO documents (title, category, visibility, filename, original_name, size, doc_date) VALUES (?, 'technicke', 'residents', ?, ?, ?, ?)",
             ['Průkaz energetické náročnosti budovy', $file, setting('penb_file_name') !== '' ? setting('penb_file_name') : 'prukaz-energeticke-narocnosti.pdf', (int) setting('penb_file_size'), date('Y-m-d')]);
         listing_setting_save('penb_doc_id', (string) db()->lastInsertId());
         listing_setting_save('penb_file', '');

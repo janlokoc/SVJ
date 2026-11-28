@@ -298,6 +298,7 @@ $route('POST', '/admin/inzeraty/(\d+)/(skryt|odkryt)', function (int $id, string
 $route('POST', '/admin/nastaveni/inzeraty', function () {
     require_admin();
     if ($err = listing_penb_save(post('penb_class'), post('penb_valid_until'))) {
+        $_SESSION['penb_form'] = ['class' => post('penb_class'), 'until' => post('penb_valid_until')];   // vyplněné se po chybě neztratí
         flash($err . ' Nastavení nebylo uloženo.', 'error');
         redirect('/admin/nastaveni#penb');
     }

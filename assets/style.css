@@ -2196,3 +2196,4 @@ tr.is-neg td { color: var(--accent); }
 .doc-list li { position: relative; }
 .doc-edit { position: absolute; right: .55rem; bottom: .45rem; padding: .2rem; border-radius: 6px; color: var(--muted); line-height: 0; }
 .doc-edit:hover { color: var(--primary); background: var(--soft); }
+.flash-here { margin: .5rem 0 1rem; }

@@ -905,3 +905,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, true);
   }
 });
+
+// Chyba po uložení s návratem na oddíl (#kotva): hlášení je nahoře, ale stránka sjede k oddílu – ukázat ho i tam (11/2026).
+document.addEventListener('DOMContentLoaded', () => {
+  const err = document.querySelector('main .flash-error');
+  const id = decodeURIComponent(location.hash.slice(1));
+  const target = id && document.getElementById(id);
+  if (!err || !target || target.contains(err)) return;
+  const copy = err.cloneNode(true);
+  copy.removeAttribute('id');
+  copy.setAttribute('role', 'alert');
+  copy.classList.add('flash-here');
+  const host = target.matches('form, section, fieldset, .card') ? target : target.closest('form, section, .card') || target;
+  const first = host.querySelector('legend, h2, h3');
+  if (first && first.parentElement === host) first.after(copy); else host.prepend(copy);
+  // Až po vlastním skoku prohlížeče na kotvu – jinak by ho přebil.
+  const show = () => copy.scrollIntoView({ block: 'center', behavior: 'instant' });
+  show();
+  if (document.readyState === 'complete') setTimeout(show, 30); else window.addEventListener('load', () => setTimeout(show, 30), { once: true });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(show);
+});
