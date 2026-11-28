@@ -51,6 +51,7 @@
 </header>
 <main id="obsah">
   <?php if ($flash): ?><div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div><?php endif ?>
+  <?php if ($super && empty($super['totp_enabled']) && $path !== '/ucet'): ?><div class="wrap"><div class="flash flash-info console-2fa">Konzole má přístup ke všem webům. <strong>Zapněte si ověření kódem z telefonu</strong> (dvoufázové ověření) – heslo samo nestačí. <a href="<?= url('/ucet') ?>">Zapnout v Účtu</a></div></div><?php endif ?>
   <?= $content ?>
 </main>
 <footer class="wrap console-foot"><a href="<?= e(platform_url('/')) ?>">Úvodní stránka služby</a><?= theme_switch() ?></footer>

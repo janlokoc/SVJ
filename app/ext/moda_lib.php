@@ -75,8 +75,10 @@ function magic_link_request(string $email): string
     }
     q("INSERT INTO login_attempts (ip, at, email) VALUES (?,?,'#magic')", [client_ip(), time()]);
     $u = filter_var($email, FILTER_VALIDATE_EMAIL) ? one('SELECT * FROM users WHERE email = ? AND active = 1', [$email]) : null;
-    if (!$u || login_blocked($u['email'])) {
-        return 'sent';   // neexistující nebo zablokovaný účet: nic se neodešle, odpověď je stejná
+    if (!$u) {
+        return 'sent';   // neexistující účet: nic se neodešle, odpověď je stejná
+        // Útok hesly na účet odkaz z e-mailu neblokuje (bezpečnost 11/2026): odkaz dostane jen majitel schránky,
+        // proto je to cesta, jak se přihlásit i během útoku. Rozesílání hlídá MAGIC_LINK_PER_IP a MAGIC_LINK_PER_ACCOUNT.
     }
     if ($u['password_hash'] === NO_PASSWORD) {
         send_account_invite($u);   // účet ještě nepřijal pozvánku – pošle se znovu

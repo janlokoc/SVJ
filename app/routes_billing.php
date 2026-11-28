@@ -20,6 +20,35 @@ $route('GET', '/vitejte/([a-f0-9]{64})', function (string $token) {
     redirect('/admin');
 });
 
+// Potvrzení e-mailu zakladatele (odkaz z registrace): teprve potom je web veřejně vidět.
+$route('GET', '/overit-email/([a-f0-9]{64})', function (string $token) {
+    $v = setting_consume('verify_pending', fn($v) => hash_equals(explode('|', $v . '|')[0], hash('sha256', $token)));
+    if ($v === null) {
+        flash(setting('verify_pending') === '' ? 'E-mail už je potvrzený, web je veřejný.' : 'Odkaz pro potvrzení e-mailu neplatí. V administraci si pošlete nový.', setting('verify_pending') === '' ? 'ok' : 'error');
+        redirect(user() ? '/admin' : '/prihlaseni');
+    }
+    setting('__reset');
+    audit('signup_verified', explode('|', $v . '|')[1]);
+    if (function_exists('platform_log')) {
+        platform_log('Registrace: e-mail potvrzen', TENANT . ' · ' . explode('|', $v . '|')[1]);
+    }
+    flash('Děkujeme, e-mail je potvrzený. Web je teď veřejně vidět.');
+    redirect(user() ? '/admin' : '/');
+});
+$route('POST', '/overit-email/znovu', function () {
+    $u = require_admin();
+    $pending = explode('|', setting('verify_pending') . '|');
+    if ($pending[0] === '') {
+        redirect('/admin');
+    }
+    $email = filter_var($pending[1], FILTER_VALIDATE_EMAIL) ? $pending[1] : $u['email'];
+    $token = signup_verify_token(TENANT, $email);
+    setting('__reset');
+    $ok = send_mail($email, 'Potvrďte e-mail – web ' . site('name'), "Dobrý den,\n\npotvrďte prosím e-mail zakladatele webu " . site('name') . " na této adrese – teprve potom bude web veřejně vidět:\n" . absolute_url('/overit-email/' . $token) . "\n");
+    flash($ok ? 'Odkaz pro potvrzení jsme poslali znovu na ' . $email . '.' : 'E-mail se nepodařilo odeslat.', $ok ? 'ok' : 'error');
+    redirect('/admin');
+});
+
 // Vstup podpory provozovatele: jednorázový odkaz z konzole platformy, platí 2 minuty.
 $route('GET', '/podpora-vstup/([a-f0-9]{64})', function (string $token) {
     $d = (array) json_decode((string) setting_consume('support_login', fn($v) => hash_equals((string) (json_decode($v, true)['hash'] ?? ''), hash('sha256', $token))), true);

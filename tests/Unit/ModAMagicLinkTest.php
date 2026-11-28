@@ -130,13 +130,15 @@ final class ModAMagicLinkTest extends TestCase
         $this->assertSame([], $this->mails());
     }
 
-    public function testBlockedAccountAfterFailedLoginsGetsNoLink(): void
+    /** Bezpečnost 11/2026: útok hesly na účet nesmí majiteli zabránit přihlásit se odkazem z e-mailu. */
+    public function testAccountUnderPasswordAttackStillGetsLink(): void
     {
-        for ($i = 0; $i < 10; $i++) {
-            q('INSERT INTO login_attempts (ip, at, email) VALUES (?,?,?)', ['10.0.0.' . $i, time(), 'hana.prochazkova@example.cz']);
+        for ($i = 0; $i < LOGIN_FAIL_ACCOUNT; $i++) {
+            q('INSERT INTO login_attempts (ip, at, email) VALUES (?,?,?)', ['10.0.' . intdiv($i, 200) . '.' . ($i % 200), time(), 'hana.prochazkova@example.cz']);
         }
+        $this->assertTrue(login_blocked('hana.prochazkova@example.cz'), 'heslem se teď nepřihlásí');
         $this->assertSame('sent', magic_link_request('hana.prochazkova@example.cz'));
-        $this->assertSame([], $this->mails());
+        $this->assertCount(1, $this->mails(), 'odkaz z e-mailu ale dostane');
     }
 
     public function testPendingInviteGetsInviteInsteadOfLink(): void

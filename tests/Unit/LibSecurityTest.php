@@ -253,25 +253,37 @@ final class LibSecurityTest extends TestCase
         }
     }
 
-    public function testLoginBlockedAfterTenFailuresOnOneAccount(): void
+    /** Bezpečnost 11/2026: cizí účet nejde zablokovat pár pokusy z různých adres; z jedné adresy 10, celkem 50. */
+    public function testAccountLockNeedsManyAddressesOrRepeatsFromOne(): void
     {
         $email = 'Throttle-Acct-' . bin2hex(random_bytes(3)) . '@Example.cz';
-        $ips = [];
         try {
-            for ($i = 0; $i < 10; $i++) {
-                $_SERVER['REMOTE_ADDR'] = $ips[] = '10.252.' . random_int(0, 255) . '.' . ($i + 1);
-                q('DELETE FROM login_attempts WHERE ip = ?', [$_SERVER['REMOTE_ADDR']]);
+            for ($i = 0; $i < LOGIN_FAIL_ACCOUNT - 1; $i++) {
+                $_SERVER['REMOTE_ADDR'] = '10.252.' . intdiv($i, 250) . '.' . ($i % 250 + 1);
                 login_failed($email, 'login_failed_test');
-                $_SERVER['REMOTE_ADDR'] = '10.253.0.1';
-                if ($i < 9) {
-                    $this->assertFalse(login_blocked($email), "after " . ($i + 1) . " failures");
-                }
             }
-            $this->assertTrue(login_blocked($email), '10 failures on one account block it');
-            $this->assertTrue(login_blocked(mb_strtolower($email)), 'email is compared case-insensitively');
+            $_SERVER['REMOTE_ADDR'] = '10.253.0.1';
+            $this->assertFalse(login_blocked($email), '49 chyb z různých adres účet ještě nezablokuje');
+            $_SERVER['REMOTE_ADDR'] = '10.252.9.9';
+            login_failed($email, 'login_failed_test');
+            $_SERVER['REMOTE_ADDR'] = '10.253.0.1';
+            $this->assertTrue(login_blocked($email), '50 chyb na účet celkem → blokace');
+            $this->assertTrue(login_blocked(mb_strtolower($email)), 'e-mail bez ohledu na velikost písmen');
             $this->assertFalse(login_blocked('other-' . $email));
+            q('DELETE FROM login_attempts WHERE email = ?', [mb_strtolower($email)]);
+            // Z jedné adresy: 10 chyb na účet (adresní limit 8 platí pro všechny účty – proto se tu adresa střídá s jinou).
+            for ($i = 0; $i < LOGIN_FAIL_ACCOUNT_IP; $i++) {
+                $_SERVER['REMOTE_ADDR'] = '10.254.0.' . ($i % 2 ? 1 : 2);
+                login_failed($email, 'login_failed_test');
+            }
+            q('DELETE FROM login_attempts WHERE ip = ? AND email <> ?', ['10.254.0.1', mb_strtolower($email)]);
+            $_SERVER['REMOTE_ADDR'] = '10.254.0.3';
+            $this->assertFalse(login_blocked($email), 'jiná adresa se k účtu dostane');
         } finally {
             q('DELETE FROM login_attempts WHERE email = ?', [mb_strtolower($email)]);
+            q("DELETE FROM login_attempts WHERE ip LIKE '10.25%'");
         }
+        $sso = (string) file_get_contents(dirname(__DIR__, 2) . '/app/ext/routes_sso.php');
+        $this->assertStringContainsString("if (login_blocked('')) {", $sso, 'SSO jen podle adresy');
     }
 }

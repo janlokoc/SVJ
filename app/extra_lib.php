@@ -487,10 +487,10 @@ function outlook_subscribe_url(string $feed, string $host = 'outlook.office.com'
     return 'https://' . $host . '/calendar/0/addfromweb?' . http_build_query(['url' => $feed, 'name' => 'Termíny – ' . site('name')], '', '&', PHP_QUERY_RFC3986);
 }
 /** Tajná část adresy, na které si kalendářové aplikace samy stahují všechny termíny (přihlásit se neumějí). */
-function calendar_token(): string
+function calendar_token(bool $new = false): string
 {
     $t = setting('calendar_token');
-    if (!preg_match('/^[a-f0-9]{32}$/', $t)) {
+    if ($new || !preg_match('/^[a-f0-9]{32}$/', $t)) {   // $new: správce adresu vyměnil (např. odstěhovaní obyvatelé ji mají v kalendáři)
         $t = bin2hex(random_bytes(16));
         q('DELETE FROM settings WHERE `key` = ?', ['calendar_token']);
         q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['calendar_token', $t]);

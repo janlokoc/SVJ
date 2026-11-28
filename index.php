@@ -262,6 +262,14 @@ if (user() && user()['must_change_password'] && !in_array($PATH, ['/muj-ucet', '
     redirect('/muj-ucet');
 }
 
+// Nově registrovaný web s nepotvrzeným e-mailem zakladatele vidí jen správce (bezpečnost 11/2026, viz signup_verify_token).
+if (TENANT !== '' && setting('verify_pending') !== '' && !is_admin() && !verify_pending_path_ok($PATH)) {
+    header('X-Robots-Tag: noindex, nofollow');
+    http_response_code(503);
+    render('error', ['title' => 'Web se připravuje', 'message' => 'Web společenství se právě připravuje a zatím není veřejný. Zkuste to prosím později.']);
+    exit;
+}
+
 // Ukázkový web je jen pro čtení: přihlašuje se tlačítkem a žádná změna se neuloží.
 $GLOBALS['DEMO'] = TENANT !== '' && !empty($tenantRow['demo']);
 // Ukázkový web nemá účty s heslem: místo přihlášení nabídne vstup jedním kliknutím jako obyvatel nebo jako správce.

@@ -67,7 +67,7 @@ $route('GET', '/prihlaseni/sso/vstup/([a-f0-9]{64})', function (string $token) {
         flash('Účet ' . $label . ' je propojený. Příště se můžete přihlásit tlačítkem „Přihlásit přes ' . $label . '“.');
         redirect('/muj-ucet#sso');
     }
-    if (login_blocked($id['email'])) {
+    if (login_blocked('')) {   // jen podle adresy: přihlášení u Googlu/Microsoftu/Applu je důkaz totožnosti i během útoku hesly na účet
         flash(sso_message('blocked', $p), 'error');
         redirect('/prihlaseni');
     }

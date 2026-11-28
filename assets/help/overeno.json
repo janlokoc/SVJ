@@ -1,6 +1,6 @@
 {
   "shromazdeni": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 11,
     "steps": [
       "Termín s programem a přihlašováním se uložil.",
@@ -15,7 +15,7 @@
     "note": ""
   },
   "odecty-api": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 30,
     "steps": [
       "Správce zapnul automatický příjem a získal adresu a zvlášť klíč (klíč doporučujeme předat firmě jinou cestou než adresu).",
@@ -32,7 +32,7 @@
     "note": ""
   },
   "upozorneni-do-telefonu": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 10,
     "steps": [
       "V „Můj účet“ je část Upozornění do telefonu s tlačítkem „Zapnout upozornění na tomto zařízení“.",
@@ -47,7 +47,7 @@
     "note": "Přidání webu na plochu na skutečném iPhonu a telefonu s Androidem jsme ověřit nemohli – ověřovací běh nemá skutečný telefon. Ověřeno je zapnutí na webu, šifrování a doručení zprávy přes zkušební push službu a zobrazení upozornění v prohlížeči."
   },
   "parovani-plateb": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 5,
     "steps": [
       "Stav dvou jednotek z účetnictví s variabilními symboly 4801 a 4803 nahrán k 1. 11.",
@@ -59,7 +59,7 @@
     "note": "Postup v internetovém bankovnictví (stažení výpisu, vytvoření tokenu Fio) nešlo ověřit – je na webu banky. Ověřeno je načtení výpisu ve formátu GPC, spárování podle VS a ruční přiřazení."
   },
   "sms-zpravy": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 13,
     "steps": [
       "SMS zprávy (Komunikace): edice Premium má 100 SMS ročně v ceně, další SMS stojí 1,50 Kč bez DPH z kreditu služeb. Příjemci: 4 vlastníci s mobilem; pevnou linku web vynechal a napsal, kolik jich je.",
@@ -72,7 +72,7 @@
     "note": "Doručení SMS do telefonu jsme ověřit nemohli – ověřovací běh nesmí posílat skutečné SMS. Zprávy místo smluvní SMS brány přijala zkušební brána se stejným rozhraním (GoSMS.cz). Ověřeno je vše na straně webu: SMS v ceně edice Premium, kredit služeb a jeho dobití, náhled a cena, výběr příjemců, odeslání bráně a vrácení peněz za zprávu, kterou brána odmítla."
   },
   "hlasovani-per-rollam": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 24,
     "steps": [
       "Pole Ověření hlasu nabízí žádné / kód z e-mailu (výchozí) / kód z SMS; Bank iD bez nastavení u provozovatele web nenabídne.",
@@ -91,7 +91,7 @@
     "note": "Právní výklad (zákon, odborný článek, vzor stanov) ověřovací běh neověřuje – je to text, ne funkce webu. Ověření hlasu přes Bank iD jsme ověřit nemohli: potřebuje smlouvu s Bankovní identitou a přihlášení do skutečné banky; ověřeno je jen, že web Bank iD bez nastavení nenabídne. SMS s kódem přijala místo telefonu zkušební SMS brána."
   },
   "shromazdeni-online": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 25,
     "steps": [
       "Administrace → Shromáždění online: povoleno pro dům i ověření kódem z e-mailu; stránka nabízí vzorové ustanovení stanov.",
@@ -108,12 +108,12 @@
     "note": "Videohovor samotný (Jitsi Meet, Microsoft Teams, Zoom, Google Meet) jsme neověřovali – jde o cizí služby; přihlášení předsedajícího na meet.jit.si a limit 25 připojení měsíčně jsou podle stránek Jitsi (oznámení 8/2023, podmínky 2020), neověřeno v provozu; ověřovací běh místo nich otevřel prázdnou zkušební stránku. Ověřeno je vše na webu: zapnutí pro dům, forma u termínu, připojení vlastníků s kódem z e-mailu, prezence, hlasování online, odchod a zápis."
   },
   "vyuctovani-sluzeb": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 18,
     "steps": [
       "Vyúčtování za rok 2025 je založené; web ukazuje zákonnou lhůtu pro doručení 30. 4. 2026 (4 měsíce od konce období).",
       "Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12A/5 je označená „bez účtu vlastníka“.",
-      "Po „Zveřejnit“ dostali vlastníci e-mail (nájemník ne); námitky lze podat do 27. 12. 2026 a vyúčtování už nejde smazat.",
+      "Po „Zveřejnit“ dostali vlastníci e-mail (nájemník ne); námitky lze podat do 28. 12. 2026 a vyúčtování už nejde smazat.",
       "Vlastník přes Můj účet → Moje vyúčtování otevřel PDF, potvrdil převzetí a podal námitku; správcům přišel e-mail.",
       "Stav po jednotkách ukázal potvrzení převzetí, lhůtu pro námitky a lhůtu k vyřízení; „Odeslat odpověď a uzavřít“ poslalo vlastníkovi odpověď e-mailem.",
       "Denní úloha webu připomněla správcům námitku, které za 5 dní končí lhůta k vyřízení, a vyúčtování, které je třeba doručit do 10 dnů."
@@ -121,7 +121,7 @@
     "note": "Jak soubory vyúčtování pojmenovává odečtová nebo správcovská firma, jsme ověřit nemohli – běh použil názvy podle návodu (A-1.pdf, vyuctovani_A_2.pdf …) a jeden soubor s názvem bez jednotky."
   },
   "plan-oprav": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 9,
     "steps": [
       "Nastaven fond 650 000 Kč k 31. 10. 2026, příspěvek 15 000 Kč měsíčně za dům, výhled 15 let, růst cen 3 %; přidány 4 opravy. Hotová oprava se do výhledu nepočítá, nehotová z loňska je v prvním roce.",
@@ -132,7 +132,7 @@
     "note": "Stav fondu oprav z účetnictví si správce přináší zvenku – běh použil smyšlenou částku."
   },
   "ucetnictvi": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 19,
     "steps": [
       "Bez IČ v Nastavení web upozorní; v Nastavení exportu uložena zkratka účtu KB a splatnost 15. dne.",
@@ -145,7 +145,7 @@
     "note": "Import souborů do skutečné POHODY, Money S3 a ABRA Flexi jsme neověřili – tyto programy nemáme; ověřeno je, že web soubory vytvoří ve tvaru podle zveřejněných schémat výrobců. Předvolby programů správy domů (DOMSYS, IDES, MECOM, INTEGRI) jsou jen odhad názvů sloupců – soubory z těchto programů jsme neměli."
   },
   "data-a-smlouva": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 9,
     "steps": [
       "Data a smlouva (Správa webu, odkaz i nahoře v Nastavení): se špatným heslem export nejde, se správným se stáhl ZIP s data.json a složkou uploads; stažení je v Záznamech.",
@@ -155,7 +155,7 @@
     "note": ""
   },
   "propojeni-banky": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 14,
     "steps": [
       "Platby na jednotku → „Propojit účet u ČS, KB, ČSOB a dalších bank“: bez nastavení u provozovatele web jen oznámí, že propojení není nastavené. S nastavením: výběr banky, „Pokračovat do banky“, návrat z banky – web načetl účet a hned stáhl 2 platby; platba s VS 4803 se spárovala, platba bez VS zůstala v Posledních příchozích platbách k ručnímu přiřazení. Souhlas je jen pro čtení (údaje o účtu a pohyby) na 90 dní.",
@@ -166,7 +166,7 @@
     "note": "Přihlášení do internetového bankovnictví a souhlas na webu banky jsme ověřit nemohli – jde o cizí weby a skutečný účet. Místo poskytovatele bankovních dat (GoCardless) odpovídala zkušební služba podle jeho zveřejněné dokumentace a místo banky zkušební stránka, která rovnou vrátila zpět na web. Ověřeno je vše na straně webu."
   },
   "katastr-a-rejstriky": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 25,
     "steps": [
       "Změny v katastru: kód k. ú. 610372 a LV uloženy; u tlačítka je cena 1 490 Kč za dům a rok bez DPH včetně 1 LV (se dvěma LV 2 480 Kč). Po potvrzení ceny „Zapnout sledování“ vznikla výzva k platbě za zbytek zaplaceného období (dál se platí s ročním předplatným). Web kontroluje každých 30 dní. Bez nastavení u provozovatele web jen upozorní; funkce je jen v edici Premium.",
@@ -179,7 +179,7 @@
     "note": "Stránky Nahlížení do katastru nemovitostí jsme nemohli ověřit automaticky – web katastru strojové procházení blokuje. Dálkový přístup ČÚZK (WSDP), insolvenční rejstřík ani Centrální evidenci exekucí jsme se skutečnými účty nezkoušeli: místo nich odpovídaly zkušební služby podle zveřejněné dokumentace (vzorový výpis listu vlastnictví, vzorové odpovědi). Ověřeno je vše na straně webu."
   },
   "prihlaseni-sso": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 9,
     "steps": [
       "Na stránce Přihlášení jsou pod formulářem tlačítka Google, Microsoft, Apple a Facebook; tlačítko vede na stránku poskytovatele s ochranou state a PKCE (S256).",
@@ -190,7 +190,7 @@
     "note": "Přihlášení na stránkách Googlu, Microsoftu, Applu a Facebooku jsme ověřit nemohli – jsou to cizí weby a ověřovací běh u nich nemá účty; místo nich se otevřela prázdná zkušební stránka. Ověřena je strana webu: tlačítka, přesměrování k poskytovateli se zabezpečením (state, PKCE), zrušené přihlášení, odmítnutí odkazu z cizího prohlížeče, zrušení propojení a Záznamy. Výměnu kódu za identitu, vyhledání účtu podle ověřeného e-mailu a dokončení propojení pokrývají unit testy se vzorovými odpověďmi poskytovatelů."
   },
   "import-z-katastru": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "checks": 3,
     "steps": [
       "Náhled našel 6 jednotek a součet podílů 100 %.",

@@ -146,6 +146,11 @@ if ($METHOD === 'POST' && $PATH === '/odhlaseni') {
     redirect('/');
 }
 if ($PATH === '/ares' && $METHOD === 'GET') {
+    if (!ares_rate_ok()) {   // i ukázka portálu je veřejná – stejné omezení jako u registrace
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['ok' => false, 'error' => 'Hledali jste v ARES už mnohokrát. Zkuste to prosím za hodinu.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
     exit;
 }

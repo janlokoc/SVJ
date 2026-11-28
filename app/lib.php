@@ -1621,12 +1621,26 @@ function audit(string $action, string $detail = '', ?int $userId = null): void
         unset($GLOBALS['SUPPORT_AUDIT']);
     }
 }
-/** Ochrana proti hádání hesel: nejvýše 8 chyb z jedné adresy a 10 chyb na jeden účet za 15 minut. */
+/**
+ * Ochrana proti hádání hesel za 15 minut: nejvýše 8 chyb z jedné adresy, 10 chyb na účet z jedné adresy a 50 chyb na účet
+ * celkem (útok z mnoha adres). Bezpečnost 11/2026: dřív stačilo 10 chyb odkudkoli a kdokoli mohl cizí účet trvale
+ * zablokovat; teď to vyžaduje mnoho adres a majitel se i tak přihlásí odkazem z e-mailu nebo přes Google/Microsoft/Apple.
+ */
+const LOGIN_FAIL_IP = 8;
+const LOGIN_FAIL_ACCOUNT_IP = 10;
+const LOGIN_FAIL_ACCOUNT = 50;
 function login_blocked(string $email): bool
 {
     q('DELETE FROM login_attempts WHERE at < ?', [time() - 900]);
-    return (int) val('SELECT COUNT(*) FROM login_attempts WHERE ip = ?', [client_ip()]) >= 8
-        || ($email !== '' && (int) val('SELECT COUNT(*) FROM login_attempts WHERE email = ?', [mb_strtolower($email)]) >= 10);
+    if ((int) val('SELECT COUNT(*) FROM login_attempts WHERE ip = ?', [client_ip()]) >= LOGIN_FAIL_IP) {
+        return true;
+    }
+    if ($email === '') {
+        return false;
+    }
+    $email = mb_strtolower($email);
+    return (int) val('SELECT COUNT(*) FROM login_attempts WHERE email = ? AND ip = ?', [$email, client_ip()]) >= LOGIN_FAIL_ACCOUNT_IP
+        || (int) val('SELECT COUNT(*) FROM login_attempts WHERE email = ?', [$email]) >= LOGIN_FAIL_ACCOUNT;
 }
 function login_failed(string $email, string $what = 'login_failed'): void
 {
@@ -2047,6 +2061,12 @@ function audit_chain_check(): array
  * i pokus se špatným tokenem, takže šlo platný odkaz zneplatnit). Smazání je podmíněné původní hodnotou, takže
  * ho dvě souběžná otevření nepoužijí obě. $check dostane uloženou hodnotu a vrací, zda token sedí.
  */
+/** Adresy, které jdou otevřít i na webu čekajícím na potvrzení e-mailu (přihlášení, potvrzení, technické soubory). */
+function verify_pending_path_ok(string $path): bool
+{
+    return in_array($path, ['/prihlaseni', '/prihlaseni/overeni', '/odhlaseni', '/zapomenute-heslo', '/sw.js', '/manifest.webmanifest', '/apple-touch-icon.png', '/robots.txt', '/favicon.ico'], true)
+        || (bool) preg_match('~^/(vitejte|overit-email|obnova-hesla|pozvanka|podpora-vstup|spravce-vstup)/~', $path) || str_starts_with($path, '/sso/');
+}
 function setting_consume(string $key, callable $check): ?string
 {
     $value = (string) (one('SELECT value FROM settings WHERE `key` = ?', [$key])['value'] ?? '');

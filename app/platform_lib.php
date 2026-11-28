@@ -448,6 +448,38 @@ function platform_seo_head(string $path, string $title): string
     }
     return $out;
 }
+/**
+ * Registrace (bezpečnost 11/2026): web, jehož zakladatel ještě nepotvrdil e-mail, vidí jen jeho správce – návštěvníkům se
+ * ukáže jen „Web se připravuje“. Brání to založení podvodné stránky s cizím názvem SVJ na naší doméně.
+ * V nastavení webu 'verify_pending' = sha256(token)|e-mail.
+ */
+function signup_verify_token(string $slug, string $email): string
+{
+    $token = bin2hex(random_bytes(32));
+    tenant_set($slug, 'verify_pending', hash('sha256', $token) . '|' . $email);
+    return $token;
+}
+/** Web, který už má dané IČO (jiný než $except), nebo ''. Prochází nastavení webů; chyby jednotlivých databází přeskočí. */
+function tenant_with_ico(string $ico, string $except = ''): string
+{
+    if ($ico === '') {
+        return '';
+    }
+    foreach (pq('SELECT slug FROM tenants')->fetchAll(PDO::FETCH_COLUMN) as $slug) {
+        if ($slug === $except) {
+            continue;
+        }
+        try {
+            $st = tenant_pdo((string) $slug)->prepare("SELECT value FROM settings WHERE `key` = 'ico'");
+            $st->execute();
+            if ((string) $st->fetchColumn() === $ico) {
+                return (string) $slug;
+            }
+        } catch (Throwable) {
+        }
+    }
+    return '';
+}
 function tenant_settings(string $slug): array
 {
     return array_column(tenant_pdo($slug)->query('SELECT `key`, value FROM settings')->fetchAll(), 'value', 'key');
@@ -589,6 +621,18 @@ function platform_login_failed(string $account = ''): void
     if (trim($account) !== '') {
         pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [platform_login_account_key($account), time()]);
     }
+}
+/** Veřejné dotazy do ARES: nejvýše 30 za hodinu z jedné adresy (v databázi – dřív jen v relaci, šlo obejít smazáním cookie). */
+const ARES_PER_HOUR = 30;
+function ares_rate_ok(): bool
+{
+    $key = 'ares:' . client_ip();
+    pq('DELETE FROM attempts WHERE ip LIKE ? AND at < ?', ['ares:%', time() - 3600]);
+    if ((int) pq('SELECT COUNT(*) FROM attempts WHERE ip = ?', [$key])->fetchColumn() >= ARES_PER_HOUR) {
+        return false;
+    }
+    pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [$key, time()]);
+    return true;
 }
 function platform_log(string $action, string $detail = ''): void
 {

@@ -251,6 +251,14 @@ $route('GET', '/admin/terminy', function () {
     require_admin();
     render('admin/events', ['title' => 'Termíny', 'events' => all('SELECT * FROM events ORDER BY event_date DESC')]);
 });
+// Nová adresa odběru kalendáře domu: dosavadní přestane fungovat (bezpečnost 11/2026 – bývalí obyvatelé ji jinak mají napořád).
+$route('POST', '/admin/terminy/novy-odkaz-kalendare', function () {
+    require_admin();
+    calendar_token(true);
+    audit('calendar_token', 'nová adresa odběru kalendáře domu');
+    flash('Adresa pro odběr kalendáře je nová. Dosavadní odběry přestaly fungovat – obyvatelé si kalendář přidají znovu na stránce Termíny.');
+    redirect('/admin/terminy');
+});
 $eventForm = function (int $id = 0) {
     require_admin();
     $ev = $id ? (one('SELECT * FROM events WHERE id = ?', [$id]) ?? not_found())

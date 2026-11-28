@@ -113,14 +113,12 @@ if ($PATH === '/registrace/adresa' && $METHOD === 'GET') {
     exit;
 }
 if ($PATH === '/registrace/ares' && $METHOD === 'GET') {
-    // Veřejné, proto s omezením: nejvýš 30 dotazů za hodinu z jednoho prohlížeče.
-    $hits = array_filter($_SESSION['ares_hits'] ?? [], fn($t) => $t > time() - 3600);
-    if (count($hits) >= 30) {
+    // Veřejné, proto s omezením: nejvýš 30 dotazů za hodinu z jedné adresy (ares_rate_ok).
+    if (!ares_rate_ok()) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['ok' => false, 'error' => 'Hledali jste v ARES už mnohokrát. Údaje prosím vyplňte ručně, nebo to zkuste za hodinu.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    $_SESSION['ares_hits'] = [...$hits, time()];
     ares_lookup_json(mb_substr((string) ($_GET['q'] ?? ''), 0, 120));
     exit;
 }
@@ -154,6 +152,10 @@ if (isset($steps[$PATH])) {
         $ico = preg_replace('/\s+/', '', post('ico'));
         if ($ico !== '' && ares_ico($ico) === null) {
             $errors[] = 'IČO není platné – zkontrolujte ho, nebo pole nechte prázdné.';
+        } elseif ($ico !== '' && ($dup = tenant_with_ico((string) ares_ico($ico)))) {
+            // Bezpečnost 11/2026: jedno SVJ = jeden web; brání i podvodnému webu s cizím IČO.
+            $errors[] = 'Pro toto IČO už web společenství existuje (' . tenant_address($dup) . '). Pokud jde o Vaše SVJ, požádejte výbor o přístup' . (pset('contact_email') !== '' ? ', nebo nám napište na ' . pset('contact_email') : '') . '.';
+            platform_log('Registrace: IČO už má web', $ico . ' · ' . $dup . ' · ' . client_ip());
         }
         // Celý úřední název z ARES platí, jen pokud název nezměnil člověk ručně na úplně jiný.
         $full = mb_substr(post('full'), 0, 200);
@@ -231,10 +233,12 @@ if (isset($steps[$PATH])) {
             // Jednorázový odkaz, kterým se nový správce rovnou přihlásí na svém webu (platí 10 minut).
             $token = bin2hex(random_bytes(32));
             tenant_set($slug, 'signup_login', hash('sha256', $token) . '|' . (time() + 600));
+            $vtoken = signup_verify_token($slug, $email);
             pq('INSERT INTO signups (ip, at) VALUES (?,?)', [client_ip(), time()]);
             platform_log('Registrace společenství', $slug . ' · ' . $signup['name'] . ' · ' . $email);
             $t = tenant_row($slug);
-            platform_mail($email, 'Váš web je připraven – ' . $signup['name'], "Dobrý den,\n\nweb společenství " . $signup['name'] . " je založen na adrese " . rtrim(tenant_url($t), '/') . ".\n"
+            platform_mail($email, 'Potvrďte e-mail – web ' . $signup['name'], "Dobrý den,\n\nweb společenství " . $signup['name'] . " je založen na adrese " . rtrim(tenant_url($t), '/') . ".\n\n"
+                . "Potvrďte prosím svůj e-mail na této adrese – dokud ho nepotvrdíte, web vidíte jen Vy, návštěvníci uvidí jen „Web se připravuje“:\n" . tenant_url($t, '/overit-email/' . $vtoken) . "\n\n"
                 . "Přihlásíte se e-mailem $email a heslem, které jste si zvolili při registraci.\n\nWeb běží v edici Zdarma bez časového omezení. Funkce vyšších edic si můžete každou na 30 dní vyzkoušet v administraci v části Předplatné.");
             unset($_SESSION['signup']);
             // Na web společenství (jiná adresa) se z formuláře nedá přesměrovat přímo – pravidla stránky to prohlížeči zakazují. Přechod obstará mezistránka.
