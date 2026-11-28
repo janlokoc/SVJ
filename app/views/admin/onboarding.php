@@ -17,6 +17,10 @@ $left = count($o['waiting']); $n = 0; ?>
       <div class="onb-body">
         <h3><?= e($s['title']) ?> <span class="onb-state"><?= ['done' => 'hotovo', 'must' => 'čeká – důležité', 'wait' => 'čeká', 'skip' => 'přeskočeno'][$light] ?></span></h3>
         <p><?= e($s['why']) ?></p>
+        <?php if (!empty($s['how']) && $s['state'] === 'wait'): ?>
+        <ol class="onb-how"><?php foreach ($s['how']['steps'] as $hs): ?><li><?= e($hs) ?></li><?php endforeach ?></ol>
+        <?php if (!empty($s['how']['help'])): ?><p class="hint"><?= help_link($s['how']['help'], 'Podrobný návod se snímky') ?></p><?php endif ?>
+        <?php endif ?>
         <div class="onb-actions">
           <a class="btn btn-small<?= $s['state'] === 'wait' ? '' : ' btn-ghost' ?>" href="<?= url($s['href']) ?>"><?= e($s['state'] === 'wait' ? $s['label'] : 'Otevřít') ?></a>
           <?php if (!$s['auto']): ?><form method="post" action="<?= url('/admin/pruvodce/' . $s['key']) ?>" class="inline-form"><?= csrf_field() ?>
@@ -25,6 +29,7 @@ $left = count($o['waiting']); $n = 0; ?>
             <?php else: ?><button class="btn btn-small btn-ghost" name="state" value="wait" type="submit">Vrátit mezi čekající</button><?php endif ?>
           </form><?php else: ?><small class="muted">Poznáno podle obsahu webu.</small><?php endif ?>
         </div>
+        <?php if (!empty($s['how']['alt']) && $s['state'] === 'wait'): [$altHref, $altText, $altLabel] = $s['how']['alt']; ?><p class="onb-alt"><?= e($altText) ?> <a href="<?= url($altHref) ?>"><?= e($altLabel) ?></a></p><?php endif ?>
       </div>
     </li>
     <?php endforeach ?>

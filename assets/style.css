@@ -2168,3 +2168,7 @@ tr.is-neg td { color: var(--accent); }
 .todo-list li { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .55rem .75rem; background: var(--surface); border-radius: 10px; }
 .todo-list li form { flex: none; }
 @media (max-width: 640px) { .todo-list li { flex-direction: column; align-items: flex-start; } }
+
+/* Průvodce: postup u kroku (např. převod starého webu přes AI asistenta) */
+.onb-how { margin: .4rem 0 .6rem; padding-left: 1.3rem; display: grid; gap: .35rem; font-size: .95rem; }
+.onb-alt { margin: .6rem 0 0; font-size: .92rem; color: var(--muted); }

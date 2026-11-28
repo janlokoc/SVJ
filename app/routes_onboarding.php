@@ -34,8 +34,8 @@ function onboarding_steps(): array
             '/admin/aktuality/nova', 'Napsat aktualitu', $n("SELECT COUNT(*) FROM posts WHERE title <> 'Vítejte na novém webu'") > 0, false],
         'termin' => ['obsah', 'Nejbližší termín', 'Shromáždění, odečty, revize nebo úklid. Termíny se ukazují na úvodní stránce a jdou přidat do kalendáře.',
             '/admin/terminy/novy', 'Přidat termín', $n('SELECT COUNT(*) FROM events') > 0, false],
-        'prevod' => ['obsah', 'Obsah ze starého webu', 'Máte starší web? Dokumenty a aktuality můžete přenést sami, nebo si převod objednat. Pokud žádný starý web nemáte, krok přeskočte.',
-            '/admin/predplatne#prevod', 'Objednat převod', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== ''), false],
+        'prevod' => ['obsah', 'Obsah ze starého webu', 'Máte starší web nebo export z portálu správce? Převeďte ho sami s pomocí AI asistenta – zdarma, za pár minut. Pokud žádný starý web nemáte, krok přeskočte.',
+            '/admin/api', 'Vytvořit klíč pro AI asistenta', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== ''), false],
         'udaje-ochrana' => ['start', 'Ochrana osobních údajů', 'Přečtěte si text stránky „Ochrana osobních údajů“ a doplňte, kdo je ve Vašem společenství kontaktní osobou.',
             '/admin/nastaveni', 'Zkontrolovat text', false, true],
         'zastup' => ['start', 'Zástup správce', 'Druhý účet správce se hodí při dovolené nebo nemoci. Web nesmí stát na jednom člověku.',
@@ -50,12 +50,22 @@ function onboarding_steps(): array
     if (function_exists('plan_limit') && plan_limit('admins') === 1) {
         unset($steps['zastup']);
     }
+    // Převod starého webu přes AI asistenta a MCP (11/2026): postup přímo v průvodci, placený převod jako záloha.
+    $migPrice = function_exists('pset_int') ? pset_int('price_migration', 0, 1000000) : 0;
+    $apiOn = !function_exists('plan_has') || plan_has('api');
+    $how = ['prevod' => ['steps' => [
+        ($apiOn ? '' : 'API je v edici Standard a Premium – v Předplatné si edici zapněte na ' . PLAN_TRIAL_DAYS . ' dní zdarma. ')
+            . 'V části API a napojení vytvořte klíč a zaškrtněte, co se má převést: documents:write (dokumenty), posts:write (aktuality), events:write (termíny), contacts:write (kontakty), případně units:write a people:write (jednotky a účty obyvatel).',
+        'Ve svém AI asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou ' . absolute_url('/mcp') . ' a klíčem.',
+        'Dejte asistentovi adresu starého webu nebo soubor s exportem a napište mu: „Převeď obsah do našeho nového webu.“ Obyvatelům se při převodu nic neposílá.',
+        'Projděte si výsledek na webu a klíč v API a napojení zrušte.',
+    ], 'help' => 'api-a-mcp', 'alt' => $migPrice ? ['/admin/predplatne#prevod', 'Netroufáte si? Převod za Vás udělá provozovatel za ' . money_czk($migPrice) . ' bez DPH (jednorázově, viz ceník).', 'Objednat převod'] : null]];
     $out = [];
     foreach ($steps as $key => [$group, $title, $why, $href, $label, $auto, $important]) {
         $manual = setting('onb_' . $key);
         $state = $auto || $manual === 'done' ? 'done' : ($manual === 'skip' ? 'skip' : 'wait');
         $out[$key] = ['key' => $key, 'group' => $group, 'title' => $title, 'why' => $why, 'href' => $href, 'label' => $label,
-            'auto' => (bool) $auto, 'important' => $important, 'state' => $state];
+            'auto' => (bool) $auto, 'important' => $important, 'state' => $state, 'how' => $how[$key] ?? null];
     }
     return $out;
 }
