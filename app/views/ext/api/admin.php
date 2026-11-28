@@ -20,6 +20,16 @@ $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
     </dl>
     <p class="hint">Klíč se posílá v hlavičce <code>Authorization: Bearer swk_…</code>. <?= help_link('api-a-mcp', 'Návod: klíč pro dodavatele a AI asistenta') ?></p>
   </section>
+  <section class="card" id="zadani">
+    <h2>Vzorová zadání pro AI asistenta</h2>
+    <p>V AI asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou <code><?= e(absolute_url('/mcp')) ?></code> a klíčem s oprávněními uvedenými u zadání. Pak zadání zkopírujte, doplňte údaje v hranatých závorkách a vložte asistentovi.</p>
+    <?php foreach (api_prompts() as $pi => [$pTitle, $pScopes, $pText]): ?>
+    <details class="api-prompt"<?= $pi === 0 ? ' open' : '' ?>><summary><strong><?= e($pTitle) ?></strong> <small class="muted">oprávnění: <?= e(implode(', ', $pScopes)) ?></small></summary>
+      <textarea readonly rows="8" aria-label="Zadání: <?= e($pTitle) ?>"><?= e($pText) ?></textarea>
+      <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($pText) ?>">Zkopírovat zadání</button></p>
+    </details>
+    <?php endforeach ?>
+  </section>
   <form method="post" action="<?= url('/admin/api') ?>" class="card form" id="novy">
     <?= csrf_field() ?><input type="hidden" name="do" value="create">
     <h2>Vytvořit klíč</h2>

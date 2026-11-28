@@ -65,7 +65,7 @@ function onboarding_steps(): array
         ($apiOn ? '' : 'API je v edici Standard a Premium – v Předplatné si edici zapněte na ' . PLAN_TRIAL_DAYS . ' dní zdarma. ')
             . 'V části API a napojení vytvořte klíč a zaškrtněte, co se má převést: documents:write (dokumenty), posts:write (aktuality), events:write (termíny), contacts:write (kontakty), případně units:write a people:write (jednotky a účty obyvatel).',
         'Ve svém AI asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou ' . absolute_url('/mcp') . ' a klíčem.',
-        'Dejte asistentovi adresu starého webu nebo soubor s exportem a napište mu: „Převeď obsah do našeho nového webu.“ Obyvatelům se při převodu nic neposílá.',
+        'Dejte asistentovi adresu starého webu nebo soubor s exportem a vložte mu vzorové zadání – najdete ho v API a napojení (stačí zkopírovat). Obyvatelům se při převodu nic neposílá.',
         'Projděte si výsledek na webu a klíč v API a napojení zrušte.',
     ], 'help' => 'api-a-mcp', 'alt' => $migPrice ? ['/admin/predplatne#prevod', 'Netroufáte si? Převod za Vás udělá provozovatel za ' . money_czk($migPrice) . ' bez DPH (jednorázově, viz ceník).', 'Objednat převod'] : null]];
     $out = [];

@@ -524,6 +524,38 @@ function api_posts_import(array $rows): array
     return [$new, $upd, $err];
 }
 
+/**
+ * Vzorová zadání pro AI asistenta (administrace → API a napojení): [nadpis, potřebná oprávnění, text]. Správce je jen
+ * zkopíruje do asistenta s připojeným MCP serverem domu – nemusí je vymýšlet ani psát podporu.
+ */
+function api_prompts(): array
+{
+    $house = site('name');
+    $mcp = absolute_url('/mcp');
+    $safe = "\n\nPravidla: nic nemaž; obyvatelům nic neposílej; osobní údaje (jména, e-maily, telefony) převáděj jen tam, kde o to výslovně žádám; u každého záznamu vyplň ext_id podle původního zdroje, aby opakování nic nezdvojilo. Na konci mi napiš, co jsi převedl a co ne (a proč).";
+    return [
+        ['Převod starého webu', ['documents:write', 'posts:write', 'events:write', 'contacts:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Převeď prosím obsah našeho starého webu [ADRESA STARÉHO WEBU] do nového webu:\n"
+            . "1. Projdi starý web a sepiš mi, co na něm je (aktuality, dokumenty, kontakty, termíny) – než začneš, ukaž mi seznam ke schválení.\n"
+            . "2. Aktuality převeď nástrojem import_posts s původním datem zveřejnění.\n3. Dokumenty (PDF, Word, Excel) stáhni a nahraj nástrojem upload_document; zařaď je do kategorie (stanovy a smlouvy, pozvánky, zápisy, účetní závěrky, oznámení, nabídky, formuláře) a dokumenty s osobními údaji (zápisy, seznamy vlastníků) nastav jen pro přihlášené (visibility residents).\n"
+            . "4. Kontakty na výbor, správce a havarijní služby převeď nástrojem import_contacts.\n5. Budoucí termíny převeď nástrojem import_events." . $safe],
+        ['Převod z exportu portálu správce (např. INTEGRI, DOMUS)', ['units:write', 'people:write', 'documents:write', 'contacts:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Přikládám export z portálu naší správcovské firmy. Převeď ho prosím do nového webu:\n"
+            . "1. Nejdřív mi popiš, co export obsahuje (jednotky, vlastníci, nájemníci, dokumenty, kontakty) a jak to namapuješ.\n2. Jednotky (vchod, číslo, patro, podíl, plocha) nahraj nástrojem import_units.\n"
+            . "3. Vlastníky a nájemníky s e-mailem nahraj nástrojem import_people a přiřaď je k jednotkám (nájemníka jen k jednotce, která má vlastníka). Pozvánky se neposílají – pošleme je sami.\n"
+            . "4. Dokumenty nahraj nástrojem upload_document (dokumenty jedné jednotky s polem unit), kontakty nástrojem import_contacts." . $safe],
+        ['Jednotky a obyvatelé z tabulky', ['units:write', 'people:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Přikládám tabulku (Excel/CSV) s jednotkami a jejich vlastníky a nájemníky. "
+            . "Zjisti, který sloupec je co, ukaž mi mapování ke schválení a pak nahraj jednotky nástrojem import_units a lidi nástrojem import_people (přiřazené k jednotkám). Telefony zapiš s předvolbou +420. Řádky, které nejdou zpracovat, mi vypiš." . $safe],
+        ['Podklady pro schůzi výboru', ['units:read', 'tickets:read', 'ledger:read'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Připrav mi podklady pro schůzi výboru: přehled domu (house_overview), otevřené závady a ty po termínu (list_tickets), "
+            . "jednotky s nedoplatkem a celkovou výši (list_debtors). Shrň to na jednu stránku s návrhem, co projednat. Nic na webu neměň."],
+        ['Oznámení obyvatelům', ['posts:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Napiš návrh oznámení pro obyvatele: [CO SE DĚJE – např. odstávka teplé vody 12. 3. od 8 do 14 h kvůli opravě stoupačky ve vchodu B]. "
+            . "Piš stručně, věcně a zdvořile, s tím, co mají lidé udělat. Ukaž mi návrh a zveřejni ho nástrojem create_post, až ti ho výslovně schválím."],
+    ];
+}
+
 // ---------- MCP (Model Context Protocol) pro AI asistenty výboru – nástroje podle rozsahů klíče ----------
 
 const API_MCP_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];

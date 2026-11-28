@@ -2172,3 +2172,8 @@ tr.is-neg td { color: var(--accent); }
 /* Průvodce: postup u kroku (např. převod starého webu přes AI asistenta) */
 .onb-how { margin: .4rem 0 .6rem; padding-left: 1.3rem; display: grid; gap: .35rem; font-size: .95rem; }
 .onb-alt { margin: .6rem 0 0; font-size: .92rem; color: var(--muted); }
+
+/* API a napojení: vzorová zadání pro AI asistenta */
+.api-prompt { border-top: 1px solid var(--line); padding: .6rem 0; }
+.api-prompt summary { cursor: pointer; }
+.api-prompt textarea { width: 100%; margin-top: .5rem; font-size: .92rem; }
