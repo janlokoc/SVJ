@@ -2205,3 +2205,10 @@ tr.is-neg td { color: var(--accent); }
 .vis-btn.vis-residents { background: var(--soft); }
 .vis-btn .icon { width: 1em; height: 1em; }
 .vis-swap { color: var(--muted); }
+
+/* Široké monitory (11/2026): v administraci, konzoli a portálu se obsah roztáhne; úzký sloupec (.narrow) zůstává
+   jen u stránek s textem a formuláři – stránka s tabulkou dostane plnou šířku, ať se jména a e-maily nelámou. */
+@media (min-width: 1440px) {
+  body.in-admin .wrap { width: min(1480px, 100% - 4rem); }
+}
+body.in-admin .narrow:has(table.table) { max-width: 1240px; }
