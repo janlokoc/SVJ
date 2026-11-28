@@ -1,6 +1,7 @@
 <div class="wrap page narrow">
   <header class="page-head"><h1>Závady a požadavky</h1>
     <p class="lead">Nahlaste výboru závadu ve společných prostorách nebo mu pošlete požadavek. V případě havárie volejte rovnou <a href="<?= url('/kontakty') ?>#havarie">havarijní servis</a>.</p></header>
+  <?php if (function_exists('unitcase_enabled') && unitcase_enabled() && unitcase_side() === 'tenant' && unitcase_my_units()): ?><p class="hint">Závada uvnitř Vašeho bytu (spotřebič, vybavení, okna)? Tu řeší vlastník bytu – <a href="<?= url('/byt/novy') ?>">napište mu</a>.</p><?php endif ?>
   <form method="post" action="<?= url('/zavady') ?>" class="card form" enctype="multipart/form-data">
     <h2>Nová závada nebo požadavek</h2>
     <?= csrf_field() ?>

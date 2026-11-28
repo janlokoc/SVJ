@@ -28,6 +28,7 @@ foreach ($planPublic as $pf => $pp) {
 $nav = array_diff_key($nav, array_flip($hiddenPaths));
 $more = array_diff_key($more, array_flip($hiddenPaths), array_flip($planHidden));
 $chatUnread = $u && isset($more['/zpravy']) ? (int) val('SELECT COUNT(*) FROM messages WHERE to_id = ? AND read_at IS NULL', [$u['id']]) : 0;
+$caseUnread = $u && isset($more['/byt']) && function_exists('unitcase_unread') ? unitcase_unread($u) : 0;   // Závady v bytě (nájemník ↔ vlastník)
 $active = fn(string $href) => $href === '/' ? $path === '/' : str_starts_with($path, $href);
 $adminNav = ['/admin' => 'Přehled', '/admin/prehled-spravy' => 'Přehled správy', '/admin/aktuality' => 'Aktuality', '/admin/dokumenty' => 'Dokumenty', '/admin/zpravy' => 'E-maily', '/admin/terminy' => 'Termíny',
     '/admin/hlasovani' => 'Hlasování', '/admin/ankety' => 'Ankety', '/admin/ukoly' => 'Úkoly a usnesení', '/admin/dodavatele' => 'Dodavatelé', '/admin/platby' => 'Platby na jednotku',
@@ -110,8 +111,8 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
           <li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?></a></li>
         <?php endforeach ?>
         <?php if ($more): $moreActive = (bool) array_filter(array_keys($more), $active) || str_starts_with($path, '/terminy'); ?>
-          <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Pro obyvatele<?= $chatUnread ? ' <span class="nav-count" title="Nepřečtené zprávy">' . $chatUnread . '</span>' : '' ?></summary>
-            <ul><?php foreach ($more as $href => $label): ?><li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?><?= $href === '/zpravy' && $chatUnread ? ' <span class="nav-count">' . $chatUnread . '</span>' : '' ?></a></li><?php endforeach ?></ul>
+          <li class="nav-more"><details<?= $moreActive ? ' class="is-active"' : '' ?>><summary>Pro obyvatele<?= $chatUnread + $caseUnread ? ' <span class="nav-count" title="Nepřečtené zprávy">' . ($chatUnread + $caseUnread) . '</span>' : '' ?></summary>
+            <ul><?php foreach ($more as $href => $label): ?><li><a href="<?= url($href) ?>"<?= $active($href) ? ' aria-current="page"' : '' ?>><?= $label ?><?= $href === '/zpravy' && $chatUnread ? ' <span class="nav-count">' . $chatUnread . '</span>' : '' ?><?= $href === '/byt' && $caseUnread ? ' <span class="nav-count">' . $caseUnread . '</span>' : '' ?></a></li><?php endforeach ?></ul>
           </details></li>
         <?php endif ?>
       </ul>

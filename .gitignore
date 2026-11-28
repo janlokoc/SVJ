@@ -6,3 +6,4 @@
 /vendor
 /composer.lock
 /.phpunit.cache
+tools/napoveda/.zavady-byt/

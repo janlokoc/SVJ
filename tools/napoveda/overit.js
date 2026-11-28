@@ -267,6 +267,50 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await shot(ad.locator('main'), 'odecty-sprava.jpg', 700, LPd);
     }
 
+    // ---------- Závady v bytě: nájemník ↔ vlastník (bez návodu – funkce je z obrazovky zřejmá; kontrola chování) ----------
+    begin('zavady-v-byte', 'Funkce nemá návod v nápovědě (obrazovka je samovysvětlující); běh ověřuje chování a soukromí.');
+    {
+      const tenantEmail = sql("SELECT u.email FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.kind = 'tenant' AND u.active = 1 ORDER BY u.id LIMIT 1");
+      const tUnit = sql(`SELECT uu.unit_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.email = '${tenantEmail}'`);
+      const ownerId = sql(`SELECT id FROM users WHERE email = '${who.owner}'`);
+      run(`INSERT INTO user_units (user_id, unit_id) VALUES (${ownerId}, ${tUnit})`);
+      const ten = await (await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, locale: 'cs-CZ' })).newPage(); ten.setDefaultTimeout(10000);
+      await login(ten, tenantEmail);
+      await ten.goto(T + '/zavady');
+      check((await text(ten)).includes('Tu řeší vlastník bytu'), 'na Závadách a požadavcích nájemník vidí odkaz na vlastníka');
+      await ten.goto(T + '/byt');
+      check((await text(ten)).includes('výbor ani správa domu zprávy nevidí'), 'nájemník vidí vysvětlení');
+      await ten.click('a:has-text("Napsat vlastníkovi")');
+      await ten.fill('[name=subject]', 'Kape kohoutek v kuchyni'); await ten.fill('[name=body]', 'Od včerejška kape kohoutek v kuchyni. Doma jsem odpoledne po 16. hodině.');
+      const png = path.join(STORE, 'kohoutek.png'); fs.writeFileSync(png, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'));
+      await ten.setInputFiles('input[type=file]', png);
+      const since = mailLen();
+      await ten.click('main form button[type=submit]');
+      const caseId = sql("SELECT id FROM unit_cases ORDER BY id DESC LIMIT 1");
+      check(!!caseId && ten.url().endsWith('/byt/' + caseId) && (await text(ten)).includes('Kape kohoutek v kuchyni') && (await text(ten)).includes('kohoutek.png'), 'závada odeslaná i s fotkou');
+      check(mailsSince(since).some((m) => m.to === who.owner && m.subject.startsWith('Nová závada v bytě')), 'vlastník dostal e-mail');
+      step('Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail.');
+      await owner.goto(T + '/byt');
+      check((await text(owner)).includes('Kape kohoutek v kuchyni') && !!(await owner.$('.ucase-row.is-unread')), 'vlastník vidí novou nepřečtenou závadu');
+      await owner.click('.ucase-row');
+      await owner.click('.ucase-status button[value=in_progress]');
+      await owner.fill('#odpoved [name=body]', 'Děkuji, ve čtvrtek v 17 hodin přijde instalatér.'); await owner.click('#odpoved button[type=submit]');
+      check(sql(`SELECT status FROM unit_cases WHERE id = ${caseId}`) === 'in_progress' && sql(`SELECT COUNT(*) FROM unit_case_messages WHERE case_id = ${caseId}`) === '3', 'vlastník změnil stav a odpověděl');
+      await ten.goto(T + '/byt/' + caseId);
+      check((await text(ten)).includes('ve čtvrtek v 17 hodin') && (await text(ten)).includes('Řeší se'), 'nájemník vidí odpověď a stav');
+      step('Vlastník závadu otevřel, nastavil „Řeší se“ a odpověděl; nájemník odpověď i stav vidí.');
+      await admin.goto(T + '/byt/' + caseId);
+      check(!(await text(admin)).includes('Kape kohoutek'), 'výbor obsah nevidí');
+      const fileId = sql(`SELECT id FROM unit_case_files WHERE case_id = ${caseId}`);
+      const adminFile = await admin.goto(T + '/byt/priloha/' + fileId);
+      check(adminFile.status() === 404, 'výbor nestáhne ani přílohu');
+      step('Správce webu (výbor) vlákno ani přílohu neotevře.');
+      const shots = path.join(ROOT, 'tools/napoveda/.zavady-byt'); fs.mkdirSync(shots, { recursive: true });
+      await ten.screenshot({ path: path.join(shots, 'najemnik.png'), fullPage: true });
+      await owner.goto(T + '/byt'); await owner.screenshot({ path: path.join(shots, 'vlastnik.png'), fullPage: true });
+      run(`DELETE FROM user_units WHERE user_id = ${ownerId} AND unit_id = ${tUnit}`);   // vrátit ukázkový dům, další návody počítají s jedním bytem vlastníka
+    }
+
     // ---------- Snímky pro úvodní stránku služby (assets/landing) ----------
     const LP = path.join(ROOT, 'assets/landing'); fs.mkdirSync(LP, { recursive: true });
     const lpShot = async (page, file) => { await page.evaluate(() => window.scrollTo(0, 0)); await page.screenshot({ path: path.join(LP, file), type: 'jpeg', quality: 74 }); };

@@ -16,7 +16,7 @@
   },
   "odecty-api": {
     "date": "2026-11-28",
-    "checks": 30,
+    "checks": 28,
     "steps": [
       "Správce zapnul automatický příjem a získal adresu a zvlášť klíč (klíč doporučujeme předat firmě jinou cestou než adresu).",
       "Poslán JSON s klíčem v hlavičce Authorization (1 řádek uložen, 1 s chybou), CSV s hlavičkou X-Api-Key (stav přepsán), JSON jen s číslem měřidla (uložen); starší adresa s klíčem v adrese funguje; špatný klíč i chybějící klíč odmítnuty (403).",
@@ -30,6 +30,16 @@
       "Se zapnutým automatickým upozorněním odešel e-mail obyvatelům sám při denní úloze webu (od 5. dne v měsíci, jednou za měsíc)."
     ],
     "note": ""
+  },
+  "zavady-v-byte": {
+    "date": "2026-11-28",
+    "checks": 11,
+    "steps": [
+      "Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail.",
+      "Vlastník závadu otevřel, nastavil „Řeší se“ a odpověděl; nájemník odpověď i stav vidí.",
+      "Správce webu (výbor) vlákno ani přílohu neotevře."
+    ],
+    "note": "Funkce nemá návod v nápovědě (obrazovka je samovysvětlující); běh ověřuje chování a soukromí."
   },
   "upozorneni-do-telefonu": {
     "date": "2026-11-28",

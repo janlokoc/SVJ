@@ -2097,3 +2097,10 @@ tr.is-neg td { color: var(--accent); }
 .meter-chart .mc-value { fill: var(--ink); font-size: 11px; font-weight: 600; }
 .meter-plan { padding: .6rem .8rem; border-radius: 10px; background: var(--surface-2); }
 .meter-plan.is-on { background: var(--ok-soft); }
+/* Závady v bytě (nájemník ↔ vlastník), 11/2026 */
+.ucase-list { list-style: none; padding: 0; margin: 1rem 0; display: flex; flex-direction: column; gap: .5rem; }
+.ucase-row { display: flex; align-items: center; gap: .75rem; padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: inherit; text-decoration: none; }
+.ucase-row:hover { border-color: var(--primary); }
+.ucase-row.is-unread { border-left: 4px solid var(--primary); }
+.ucase-subj { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ucase-status { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 1rem 0; }
