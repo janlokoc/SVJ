@@ -235,6 +235,12 @@ if ($METHOD === 'POST' && $PATH === '/odhlaseni') {
 }
 if ($PATH === '/') {
     $tenants = pq('SELECT * FROM tenants ORDER BY active DESC, name')->fetchAll();
+    // Ukázkové weby (demo, ukázky partnerského portálu) jsou ve výchozím stavu schované; zobrazí je ?ukazky=1.
+    $showDemo = ($_GET['ukazky'] ?? '') === '1';
+    $demoCount = count(array_filter($tenants, fn($x) => !empty($x['demo'])));
+    if (!$showDemo) {
+        $tenants = array_values(array_filter($tenants, fn($x) => empty($x['demo'])));
+    }
     foreach ($tenants as &$t) {
         $t['stats'] = tenant_stats($t['slug']);
         $t['billing_state'] = billing_state($t);
@@ -244,7 +250,7 @@ if ($PATH === '/') {
         $t['last_notice'] = pq('SELECT * FROM tenant_notices WHERE tenant = ? ORDER BY id DESC LIMIT 1', [$t['slug']])->fetch() ?: null;
     }
     unset($t);
-    render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants, 'hasDemo' => (bool) demo_tenant()]);
+    render('platform/dashboard', ['title' => 'Společenství', 'tenants' => $tenants, 'hasDemo' => (bool) demo_tenant(), 'showDemo' => $showDemo, 'demoCount' => $demoCount]);
     exit;
 }
 if ($PATH === '/ares' && $METHOD === 'GET') {

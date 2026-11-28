@@ -2,7 +2,8 @@
   <?php $todo = launch_checklist(); if ($todo): ?><div class="flash flash-info">Před spuštěním zbývá v nastavení doplnit <?= count($todo) ?> <?= count($todo) === 1 ? 'věc' : (count($todo) < 5 ? 'věci' : 'věcí') ?> (<?= e(mb_strtolower($todo[0][0])) ?><?= count($todo) > 1 ? ' a další' : '' ?>). <a href="<?= url('/nastaveni') ?>#spusteni">Zobrazit seznam</a></div><?php endif ?>
   <header class="page-head row"><h1>Společenství</h1><span class="actions"><form method="post" action="<?= url('/demo') ?>"<?= $hasDemo ? ' data-confirm="Ukázkový web smazat a založit znovu s čerstvými daty?"' : '' ?>><?= csrf_field() ?><button class="btn btn-ghost" type="submit"><?= $hasDemo ? 'Obnovit ukázkový web' : 'Založit ukázkový web' ?></button></form>
     <a class="btn" href="<?= url('/svj/nove') ?>">+ Nové společenství</a></span></header>
-  <p class="lead">Každé společenství má vlastní adresu, vlastní oddělená data a vlastní správce. Celkem: <?= count($tenants) ?>.</p>
+  <p class="lead">Každé společenství má vlastní adresu, vlastní oddělená data a vlastní správce. Celkem: <?= count(array_filter($tenants, fn($x) => empty($x['demo']))) ?>.
+    <?php if ($demoCount): ?><a href="<?= url('/') ?><?= $showDemo ? '' : '?ukazky=1' ?>"><?= $showDemo ? 'Skrýt ukázkové weby' : 'Zobrazit ukázkové weby (' . $demoCount . ')' ?></a><?php endif ?></p>
   <?php if (!$tenants): ?><p class="empty">Zatím tu není žádné společenství. Založte první.</p><?php else: ?>
   <label class="table-filter">Hledat <input type="search" data-filter="#tenants tbody" data-filter-rows="tr" placeholder="Název nebo adresa…"></label>
   <table class="table" id="tenants">
