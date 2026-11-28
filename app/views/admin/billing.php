@@ -170,7 +170,7 @@
   <?php $migratedOn = function_exists('tenant_migrated') ? tenant_migrated(TENANT) : ''; if ($migratedOn === '' || ($migration && in_array($migration['status'], ['ordered', 'paid'], true))): ?>
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
-    <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>
+    <?php $mf = $_SESSION['migration_form'] ?? []; $price = function_exists('migration_price') ? migration_price(tenant_row(TENANT)) : pset_int('price_migration', 0, 1000000); ?>
     <?php if ($migration && $migration['status'] !== 'done'): $mp = $migrationPayment; ?>
       <p>Objednávka převodu z <strong><?= e(migration_source($migration)) ?></strong> ze dne <?= cz_date($migration['created_at']) ?>: <span class="status status-<?= $migration['status'] === 'paid' ? 'in_progress' : 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span></p>
       <p class="muted">Převádíme: <?= e(implode(', ', array_map(fn($k) => mb_strtolower(MIGRATION_SCOPE[$k] ?? $k), array_filter(explode(',', $migration['scope']))))) ?>. Kontakt: <?= e($migration['contact_name']) ?>, <?= e($migration['contact_email']) ?>.</p>
@@ -190,7 +190,7 @@
       <?php endif ?>
     <?php else: ?>
       <?php if ($migration): ?><div class="flash flash-ok">Převod z <?= e(migration_source($migration)) ?> byl dokončen <?= cz_date($migration['done_at']) ?>.<?= $migration['done_note'] !== '' ? ' ' . e($migration['done_note']) : '' ?></div><?php endif ?>
-      <p>Máte obsah na starém webu (Webnode, Wix, WordPress, vlastní stránky)? Přeneseme ho za Vás – <strong><?= money_czk($price) ?> jednorázově</strong>, v kterékoli edici.</p>
+      <p>Máte obsah na starém webu (Webnode, Wix, WordPress, vlastní stránky)? Přeneseme ho za Vás – <?= $price > 0 ? '<strong>' . money_czk($price) . ' jednorázově</strong>, v kterékoli edici' : '<strong>zdarma</strong>, protože jste zakládající dům' ?>.</p>
       <div class="req-box">
         <strong>Co k převodu potřebujeme</strong>
         <ol>
@@ -198,7 +198,7 @@
           <li><strong>Co převést</strong> – aktuality, dokumenty, kontakty, texty stránek, fotografie.</li>
           <li><strong>Potvrzení, že společenství má k obsahu práva</strong> a s převodem souhlasí. U dokumentů s osobními údaji (zápisy, seznamy vlastníků) nám napište, které mají být jen pro přihlášené.</li>
           <li><strong>Kontaktní osobu</strong>, které se můžeme zeptat, když si nebudeme jistí.</li>
-          <li><strong>Úhradu <?= money_czk($price) ?></strong> převodem na zálohovou fakturu s QR kódem. Pracovat začneme po připsání platby.</li>
+          <?php if ($price > 0): ?><li><strong>Úhradu <?= money_czk($price) ?></strong> převodem na zálohovou fakturu s QR kódem. Pracovat začneme po připsání platby.</li><?php endif ?>
         </ol>
         <p class="hint">Převod bývá hotový do 5 pracovních dnů od připsání platby a dodání podkladů. Starý web neměníme ani nerušíme. Nepřevádíme účty uživatelů a hesla, diskuze, formuláře ani vzhled starého webu. Převedené dokumenty se počítají do limitu úložiště Vaší edice<?= plan_limit('storage') ? ' (' . plan_limit('storage') . ' MB)' : '' ?>.</p>
       </div>
@@ -223,7 +223,7 @@
           <label>Telefon (nepovinné) <input type="tel" name="contact_phone" value="<?= e($mf['contact_phone'] ?? '') ?>" maxlength="40"></label>
         </div>
         <label class="check"><input type="checkbox" name="rights" required> <span>Potvrzuji, že společenství má k obsahu starého webu práva a s jeho převodem souhlasí.</span></label>
-        <div class="actions"><button class="btn" type="submit">Objednat převod za <?= money_czk($price) ?></button></div>
+        <div class="actions"><button class="btn" type="submit"><?= $price > 0 ? 'Objednat převod za ' . money_czk($price) : 'Objednat převod zdarma' ?></button></div>
       </form>
     <?php endif ?>
   </div>

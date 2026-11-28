@@ -36,6 +36,19 @@ if ($PATH === '/' && $METHOD === 'GET') {
     render('platform/landing', ['title' => '', 'open' => $open, 'demo' => demo_tenant()]);
     exit;
 }
+// Fotka provozovatele do sekce „Kdo za tím stojí“ na úvodní stránce (nahrává se v konzoli → Obchod).
+if ($METHOD === 'GET' && $PATH === '/kdo-za-tim-stoji/foto') {
+    $f = about_photo_file();
+    if ($f === '') {
+        http_response_code(404);
+        exit;
+    }
+    header('Content-Type: ' . (['jpg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'][pathinfo($f, PATHINFO_EXTENSION)] ?? 'application/octet-stream'));
+    header('Cache-Control: public, max-age=86400');
+    header('X-Content-Type-Options: nosniff');
+    readfile($f);
+    exit;
+}
 if ($METHOD === 'GET' && $PATH === '/robots.txt') {
     header('Content-Type: text/plain; charset=utf-8');
     echo platform_robots_txt();

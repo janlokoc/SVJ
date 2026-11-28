@@ -26,10 +26,10 @@
       $claimed = (int) pq("SELECT COUNT(*) FROM payments WHERE status = 'claimed'")->fetchColumn();
       $newReports = reports_open_count();
       $consoleMain = [['/', 'Společenství', $path === '/' || str_starts_with($path, '/svj'), 0], ['/platby', 'Platby', str_starts_with($path, '/platby'), $claimed],
-          ['/partneri', 'Partneři', str_starts_with($path, '/partneri'), 0], ['/hlaseni', 'Hlášení', str_starts_with($path, '/hlaseni'), $newReports],
+          ['/obchod', 'Obchod', $path === '/obchod', 0], ['/hlaseni', 'Hlášení', str_starts_with($path, '/hlaseni'), $newReports],
           ['/nastaveni', 'Nastavení', $path === '/nastaveni', 0]];
-      $consoleMore = [['/vyuziti', 'Využití funkcí'], ['/kredit', 'Kredit služeb'], ['/rejstriky', 'Rejstříky'], ['/zajem', 'Zájem o funkce'], ['/zaznamy', 'Záznamy']];
-      $moreActive = in_array($path, array_column($consoleMore, 0), true);
+      $consoleMore = [['/partneri', 'Partneři'], ['/vyuziti', 'Využití funkcí'], ['/kredit', 'Kredit služeb'], ['/rejstriky', 'Rejstříky'], ['/zajem', 'Zájem o funkce'], ['/zaznamy', 'Záznamy']];
+      $moreActive = in_array($path, array_column($consoleMore, 0), true) || str_starts_with($path, '/partneri');
       ?>
       <ul>
         <?php foreach ($consoleMain as [$href, $label, $active, $count]): ?>

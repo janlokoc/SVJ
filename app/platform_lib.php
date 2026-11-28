@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'napojeni', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost', 'sso', 'doporuceni'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'napojeni', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost', 'sso', 'doporuceni', 'kdo-za-tim-stoji'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -292,6 +292,16 @@ SQL);
         $pdo->exec("ALTER TABLE tenants ADD COLUMN trial_plan TEXT NOT NULL DEFAULT ''; ALTER TABLE tenants ADD COLUMN trial_used TEXT NOT NULL DEFAULT '';
             ALTER TABLE migrations ADD COLUMN export_file TEXT NOT NULL DEFAULT ''; ALTER TABLE migrations ADD COLUMN export_name TEXT NOT NULL DEFAULT '';
             ALTER TABLE migrations ADD COLUMN export_url TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 32;");
+    }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 33) {
+        // Obchod (app/sales_lib.php): známý/cizí dům, zakládající domy se zamčenou cenou, kontakty a doporučení výborů.
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN known INTEGER NOT NULL DEFAULT 0; ALTER TABLE tenants ADD COLUMN founding TEXT NOT NULL DEFAULT '';
+            ALTER TABLE tenants ADD COLUMN founding_std INTEGER NOT NULL DEFAULT 0;
+            CREATE TABLE leads (id INTEGER PRIMARY KEY AUTOINCREMENT, house TEXT NOT NULL, contact TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT 'jine',
+              stage TEXT NOT NULL DEFAULT 'kontakt', tenant TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', demo_done INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+            CREATE TABLE testimonials (id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT NOT NULL, who TEXT NOT NULL, house TEXT NOT NULL DEFAULT '', consent TEXT NOT NULL DEFAULT '',
+              visible INTEGER NOT NULL DEFAULT 0, sort INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
+            PRAGMA user_version = 33;");
     }
     return $pdo;
 }
@@ -861,7 +871,8 @@ const PLATFORM_DEFAULTS = [
     'terms' => PLATFORM_TERMS, 'dpa' => PLATFORM_DPA,
     'partner_discounts' => "5:10\n20:15\n50:20",
     'google_verification' => '',
-    'price_flat_units' => '50', 'price_unit_standard' => '20', 'price_unit_premium' => '40', 'free_max_units' => '0', 'price_vote' => '990', 'compare_on' => '0', 'twa_package' => '', 'twa_sha256' => '',
+    'price_flat_units' => '50', 'price_unit_standard' => '20', 'price_unit_premium' => '40', 'free_max_units' => '0', 'price_vote' => '990', 'compare_on' => '0',
+    'sales_goal' => '5', 'sales_deadline' => '2027-05-31', 'founding_on' => '0', 'founding_slots' => '10', 'about_name' => '', 'about_role' => '', 'about_story' => '', 'twa_package' => '', 'twa_sha256' => '',
     'pricelist' => "Provoz webu a zálohy | v ceně\nPodpora e-mailem | v ceně\nÚpravy webu na míru | 900 Kč / hod\nŠkolení výboru (online, 1 hodina) | 900 Kč",
 ];
 const PAYMENT_STATUS = ['pending' => 'čeká na platbu', 'claimed' => 'nahlášeno jako zaplacené', 'paid' => 'zaplaceno', 'cancelled' => 'zrušeno', 'storno' => 'stornováno'];
@@ -1834,12 +1845,20 @@ function migration_export_delete(array $m): void
 /** Založí objednávku a výzvu k platbě. */
 function migration_order(array $t, array $in): array
 {
-    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,0,?,'migration',?)", [$t['slug'], pset_int('price_migration', 0, 1000000), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
+    pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,0,?,'migration',?)", [$t['slug'], migration_price($t), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
     $pid = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $pid), $pid]);
+    // Zakládající dům má převod zdarma: bez výzvy k platbě, rovnou „pracujeme na převodu“.
+    $free = migration_price($t) === 0;
+    if ($free) {
+        pq("UPDATE payments SET status = 'paid', paid_at = ?, confirmed_by = 'převod zdarma' WHERE id = ?", [date('Y-m-d H:i:s'), $pid]);
+    }
     pq('INSERT INTO migrations (tenant, url, scope, access, note, contact_name, contact_email, contact_phone, payment_id, created_at, export_file, export_name, export_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [$t['slug'], $in['url'], $in['scope'], $in['access'], $in['note'], $in['contact_name'], $in['contact_email'], $in['contact_phone'], $pid, date('Y-m-d H:i:s'),
             $in['export_file'] ?? '', $in['export_name'] ?? '', $in['export_url'] ?? '']);
+    if ($free) {
+        pq("UPDATE migrations SET status = 'paid' WHERE payment_id = ?", [$pid]);
+    }
     return migration_row($t['slug']);
 }
 

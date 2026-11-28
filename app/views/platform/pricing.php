@@ -4,6 +4,7 @@
   <p class="lead">Web společenství je zdarma pro každého a bez časového omezení. Platíte až ve chvíli, kdy Vám přestanou stačit limity nebo chcete funkce navíc – a každou placenou funkci si předtím na <?= PLAN_TRIAL_DAYS ?> dní zdarma vyzkoušíte.</p>
   <?php $edView = 'landing'; require __DIR__ . '/_editions.php'; ?>
   <?php if (vat_payer()): ?><p class="vat-note"><?= e(vat_note()) ?></p><?php endif ?>
+  <?php require __DIR__ . '/_founding.php'; ?>
   <?php if (function_exists('price_size_note')) { require __DIR__ . '/../ext/pricing/pricing_notes.php'; } /* modul G */ ?>
   <p class="hint">Po dosažení limitu web běží dál a nic se nemaže – jen nejde přidat další účet nebo odeslat další hromadný e-mail. Platí se ročně převodem na zálohovou fakturu s QR kódem; po úhradě dostanete fakturu.</p>
 
@@ -11,7 +12,7 @@
   <table class="table price-table"><tbody>
     <?php if (pset_int('price_storage', 0, 1000000)): ?><tr><td><strong>Úložiště navíc</strong><br><small class="muted">Když dokumentům přestane stačit místo edice. V kterékoli edici, objednává se v administraci.</small></td><td class="t-actions"><strong><?= pset_int('storage_pack_mb', 1, 100000) ?> MB za <?= money_czk(pset_int('price_storage', 0, 1000000)) ?> / rok</strong></td></tr><?php endif ?>
     <?php if (pset_int('price_ai_pack', 0, 1000000)): ?><tr><td><strong>AI kredity</strong><br><small class="muted">Další dotazy na AI asistenta a AI pomocníka, když se vyčerpá měsíční limit edice. Kredity nepropadají; objednávají se v administraci.</small></td><td class="t-actions"><strong><?= number_format(pset_int('ai_pack', 1, 100000), 0, ',', "\u{a0}") ?> dotazů za <?= money_czk(pset_int('price_ai_pack', 0, 1000000)) ?></strong></td></tr><?php endif ?>
-    <tr><td><strong>Převod obsahu ze starého webu</strong><br><small class="muted">Aktuality, dokumenty, kontakty a texty přeneseme za Vás. Objednává se v administraci, v kterékoli edici; hotovo do 5 pracovních dnů od platby.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_migration', 0, 1000000)) ?> jednorázově</strong></td></tr>
+    <tr><td><strong>Převod obsahu ze starého webu</strong><br><small class="muted">Aktuality, dokumenty, kontakty a texty přeneseme za Vás. Objednává se v administraci, v kterékoli edici; hotovo do 5 pracovních dnů od platby.</small></td><td class="t-actions"><strong><?= money_czk(pset_int('price_migration', 0, 1000000)) ?> jednorázově</strong><?= function_exists('founding_open') && founding_open() ? '<br><small class="muted">zakládající domy zdarma</small>' : '' ?></td></tr>
     <?php foreach (preg_split('/\R/', pset('pricelist')) as $line): if (trim($line) === '' || str_contains($line, 'v ceně') || str_contains(mb_strtolower($line), 'převod obsahu') || str_contains(mb_strtolower($line), 'vlastní doména') || str_contains($line, 'AI Plus')) { continue; } [$item, $price] = array_map('trim', explode('|', $line . '|')); ?>
       <tr><td><?= e($item) ?></td><td class="t-actions"><strong><?= e($price) ?></strong></td></tr>
     <?php endforeach ?>

@@ -2554,6 +2554,7 @@ function user_badge(array $u): string
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/platform_lib.php';
 require_once __DIR__ . '/partner_lib.php';
+require_once __DIR__ . '/sales_lib.php';
 require_once __DIR__ . '/plan_lib.php';
 require_once __DIR__ . '/qr.php';
 require_once __DIR__ . '/reports_lib.php';

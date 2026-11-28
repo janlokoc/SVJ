@@ -376,6 +376,11 @@ $route('POST', '/admin/predplatne/prevod', function () {
             . ($in['export_url'] !== '' ? "\nOdkaz na export: " . $in['export_url'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . ', částka ' . pay_money($p)
             . "\nZálohová faktura: " . platform_url('/sprava/platby/' . $p['id'] . '/doklad') . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
     }
+    if ((int) $p['amount'] === 0) {
+        // Zakládající dům: převod zdarma, žádná výzva k platbě.
+        flash('Převod je objednán. Jako zakládající dům ho máte zdarma – pustíme se do něj hned a ozveme se na uvedený e-mail.');
+        redirect('/admin/predplatne#prevod');
+    }
     // Potvrzení objednateli: co zaplatit a kde je zálohová faktura (s QR platbou).
     $iban = (string) cz_iban(pset('account'));
     foreach (array_unique(array_filter([$in['contact_email'], $t['owner_email']], fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL))) as $to) {

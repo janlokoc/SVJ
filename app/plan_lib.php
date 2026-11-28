@@ -223,6 +223,10 @@ function plan_feature_for(string $path): ?string
 function edition_price(string $edition, array|int|null $size = null): int
 {
     $base = $edition === 'free' ? 0 : pset_int('price_' . $edition, 0, 1000000);
+    // Zakládající dům (app/sales_lib.php) má cenu Standardu zamčenou ze dne, kdy se jím stal.
+    if ($edition === 'standard' && is_array($size) && (int) ($size['founding_std'] ?? 0) > 0) {
+        $base = (int) $size['founding_std'];
+    }
     return $base && $size !== null && function_exists('edition_surcharge') ? $base + edition_surcharge($edition, is_array($size) ? tenant_unit_count($size) : $size) : $base;
 }
 

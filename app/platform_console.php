@@ -855,6 +855,102 @@ if ($PATH === '/zajem') {
         'tenantViews' => pq("SELECT v.feature, v.tenant, t.name AS tenant_name, COUNT(*) AS n, MAX(v.at) AS last FROM feature_views v LEFT JOIN tenants t ON t.slug = v.tenant WHERE v.tenant <> '' GROUP BY v.feature, v.tenant ORDER BY last DESC LIMIT 200")->fetchAll()]);
     exit;
 }
+// ---------- Obchod: cesta od kontaktu k platbě, cíl, zakládající domy, „Kdo za tím stojí“ (app/sales_lib.php) ----------
+if ($PATH === '/obchod') {
+    $errors = [];
+    $back = '/obchod';
+    if ($METHOD === 'POST') {
+        $a = (string) ($_POST['action'] ?? '');
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($a === 'lead_add' || $a === 'lead_save') {
+            $errors = sales_lead_save($_POST, $a === 'lead_save' ? $id : null);
+            if (!$errors) {
+                flash($a === 'lead_add' ? 'Kontakt je zapsaný.' : 'Kontakt je uložený.');
+                redirect('/obchod#kontakty');
+            }
+            $_SESSION['lead_form'] = $_POST;
+            flash(implode(' ', $errors), 'error');
+            redirect('/obchod#kontakty');
+        }
+        if ($a === 'lead_delete' && $id) {
+            pq('DELETE FROM leads WHERE id = ?', [$id]);
+            flash('Kontakt je smazaný.');
+            redirect('/obchod#kontakty');
+        }
+        if ($a === 'known' && ($t = tenant_row((string) ($_POST['slug'] ?? '')))) {
+            pq('UPDATE tenants SET known = ? WHERE slug = ?', [!empty($_POST['known']) ? 1 : 0, $t['slug']]);
+            redirect('/obchod#domy');
+        }
+        if ($a === 'founding' && ($t = tenant_row((string) ($_POST['slug'] ?? '')))) {
+            $on = !empty($_POST['founding']);
+            if (!founding_set($t['slug'], $on)) {
+                flash('Zakládající místa jsou obsazená (' . founding_slots() . '). Zvyšte jejich počet níže, nebo místo uvolněte u jiného domu.', 'error');
+            } else {
+                flash($on ? $t['name'] . ' je zakládající dům: Standard za ' . money_czk(pset_int('price_standard', 0, 1000000)) . ' natrvalo a převod zdarma.' : $t['name'] . ' už není zakládající dům.');
+            }
+            redirect('/obchod#domy');
+        }
+        if ($a === 'settings') {
+            $goal = (int) ($_POST['sales_goal'] ?? 0);
+            $dl = (string) ($_POST['sales_deadline'] ?? '');
+            $slots = (int) ($_POST['founding_slots'] ?? 0);
+            if ($goal < 1 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dl) || $slots < 0) {
+                flash('Cíl musí být aspoň 1 dům a termín platné datum.', 'error');
+                redirect('/obchod#cil');
+            }
+            pset_save('sales_goal', (string) $goal);
+            pset_save('sales_deadline', $dl);
+            pset_save('founding_slots', (string) $slots);
+            pset_save('founding_on', !empty($_POST['founding_on']) ? '1' : '0');
+            platform_log('Obchod: cíl a zakládající domy', $goal . ' do ' . $dl . ' · zakládající ' . (!empty($_POST['founding_on']) ? 'zapnuto' : 'vypnuto') . ', míst ' . $slots);
+            flash('Uloženo.');
+            redirect('/obchod#cil');
+        }
+        if ($a === 'about') {
+            foreach (['about_name' => 80, 'about_role' => 120, 'about_story' => 1500] as $k => $max) {
+                pset_save($k, mb_substr(trim((string) ($_POST[$k] ?? '')), 0, $max));
+            }
+            $f = $_FILES['photo'] ?? null;
+            if ($f && ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $err = about_photo_store($f);
+                if ($err !== '') {
+                    flash($err, 'error');
+                    redirect('/obchod#kdo');
+                }
+            }
+            if (!empty($_POST['photo_delete'])) {
+                about_photo_delete();
+            }
+            platform_log('Obchod: Kdo za tím stojí', 'upraveno');
+            flash('Sekce „Kdo za tím stojí“ je uložená.');
+            redirect('/obchod#kdo');
+        }
+        if ($a === 'testimonial_add' || $a === 'testimonial_save') {
+            $errors = testimonial_save($_POST, $a === 'testimonial_save' ? $id : null);
+            if ($errors) {
+                $_SESSION['testimonial_form'] = $_POST;
+                flash(implode(' ', $errors), 'error');
+            } else {
+                flash('Doporučení je uložené.');
+            }
+            redirect('/obchod#doporuceni');
+        }
+        if ($a === 'testimonial_delete' && $id) {
+            pq('DELETE FROM testimonials WHERE id = ?', [$id]);
+            flash('Doporučení je smazané.');
+            redirect('/obchod#doporuceni');
+        }
+        redirect('/obchod');
+    }
+    $houses = sales_houses();
+    $leads = pq('SELECT * FROM leads ORDER BY updated_at DESC, id DESC')->fetchAll();
+    $leadForm = $_SESSION['lead_form'] ?? [];
+    $tForm = $_SESSION['testimonial_form'] ?? [];
+    unset($_SESSION['lead_form'], $_SESSION['testimonial_form']);
+    render('platform/sales', ['title' => 'Obchod', 'funnel' => sales_funnel($houses, $leads), 'houses' => $houses, 'leads' => $leads,
+        'testimonials' => pq('SELECT * FROM testimonials ORDER BY sort, id')->fetchAll(), 'leadForm' => $leadForm, 'tForm' => $tForm]);
+    exit;
+}
 if ($PATH === '/zaznamy') {
     render('platform/log', ['title' => 'Záznamy platformy', 'rows' => pq('SELECT * FROM platform_log ORDER BY id DESC LIMIT 500')->fetchAll(),
         'notices' => pq('SELECT * FROM tenant_notices ORDER BY id DESC LIMIT 200')->fetchAll()]);
