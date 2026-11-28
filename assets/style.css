@@ -2177,3 +2177,15 @@ tr.is-neg td { color: var(--accent); }
 .api-prompt { border-top: 1px solid var(--line); padding: .6rem 0; }
 .api-prompt summary { cursor: pointer; }
 .api-prompt textarea { width: 100%; margin-top: .5rem; font-size: .92rem; }
+
+/* Převod ze starého webu: kroky */
+.mig-step h2 { display: flex; align-items: center; gap: .6rem; }
+.mig-num { display: inline-grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-size: 1rem; flex: none; }
+.mig-ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin: .5rem 0 1rem; }
+.mig-ways > div { padding: .8rem 1rem; border: 1px solid var(--line); border-radius: 12px; }
+.mig-ways h3 { margin: 0 0 .3rem; font-size: 1rem; }
+.mig-ways p { margin: 0; font-size: .93rem; }
+
+.nowrap { white-space: nowrap; }
+.api-edit { margin-top: .4rem; }
+.api-edit summary { cursor: pointer; font-size: .9rem; }

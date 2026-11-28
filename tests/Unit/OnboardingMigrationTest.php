@@ -23,10 +23,9 @@ final class OnboardingMigrationTest extends TestCase
         api_ready();
         q('DELETE FROM api_refs');   // převod přes API by krok splnil sám
         $s = onboarding_steps()['prevod'];
-        $this->assertSame('/admin/api', $s['href']);
+        $this->assertSame('/admin/prevod', $s['href'], 'převod má vlastní stránku, odděleně od API a napojení');
         $how = implode(' ', $s['how']['steps']);
-        $this->assertStringContainsString(absolute_url('/mcp'), $how, 'adresa MCP serveru domu');
-        $this->assertStringContainsString('documents:write', $how);
+        $this->assertStringContainsString('Převod ze starého webu', $how);
         $this->assertStringContainsString('nic neposílá', $how);
         $this->assertSame('api-a-mcp', $s['how']['help']);
         if (pset_int('price_migration', 0, 1000000)) {
@@ -38,7 +37,7 @@ final class OnboardingMigrationTest extends TestCase
         require dirname(__DIR__, 2) . '/app/views/admin/onboarding.php';
         $html = (string) ob_get_clean();
         $this->assertStringContainsString('class="onb-how"', $html);
-        $this->assertStringContainsString('Vytvořit klíč pro AI asistenta', $html);
+        $this->assertStringContainsString('Převést starý web', $html);
         $this->assertLessThan(strpos($html, 'id="krok-kontakty"'), strpos($html, 'id="krok-prevod"'), 'převod je před ručním zadáváním obsahu');
         foreach (ONBOARDING_FROM_MIGRATION as $k) {
             if (($o['steps'][$k]['state'] ?? '') === 'wait') {

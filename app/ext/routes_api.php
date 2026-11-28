@@ -224,6 +224,13 @@ $adminApi = function () {
                 $_SESSION['api_new_key'] = $plain;
                 flash('Klíč je vytvořený. Zkopírujte si ho hned – znovu ho už neuvidíte.');
             }
+        } elseif (post('do') === 'update') {
+            $ips = function_exists('meter_ip_list_clean') ? meter_ip_list_clean(post('ips')) : '';
+            if (is_array($ips)) {
+                flash($ips['error'], 'error');
+            } else {
+                flash(api_key_update((int) post('id'), array_map('strval', (array) ($_POST['scopes'] ?? [])), $ips) ? 'Oprávnění klíče jsou upravená – platí hned, klíč zůstává stejný.' : 'Vyberte aspoň jedno oprávnění.', 'info');
+            }
         } elseif (post('do') === 'revoke') {
             flash(api_key_revoke((int) post('id')) ? 'Klíč je zrušený, přestal platit okamžitě.' : 'Klíč už zrušený je.', 'info');
         }
@@ -235,6 +242,30 @@ $adminApi = function () {
         'log' => all('SELECT l.*, k.name AS key_name FROM api_log l LEFT JOIN api_keys k ON k.id = l.key_id ORDER BY l.id DESC LIMIT 30'),
         'fails' => (int) val('SELECT COUNT(*) FROM api_log WHERE ok = 0 AND at >= ?', [date('Y-m-d H:i:s', strtotime('-7 days'))])]);
 };
+// Převod ze starého webu: klíč s oprávněními pro převod jedním tlačítkem (starý klíč pro převod se zruší), zadání, zrušení.
+$adminMigration = function () {
+    $me = require_admin();
+    api_ready();
+    if ($GLOBALS['METHOD'] === 'POST') {
+        $old = api_migration_key();
+        if (post('do') === 'key') {
+            if ($old) {
+                api_key_revoke((int) $old['id']);
+            }
+            [, $plain] = api_key_create(API_MIGRATION_KEY, API_MIGRATION_SCOPES, '', (int) $me['id']);
+            $_SESSION['api_migration_key'] = $plain;
+        } elseif (post('do') === 'revoke' && $old) {
+            api_key_revoke((int) $old['id']);
+            flash('Klíč pro převod je zrušený. Asistent už do webu nic nezapíše.');
+        }
+        redirect('/admin/prevod');
+    }
+    $new = $_SESSION['api_migration_key'] ?? '';
+    unset($_SESSION['api_migration_key']);
+    render('ext/api/migration', ['title' => 'Převod ze starého webu', 'key' => api_migration_key(), 'new' => $new]);
+};
+$route('GET', '/admin/prevod', $adminMigration);
+$route('POST', '/admin/prevod', $adminMigration);
 $route('GET', '/admin/api', $adminApi);
 $route('POST', '/admin/api', $adminApi);
 

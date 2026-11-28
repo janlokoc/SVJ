@@ -10,6 +10,7 @@
 <p>Klíč předejte bezpečně (ne ve stejné zprávě jako adresu webu). Když už ho nepotřebujete, klikněte u něj na <em>Zrušit</em> – přestane platit okamžitě. Každé volání uvidíte v části <em>Poslední volání</em>; po 10 neplatných pokusech za hodinu web adresu zablokuje a pošle správcům e-mail.</p>
 
 <h2>Převod obsahu ze starého webu</h2>
+<p>Pro převod je v administraci samostatná stránka <strong>Převod ze starého webu</strong> (Správa webu): jedním tlačítkem vytvoří klíč s oprávněními jen pro převod, nabídne vzorová zadání pro asistenta – přes MCP, nebo přes API, když máte MCP zakázané – a po převodu klíč zrušíte.</p>
 <p>Jednotky, účty obyvatel, dokumenty, termíny, kontakty i starší aktuality jde nahrát přes API. Každý záznam může nést označení z původního systému (<code>ext_id</code>) – když převod pustíte znovu, záznamy se jen přepíšou, nic se nezdvojí. <strong>Obyvatelům se při převodu nic neposílá</strong>: aktuality se zapíšou s původním datem bez upozornění a účty vzniknou bez pozvánek – pozvánky pošlete sami, až bude web připravený.</p>
 <ul>
   <li><strong>S AI asistentem:</strong> v asistentovi přidejte vlastní MCP server s adresou <code>https://&lt;adresa webu&gt;/mcp</code> a klíčem (v hlavičce <code>Authorization: Bearer swk_…</code>, nebo jako adresu <code>…/mcp/swk_…</code>). Pak mu dejte exportovaná data a napište, ať je převede. Asistent vidí jen nástroje, na které má klíč oprávnění.</li>

@@ -30,6 +30,14 @@ final class ApiPromptsTest extends TestCase
             $this->assertStringContainsString('(' . $cat . ')', $prompts[0][2], 'pravidla znají kategorii ' . $cat);
         }
         $this->assertStringContainsString('až ti ho výslovně schválím', $prompts[4][2], 'zveřejnění jen po schválení');
+        foreach ($prompts as [$title, , $text]) {
+            $rest = api_prompt_rest($text);
+            $this->assertStringStartsWith('Máš přístup k REST API', $rest, $title . ': varianta bez MCP');
+            $this->assertStringNotContainsString('/mcp', $rest, $title);
+            $this->assertDoesNotMatchRegularExpression('/\b(import_[a-z]+|upload_document|house_overview|list_tickets|list_debtors|create_post)\b/', $rest, $title . ': v API variantě nesmí zůstat nástroj MCP');
+            $this->assertStringContainsString('SVJ_API_KEY', $rest, 'klíč z proměnné prostředí, ne v konverzaci');
+        }
+        $this->assertStringContainsString('Zkopírovat zadání pro API', (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/api/admin.php'));
         $this->assertStringContainsString('id="zadani"', (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/ext/api/admin.php'));
     }
 }

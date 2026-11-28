@@ -29,7 +29,7 @@ function onboarding_steps(): array
         'overeni' => ['zaklad', 'Dvoufázové ověření správce', 'Účet správce vidí osobní údaje všech obyvatel. Druhý krok při přihlášení ho ochrání, i kdyby uniklo heslo.',
             '/muj-ucet#overeni', 'Zapnout ověření', (int) ($me['totp_enabled'] ?? 0) === 1, true],
         'prevod' => ['prevod', 'Obsah ze starého webu', 'Máte starší web nebo export z portálu správce? Převeďte ho sami s pomocí AI asistenta – zdarma, za pár minut. Pokud žádný starý web nemáte, krok přeskočte.',
-            '/admin/api', 'Vytvořit klíč pro AI asistenta', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== '' || $apiImported), true],
+            '/admin/prevod', 'Převést starý web', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== '' || $apiImported), true],
         'jednotky' => ['dum', 'Seznam jednotek', 'Jednotky s vlastníky a podíly založíte naráz z výpisu z katastru nemovitostí. Bez nich nejde přiřadit účty k bytům, hlasovat podle podílů ani evidovat odečty.',
             '/admin/jednotky/import', 'Import z katastru', $n('SELECT COUNT(*) FROM units') > 0, true],
         'ucty' => ['dum', 'Účty obyvatel', 'Vlastníky a nájemníky přidáte hromadně z tabulky, nebo zapnete odkaz, přes který se k jednotce přihlásí sami a Vy jen schválíte. Každému pak přijde e-mail s odkazem na nastavení hesla.',
@@ -62,11 +62,10 @@ function onboarding_steps(): array
     $migPrice = function_exists('pset_int') ? pset_int('price_migration', 0, 1000000) : 0;
     $apiOn = !function_exists('plan_has') || plan_has('api');
     $how = ['prevod' => ['steps' => [
-        ($apiOn ? '' : 'API je v edici Standard a Premium – v Předplatné si edici zapněte na ' . PLAN_TRIAL_DAYS . ' dní zdarma. ')
-            . 'V části API a napojení vytvořte klíč a zaškrtněte, co se má převést: documents:write (dokumenty), posts:write (aktuality), events:write (termíny), contacts:write (kontakty), případně units:write a people:write (jednotky a účty obyvatel).',
-        'Ve svém AI asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou ' . absolute_url('/mcp') . ' a klíčem.',
-        'Dejte asistentovi adresu starého webu nebo soubor s exportem a vložte mu vzorové zadání – najdete ho v API a napojení (stačí zkopírovat). Obyvatelům se při převodu nic neposílá.',
-        'Projděte si výsledek na webu a klíč v API a napojení zrušte.',
+        ($apiOn ? '' : 'Převod přes AI je v edici Standard a Premium – v Předplatné si edici zapněte na ' . PLAN_TRIAL_DAYS . ' dní zdarma. ')
+            . 'Na stránce Převod ze starého webu vytvořte jedním tlačítkem klíč pro asistenta.',
+        'Zkopírujte vzorové zadání (přes MCP, nebo přes API, když máte MCP zakázané) a dejte ho AI asistentovi spolu s adresou starého webu nebo exportem. Obyvatelům se při převodu nic neposílá.',
+        'Projděte si výsledek a klíč zrušte.',
     ], 'help' => 'api-a-mcp', 'alt' => $migPrice ? ['/admin/predplatne#prevod', 'Netroufáte si? Převod za Vás udělá provozovatel za ' . money_czk($migPrice) . ' bez DPH (jednorázově, viz ceník).', 'Objednat převod'] : null]];
     $out = [];
     foreach ($steps as $key => [$group, $title, $why, $href, $label, $auto, $important]) {

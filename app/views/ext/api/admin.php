@@ -3,7 +3,7 @@ $base = absolute_url('/api/v1');
 $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
 <div class="wrap page">
   <header class="page-head"><h1>API a napojení</h1>
-    <p class="lead">Klíč pro dodavatele, kteří mají plnit web daty: odečtová firma (odečty měřidel), účetní nebo správce (předpisy, pohledávky, platby), případně AI asistent výboru (MCP). Každý klíč smí jen to, co mu zaškrtnete, a jde kdykoli zrušit.</p></header>
+    <p class="lead">Trvalá napojení: klíč pro dodavatele, kteří web průběžně plní daty – odečtová firma (odečty měřidel), účetní nebo správce (předpisy, pohledávky, platby) – a pro AI asistenta výboru. Jednorázový převod ze starého webu je na stránce <a href="<?= url('/admin/prevod') ?>">Převod ze starého webu</a>. Každý klíč smí jen to, co mu zaškrtnete, a jde kdykoli zrušit.</p></header>
   <?php if ($new !== ''): ?>
   <div class="card api-new">
     <h2>Nový klíč</h2>
@@ -21,12 +21,17 @@ $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
     <p class="hint">Klíč se posílá v hlavičce <code>Authorization: Bearer swk_…</code>. <?= help_link('api-a-mcp', 'Návod: klíč pro dodavatele a AI asistenta') ?></p>
   </section>
   <section class="card" id="zadani">
-    <h2>Vzorová zadání pro AI asistenta</h2>
-    <p>V AI asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou <code><?= e(absolute_url('/mcp')) ?></code> a klíčem s oprávněními uvedenými u zadání. Pak zadání zkopírujte, doplňte údaje v hranatých závorkách a vložte asistentovi.</p>
-    <?php foreach (api_prompts() as $pi => [$pTitle, $pScopes, $pText]): ?>
+    <h2>AI asistent výboru – vzorová zadání</h2>
+    <p class="hint">Převod obsahu ze starého webu je na samostatné stránce <a href="<?= url('/admin/prevod') ?>">Převod ze starého webu</a>.</p>
+    <p>Každé zadání je ve dvou variantách. <strong>MCP</strong>: v asistentovi (Claude, ChatGPT, Copilot…) přidejte vlastní MCP server s adresou <code><?= e(absolute_url('/mcp')) ?></code> a klíčem. <strong>API</strong>: když máte MCP zakázané – asistent, který umí spouštět kód s přístupem na internet (např. Claude Code), si napíše skript a volá <code><?= e(absolute_url('/api/v1')) ?></code>; klíč mu dejte do proměnné prostředí <code>SVJ_API_KEY</code>, ne do konverzace. Klíč musí mít oprávnění uvedená u zadání. Údaje v hranatých závorkách doplňte.</p>
+    <?php foreach (api_prompts_committee() as $pi => [$pTitle, $pScopes, $pText]): $pRest = api_prompt_rest($pText); ?>
     <details class="api-prompt"<?= $pi === 0 ? ' open' : '' ?>><summary><strong><?= e($pTitle) ?></strong> <small class="muted">oprávnění: <?= e(implode(', ', $pScopes)) ?></small></summary>
-      <textarea readonly rows="8" aria-label="Zadání: <?= e($pTitle) ?>"><?= e($pText) ?></textarea>
-      <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($pText) ?>">Zkopírovat zadání</button></p>
+      <p class="h-small">Přes MCP</p>
+      <textarea readonly rows="7" aria-label="Zadání přes MCP: <?= e($pTitle) ?>"><?= e($pText) ?></textarea>
+      <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($pText) ?>">Zkopírovat zadání pro MCP</button></p>
+      <p class="h-small">Přes API (bez MCP)</p>
+      <textarea readonly rows="7" aria-label="Zadání přes API: <?= e($pTitle) ?>"><?= e($pRest) ?></textarea>
+      <p class="actions"><button class="btn btn-small btn-ghost" type="button" data-copy="<?= e($pRest) ?>">Zkopírovat zadání pro API</button></p>
     </details>
     <?php endforeach ?>
   </section>
@@ -46,9 +51,14 @@ $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
     <table class="table"><thead><tr><th>Název</th><th>Oprávnění</th><th>Naposledy použit</th><th></th></tr></thead><tbody>
       <?php foreach ($keys as $k): ?><tr<?= $k['revoked_at'] !== '' ? ' class="muted"' : '' ?>>
         <td data-label="Název"><strong><?= e($k['name']) ?></strong> <small class="muted"><code><?= e($k['prefix']) ?>…</code></small><?= $k['ips'] !== '' ? '<br><small class="muted">jen z ' . e($k['ips']) . '</small>' : '' ?></td>
-        <td data-label="Oprávnění"><small><?= e(str_replace(' ', ', ', $k['scopes'])) ?></small></td>
+        <td data-label="Oprávnění"><small><?= e(str_replace(' ', ', ', $k['scopes'])) ?></small>
+          <?php if ($k['revoked_at'] === ''): $kScopes = explode(' ', (string) $k['scopes']); ?><details class="api-edit"><summary>Upravit oprávnění</summary>
+            <form method="post" action="<?= url('/admin/api') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="do" value="update"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
+              <fieldset class="checks"><legend>Co smí</legend><?php foreach (API_SCOPES as $sk => $sl): ?><label class="check"><input type="checkbox" name="scopes[]" value="<?= e($sk) ?>"<?= in_array($sk, $kScopes, true) ? ' checked' : '' ?>> <span><code><?= e($sk) ?></code> <small><?= e($sl) ?></small></span></label><?php endforeach ?></fieldset>
+              <label>Jen z IP adres (nepovinné) <input type="text" name="ips" value="<?= e($k['ips']) ?>"></label>
+              <button class="btn btn-small" type="submit">Uložit oprávnění</button></form></details><?php endif ?></td>
         <td data-label="Naposledy použit"><?= $k['last_used_at'] !== '' ? e(cz_datetime($k['last_used_at'])) : '–' ?></td>
-        <td data-label=""><?php if ($k['revoked_at'] === ''): ?><form method="post" action="<?= url('/admin/api') ?>" data-confirm="Zrušit klíč „<?= e($k['name']) ?>“? Dodavatel přestane posílat data."><?= csrf_field() ?><input type="hidden" name="do" value="revoke"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>"><button class="btn btn-small btn-ghost" type="submit">Zrušit</button></form><?php else: ?><small>zrušen <?= e(cz_date($k['revoked_at'])) ?></small><?php endif ?></td>
+        <td data-label=""><?php if ($k['revoked_at'] === ''): ?><form method="post" action="<?= url('/admin/api') ?>" data-confirm="Zrušit klíč „<?= e($k['name']) ?>“? Dodavatel přestane posílat data."><?= csrf_field() ?><input type="hidden" name="do" value="revoke"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>"><button class="btn btn-small btn-ghost nowrap" type="submit">Zrušit</button></form><?php else: ?><small>zrušen <?= e(cz_date($k['revoked_at'])) ?></small><?php endif ?></td>
       </tr><?php endforeach ?>
     </tbody></table><?php endif ?>
   </section>

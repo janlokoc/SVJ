@@ -35,6 +35,19 @@ final class ApiTest extends TestCase
         $this->assertFalse(api_key_revoke($id));
     }
 
+    public function testKeyScopesCanBeChanged(): void
+    {
+        [$id, $plain] = api_key_create('Úprava', ['units:read'], '', 1);
+        $this->assertTrue(api_key_update($id, ['units:read', 'maintenance:write', 'nesmysl'], '192.0.2.10'));
+        $k = one('SELECT * FROM api_keys WHERE id = ?', [$id]);
+        $this->assertSame('units:read maintenance:write', $k['scopes']);
+        $this->assertSame('192.0.2.10', $k['ips']);
+        $this->assertSame(hash('sha256', $plain), $k['hash'], 'klíč zůstává stejný');
+        $this->assertFalse(api_key_update($id, ['nesmysl'], ''), 'bez platného oprávnění nic');
+        api_key_revoke($id);
+        $this->assertFalse(api_key_update($id, ['units:read'], ''), 'zrušený klíč nejde upravit');
+    }
+
     public function testBearerHeaderParsing(): void
     {
         $k = 'swk_' . str_repeat('a', 40);

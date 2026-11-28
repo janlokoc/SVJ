@@ -945,6 +945,13 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const r4 = await call('PUT', T + '/api/v1/events', '[]', 'application/json', key);
       check(r4.status === 401, 'zrušený klíč přestal platit: ' + r4.status);
       step('Volání jsou vidět v části Poslední volání; po kliknutí na Zrušit klíč přestal okamžitě platit (401).');
+      await admin.goto(T + '/admin/prevod'); await admin.click('#krok-1 button[type=submit]');
+      const mk = await admin.inputValue('#krok-1 input');
+      const mt = await text(admin);
+      check(/^swk_[a-f0-9]{40}$/.test(mk) && mt.includes('Zkopírovat zadání – MCP') && mt.includes('Zkopírovat zadání – API') && sql(`SELECT scopes FROM api_keys WHERE name = 'Převod starého webu' AND revoked_at = ''`).includes('maintenance:write'), 'stránka Převod ze starého webu: klíč jedním tlačítkem a zadání MCP/API');
+      await admin.click('#krok-3 button[type=submit]');
+      check(sql(`SELECT COUNT(*) FROM api_keys WHERE name = 'Převod starého webu' AND revoked_at = ''`) === '0', 'klíč pro převod zrušen');
+      step('Na stránce Převod ze starého webu vytvořilo jedno tlačítko klíč s oprávněními pro převod (včetně revizí), stránka nabízí zadání přes MCP i přes API a tlačítko „Převod je hotový – zrušit klíč“ klíč zrušilo.');
       run("DELETE FROM events WHERE title LIKE '%(převod)'"); run("DELETE FROM documents WHERE title LIKE '%(převod)'"); run("DELETE FROM posts WHERE title LIKE '%(převod)'"); run("DELETE FROM contacts WHERE name LIKE '%(převod)'"); run('DELETE FROM api_refs');
     }
 

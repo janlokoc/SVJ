@@ -31,6 +31,10 @@ const API_SCOPES = [
 ];
 const API_FAIL_LIMIT = 10;
 $GLOBALS['EXT_ADMIN_NAV']['/admin/api'] = ['API a napojení', 'Správa webu'];
+$GLOBALS['EXT_ADMIN_NAV']['/admin/prevod'] = ['Převod ze starého webu', 'Správa webu'];
+/** Oprávnění klíče pro převod ze starého webu (stránka Převod ze starého webu vytvoří klíč jedním tlačítkem). */
+const API_MIGRATION_SCOPES = ['documents:write', 'posts:write', 'events:write', 'contacts:write', 'maintenance:write', 'units:write', 'people:write'];
+const API_MIGRATION_KEY = 'Převod starého webu';
 const API_MAX_BODY = 5 * 1048576;
 const API_MAX_ROWS = 5000;
 
@@ -81,6 +85,19 @@ function api_key_create(string $name, array $scopes, string $ips, int $userId): 
     $id = (int) db()->lastInsertId();
     audit('api_key_new', mb_substr(trim($name), 0, 100) . ' · ' . (implode(', ', $scopes) ?: 'bez oprávnění'));
     return [$id, $plain];
+}
+/** Změní oprávnění a povolené IP adresy klíče (klíč sám zůstává stejný). */
+function api_key_update(int $id, array $scopes, string $ips): bool
+{
+    api_ready();
+    $k = one('SELECT * FROM api_keys WHERE id = ? AND revoked_at = ?', [$id, '']);
+    $scopes = array_values(array_intersect(array_keys(API_SCOPES), $scopes));
+    if (!$k || !$scopes) {
+        return false;
+    }
+    q('UPDATE api_keys SET scopes = ?, ips = ? WHERE id = ?', [implode(' ', $scopes), $ips, $id]);
+    audit('api_key_update', $k['name'] . ' · ' . implode(', ', $scopes) . ($ips !== '' ? ' · jen z ' . $ips : ''));
+    return true;
 }
 function api_key_revoke(int $id): bool
 {
@@ -492,6 +509,45 @@ function api_people_save(array $rows): array
     return [$new, $linked, $err];
 }
 
+/** Zadání pro jednorázový převod úvodních dat (stránka Převod ze starého webu). */
+function api_prompts_migration(): array
+{
+    return array_slice(api_prompts(), 0, 3);
+}
+/** Zadání pro průběžnou práci výboru s AI asistentem (stránka API a napojení). */
+function api_prompts_committee(): array
+{
+    return array_slice(api_prompts(), 3);
+}
+/** Aktivní klíč pro převod (nebo null). */
+function api_migration_key(): ?array
+{
+    api_ready();
+    return one('SELECT * FROM api_keys WHERE name = ? AND revoked_at = ? ORDER BY id DESC LIMIT 1', [API_MIGRATION_KEY, '']);
+}
+/**
+ * Totéž zadání pro asistenta, který místo MCP volá REST API (MCP může být ve firmě zakázané): asistent si napíše a spustí
+ * skript; klíč čte z proměnné prostředí SVJ_API_KEY, aby se neobjevil v konverzaci. Nástroje MCP se přepíšou na adresy API.
+ */
+function api_prompt_rest(string $text): string
+{
+    $base = absolute_url('/api/v1');
+    $doc = function_exists('platform_url') ? platform_url('/api/openapi.json') : '';
+    $map = [
+        'nástrojem import_posts' => 'přes PUT ' . $base . '/posts', 'nástrojem upload_document' => 'přes POST ' . $base . '/documents (multipart, pole file)',
+        'nástrojem import_contacts' => 'přes PUT ' . $base . '/contacts', 'nástrojem import_events' => 'přes PUT ' . $base . '/events',
+        'nástrojem import_maintenance' => 'přes PUT ' . $base . '/maintenance', 'nástrojem import_units' => 'přes PUT ' . $base . '/units',
+        'nástrojem import_people' => 'přes POST ' . $base . '/people', 'nástrojem create_post' => 'přes POST ' . $base . '/posts',
+        'přehled domu (house_overview)' => 'jednotky (GET ' . $base . '/units)', 'po termínu (list_tickets)' => 'po termínu (GET ' . $base . '/tickets?status=open)',
+        'celkovou výši (list_debtors)' => 'celkovou výši (GET ' . $base . '/ledger/balances, záporné saldo = nedoplatek)',
+        'Do termínů (events)' => 'Do termínů (' . $base . '/events)',
+    ];
+    $text = strtr($text, $map);
+    $intro = 'Máš přístup k REST API webu našeho společenství „' . site('name') . '“ na adrese ' . $base . ($doc !== '' ? ' (popis všech adres a formátů: ' . $doc . ')' : '')
+        . '. Napiš a spusť skript (Python nebo curl), který API volá; klíč je v proměnné prostředí SVJ_API_KEY a posílá se v hlavičce Authorization: Bearer – nikde ho nevypisuj. '
+        . 'Odpovědi kontroluj (pole errors) a chybné řádky oprav nebo vypiš.';
+    return (string) preg_replace('/^Jsi připojený k webu našeho společenství „[^“]*“ přes MCP server \S+?\.( |$)/u', $intro . '$1', $text);
+}
 /** Revize a kontroly (Hlídání revizí): upsert podle ext_id, jinak podle názvu. Příští termín se dopočítá z posledního a intervalu. */
 function api_maintenance_save(array $rows): array
 {
