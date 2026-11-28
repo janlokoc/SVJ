@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Adresa /zaloha/<klíč>, klíč v storage/config.php jako 'backup_key' (jiný než pro cron).
  */
 
-const BACKUP_SKIP = '~(^|/)([a-z-]*sessions|tmp)(/|$)|(^|/)mailq[.-]|\.lock$|\.tick$|\.pending$|(^|/)instalacni-kod|^obnova-2fa|^obnova-pristupu|^mail-staging\.log$|^inbound/files(/|$)|^inbound/pending-.*\.flag$|\.sqlite-(wal|shm|journal)$~';
+const BACKUP_SKIP = '~(^|/)([a-z-]*sessions|tmp)(/|$)|(^|/)mailq[.-]|\.lock$|\.tick$|\.pending$|(^|/)instalacni-kod|^obnova-2fa|^prevody(/|$)|^obnova-pristupu|^mail-staging\.log$|^inbound/files(/|$)|^inbound/pending-.*\.flag$|\.sqlite-(wal|shm|journal)$~';
 
 /** Sestaví ZIP se zálohou do dočasného souboru a vrátí jeho cestu (volající ho po odeslání smaže). */
 /** Neúspěšných pokusů o stažení zálohy z jedné adresy za hodinu, po kterých se adresa na hodinu zablokuje. */

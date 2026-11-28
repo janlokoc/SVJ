@@ -1,5 +1,8 @@
 <?php /** Tři edice vedle sebe. $edView = 'admin' (objednávka) nebo 'landing' (registrace). V administraci je $edition aktuální edice. */
 $edNow = $edView === 'admin' ? ($edition ?? 'free') : '';
+// Běží zkouška edice (a ne zaplacená stejná edice)? Pak „Objednat“, ne „Prodloužit“.
+$edOnTrial = $edView === 'admin' && !empty($t) && ($t['trial_ends'] ?? '') >= date('Y-m-d') && ($t['trial_plan'] ?? '') === $edNow
+    && !(($t['paid_until'] ?? '') >= date('Y-m-d') && ($t['plan'] ?? '') === $edNow);
 $lim = fn(string $ed, string $k) => pset_int("lim_{$ed}_{$k}", 0, 10000000);
 $edNotes = ['free' => 'Web domu pro každé společenství. Bez časového omezení.', 'standard' => 'Pro výbor, který přes web opravdu řídí dům.', 'premium' => 'Bez limitů, s AI asistentem pro obyvatele, AI zápisem, platbami na jednotku a rezervacemi.'];
 $edExtra = [
@@ -40,8 +43,12 @@ if ($edCompact) {
     <?php elseif ($ek !== 'free' && !empty($t['billing']) && billing_order_problem($t, $ek)): ?>
       <p class="hint">Přechod možný po <?= cz_date($t['paid_until']) ?>, kdy skončí zaplacená edice <?= e(EDITIONS[$edNow]) ?>.</p>
     <?php elseif ($ek !== 'free' && !empty($t['billing'])): $edCredit = billing_credit($t, $ek); ?>
+      <?php if (!edition_trial_problem($t, $ek)): ?><form method="post" action="<?= url('/admin/predplatne/zkouska-edice') ?>" class="edition-order"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
+        <button class="btn" type="submit">Vyzkoušet <?= PLAN_TRIAL_DAYS ?> dní zdarma</button></form>
+      <p class="hint">Bez platby a bez závazku. Po <?= PLAN_TRIAL_DAYS ?> dnech se web sám vrátí do edice <?= e(EDITIONS[$edNow]) ?>, nic se samo neobjedná. Zkoušku edice lze využít jednou.</p><?php endif ?>
       <form method="post" action="<?= url('/admin/predplatne/edice') ?>" class="edition-order"><?= csrf_field() ?><input type="hidden" name="edition" value="<?= $ek ?>">
-        <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
+        <button class="btn<?= $ek === 'standard' ? '' : ' btn-ghost' ?>" type="submit"><?= $edNow === $ek && !$edOnTrial ? 'Prodloužit o rok' : 'Objednat ' . e($en) ?></button></form>
+      <?php if ($edNow === $ek && $edOnTrial): ?><p class="hint">Zkouška běží do <?= cz_date($t['trial_ends']) ?>. Když edici neobjednáte, web se pak sám vrátí do své edice.</p><?php endif ?>
       <?php if ($edCredit): ?><p class="hint">Zaplatíte <?= money_czk(max(0, $price - $edCredit)) ?> – odečteme <?= money_czk($edCredit) ?> za nevyčerpanou část edice <?= e(EDITIONS[$edNow]) ?>.</p><?php endif ?>
     <?php endif ?>
   </section>

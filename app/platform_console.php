@@ -281,7 +281,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni|/vybor)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod-export|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni|/vybor)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -346,6 +346,21 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
         }
         redirect('/svj/' . $slug . '#predplatne');
     }
+    if ($METHOD === 'GET' && $action === '/prevod-export') {
+        $m = migration_row($slug);
+        $f = $m && preg_match('/^[a-z0-9-]+\.[a-z0-9]+$/', (string) $m['export_file']) ? migration_export_dir() . '/' . $m['export_file'] : '';
+        if ($f === '' || !is_file($f)) {
+            flash('Export už na serveru není.', 'error');
+            redirect('/svj/' . $slug);
+        }
+        platform_log('Stažení exportu k převodu', $slug . ' · ' . $m['export_name']);
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '', $m['export_name']) . '"; filename*=UTF-8\'\'' . rawurlencode($m['export_name']));
+        header('Content-Length: ' . filesize($f));
+        header('Cache-Control: no-store');
+        readfile($f);
+        exit;
+    }
     if ($METHOD === 'POST' && $action === '/prevod') {
         $m = migration_row($slug);
         if ($m && $m['status'] === 'paid' && post('do') === 'done' && ($still = external_doc_count(tenant_pdo($slug)))) {
@@ -354,10 +369,11 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
         }
         if ($m && $m['status'] === 'paid' && post('do') === 'done') {
             pq("UPDATE migrations SET status = 'done', done_at = ?, done_note = ? WHERE id = ?", [date('Y-m-d H:i:s'), mb_substr(trim(post('done_note')), 0, 500), $m['id']]);
+            migration_export_delete($m);   // export obsahuje osobní údaje – po převodu pryč
             platform_log('Převod obsahu dokončen', $slug . ' · ' . $m['url']);
             $to = filter_var($m['contact_email'], FILTER_VALIDATE_EMAIL) ? $m['contact_email'] : $t['owner_email'];
             if ($to !== '') {
-                platform_mail($to, 'Převod obsahu je hotový – ' . $t['name'], "Dobrý den,\n\nobsah z webu " . $m['url'] . " jsme převedli na " . rtrim(tenant_url($t), '/') . ".\n"
+                platform_mail($to, 'Převod obsahu je hotový – ' . $t['name'], "Dobrý den,\n\nobsah z " . ($m['url'] === 'export' ? 'přiloženého exportu' : 'webu ' . $m['url']) . " jsme převedli na " . rtrim(tenant_url($t), '/') . ".\n"
                     . (trim(post('done_note')) !== '' ? trim(post('done_note')) . "\n" : '') . "Projděte si ho prosím a napište nám, kdyby něco chybělo nebo bylo jinak, než má být.");
             }
             flash('Převod je označen jako hotový a kontaktní osoba dostala e-mail.');

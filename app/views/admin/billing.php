@@ -172,7 +172,7 @@
     <h2>Převod obsahu ze starého webu</h2>
     <?php $mf = $_SESSION['migration_form'] ?? []; $price = pset_int('price_migration', 0, 1000000); ?>
     <?php if ($migration && $migration['status'] !== 'done'): $mp = $migrationPayment; ?>
-      <p>Objednávka převodu z <strong><?= e($migration['url']) ?></strong> ze dne <?= cz_date($migration['created_at']) ?>: <span class="status status-<?= $migration['status'] === 'paid' ? 'in_progress' : 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span></p>
+      <p>Objednávka převodu z <strong><?= e(migration_source($migration)) ?></strong> ze dne <?= cz_date($migration['created_at']) ?>: <span class="status status-<?= $migration['status'] === 'paid' ? 'in_progress' : 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span></p>
       <p class="muted">Převádíme: <?= e(implode(', ', array_map(fn($k) => mb_strtolower(MIGRATION_SCOPE[$k] ?? $k), array_filter(explode(',', $migration['scope']))))) ?>. Kontakt: <?= e($migration['contact_name']) ?>, <?= e($migration['contact_email']) ?>.</p>
       <?php if ($migration['status'] === 'paid'): ?><p>Platbu jsme přijali. Převod bývá hotový do 5 pracovních dnů; kdybychom něco potřebovali, ozveme se na uvedený e-mail. Starý web neměníme ani nerušíme.</p>
       <?php elseif ($mp): ?>
@@ -189,7 +189,7 @@
         </div>
       <?php endif ?>
     <?php else: ?>
-      <?php if ($migration): ?><div class="flash flash-ok">Převod z <?= e($migration['url']) ?> byl dokončen <?= cz_date($migration['done_at']) ?>.<?= $migration['done_note'] !== '' ? ' ' . e($migration['done_note']) : '' ?></div><?php endif ?>
+      <?php if ($migration): ?><div class="flash flash-ok">Převod z <?= e(migration_source($migration)) ?> byl dokončen <?= cz_date($migration['done_at']) ?>.<?= $migration['done_note'] !== '' ? ' ' . e($migration['done_note']) : '' ?></div><?php endif ?>
       <p>Máte obsah na starém webu (Webnode, Wix, WordPress, vlastní stránky)? Přeneseme ho za Vás – <strong><?= money_czk($price) ?> jednorázově</strong>, v kterékoli edici.</p>
       <div class="req-box">
         <strong>Co k převodu potřebujeme</strong>
@@ -202,9 +202,14 @@
         </ol>
         <p class="hint">Převod bývá hotový do 5 pracovních dnů od připsání platby a dodání podkladů. Starý web neměníme ani nerušíme. Nepřevádíme účty uživatelů a hesla, diskuze, formuláře ani vzhled starého webu. Převedené dokumenty se počítají do limitu úložiště Vaší edice<?= plan_limit('storage') ? ' (' . plan_limit('storage') . ' MB)' : '' ?>.</p>
       </div>
-      <form method="post" action="<?= url('/admin/predplatne/prevod') ?>" class="form">
+      <form method="post" action="<?= url('/admin/predplatne/prevod') ?>" class="form" enctype="multipart/form-data">
         <?= csrf_field() ?><input type="hidden" name="action" value="order">
-        <label>Adresa starého webu <input type="text" name="url" value="<?= e($mf['url'] ?? '') ?>" placeholder="https://svj-zahradni.webnode.cz" required maxlength="300" inputmode="url" autocomplete="off"></label>
+        <label>Adresa starého webu <input type="text" name="url" value="<?= e($mf['url'] ?? '') ?>" placeholder="https://svj-zahradni.webnode.cz" maxlength="300" inputmode="url" autocomplete="off"> <small>Nemáte starý web, jen export z portálu správce (např. INTEGRI)? Nechte prázdné a přiložte export níže.</small></label>
+        <fieldset class="checks"><legend>Export nebo záloha (nepovinné)</legend>
+          <label>Soubor (ZIP, Excel, PDF…, nejvýše <?= e(ini_get('upload_max_filesize')) ?>) <input type="file" name="export" accept="<?= e('.' . implode(',.', MIGRATION_EXPORT_EXT)) ?>"></label>
+          <label>nebo odkaz ke stažení (OneDrive, Google Disk, Úschovna…) <input type="url" name="export_url" value="<?= e($mf['export_url'] ?? '') ?>" maxlength="500" placeholder="https://…"></label>
+          <p class="hint">Export uvidí jen provozovatel služby; po dokončení převodu ho smažeme. Hesla do něj nedávejte.</p>
+        </fieldset>
         <fieldset class="checks"><legend>Co chcete převést</legend>
           <?php foreach (MIGRATION_SCOPE as $sk => $sl): ?><label class="check"><input type="checkbox" name="scope[]" value="<?= $sk ?>"<?= in_array($sk, $mf['scope_list'] ?? ['aktuality', 'dokumenty', 'kontakty'], true) ? ' checked' : '' ?>> <span><?= e($sl) ?></span></label><?php endforeach ?>
         </fieldset>

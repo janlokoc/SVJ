@@ -287,6 +287,12 @@ SQL);
         $pdo->exec("CREATE TABLE integration_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, program TEXT NOT NULL, other TEXT NOT NULL DEFAULT '', what TEXT NOT NULL DEFAULT '',
             contact TEXT NOT NULL DEFAULT '', tenant TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 31;");
     }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 32) {
+        // Zkouška celé edice na 30 dní (jednou za web) a příloha k objednávce převodu (export ze starého webu nebo portálu).
+        $pdo->exec("ALTER TABLE tenants ADD COLUMN trial_plan TEXT NOT NULL DEFAULT ''; ALTER TABLE tenants ADD COLUMN trial_used TEXT NOT NULL DEFAULT '';
+            ALTER TABLE migrations ADD COLUMN export_file TEXT NOT NULL DEFAULT ''; ALTER TABLE migrations ADD COLUMN export_name TEXT NOT NULL DEFAULT '';
+            ALTER TABLE migrations ADD COLUMN export_url TEXT NOT NULL DEFAULT ''; PRAGMA user_version = 32;");
+    }
     return $pdo;
 }
 /** Vypnuté funkce beta programu (i nikdy nenastavené) přepne do bety; spuštěné ('on') a starší zapnuté hlídání insolvencí nechá. */
@@ -1018,6 +1024,31 @@ function billing_credit(array $t, string $edition): int
     $total = max(1, (int) round((strtotime($p['period_to']) - strtotime($p['period_from'])) / 86400) + 1);
     $left = max(0, (int) round((strtotime($p['period_to']) - strtotime(date('Y-m-d'))) / 86400));
     return (int) floor((int) $p['amount'] * min($left, $total) / $total);
+}
+/**
+ * Zkouška edice na PLAN_TRIAL_DAYS dní: jednou za web, jen vyšší edice, než web má. Nic se neplatí a po skončení se web
+ * sám vrátí do své edice – nic se neprodlužuje ani neobjednává. Vrací chybu, nebo null.
+ */
+function edition_trial_problem(array $t, string $edition): ?string
+{
+    if (empty($t['billing']) || !empty($t['demo']) || !isset(EDITION_RANK[$edition]) || $edition === 'free') {
+        return 'Zkoušku tady spustit nejde.';
+    }
+    if (($t['trial_used'] ?? '') !== '') {
+        return 'Zkoušku edice jste už využili (' . cz_date(substr((string) $t['trial_used'], 0, 10)) . '). Jednotlivé funkce můžete dál zkoušet v seznamu funkcí.';
+    }
+    if (EDITION_RANK[$edition] <= EDITION_RANK[tenant_edition($t)]) {
+        return 'Edici ' . EDITIONS[$edition] . ' už máte.';
+    }
+    return null;
+}
+function edition_trial_start(array $t, string $edition): ?string
+{
+    if ($why = edition_trial_problem($t, $edition)) {
+        return $why;
+    }
+    pq("UPDATE tenants SET trial_ends = ?, trial_plan = ?, trial_used = ? WHERE slug = ? AND trial_used = ''", [date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day')), $edition, date('Y-m-d H:i:s'), $t['slug']]);
+    return null;
 }
 /** Proč teď edici objednat nejde (nebo null): na nižší edici se přechází až po skončení zaplaceného období. */
 function billing_order_problem(array $t, string $edition): ?string
@@ -1755,14 +1786,60 @@ function migration_payment(?array $m): ?array
     $p = $m && $m['payment_id'] ? pq('SELECT * FROM payments WHERE id = ?', [$m['payment_id']])->fetch() : null;
     return $p ?: null;
 }
+/**
+ * Příloha k objednávce převodu (export ze starého webu nebo z portálu správce): uloží se mimo veřejné soubory a mimo
+ * zálohy do storage/prevody/, stáhnout ji může jen hlavní správce; po dokončení převodu se smaže (obsahuje osobní údaje).
+ */
+const MIGRATION_EXPORT_EXT = ['zip', '7z', 'rar', 'pdf', 'xlsx', 'xls', 'csv', 'json', 'xml', 'docx', 'doc', 'odt', 'ods', 'txt'];
+function migration_export_dir(): string
+{
+    $d = ROOT_STORAGE . '/prevody';
+    if (!is_dir($d)) {
+        @mkdir($d, 0700, true);
+        @file_put_contents($d . '/.htaccess', "Require all denied\n");
+    }
+    return $d;
+}
+/** Uloží nahraný export; vrací [soubor, původní název], nebo text chyby. */
+function migration_export_store(array $f, string $slug): array|string
+{
+    if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return in_array($f['error'] ?? 0, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)
+            ? 'Soubor je větší, než server přijme (' . ini_get('upload_max_filesize') . '). Rozdělte ho, nebo vložte odkaz ke stažení (OneDrive, Google Disk, Úschovna…).'
+            : 'Soubor se nepodařilo nahrát.';
+    }
+    $orig = mb_substr(basename(str_replace('\\', '/', (string) $f['name'])), 0, 150);
+    $ext = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+    if (!in_array($ext, MIGRATION_EXPORT_EXT, true)) {
+        return 'Export nahrajte jako ' . implode(', ', MIGRATION_EXPORT_EXT) . '.';
+    }
+    $name = $slug . '-' . bin2hex(random_bytes(12)) . '.' . $ext;
+    if (!move_uploaded_file((string) $f['tmp_name'], migration_export_dir() . '/' . $name) && !@rename((string) $f['tmp_name'], migration_export_dir() . '/' . $name)) {
+        return 'Soubor se nepodařilo uložit.';
+    }
+    return [$name, $orig];
+}
+/** Odkud se převádí: adresa starého webu, nebo „přiložený export“. */
+function migration_source(array $m): string
+{
+    return $m['url'] === 'export' ? 'přiloženého exportu' . (($m['export_name'] ?? '') !== '' ? ' (' . $m['export_name'] . ')' : '') : (string) $m['url'];
+}
+function migration_export_delete(array $m): void
+{
+    if (($m['export_file'] ?? '') !== '' && preg_match('/^[a-z0-9-]+\.[a-z0-9]+$/', $m['export_file'])) {
+        @unlink(migration_export_dir() . '/' . $m['export_file']);
+    }
+    pq("UPDATE migrations SET export_file = '' WHERE id = ?", [$m['id']]);
+}
 /** Založí objednávku a výzvu k platbě. */
 function migration_order(array $t, array $in): array
 {
     pq("INSERT INTO payments (vat_rate, tenant, amount, months, created_at, kind, item) VALUES (" . vat_rate_now() . ",?,?,0,?,'migration',?)", [$t['slug'], pset_int('price_migration', 0, 1000000), date('Y-m-d H:i:s'), mb_substr($in['url'], 0, 150)]);
     $pid = (int) platform_db()->lastInsertId();
     pq('UPDATE payments SET vs = ? WHERE id = ?', [date('y') . sprintf('%06d', $pid), $pid]);
-    pq('INSERT INTO migrations (tenant, url, scope, access, note, contact_name, contact_email, contact_phone, payment_id, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [$t['slug'], $in['url'], $in['scope'], $in['access'], $in['note'], $in['contact_name'], $in['contact_email'], $in['contact_phone'], $pid, date('Y-m-d H:i:s')]);
+    pq('INSERT INTO migrations (tenant, url, scope, access, note, contact_name, contact_email, contact_phone, payment_id, created_at, export_file, export_name, export_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        [$t['slug'], $in['url'], $in['scope'], $in['access'], $in['note'], $in['contact_name'], $in['contact_email'], $in['contact_phone'], $pid, date('Y-m-d H:i:s'),
+            $in['export_file'] ?? '', $in['export_name'] ?? '', $in['export_url'] ?? '']);
     return migration_row($t['slug']);
 }
 

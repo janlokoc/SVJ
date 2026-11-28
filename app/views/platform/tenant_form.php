@@ -164,13 +164,15 @@
   <?php if (!empty($migration)): $mp = $migrationPayment; ?>
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
-    <p><strong><a href="<?= e($migration['url']) ?>" rel="noopener noreferrer nofollow" target="_blank"><?= e($migration['url']) ?></a></strong> · <span class="status status-<?= ['ordered' => 'new', 'paid' => 'in_progress', 'done' => 'done'][$migration['status']] ?? 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span>
+    <p><strong><?php if ($migration['url'] === 'export'): ?><?= e(migration_source($migration)) ?><?php else: ?><a href="<?= e($migration['url']) ?>" rel="noopener noreferrer nofollow" target="_blank"><?= e($migration['url']) ?></a><?php endif ?></strong> · <span class="status status-<?= ['ordered' => 'new', 'paid' => 'in_progress', 'done' => 'done'][$migration['status']] ?? 'new' ?>"><?= e(MIGRATION_STATUS[$migration['status']]) ?></span>
       · objednáno <?= cz_datetime($migration['created_at']) ?><?= $mp ? ' · platba: ' . e(PAYMENT_STATUS[$mp['status']] ?? $mp['status']) . ' (VS ' . e($mp['vs']) . ', ' . pay_money($mp) . ')' : '' ?></p>
     <dl class="pay-data">
       <dt>Rozsah</dt><dd><?= e(implode(', ', array_map(fn($k) => MIGRATION_SCOPE[$k] ?? $k, array_filter(explode(',', $migration['scope']))))) ?></dd>
       <dt>Přístup</dt><dd><?= e(MIGRATION_ACCESS[$migration['access']] ?? '') ?></dd>
       <dt>Kontakt</dt><dd><?= e($migration['contact_name']) ?>, <a href="mailto:<?= e($migration['contact_email']) ?>"><?= e($migration['contact_email']) ?></a><?= $migration['contact_phone'] !== '' ? ', ' . e($migration['contact_phone']) : '' ?></dd>
       <?php if ($migration['note'] !== ''): ?><dt>Poznámka</dt><dd><?= nl2br(e($migration['note'])) ?></dd><?php endif ?>
+      <?php if (($migration['export_file'] ?? '') !== ''): ?><dt>Export</dt><dd><a href="<?= url('/svj/' . $t['slug'] . '/prevod-export') ?>"><?= e($migration['export_name']) ?></a> <small class="muted">(smaže se po dokončení převodu)</small></dd><?php endif ?>
+      <?php if (($migration['export_url'] ?? '') !== ''): ?><dt>Odkaz na export</dt><dd><a href="<?= e($migration['export_url']) ?>" rel="noopener noreferrer nofollow" target="_blank"><?= e($migration['export_url']) ?></a></dd><?php endif ?>
     </dl>
     <?php if ($migration['status'] === 'ordered'): ?><p class="hint">Čeká na platbu – potvrdíte ji v části Platby. Do té doby na převodu nepracujte.</p>
     <?php elseif ($migration['status'] === 'paid'): ?>

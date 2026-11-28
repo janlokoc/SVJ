@@ -78,11 +78,10 @@ function tenant_edition(?array $t): string
     }
     $today = date('Y-m-d');
     $grace = date('Y-m-d', strtotime('-' . pset_int('grace_days', 0, 365) . ' day'));
-    if ($t['paid_until'] !== '' && $t['paid_until'] >= $grace) {
-        return isset(EDITIONS[$t['plan'] ?? '']) && $t['plan'] !== 'free' ? $t['plan'] : 'standard';
-    }
-    // Weby založené dřív se zkušební dobou mají do jejího konce Standard.
-    return $t['trial_ends'] !== '' && $t['trial_ends'] >= $today ? 'standard' : 'free';
+    $paid = $t['paid_until'] !== '' && $t['paid_until'] >= $grace ? (isset(EDITIONS[$t['plan'] ?? '']) && $t['plan'] !== 'free' ? $t['plan'] : 'standard') : 'free';
+    // Zkouška edice (od 11/2026 Standard nebo Premium na 30 dní, jednou za web); starší weby se zkušební dobou mají Standard.
+    $trial = $t['trial_ends'] !== '' && $t['trial_ends'] >= $today ? (in_array($t['trial_plan'] ?? '', ['standard', 'premium'], true) ? $t['trial_plan'] : 'standard') : 'free';
+    return EDITION_RANK[$trial] > EDITION_RANK[$paid] ? $trial : $paid;
 }
 function plan_edition(): string
 {

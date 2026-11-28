@@ -330,11 +330,22 @@ $route('POST', '/admin/predplatne/prevod', function () {
     }
     $scope = array_values(array_intersect(array_keys(MIGRATION_SCOPE), (array) ($_POST['scope'] ?? [])));
     $in = ['url' => mb_substr($url, 0, 300), 'scope' => implode(',', $scope), 'access' => isset(MIGRATION_ACCESS[post('access')]) ? post('access') : '', 'note' => mb_substr(trim(post('note')), 0, 2000),
-        'contact_name' => mb_substr(trim(post('contact_name')), 0, 120), 'contact_email' => trim(post('contact_email')), 'contact_phone' => mb_substr(trim(post('contact_phone')), 0, 40)];
+        'contact_name' => mb_substr(trim(post('contact_name')), 0, 120), 'contact_email' => trim(post('contact_email')), 'contact_phone' => mb_substr(trim(post('contact_phone')), 0, 40),
+        'export_url' => mb_substr(trim(post('export_url')), 0, 500)];
     $errors = [];
+    $hasExport = ($_FILES['export']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+    if ($in['export_url'] !== '' && !preg_match('~^https://~i', $in['export_url'])) {
+        $errors[] = 'Odkaz ke stažení exportu musí začínat https://.';
+    }
     $host = (string) parse_url($in['url'], PHP_URL_HOST);
-    if (!filter_var($in['url'], FILTER_VALIDATE_URL) || !str_contains($host, '.')) {
-        $errors[] = 'Zadejte adresu starého webu, například https://svj-zahradni.webnode.cz.';
+    if ($in['url'] === '' && ($hasExport || $in['export_url'] !== '')) {
+        $in['url'] = 'export';   // bez starého webu – jen export (např. z portálu správce)
+    } elseif (!filter_var($in['url'], FILTER_VALIDATE_URL) || !str_contains($host, '.')) {
+        $errors[] = 'Zadejte adresu starého webu (například https://svj-zahradni.webnode.cz), nebo přiložte export.';
+    }
+    if (!$errors && $hasExport) {
+        $ex = migration_export_store($_FILES['export'], TENANT);
+        is_string($ex) ? $errors[] = $ex : [$in['export_file'], $in['export_name']] = $ex;
     }
     if (!$scope) {
         $errors[] = 'Zaškrtněte, co chcete převést.';
@@ -361,19 +372,32 @@ $route('POST', '/admin/predplatne/prevod', function () {
     if (pset('contact_email') !== '') {
         platform_mail(pset('contact_email'), 'Objednávka převodu obsahu: ' . $t['name'], 'Web ' . $t['name'] . ' (' . TENANT . ') objednal převod obsahu z ' . $in['url'] . ".\nRozsah: " . implode(', ', $scope)
             . "\nPřístup: " . MIGRATION_ACCESS[$in['access']] . "\nKontakt: " . $in['contact_name'] . ', ' . $in['contact_email'] . ($in['contact_phone'] !== '' ? ', ' . $in['contact_phone'] : '')
-            . ($in['note'] !== '' ? "\nPoznámka: " . $in['note'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . ', částka ' . pay_money($p)
+            . ($in['note'] !== '' ? "\nPoznámka: " . $in['note'] : '') . (($in['export_name'] ?? '') !== '' ? "\nPřiložený export: " . $in['export_name'] . ' (stáhnete v konzoli u společenství)' : '')
+            . ($in['export_url'] !== '' ? "\nOdkaz na export: " . $in['export_url'] : '') . "\nVariabilní symbol platby: " . $p['vs'] . ', částka ' . pay_money($p)
             . "\nZálohová faktura: " . platform_url('/sprava/platby/' . $p['id'] . '/doklad') . "\nVyřídit: " . platform_url('/sprava/svj/' . TENANT));
     }
     // Potvrzení objednateli: co zaplatit a kde je zálohová faktura (s QR platbou).
     $iban = (string) cz_iban(pset('account'));
     foreach (array_unique(array_filter([$in['contact_email'], $t['owner_email']], fn($e) => filter_var($e, FILTER_VALIDATE_EMAIL))) as $to) {
-        platform_mail($to, 'Objednávka převodu obsahu – ' . $t['name'], "Dobrý den,\n\nděkujeme za objednávku převodu obsahu z webu " . $in['url'] . ".\n\n"
+        platform_mail($to, 'Objednávka převodu obsahu – ' . $t['name'], "Dobrý den,\n\nděkujeme za objednávku převodu obsahu z " . ($in['url'] === 'export' ? 'přiloženého exportu' : 'webu ' . $in['url']) . ".\n\n"
             . 'K úhradě: ' . pay_money($p) . ($iban !== '' ? "\nÚčet: " . pset('account') : '') . "\nVariabilní symbol: " . $p['vs']
             . "\n\nZálohovou fakturu s QR kódem pro platbu najdete po přihlášení do administrace webu:\n" . tenant_url($t, '/admin/predplatne/doklad/' . $p['id'])
             . "\n\nNa převodu začneme pracovat po připsání platby; obvykle je hotový do 5 pracovních dnů.\n\nDěkujeme.");
     }
     flash('Převod je objednán. Pustíme se do něj po připsání platby – údaje jsou níže.');
     redirect('/admin/predplatne#prevod');
+});
+$route('POST', '/admin/predplatne/zkouska-edice', function () {
+    require_admin();
+    $t = tenant_row(TENANT);
+    $edition = post('edition');
+    if ($why = edition_trial_start($t, $edition)) {
+        flash($why, 'info');
+        redirect('/admin/predplatne#edice');
+    }
+    audit('Předplatné: zkouška edice', EDITIONS[$edition] . ' na ' . PLAN_TRIAL_DAYS . ' dní');
+    flash('Edice ' . EDITIONS[$edition] . ' je zapnutá na zkoušku do ' . cz_date(date('Y-m-d', strtotime('+' . PLAN_TRIAL_DAYS . ' day'))) . '. Nic neplatíte; potom se web sám vrátí do své edice a vše, co zapíšete, zůstane uložené.');
+    redirect('/admin/predplatne#edice');
 });
 $route('POST', '/admin/predplatne/edice', function () {
     require_admin();
