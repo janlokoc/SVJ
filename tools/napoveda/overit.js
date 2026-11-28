@@ -1201,11 +1201,11 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     begin('katastr-a-rejstriky', 'Stránky Nahlížení do katastru nemovitostí jsme nemohli ověřit automaticky – web katastru strojové procházení blokuje. Dálkový přístup ČÚZK (WSDP), insolvenční rejstřík ani Centrální evidenci exekucí jsme se skutečnými účty nezkoušeli: místo nich odpovídaly zkušební služby podle zveřejněné dokumentace (vzorový výpis listu vlastnictví, vzorové odpovědi). Ověřeno je vše na straně webu.');
     {
       check(await navGroup(admin, '/admin/rejstriky') === 'Dům a lidé', 'Katastr a rejstříky v menu Dům a lidé');
+      edition('premium', true); await admin.goto(T + '/admin/rejstriky/katastr');
+      check(!(await admin.$('[name=lv]')), 'bez nastavení u provozovatele se sledování katastru nenabízí (zůstává v Připravujeme)');
+      setCfg('katastr', { user: 'WSZKOUSKA', password: 'zkouska', endpoint: FAKE + '/wsdp' }); setCfg('exekuce', { api_key: 'KEY', api_secret: 'SECRET', url: FAKE + '/cee' }); setCfg('isir', { url: FAKE + '/isir' });
       edition('standard'); await admin.goto(T + '/admin/rejstriky/katastr');
       check((await text(admin)).includes('Sledování katastru je součástí edice Premium'), 'jen edice Premium'); edition('premium', true);
-      await admin.reload();
-      check((await text(admin)).includes('Propojení s katastrem (dálkový přístup ČÚZK) zatím provozovatel nenastavil'), 'bez nastavení u provozovatele');
-      setCfg('katastr', { user: 'WSZKOUSKA', password: 'zkouska', endpoint: FAKE + '/wsdp' }); setCfg('exekuce', { api_key: 'KEY', api_secret: 'SECRET', url: FAKE + '/cee' }); setCfg('isir', { url: FAKE + '/isir' });
       await admin.reload();
       check((await text(admin, '.page-head')).includes('každých 30 dní'), 'kontrola každých 30 dní');
       await admin.fill('[name=ku]', '610372'); await admin.fill('[name=lv]', '4321'); await admin.click('form:has([value=target]) button');
