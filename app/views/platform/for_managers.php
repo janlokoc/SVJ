@@ -40,6 +40,7 @@ $contact = filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('cont
     </div>
   </div>
 </section>
+<?php require __DIR__ . '/_integrations.php'; ?>
 <section class="lpx-cta">
   <div class="wrap"><h2>Vyzkoušejte si portál na smyšlené firmě se třemi domy.</h2><?php if ($demoPortal): ?><a class="btn btn-big lpx-cta-btn" href="<?= e($demoPortal) ?>">Otevřít ukázku portálu</a><?php endif ?></div>
 </section>

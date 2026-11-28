@@ -900,6 +900,36 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       run('DELETE FROM ledger_docs'); run('DELETE FROM unit_accounts'); run('INSERT INTO unit_accounts SELECT * FROM ua_zaloha'); run('DROP TABLE ua_zaloha');
     }
 
+    // ---------- Kontrolní komise a napojení na programy (bez návodu – kontrola chování) ----------
+    begin('kontrolni-komise-a-napojeni', 'Funkce bez návodu v nápovědě; běh ověřuje chování.');
+    {
+      const kkHash = execFileSync('php', ['-r', 'echo password_hash("Navod-overeni-2027", PASSWORD_DEFAULT);']).toString();
+      run(`INSERT INTO users (name, email, role, kind, password_hash) VALUES ('Kamila Kontrolní', 'kontrola@example.cz', 'kontrola', 'owner', '${kkHash}')`);
+      const kk = await (await b.newContext({ viewport: { width: 1280, height: 900 }, locale: 'cs-CZ' })).newPage(); kk.setDefaultTimeout(10000);
+      await login(kk, 'kontrola@example.cz');
+      await kk.goto(T + '/admin/platby');
+      const kt = await text(kk);
+      check(kt.includes('kontrolní komise') && kt.includes('Platby na jednotku'), 'kontrolní komise otevře administraci s upozorněním jen pro čtení');
+      const before = sql('SELECT COUNT(*) FROM posts');
+      await kk.goto(T + '/admin/aktuality/nova').catch(() => {});
+      const hasForm = await kk.$('main form [name=title]');
+      if (hasForm) { await kk.fill('main form [name=title]', 'Pokus'); await kk.click('main form button[type=submit]'); }
+      check(sql('SELECT COUNT(*) FROM posts') === before && (!hasForm || (await text(kk)).includes('jen pro čtení')), 'odeslání formuláře v administraci se odmítne');
+      step('Člen kontrolní komise (role „Kontrolní komise“) otevřel administraci, vidí upozornění „jen pro čtení“; pokus o uložení aktuality byl odmítnut a nic se nezměnilo.');
+      await kk.context().close();
+      const pub = await b.newPage(); pub.setDefaultTimeout(10000);
+      await pub.goto(BASE + '/pro-spravce');
+      const pt = await text(pub, '#napojeni');
+      check(pt.includes('POHODA') && pt.includes('napojeno') && pt.includes('DOMUS') && pt.includes('pracujeme na tom'), 'na stránce Pro správce je přehled napojení');
+      await pub.selectOption('#napojeni [name=program]', 'other'); await pub.fill('#napojeni [name=other]', 'Programko 3000'); await pub.fill('#napojeni [name=what]', 'saldo vlastníků');
+      await pub.click('#napojeni button[type=submit]');
+      check((await pub.locator('.flash').allTextContents()).join(' ').includes('požadavek na napojení jsme zapsali'), 'požadavek odeslán');
+      await s.goto(BASE + '/sprava/zajem');
+      check((await text(s, '#napojeni')).includes('Programko 3000'), 'provozovatel vidí požadavek v konzoli (Zájem o funkce)');
+      step('Na stránce Pro správce domů je přehled napojení (POHODA napojeno, DOMUS a INTEGRI „pracujeme na tom“); návštěvník poslal požadavek na jiný program a provozovatel ho vidí v konzoli v Zájmu o funkce.');
+      await pub.close();
+    }
+
     // ---------- Plán oprav a fond oprav ----------
     begin('plan-oprav', 'Stav fondu oprav z účetnictví si správce přináší zvenku – běh použil smyšlenou částku.');
     {

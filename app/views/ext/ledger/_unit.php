@@ -4,7 +4,7 @@ $p = $acc['prescription']; ?>
 <div class="ledger">
   <?php if ($p && $p['items']): ?>
   <h3>Předpis záloh <small class="muted"><?= e(cz_date($p['doc_date'])) ?></small></h3>
-  <table class="table ledger-items"><tbody>
+  <table class="ledger-items"><tbody>
     <?php foreach ($p['items'] as [$label, $price]): ?><tr><td translate="no"><?= e($label) ?></td><td class="num"><?= $m($price) ?></td></tr><?php endforeach ?>
     <tr class="sum"><td>Celkem</td><td class="num"><?= $m($p['amount']) ?></td></tr>
   </tbody></table>

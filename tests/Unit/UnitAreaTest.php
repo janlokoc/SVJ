@@ -20,7 +20,7 @@ final class UnitAreaTest extends TestCase
         mkdir($dir, 0700, true);
         try {
             $pdo = open_database($dir, '');
-            $this->assertSame(17, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
+            $this->assertGreaterThanOrEqual(17, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
             $cols = array_column($pdo->query('PRAGMA table_info(units)')->fetchAll(PDO::FETCH_ASSOC), 'name');
             $this->assertContains('area', $cols);
         } finally {
@@ -40,7 +40,7 @@ final class UnitAreaTest extends TestCase
             $pdo->exec('PRAGMA user_version = 16');
             unset($pdo);
             $pdo = open_database($dir, '');
-            $this->assertSame(17, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
+            $this->assertGreaterThanOrEqual(17, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
             $row = $pdo->query("SELECT * FROM units WHERE entrance = 'Z' AND number = '99'")->fetch(PDO::FETCH_ASSOC);
             $this->assertSame(['4', '1/100'], [$row['floor'], $row['share']]);
             $this->assertArrayHasKey('area', $row);

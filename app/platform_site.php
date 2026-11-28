@@ -80,6 +80,12 @@ if ($PATH === '/zajem' && $METHOD === 'POST') {
     }
     redirect('/pripravujeme/' . $feature);
 }
+if ($PATH === '/napojeni' && $METHOD === 'POST') {
+    $err = post('website') !== '' ? null : integration_request_add(post('program'), post('other'), post('what'), trim(post('email')));
+    flash($err ?? 'Děkujeme, požadavek na napojení jsme zapsali. Podle počtu zájemců určujeme, na čem pracovat dřív.', $err ? 'error' : 'ok');
+    $back = (string) parse_url((string) ($_SERVER['HTTP_REFERER'] ?? ''), PHP_URL_PATH);
+    redirect((in_array($back, ['/pro-spravce', '/funkce'], true) ? $back : '/pro-spravce') . '#napojeni');
+}
 if ($METHOD === 'GET' && $PATH === '/ochrana-udaju') {
     render('platform/text', ['title' => 'Ochrana osobních údajů', 'body' => PLATFORM_PRIVACY, 'also' => ['/zpracovani-udaju', 'Smlouva o zpracování osobních údajů (pro weby společenství)']]);
     exit;

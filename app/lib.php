@@ -92,7 +92,17 @@ const VISIBILITY = ['public' => 'Veřejné', 'residents' => 'Jen pro přihláše
 const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
 const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
 const NO_PASSWORD = '!'; // účet čeká na přijetí pozvánky, přihlásit se zatím nejde
-const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu'];
+const ROLES = ['resident' => 'Obyvatel domu', 'admin' => 'Správce webu', 'kontrola' => 'Kontrolní komise (administrace jen pro čtení)'];
+/** Kontrolní komise (11/2026): vidí celou administraci, ale nic v ní nezmění (každé odeslání formuláře se odmítne). */
+function is_audit(): bool
+{
+    return (user()['role'] ?? '') === 'kontrola';
+}
+/** Smí přihlášený do administrace (správce, nebo kontrolní komise jen pro čtení)? */
+function can_view_admin(): bool
+{
+    return in_array(user()['role'] ?? '', ['admin', 'kontrola'], true);
+}
 /** Funkce ve společenství. Je vidět u jména všude na webu; s oprávněním na webu nesouvisí (to určuje role). */
 const POSITIONS = ['' => '– bez funkce –', 'predseda_svj' => 'Předseda společenství', 'predseda' => 'Předseda výboru', 'mistopredseda' => 'Místopředseda výboru', 'clen_vyboru' => 'Člen výboru',
     'predseda_kk' => 'Předseda kontrolní komise', 'clen_kk' => 'Člen kontrolní komise', 'spravce_domu' => 'Správce domu'];
@@ -170,6 +180,7 @@ function db_mysql(string $tenant): PDO
         schema_v15($pdo, true);
         schema_v16($pdo, true);
         schema_v17($pdo, true);
+        schema_v18($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -223,7 +234,33 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 17) {
         schema_v17($pdo, true);
     }
+    if ($mysqlVersion < 18) {
+        schema_v18($pdo, true);
+    }
     return $pdo;
+}
+/**
+ * Osmnáctá verze databáze: role „kontrolní komise“ (kontrola). SQLite: rozšíření omezení CHECK u users.role postupem
+ * z dokumentace SQLite (https://www.sqlite.org/lang_altertable.html#otheralter – úprava sqlite_schema, zvýšení
+ * schema_version, kontrola integrity); omezení je volnější, takže stávající data platí. MySQL omezení nemá.
+ */
+function schema_v18(PDO $pdo, bool $mysql): void
+{
+    if (!$mysql) {
+        $sql = (string) $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'")->fetchColumn();
+        $new = preg_replace("/CHECK\s*\(\s*role\s+IN\s*\('admin'\s*,\s*'resident'\)\s*\)/i", "CHECK (role IN ('admin','resident','kontrola'))", $sql);
+        if ($new !== null && $new !== $sql) {
+            $ver = (int) $pdo->query('PRAGMA schema_version')->fetchColumn();
+            $pdo->exec('PRAGMA writable_schema = ON');
+            $pdo->prepare("UPDATE sqlite_master SET sql = ? WHERE type = 'table' AND name = 'users'")->execute([$new]);
+            $pdo->exec('PRAGMA schema_version = ' . ($ver + 1));
+            $pdo->exec('PRAGMA writable_schema = OFF');
+            if ((string) $pdo->query('PRAGMA integrity_check')->fetchColumn() !== 'ok') {
+                throw new RuntimeException('Databáze po rozšíření rolí neprošla kontrolou integrity.');
+            }
+        }
+    }
+    $mysql ? $pdo->exec("UPDATE settings SET value = '18' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 18');
 }
 /** Sedmnáctá verze databáze: podlahová plocha jednotky v m² (nepovinná; NULL = nezadáno). */
 function schema_v17(PDO $pdo, bool $mysql): void
@@ -401,6 +438,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v15($pdo, false);
         schema_v16($pdo, false);
         schema_v17($pdo, false);
+        schema_v18($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -540,6 +578,9 @@ SQL);
     if ($version < 17) {
         schema_v17($pdo, false);
     }
+    if ($version < 18) {
+        schema_v18($pdo, false);
+    }
     return $pdo;
 }
 
@@ -558,7 +599,8 @@ function support_lock(bool $on): void
 function q(string $sql, array $params = []): PDOStatement
 {
     // Režim podpory: nic se nezapisuje. Výjimkou je jen zápis do záznamů o vstupu a odchodu podpory.
-    if (support_mode() && empty($GLOBALS['SUPPORT_AUDIT']) && preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP)\b/i', $sql)) {
+    // Kontrolní komise v administraci: stejný zámek (pojistka pro stránky, které by při zobrazení něco zapsaly).
+    if ((support_mode() || !empty($GLOBALS['AUDIT_READONLY'])) && empty($GLOBALS['SUPPORT_AUDIT']) && preg_match('/^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP)\b/i', $sql)) {
         return db()->query('SELECT 1 FROM (SELECT 1 AS x) t WHERE 1 = 0');
     }
     $st = db()->prepare(sql($sql));
@@ -932,6 +974,16 @@ function require_login(): array
 function require_admin(): array
 {
     $u = require_login();
+    // Kontrolní komise: jen prohlížení – stránky administrace (GET) ano, jakákoli změna (POST) ne.
+    if ($u['role'] === 'kontrola' && in_array($GLOBALS['METHOD'] ?? ($_SERVER['REQUEST_METHOD'] ?? 'GET'), ['GET', 'HEAD'], true)) {
+        $GLOBALS['AUDIT_READONLY'] = true;
+        return $u;
+    }
+    if ($u['role'] === 'kontrola') {
+        http_response_code(403);
+        render('error', ['title' => 'Jen pro čtení', 'message' => 'Kontrolní komise má do administrace přístup jen pro čtení – změny může udělat správce webu (výbor).']);
+        exit;
+    }
     if ($u['role'] !== 'admin') {
         http_response_code(403);
         render('error', ['title' => 'Přístup odepřen', 'message' => 'Tato část je určena jen správcům webu.']);

@@ -72,7 +72,7 @@ $billingNote = !is_admin() || $path === '/admin/predplatne' ? '' : match (true) 
     $billing['mode'] === 'paid' && $billing['days'] <= 14 => 'Předplatné edice ' . EDITIONS[$billing['edition']] . ' končí ' . cz_date($billing['until']) . '.',
     default => '',
 };
-$inAdmin = str_starts_with($path, '/admin') && is_admin();
+$inAdmin = str_starts_with($path, '/admin') && can_view_admin();
 // Hláška se zobrazí jen na skutečné stránce; požadavek prohlížeče na neexistující soubor (např. /favicon.ico) ji nesmí spotřebovat.
 $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : flash();
 ?>
@@ -120,7 +120,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
         <a class="search-link" href="<?= url('/hledat') ?>" title="Hledat na webu"><?= icon('search') ?><span>Hledat</span></a>
         <a class="report-link" href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open title="Napsat podpoře webu: problém s webem nebo nápad na zlepšení"><?= icon('flag') ?><span>Podpora webu</span></a>
         <?php if ($u): ?>
-          <?php if ($u['role'] === 'admin'): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>
+          <?php if (in_array($u['role'], ['admin', 'kontrola'], true)): ?><a class="btn btn-small btn-accent" href="<?= url('/admin') ?>">Administrace</a><?php endif ?>
           <a class="user-link" href="<?= url('/muj-ucet') ?>"><?= icon('user') ?><span class="user-id"><strong><?= e($u['name']) ?></strong><small><?= e(user_badge($u)) ?></small></span></a>
           <form method="post" action="<?= url('/odhlaseni') ?>"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Odhlásit</button></form>
         <?php else: ?>
@@ -186,6 +186,7 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
 <main id="obsah">
   <?php if (!empty($GLOBALS['PLAN_READONLY']) && is_admin()): $ro = PLAN_FEATURES[$GLOBALS['PLAN_READONLY']]; ?><div class="wrap"><div class="flash flash-info" translate="no">Zkouška funkce „<?= e($ro[1]) ?>“ skončila. Vše, co v ní je, zůstává uložené a viditelné, ale nejde nic přidat ani změnit. <a href="<?= url('/admin/predplatne') ?>#edice">Přejít na edici <?= e(EDITIONS[$ro[0]]) ?></a></div></div><?php endif ?>
   <?php if (is_admin() && plan_managed() && ($pt = plan_tenant()) && ($pt['delete_at'] ?? '') !== '' && $path !== '/admin/predplatne'): ?><div class="wrap"><div class="flash flash-error" translate="no">Tento web bude <strong>smazán <?= cz_date($pt['delete_at']) ?></strong> na žádost správce. <a href="<?= url('/admin/predplatne') ?>#zrusit">Zobrazit nebo vzít žádost zpět</a></div></div><?php endif ?>
+  <?php if ($inAdmin && is_audit()): ?><div class="wrap"><div class="flash flash-info audit-note">Jste v administraci jako <strong>kontrolní komise</strong> – vidíte vše, ale nic nezměníte. Tlačítka pro úpravy nefungují; změny dělá výbor.</div></div><?php endif ?>
   <?php if (is_admin() && setting('verify_pending') !== ''): ?><div class="wrap"><div class="flash flash-info" translate="no"><strong>Potvrďte e-mail.</strong> Dokud nekliknete na odkaz z e-mailu, který jsme poslali na <?= e(explode('|', setting('verify_pending') . '|')[1]) ?>, web vidíte jen Vy – návštěvníci uvidí „Web se připravuje“.
     <form method="post" action="<?= url('/overit-email/znovu') ?>" class="inline-form"><?= csrf_field() ?><button class="btn btn-small btn-ghost" type="submit">Poslat odkaz znovu</button></form></div></div><?php endif ?>
   <?php if ($billingNote !== ''): ?><div class="wrap"><div class="flash flash-info bill-note" translate="no"><?= e($billingNote) ?> <a href="<?= url('/admin/predplatne') ?>">Zobrazit platební údaje</a></div></div><?php endif ?>

@@ -2109,3 +2109,8 @@ tr.is-neg td { color: var(--accent); }
 .ledger h3 { margin: .8rem 0 .4rem; font-size: 1rem; }
 .ledger .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ledger-items .sum td { font-weight: 700; border-top: 2px solid var(--line); }
+/* Napojení na programy (veřejné stránky služby), 11/2026 */
+.integ-list li { margin-bottom: .5rem; }
+.integ-form { margin-top: 1.2rem; }
+.ledger-items { width: 100%; border-collapse: collapse; }
+.ledger-items td { padding: .4rem .2rem; border-bottom: 1px solid var(--line); }

@@ -139,6 +139,15 @@
     ],
     "note": "Postup v samotné POHODĚ (XML export) jsme neověřovali – cizí program; ověřen je import vzorového souboru podle dokumentace Stormware."
   },
+  "kontrolni-komise-a-napojeni": {
+    "date": "2026-11-28",
+    "checks": 5,
+    "steps": [
+      "Člen kontrolní komise (role „Kontrolní komise“) otevřel administraci, vidí upozornění „jen pro čtení“; pokus o uložení aktuality byl odmítnut a nic se nezměnilo.",
+      "Na stránce Pro správce domů je přehled napojení (POHODA napojeno, DOMUS a INTEGRI „pracujeme na tom“); návštěvník poslal požadavek na jiný program a provozovatel ho vidí v konzoli v Zájmu o funkce."
+    ],
+    "note": "Funkce bez návodu v nápovědě; běh ověřuje chování."
+  },
   "plan-oprav": {
     "date": "2026-11-28",
     "checks": 9,

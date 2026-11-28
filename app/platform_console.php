@@ -824,6 +824,8 @@ if ($PATH === '/zajem') {
     $days = in_array((int) ($_GET['dni'] ?? 0), [7, 30, 90], true) ? (int) $_GET['dni'] : 0;
     render('platform/interest', ['title' => 'Zájem o funkce', 'trials' => pq('SELECT feature, COUNT(*) AS n, SUM(ends >= ?) AS running FROM feature_trials GROUP BY feature ORDER BY n DESC', [date('Y-m-d')])->fetchAll(), 'stats' => feature_stats($days), 'days' => $days,
         'rows' => pq("SELECT i.*, t.name AS tenant_name FROM feature_interest i LEFT JOIN tenants t ON t.slug = i.tenant ORDER BY i.id DESC LIMIT 300")->fetchAll(),
+        'integ' => pq('SELECT * FROM integration_requests ORDER BY id DESC LIMIT 300')->fetchAll(),
+        'integCount' => pq("SELECT CASE WHEN program = 'other' THEN 'other:' || lower(other) ELSE program END AS k, COUNT(*) AS n FROM integration_requests GROUP BY k ORDER BY n DESC")->fetchAll(),
         'tenantViews' => pq("SELECT v.feature, v.tenant, t.name AS tenant_name, COUNT(*) AS n, MAX(v.at) AS last FROM feature_views v LEFT JOIN tenants t ON t.slug = v.tenant WHERE v.tenant <> '' GROUP BY v.feature, v.tenant ORDER BY last DESC LIMIT 200")->fetchAll()]);
     exit;
 }

@@ -47,7 +47,7 @@ function tenant_address(string $slug): string
     return platform_main_paths() ? platform_main_domain() . '/' . $slug : $slug . '.' . platform_main_domain();
 }
 /** První části adresy, které na hlavní doméně patří platformě, a nemohou proto být adresou společenství. */
-const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost', 'sso'];
+const PLATFORM_PATHS = ['ochrana-udaju', 'funkce', 'vzhled', 'pripravujeme', 'napojeni', 'zajem', 'domena-povolena', 'sprava', 'registrace', 'podminky', 'zpracovani-udaju', 'hlaseni', 'assets', 'storage', 'app', 'tools', 'index', 'favicon', 'robots', 'sitemap', 'kontakt', 'cenik', 'api', 'static', 'cron', 'zaloha', 'partner', 'pro-spravce', 'srovnani', 'mesicni-informace-o-spotrebe', 'bezpecnost', 'sso'];
 function platform_enabled(): bool
 {
     return platform_domain() !== '';
@@ -281,6 +281,11 @@ SQL);
     if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 30) {
         // Shromáždění online je v ceně edice Standard i Premium – dřívější výchozí cena 490 Kč (uložená z konzole) se ruší.
         $pdo->exec("DELETE FROM platform_settings WHERE key = 'price_online_meeting' AND value = '490'; PRAGMA user_version = 30;");
+    }
+    if ((int) $pdo->query('PRAGMA user_version')->fetchColumn() < 31) {
+        // Požadavky na napojení na programy správy domů a účetnictví (formulář na webu služby a v administraci domu).
+        $pdo->exec("CREATE TABLE integration_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, program TEXT NOT NULL, other TEXT NOT NULL DEFAULT '', what TEXT NOT NULL DEFAULT '',
+            contact TEXT NOT NULL DEFAULT '', tenant TEXT NOT NULL DEFAULT '', at TEXT NOT NULL, ip TEXT NOT NULL DEFAULT ''); PRAGMA user_version = 31;");
     }
     return $pdo;
 }
@@ -2027,6 +2032,38 @@ function feature_stats(int $days = 0): array
     return $out;
 }
 /** Zapíše zájem; od jednoho společenství (nebo z jedné adresy) se každá funkce počítá jednou. Vrací, zda šlo o nový hlas. */
+/**
+ * Napojení na programy správy domů a účetnictví (11/2026): stav pro veřejné stránky a sběr požadavků na další.
+ * 'done' = hotové, 'work' = pracujeme na tom. Ostatní programy se jen sbírají (integration_requests).
+ */
+const INTEGRATIONS = [
+    'pohoda' => ['POHODA (Stormware)', 'done', 'Konto bytu z XML exportu: předpis záloh po položkách, pohledávky a platby; export předpisů a plateb do POHODY.'],
+    'money' => ['Money S3', 'done', 'Export adresáře, předpisů a plateb (XML).'],
+    'flexi' => ['ABRA Flexi', 'done', 'Export adresáře, předpisů a plateb (XML).'],
+    'csv' => ['Excel / CSV', 'done', 'Import jednotek, předpisů a stavů účtů s přiřazením sloupců; export do CSV.'],
+    'domus' => ['DOMUS (ANASOFT)', 'work', 'Pracujeme na napojení.'],
+    'integri' => ['INTEGRI G5', 'work', 'Pracujeme na napojení.'],
+];
+const INTEGRATION_ASK = ['domus' => 'DOMUS', 'integri' => 'INTEGRI G5', 'domsys' => 'DOMSYS', 'ides' => 'IDES', 'mecom' => 'MECOM', 'money' => 'Money S3 (import)', 'flexi' => 'ABRA Flexi (import)', 'helios' => 'Helios', 'other' => 'Jiný program'];
+/** Uloží požadavek na napojení. Vrací chybu, nebo null. Omezení: 5 požadavků za den z jedné adresy. */
+function integration_request_add(string $program, string $other, string $what, string $contact, string $tenant = ''): ?string
+{
+    if (!isset(INTEGRATION_ASK[$program])) {
+        return 'Vyberte program.';
+    }
+    if ($program === 'other' && trim($other) === '') {
+        return 'Napište, o jaký program jde.';
+    }
+    if ($contact !== '' && !filter_var($contact, FILTER_VALIDATE_EMAIL)) {
+        return 'E-mail nemá správný tvar (nebo ho nechte prázdný).';
+    }
+    if ((int) pq('SELECT COUNT(*) FROM integration_requests WHERE ip = ? AND at >= ?', [client_ip(), date('Y-m-d H:i:s', time() - 86400)])->fetchColumn() >= 5) {
+        return 'Z Vaší adresy jsme dnes už několik požadavků přijali, děkujeme.';
+    }
+    pq('INSERT INTO integration_requests (program, other, what, contact, tenant, at, ip) VALUES (?,?,?,?,?,?,?)',
+        [$program, mb_substr(trim($other), 0, 100), mb_substr(trim($what), 0, 1000), mb_substr($contact, 0, 190), $tenant, date('Y-m-d H:i:s'), client_ip()]);
+    return null;
+}
 function interest_add(string $feature, string $tenant, string $contact): bool
 {
     if (!isset(PLANNED_FEATURES[$feature])) {

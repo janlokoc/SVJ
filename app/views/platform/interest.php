@@ -25,4 +25,13 @@
     <?php foreach ($rows as $r): ?><tr><td data-label="Kdy"><?= cz_datetime($r['at']) ?></td><td data-label="Funkce"><?= e(PLANNED_FEATURES[$r['feature']][0] ?? $r['feature']) ?></td>
       <td data-label="Kdo"><?= $r['tenant'] !== '' ? e($r['tenant_name'] ?? $r['tenant']) : '<span class="muted">návštěvník</span>' ?></td><td data-label="Kontakt"><?= e($r['contact']) ?></td></tr><?php endforeach ?>
   </tbody></table><?php endif ?>
+  <section id="napojeni">
+  <h2>Požadavky na napojení na programy</h2>
+  <p class="hint">Z formuláře „Chybí Vám napojení na Váš program?“ na stránkách Pro správce domů a Funkce.</p>
+  <?php if (!($integ ?? [])): ?><p class="empty">Zatím žádné.</p><?php else: ?>
+  <p><?php foreach ($integCount as $c): ?><span class="tag"><?= e(str_starts_with($c['k'], 'other:') ? substr($c['k'], 6) : (INTEGRATION_ASK[$c['k']] ?? $c['k'])) ?>: <?= (int) $c['n'] ?></span> <?php endforeach ?></p>
+  <table class="table"><thead><tr><th>Kdy</th><th>Program</th><th>Co potřebují</th><th>Kontakt</th></tr></thead><tbody>
+    <?php foreach ($integ as $r): ?><tr><td data-label="Kdy"><?= cz_datetime($r['at']) ?></td><td data-label="Program"><?= e($r['program'] === 'other' ? $r['other'] : (INTEGRATION_ASK[$r['program']] ?? $r['program'])) ?></td><td data-label="Co potřebují"><?= e($r['what']) ?></td><td data-label="Kontakt"><?= e($r['contact']) ?></td></tr><?php endforeach ?>
+  </tbody></table><?php endif ?>
+  </section>
 </div>
