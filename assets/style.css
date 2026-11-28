@@ -2189,3 +2189,5 @@ tr.is-neg td { color: var(--accent); }
 .nowrap { white-space: nowrap; }
 .api-edit { margin-top: .4rem; }
 .api-edit summary { cursor: pointer; font-size: .9rem; }
+.cal-feed { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.cal-feed summary { cursor: pointer; font-weight: 600; }

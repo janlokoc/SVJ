@@ -1,8 +1,6 @@
 <div class="wrap page">
   <header class="page-head row"><h1>Termíny</h1><a class="btn" href="<?= url('/admin/terminy/novy') ?>">+ Nový termín</a></header>
   <p class="hint">Nejbližší budoucí termín se zobrazuje na úvodní stránce.</p>
-  <form method="post" action="<?= url('/admin/terminy/novy-odkaz-kalendare') ?>" class="inline-form" data-confirm="Vytvořit novou adresu odběru? Všem, kdo mají kalendář domu přidaný v telefonu nebo Outlooku, přestane fungovat a musí si ho přidat znovu."><?= csrf_field() ?>
-    <p class="hint">Odběr kalendáře domu (stránka Termíny pro obyvatele) má tajnou adresu. Když se někdo odstěhuje, můžete ji vyměnit: <button class="btn btn-small btn-ghost" type="submit">Vytvořit novou adresu odběru</button></p></form>
   <?php if (!$events): ?><p class="empty">Žádný termín.</p><?php else: ?>
   <table class="table">
     <thead><tr><th>Název</th><th>Datum</th><th>Čas</th><th>Místo</th><th></th></tr></thead>
@@ -18,4 +16,10 @@
     </tbody>
   </table>
   <?php endif ?>
+  <details class="cal-feed">
+    <summary>Odběr kalendáře domu</summary>
+    <p class="hint">Obyvatelé si termíny mohou přidat do telefonu nebo Outlooku (stránka Termíny pro obyvatele). Adresa odběru je tajná – když se někdo odstěhuje, vytvořte novou. Dosavadní odběry pak přestanou fungovat a obyvatelé si kalendář přidají znovu.</p>
+    <form method="post" action="<?= url('/admin/terminy/novy-odkaz-kalendare') ?>" data-confirm="Vytvořit novou adresu odběru? Všem, kdo mají kalendář domu přidaný v telefonu nebo Outlooku, přestane fungovat a musí si ho přidat znovu."><?= csrf_field() ?>
+      <button class="btn btn-small btn-ghost" type="submit">Vytvořit novou adresu odběru</button></form>
+  </details>
 </div>
