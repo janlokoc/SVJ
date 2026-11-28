@@ -1151,9 +1151,10 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
     begin('propojeni-banky', 'Přihlášení do internetového bankovnictví a souhlas na webu banky jsme ověřit nemohli – jde o cizí weby a skutečný účet. Místo poskytovatele bankovních dat (GoCardless) odpovídala zkušební služba podle jeho zveřejněné dokumentace a místo banky zkušební stránka, která rovnou vrátila zpět na web. Ověřeno je vše na straně webu.');
     {
       await admin.goto(T + '/admin/platby');
-      await admin.click('#banka .psd2-panel a:has-text("Propojit účet u ČS, KB, ČSOB a dalších bank")');
-      check((await text(admin)).includes('Propojení s bankami zatím provozovatel služby nenastavil'), 'bez nastavení u provozovatele: hláška místo seznamu bank');
+      check(!(await admin.$('#banka .psd2-panel a:has-text("Propojit účet")')), 'bez nastavení u provozovatele se propojení nenabízí (zůstává v Připravujeme)');
       setCfg('bank', { gocardless_id: 'zkouska', gocardless_key: 'zkouska', gocardless_url: FAKE + '/gc' });
+      await admin.reload();
+      await admin.click('#banka .psd2-panel a:has-text("Propojit účet u ČS, KB, ČSOB a dalších bank")');
       gc.tx = [
         { transactionId: 'CS-1', bookingDate: today, transactionAmount: { amount: '3000.00', currency: 'CZK' }, debtorName: 'Tomáš Dvořák', endToEndId: '/VS4803/SS/KS0308', remittanceInformationUnstructured: 'Zaloha' },
         { transactionId: 'CS-2', bookingDate: today, transactionAmount: { amount: '1200.00', currency: 'CZK' }, debtorName: 'Eva Svobodová', remittanceInformationUnstructured: 'zaloha byt 4' },
@@ -1228,6 +1229,7 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       check((await flash(admin)).includes('Osoba se bude hlídat'), 'osoba přidána');
       const m0 = mailLen();
       await admin.click('#osoby button:has-text("Zkontrolovat teď")');
+      check((await text(admin, '#osoby tr:has-text("Dvořák")')).includes('1980') && !(await text(admin, '#osoby')).includes('12. 5. 1980'), 'v tabulce jen rok narození');
       check(await admin.locator('#osoby .flash').count() === 1 && (await flash(admin)).includes('Nalezená řízení: 1') && (await text(admin, '#osoby')).includes('27 INS 1234/2026'), 'řízení nalezeno, hlášení přímo v části Fyzické osoby: ' + await flash(admin));
       check(mailsSince(m0, who.admin).some((m) => m.subject.startsWith('Insolvence vlastníka jednotky') && m.body.includes('dvou měsíců')), 'e-mail správcům o insolvenci');
       step('Insolvence vlastníků → Fyzické osoby: po výběru jednotky web nabídl jejího vlastníka (z katastru, případně uživatele webu u jednotky) – klepnutím se doplnilo příjmení a jméno; ručně jen datum narození (rodné číslo se nezadává), „Hlídat“. „Zkontrolovat teď“ našlo řízení, výsledek se ukázal přímo v části Fyzické osoby a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.');

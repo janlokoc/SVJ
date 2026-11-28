@@ -18,12 +18,12 @@ foreach ($rejUnits as $ru) {
   <p class="hint">Údaje vidí jen správci webu a slouží jen k ochraně pohledávek společenství (oprávněný zájem SVJ). Rodné číslo se nezadává ani neukládá. Když se v katastru převezme nový vlastník jednotky, údaje bývalého vlastníka se smažou. <?= help_link('katastr-a-rejstriky', 'Ochrana osobních údajů') ?></p>
   <?php if ($rejPersons): ?>
   <table class="table">
-    <thead><tr><th>Jednotka</th><th>Vlastník</th><th>Datum narození</th><th>Insolvenční rejstřík</th><th></th></tr></thead>
+    <thead><tr><th>Jednotka</th><th>Vlastník</th><th>Narozen(a)</th><th>Insolvenční rejstřík</th><th></th></tr></thead>
     <tbody><?php foreach ($rejPersons as $p): $found = (array) json_decode((string) $p['isir_found'], true); ?>
       <tr<?= $found ? ' class="is-unmatched"' : '' ?>>
         <td data-label="Jednotka"><strong><?= $p['number'] !== null ? e(unit_name($p)) : '–' ?></strong></td>
         <td data-label="Vlastník"><?= e(trim($p['surname'] . ' ' . $p['first_name'])) ?></td>
-        <td data-label="Narození"><?= e(cz_date($p['birth_date'])) ?></td>
+        <td data-label="Narozen(a)" title="Celé datum je uložené jen pro dotaz do rejstříku. Při překlepu osobu smažte a zadejte znovu."><?= e(substr((string) $p['birth_date'], 0, 4)) ?></td>
         <td data-label="Rejstřík"><?php if ($p['isir_checked'] === ''): ?><span class="muted">zatím neověřeno</span>
           <?php elseif (!$found): ?><span class="status status-done">bez řízení</span> <small class="muted"><?= e($p['isir_checked']) ?></small>
           <?php else: foreach ($found as $f): ?><strong><?= e($f['sz']) ?></strong><?= $f['state'] !== '' ? ' · ' . e($f['state']) : '' ?><?= $f['url'] !== '' ? ' · <a href="' . e($f['url']) . '" target="_blank" rel="noopener noreferrer">detail</a>' : '' ?><br><?php endforeach ?><small class="muted"><?= e($p['isir_checked']) ?></small><?php endif ?></td>

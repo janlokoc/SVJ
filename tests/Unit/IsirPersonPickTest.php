@@ -37,7 +37,7 @@ final class IsirPersonPickTest extends TestCase
         [$a, $b] = [(int) $this->units[0]['id'], (int) $this->units[1]['id']];
         q('UPDATE units SET owner_note = ? WHERE id = ?', ['SJM Bílý Jan a Ing. Bílá Anna (1/2); Stavby Novák s.r.o.', $a]);
         q('UPDATE units SET owner_note = ? WHERE id = ?', ['', $b]);
-        $u = one('SELECT id, name FROM users WHERE active = 1 ORDER BY id LIMIT 1');
+        $u = one("SELECT id, name FROM users WHERE active = 1 AND kind = 'owner' ORDER BY id LIMIT 1");
         $this->uid = (int) $u['id'];
         q('DELETE FROM user_units WHERE unit_id = ? AND user_id = ?', [$b, $this->uid]);
         q('INSERT INTO user_units (user_id, unit_id) VALUES (?, ?)', [$this->uid, $b]);
@@ -45,8 +45,34 @@ final class IsirPersonPickTest extends TestCase
         $this->assertSame([['surname' => 'Bílý', 'first' => 'Jan'], ['surname' => 'Bílá', 'first' => 'Anna']], array_slice($people[$a], 0, 2), 'bez titulů a bez firmy');
         $words = preg_split('/\s+/u', trim((string) $u['name']));
         $this->assertContains(['surname' => (string) end($words), 'first' => implode(' ', array_slice($words, 0, -1))], $people[$b], 'uživatel přiřazený k jednotce');
+        $t = one("SELECT id, name FROM users WHERE active = 1 AND kind = 'tenant' ORDER BY id LIMIT 1");
+        if ($t) {
+            q('INSERT INTO user_units (user_id, unit_id) VALUES (?, ?)', [(int) $t['id'], $b]);
+            $tw = preg_split('/\s+/u', trim((string) $t['name']));
+            $this->assertNotContains(['surname' => (string) end($tw), 'first' => implode(' ', array_slice($tw, 0, -1))], rej_unit_people()[$b] ?? [], 'nájemce se nenabízí');
+            q('DELETE FROM user_units WHERE user_id = ? AND unit_id = ?', [(int) $t['id'], $b]);
+        }
         rej_person_add($a, 'Bílý', 'Jan', '1970-05-01', 1);
+        $html = $this->personsView();
+        $this->assertStringContainsString('>1970</td>', $html, 'v tabulce jen rok narození');
+        $this->assertStringNotContainsString('1. 5. 1970', $html);
         $this->assertNotContains(['surname' => 'Bílý', 'first' => 'Jan'], rej_unit_people()[$a], 'už hlídaný se znovu nenabízí');
+    }
+
+    private function personsView(): string
+    {
+        $this->loginAs('admin');
+        if (!function_exists('help_link')) {
+            $route = function (): void {};
+            require_once dirname(__DIR__, 2) . '/app/routes_help.php';
+        }
+        ob_start();
+        try {
+            require dirname(__DIR__, 2) . '/app/views/ext/rejstriky/isir_persons.php';
+        } finally {
+            $html = (string) ob_get_clean();
+        }
+        return $html;
     }
 
     public function testViewWiring(): void

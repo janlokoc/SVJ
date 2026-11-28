@@ -53,7 +53,7 @@ function rej_owner_people(string $note): array
 }
 /**
  * Lidé u jednotek k rychlému výběru při přidání hlídané osoby: vlastníci z katastru (owner_note) a uživatelé webu
- * přiřazení k jednotce. [unit_id => [['surname', 'first'], …]] bez duplicit a bez těch, kdo se už u jednotky hlídají.
+ * s rolí vlastník přiřazení k jednotce. [unit_id => [['surname', 'first'], …]] bez duplicit a bez těch, kdo se už u jednotky hlídají.
  */
 function rej_unit_people(): array
 {
@@ -77,8 +77,9 @@ function rej_unit_people(): array
             $add((int) $u['id'], $rp['surname'], $rp['first']);
         }
     }
-    // Uživatelé webu mají jméno ve tvaru „Jméno Příjmení“ (tituly se vynechají).
-    foreach (all('SELECT uu.unit_id, u.name FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 ORDER BY u.name') as $r) {
+    // Uživatelé webu – jen vlastníci (nájemce není dlužníkem společenství, hlídat ho nemá SVJ důvod).
+    // Jméno mají ve tvaru „Jméno Příjmení“ (tituly se vynechají).
+    foreach (all("SELECT uu.unit_id, u.name FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 AND u.kind = 'owner' ORDER BY u.name") as $r) {
         $name = trim(preg_replace('/\b(Ing|Mgr|Bc|JUDr|MUDr|MVDr|PhDr|RNDr|PaedDr|doc|prof|CSc|Ph\.D|DiS|MBA)\.?(?=\s|,|$)/u', '', explode(',', (string) $r['name'])[0]));
         $words = preg_split('/\s+/u', $name, -1, PREG_SPLIT_NO_EMPTY);
         if (count($words) >= 2) {
