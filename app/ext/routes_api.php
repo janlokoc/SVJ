@@ -191,6 +191,14 @@ $route('POST', '/api/v1/documents', function () use ($apiAuth, $apiDone) {
     [$id, $created] = $r;
     $apiDone($created ? 201 : 200, ['ok' => true, 'id' => $id, 'created' => $created], ($created ? 'dokument nový ' : 'dokument upraven ') . $id);
 });
+$route('PUT', '/api/v1/maintenance', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $apiAuth('maintenance:write');
+    if (function_exists('plan_has') && !plan_has('revize')) {
+        $apiDone(402, ['ok' => false, 'error' => 'Hlídání revizí je součástí edice Standard a Premium.']);
+    }
+    [$new, $upd, $err] = api_maintenance_save($apiRows($apiJson(), 'items'));
+    $apiDone(200, ['ok' => true, 'created' => $new, 'updated' => $upd, 'errors' => array_slice($err, 0, 100)], "revize: nových $new, upravených $upd");
+});
 // Starší aktuality ze starého webu: s datem v minulosti a bez upozornění obyvatelům; upsert podle ext_id.
 $route('PUT', '/api/v1/posts', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
     $apiAuth('posts:write');

@@ -85,6 +85,7 @@ const CATEGORIES = [
     'oznameni' => 'Oznámení',
     'nabidky' => 'Nabídky a projekty',
     'formulare' => 'Formuláře',
+    'technicke' => 'Revize a technická dokumentace',   // revizní zprávy, PENB, návody k zařízením (11/2026)
 ];
 const CONTACT_GROUPS = ['vybor' => 'Výbor SVJ', 'sprava' => 'Správa a účetnictví', 'havarie' => 'Havarijní servis'];
 const TICKET_STATUS = ['new' => 'Nová', 'in_progress' => 'Řeší se', 'done' => 'Vyřešeno'];

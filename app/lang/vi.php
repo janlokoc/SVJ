@@ -60,6 +60,7 @@ return [
     'Pozvánky' => 'Giấy mời',
     'Oznámení' => 'Thông báo',
     'Nabídky a projekty' => 'Báo giá và dự án',
+    'Revize a technická dokumentace' => 'Kiểm định và tài liệu kỹ thuật',
     'Formuláře' => 'Biểu mẫu',
     'Rok #' => 'Năm #',
     'Další dokumenty (#) jsou dostupné jen přihlášeným obyvatelům domu.' => 'Các tài liệu khác (#) chỉ dành cho cư dân đã đăng nhập.',

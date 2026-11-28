@@ -49,6 +49,7 @@ $contact = filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('cont
     <li><code>POST /api/v1/documents</code> (<code>documents:write</code>) – jeden soubor: <code>multipart/form-data</code> s polem <code>file</code>, nebo JSON <code>{"filename", "content_base64"}</code>; dále <code>title</code>, <code>category</code> (<?= e(implode(', ', array_keys(CATEGORIES))) ?>), <code>date</code>, <code>visibility</code>, <code>unit</code>, <code>ext_id</code>.</li>
     <li><code>PUT /api/v1/events</code> (<code>events:write</code>) – termíny <code>{"ext_id", "title", "date", "time", "place", "note"}</code>.</li>
     <li><code>PUT /api/v1/contacts</code> (<code>contacts:write</code>) – kontakty <code>{"ext_id", "group": "vybor"|"sprava"|"havarie", "role", "name", "phone", "email"}</code>.</li>
+    <li><code>PUT /api/v1/maintenance</code> (<code>maintenance:write</code>) – revize a kontroly do Hlídání revizí <code>{"ext_id", "title", "contractor", "last_date", "interval_months", "next_date"}</code>; příští termín se dopočítá z posledního a intervalu.</li>
     <li><code>PUT /api/v1/posts</code> (<code>posts:write</code>) – starší aktuality s datem <code>{"ext_id", "title", "body", "published_at", "visibility"}</code>, bez upozornění.</li>
   </ul>
   <pre class="code-sample">curl -H "Authorization: Bearer swk_…" -F file=@stanovy.pdf -F title="Stanovy SVJ" \

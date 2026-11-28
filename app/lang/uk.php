@@ -60,6 +60,7 @@ return [
     'Pozvánky' => 'Запрошення',
     'Oznámení' => 'Оголошення',
     'Nabídky a projekty' => 'Пропозиції та проєкти',
+    'Revize a technická dokumentace' => 'Ревізії та технічна документація',
     'Formuláře' => 'Форми',
     'Rok #' => 'Рік #',
     'Další dokumenty (#) jsou dostupné jen přihlášeným obyvatelům domu.' => 'Інші документи (#) доступні лише зареєстрованим мешканцям будинку.',

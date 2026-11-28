@@ -27,6 +27,7 @@ const API_SCOPES = [
     'events:write' => 'Zapisovat termíny (shromáždění, odečty, revize…)',
     'contacts:write' => 'Zapisovat kontakty (výbor, správa, havarijní služby)',
     'people:write' => 'Zakládat účty obyvatel a přiřazovat je k jednotkám (osobní údaje; pozvánky se neposílají)',
+    'maintenance:write' => 'Zapisovat revize a kontroly (co, kdo, naposledy, interval, příští termín) do Hlídání revizí',
 ];
 const API_FAIL_LIMIT = 10;
 $GLOBALS['EXT_ADMIN_NAV']['/admin/api'] = ['API a napojení', 'Správa webu'];
@@ -491,6 +492,44 @@ function api_people_save(array $rows): array
     return [$new, $linked, $err];
 }
 
+/** Revize a kontroly (Hlídání revizí): upsert podle ext_id, jinak podle názvu. Příští termín se dopočítá z posledního a intervalu. */
+function api_maintenance_save(array $rows): array
+{
+    $new = $upd = 0;
+    $err = [];
+    foreach (array_slice($rows, 0, 500) as $i => $r) {
+        $title = mb_substr(trim((string) ($r['title'] ?? '')), 0, 200);
+        $last = substr((string) ($r['last_date'] ?? ''), 0, 10);
+        $next = substr((string) ($r['next_date'] ?? ''), 0, 10);
+        $int = (int) ($r['interval_months'] ?? 0);
+        $e = match (true) {
+            !is_array($r) || $title === '' => 'Chybí název (title)',
+            $last !== '' && !valid_date($last) => 'Neplatné datum posledního provedení (last_date)',
+            $next !== '' && !valid_date($next) => 'Neplatný příští termín (next_date)',
+            $int < 0 || $int > 240 => 'Interval (interval_months) musí být 0–240 měsíců',
+            default => '',
+        };
+        if ($e !== '') {
+            $err[] = ['row' => $i + 1, 'error' => $e];
+            continue;
+        }
+        if ($next === '' && $last !== '' && $int > 0) {
+            $next = date('Y-m-d', strtotime($last . ' +' . $int . ' months'));
+        }
+        $args = [$title, mb_substr((string) ($r['contractor'] ?? ''), 0, 200), $last ?: null, $int, $next ?: null, mb_substr((string) ($r['note'] ?? ''), 0, 500)];
+        $ext = api_ext($r);
+        $id = api_ref('maintenance', $ext, 'maintenance') ?: ($ext === '' ? (int) val('SELECT id FROM maintenance WHERE title = ?', [$title]) : 0);
+        if ($id) {
+            q('UPDATE maintenance SET title = ?, contractor = ?, last_date = ?, interval_months = ?, next_date = ?, note = ?, reminded_for = NULL WHERE id = ?', [...$args, $id]);
+            $upd++;
+        } else {
+            q('INSERT INTO maintenance (title, contractor, last_date, interval_months, next_date, note) VALUES (?,?,?,?,?,?)', $args);
+            api_ref_save('maintenance', $ext, (int) db()->lastInsertId());
+            $new++;
+        }
+    }
+    return [$new, $upd, $err];
+}
 /** Starší aktuality (převod): datum published_at, bez upozornění obyvatelům; upsert podle ext_id. */
 function api_posts_import(array $rows): array
 {
@@ -532,21 +571,26 @@ function api_prompts(): array
 {
     $house = site('name');
     $mcp = absolute_url('/mcp');
-    $safe = "\n\nPravidla: nic nemaž; obyvatelům nic neposílej; osobní údaje (jména, e-maily, telefony) převáděj jen tam, kde o to výslovně žádám; u každého záznamu vyplň ext_id podle původního zdroje, aby opakování nic nezdvojilo. Na konci mi napiš, co jsi převedl a co ne (a proč).";
+    // Pravidla, podle kterých asistent rozhoduje sám – správce se nemusí na nic ptát (11/2026).
+    $rules = "\n\nRozhoduj sám podle těchto pravidel a na nic se mě neptej; sporné případy rozhodni podle nich a vypiš je na konci:\n"
+        . "- Viditelnost: dokumenty a aktuality s osobními údaji (jména vlastníků, seznamy, zápisy ze shromáždění, vyúčtování, smlouvy s cenami) jen pro přihlášené (visibility residents); ostatní veřejně (public).\n"
+        . "- Kategorie dokumentů: stanovy a smlouvy (zakladni), pozvánky (pozvanky), zápisy (zapisy), účetní závěrky (uzaverky), revizní a technické zprávy, PENB, návody k zařízením (technicke), nabídky a projekty (nabidky), formuláře (formulare), ostatní (oznameni).\n"
+        . "- Texty aktualit vyčisti od zbytků webu (menu, patičky, „číst dál“), obsah neměň.\n"
+        . "- Revize a kontroly s datem (plyn, elektro, hromosvod, hydranty, hasicí přístroje, komíny, výtahy…) zapiš nástrojem import_maintenance (naposledy provedeno, interval v měsících nebo příští termín) – web pak termín hlídá. Do termínů (events) je nedávej.\n"
+        . "- Co v podkladech chybí (např. kontakty na výbor nebo havarijní linky), nevymýšlej – jen to uveď v závěrečném přehledu.\n"
+        . "- Nic nemaž, obyvatelům nic neposílej, u každého záznamu vyplň ext_id podle původního zdroje (opakování nic nezdvojí).\n"
+        . "- Na konci napiš přehled: co jsi převedl (počty), co ne a proč, a co mám doplnit ručně.";
     return [
-        ['Převod starého webu', ['documents:write', 'posts:write', 'events:write', 'contacts:write'],
-            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Převeď prosím obsah našeho starého webu [ADRESA STARÉHO WEBU] do nového webu:\n"
-            . "1. Projdi starý web a sepiš mi, co na něm je (aktuality, dokumenty, kontakty, termíny) – než začneš, ukaž mi seznam ke schválení.\n"
-            . "2. Aktuality převeď nástrojem import_posts s původním datem zveřejnění.\n3. Dokumenty (PDF, Word, Excel) stáhni a nahraj nástrojem upload_document; zařaď je do kategorie (stanovy a smlouvy, pozvánky, zápisy, účetní závěrky, oznámení, nabídky, formuláře) a dokumenty s osobními údaji (zápisy, seznamy vlastníků) nastav jen pro přihlášené (visibility residents).\n"
-            . "4. Kontakty na výbor, správce a havarijní služby převeď nástrojem import_contacts.\n5. Budoucí termíny převeď nástrojem import_events." . $safe],
-        ['Převod z exportu portálu správce (např. INTEGRI, DOMUS)', ['units:write', 'people:write', 'documents:write', 'contacts:write'],
-            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Přikládám export z portálu naší správcovské firmy. Převeď ho prosím do nového webu:\n"
-            . "1. Nejdřív mi popiš, co export obsahuje (jednotky, vlastníci, nájemníci, dokumenty, kontakty) a jak to namapuješ.\n2. Jednotky (vchod, číslo, patro, podíl, plocha) nahraj nástrojem import_units.\n"
-            . "3. Vlastníky a nájemníky s e-mailem nahraj nástrojem import_people a přiřaď je k jednotkám (nájemníka jen k jednotce, která má vlastníka). Pozvánky se neposílají – pošleme je sami.\n"
-            . "4. Dokumenty nahraj nástrojem upload_document (dokumenty jedné jednotky s polem unit), kontakty nástrojem import_contacts." . $safe],
+        ['Převod starého webu', ['documents:write', 'posts:write', 'events:write', 'contacts:write', 'maintenance:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Převeď obsah našeho starého webu [ADRESA STARÉHO WEBU] do nového webu: "
+            . "aktuality nástrojem import_posts s původním datem, dokumenty (PDF, Word, Excel) stáhni a nahraj nástrojem upload_document, kontakty nástrojem import_contacts, budoucí termíny (shromáždění, odečty, úklid) nástrojem import_events a revize nástrojem import_maintenance." . $rules],
+        ['Převod z exportu portálu správce (např. INTEGRI, DOMUS)', ['units:write', 'people:write', 'documents:write', 'contacts:write', 'maintenance:write'],
+            "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Přikládám export z portálu naší správcovské firmy. Převeď ho do nového webu: "
+            . "jednotky (vchod, číslo, patro, podíl, plocha) nástrojem import_units; vlastníky a nájemníky s e-mailem nástrojem import_people přiřazené k jednotkám (nájemníka jen k jednotce s vlastníkem; pozvánky se neposílají); "
+            . "dokumenty nástrojem upload_document (dokument jedné jednotky s polem unit); kontakty na správce a dodavatele nástrojem import_contacts; revize nástrojem import_maintenance." . $rules],
         ['Jednotky a obyvatelé z tabulky', ['units:write', 'people:write'],
             "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Přikládám tabulku (Excel/CSV) s jednotkami a jejich vlastníky a nájemníky. "
-            . "Zjisti, který sloupec je co, ukaž mi mapování ke schválení a pak nahraj jednotky nástrojem import_units a lidi nástrojem import_people (přiřazené k jednotkám). Telefony zapiš s předvolbou +420. Řádky, které nejdou zpracovat, mi vypiš." . $safe],
+            . "Sám urči, který sloupec je co, nahraj jednotky nástrojem import_units a lidi nástrojem import_people (přiřazené k jednotkám, telefony s předvolbou +420). Řádky, které nejdou zpracovat, vypiš na konci." . $rules],
         ['Podklady pro schůzi výboru', ['units:read', 'tickets:read', 'ledger:read'],
             "Jsi připojený k webu našeho společenství „{$house}“ přes MCP server {$mcp}. Připrav mi podklady pro schůzi výboru: přehled domu (house_overview), otevřené závady a ty po termínu (list_tickets), "
             . "jednotky s nedoplatkem a celkovou výši (list_debtors). Shrň to na jednu stránku s návrhem, co projednat. Nic na webu neměň."],
@@ -584,6 +628,8 @@ function api_mcp_tools(array $key): array
             'inputSchema' => ['type' => 'object', 'required' => ['posts'], 'properties' => ['posts' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
         ['name' => 'import_people', 'scope' => 'people:write', 'title' => 'Převod: účty obyvatel', 'description' => 'Založí účty obyvatel {name, email, phone, kind owner|tenant, units ["A/12"]} bez pozvánek. Osobní údaje – jen na pokyn správce.',
             'inputSchema' => ['type' => 'object', 'required' => ['people'], 'properties' => ['people' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'import_maintenance', 'scope' => 'maintenance:write', 'title' => 'Převod: revize a kontroly', 'description' => 'Zapíše revize do Hlídání revizí {ext_id, title, contractor, last_date, interval_months, next_date, note}; web pak termín hlídá a upozorní předem.',
+            'inputSchema' => ['type' => 'object', 'required' => ['items'], 'properties' => ['items' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
         ['name' => 'upload_document', 'scope' => 'documents:write', 'title' => 'Převod: dokument', 'description' => 'Nahraje jeden dokument {filename, content_base64, title, category, date, visibility, unit, ext_id}. Větší soubory raději přes REST /api/v1/documents.',
             'inputSchema' => ['type' => 'object', 'required' => ['filename', 'content_base64'], 'properties' => ['filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string'], 'title' => ['type' => 'string'], 'category' => ['type' => 'string', 'enum' => array_keys(CATEGORIES)],
                 'date' => ['type' => 'string'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']], 'unit' => ['type' => 'string'], 'ext_id' => ['type' => 'string']]]],
@@ -637,6 +683,12 @@ function api_mcp_call(array $key, string $name, array $a): array
             [$n, $l, $e] = api_people_save((array) ($a['people'] ?? []));
             audit('users_imported', 'AI asistent (' . $key['name'] . "): nových účtů $n – pozvánky neodeslány");
             return $text(['created' => $n, 'linked' => $l, 'invites_sent' => 0, 'errors' => $e]);
+        case 'import_maintenance':
+            if (function_exists('plan_has') && !plan_has('revize')) {
+                return $text('Hlídání revizí není v edici tohoto webu (od edice Standard).', true);
+            }
+            [$n, $u, $e] = api_maintenance_save((array) ($a['items'] ?? []));
+            return $text(['created' => $n, 'updated' => $u, 'errors' => $e]);
         case 'upload_document':
             $data = base64_decode((string) ($a['content_base64'] ?? ''), true);
             if ($data === false || $data === '') {
@@ -724,6 +776,7 @@ function api_openapi(): array
             '/events' => ['put' => ['summary' => 'Převod: termíny – upsert podle ext_id', 'x-scope' => 'events:write', 'requestBody' => $body('EventIn'), 'responses' => $saved]],
             '/contacts' => ['put' => ['summary' => 'Převod: kontakty – upsert podle ext_id (jinak skupina + jméno)', 'x-scope' => 'contacts:write', 'requestBody' => $body('ContactIn'), 'responses' => $saved]],
             '/people' => ['post' => ['summary' => 'Převod: účty obyvatel s jednotkami; pozvánky se neposílají', 'x-scope' => 'people:write', 'requestBody' => $body('PersonIn'), 'responses' => $saved]],
+            '/maintenance' => ['put' => ['summary' => 'Převod: revize a kontroly do Hlídání revizí – upsert podle ext_id (jinak názvu)', 'x-scope' => 'maintenance:write', 'requestBody' => $body('MaintenanceIn'), 'responses' => $saved]],
             '/documents' => ['post' => ['summary' => 'Převod: jeden dokument (multipart pole file, nebo JSON content_base64); upsert podle ext_id', 'x-scope' => 'documents:write',
                 'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['$ref' => '#/components/schemas/DocumentIn']], 'application/json' => ['schema' => ['$ref' => '#/components/schemas/DocumentIn']]]], 'responses' => $saved]],
         ],
@@ -749,6 +802,7 @@ function api_openapi(): array
                 'PersonIn' => ['type' => 'object', 'required' => ['name', 'email'], 'properties' => ['name' => ['type' => 'string'], 'email' => ['type' => 'string'], 'phone' => ['type' => 'string'], 'kind' => ['type' => 'string', 'enum' => ['owner', 'tenant']], 'units' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'označení jednotek, např. A/12']]],
                 'DocumentIn' => ['type' => 'object', 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'category' => ['type' => 'string', 'enum' => array_keys(CATEGORIES)], 'date' => ['type' => 'string', 'format' => 'date'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']], 'unit' => ['type' => 'string', 'description' => 'dokument jedné jednotky (vždy jen pro obyvatele)'],
                     'file' => ['type' => 'string', 'format' => 'binary'], 'filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string']]],
+                'MaintenanceIn' => ['type' => 'object', 'required' => ['title'], 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'contractor' => ['type' => 'string'], 'last_date' => ['type' => 'string', 'format' => 'date'], 'interval_months' => ['type' => 'integer'], 'next_date' => ['type' => 'string', 'format' => 'date'], 'note' => ['type' => 'string']]],
                 'PostIn' => ['type' => 'object', 'required' => ['title', 'body', 'published_at'], 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'body' => ['type' => 'string'], 'published_at' => ['type' => 'string', 'format' => 'date'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']]]],
             ],
         ],

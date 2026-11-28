@@ -94,9 +94,24 @@ final class ApiImportTest extends TestCase
         q('DELETE FROM users WHERE email LIKE ?', ['%.' . $this->tag . '@example.org']);
     }
 
+    public function testMaintenanceAndTechnicalCategory(): void
+    {
+        $t = 'Revize plynu ' . $this->tag;
+        [$n, $u, $e] = api_maintenance_save([['ext_id' => 'm-' . $this->tag, 'title' => $t, 'contractor' => 'Plyn s.r.o.', 'last_date' => '2024-05-14', 'interval_months' => 36], ['title' => ''], ['title' => 'x', 'next_date' => '14. 5.']]);
+        $this->assertSame([1, 0], [$n, $u]);
+        $this->assertCount(2, $e);
+        $this->assertSame('2027-05-14', (string) val('SELECT next_date FROM maintenance WHERE title = ?', [$t]), 'příští termín z posledního a intervalu');
+        $this->assertSame(1, api_maintenance_save([['ext_id' => 'm-' . $this->tag, 'title' => $t, 'next_date' => '2027-06-01']])[1]);
+        q('DELETE FROM maintenance WHERE title = ?', [$t]);
+        $this->assertArrayHasKey('technicke', CATEGORIES, 'revizní zprávy, PENB a návody mají vlastní kategorii');
+        foreach (['en', 'sk', 'uk', 'vi'] as $l) {
+            $this->assertArrayHasKey(CATEGORIES['technicke'], require dirname(__DIR__, 2) . "/app/lang/$l.php", $l);
+        }
+    }
+
     public function testScopesToolsAndRoutes(): void
     {
-        foreach (['units:write', 'documents:write', 'events:write', 'contacts:write', 'people:write'] as $s) {
+        foreach (['units:write', 'documents:write', 'events:write', 'contacts:write', 'people:write', 'maintenance:write'] as $s) {
             $this->assertArrayHasKey($s, API_SCOPES);
         }
         $tools = array_column(api_mcp_tools(['scope_list' => ['events:write', 'documents:write']]), 'name');
@@ -104,7 +119,7 @@ final class ApiImportTest extends TestCase
         $o = api_openapi();
         $this->assertArrayHasKey('put', $o['paths']['/units']);
         $this->assertArrayHasKey('put', $o['paths']['/posts']);
-        foreach (['/events', '/contacts', '/people', '/documents'] as $p) {
+        foreach (['/events', '/contacts', '/people', '/documents', '/maintenance'] as $p) {
             $this->assertArrayHasKey($p, $o['paths']);
         }
         $r = (string) file_get_contents(dirname(__DIR__, 2) . '/app/ext/routes_api.php');
