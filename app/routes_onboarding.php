@@ -40,7 +40,7 @@ function onboarding_steps(): array
             '/admin/nastaveni', 'Zkontrolovat text', false, true],
         'zastup' => ['start', 'Zástup správce', 'Druhý účet správce se hodí při dovolené nebo nemoci. Web nesmí stát na jednom člověku.',
             '/admin/uzivatele', 'Přidat správce', $n("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1") > 1, false],
-        'oznameni' => ['start', 'Dát vědět sousedům', 'Až je web připravený, pošlete všem e-mail s adresou webu a vyvěste ji na nástěnku ve vchodu.',
+        'oznameni' => ['start', 'Dát vědět sousedům', 'Až je web připravený, pošlete všem e-mail s adresou webu a vyvěste ji na nástěnku ve vchodu. Teprve potom začne obyvatelům chodit týdenní přehled.',
             '/admin/zpravy/nova', 'Napsat e-mail', $n('SELECT COUNT(*) FROM mailings') > 0, true],
     ];
     // Edice Zdarma: vzhled se nenastavuje a druhého správce edice nedovolí – takové kroky se nenabízejí.

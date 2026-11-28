@@ -179,6 +179,32 @@ final class ModADigestTest extends TestCase
         $this->assertSame([], $this->mails());
     }
 
+    /** Nově založený web nic nerozesílá, dokud ho správce neoznámí sousedům prvním hromadným e-mailem. */
+    public function testNothingIsSentBeforeTheHouseIsAnnounced(): void
+    {
+        $week = setting('digest_week');
+        $mailings = all('SELECT * FROM mailings');
+        moda_setting('digest_week', '');
+        q('DELETE FROM mailings');
+        try {
+            q('INSERT INTO events (title, event_date) VALUES (?,?)', ['Revize výtahu', date('Y-m-d', time() + 86400)]);
+            $this->assertFalse(digest_house_launched());
+            $this->assertNull(digest_daily(true));
+            $this->assertSame([], $this->mails(), 'žádné „Vítejte na novém webu“ hned po registraci');
+            q("INSERT INTO mailings (subject, body, audience) VALUES ('Máme nový web', 'Adresa webu…', 'all')");
+            $this->assertTrue(digest_house_launched());
+            $this->assertIsArray(digest_daily(true));
+            q('DELETE FROM mailings');
+            $this->assertTrue(digest_house_launched(), 'dům, kterému přehled už chodil, pokračuje');
+        } finally {
+            q('DELETE FROM mailings');
+            foreach ($mailings as $m) {
+                q('INSERT INTO mailings (' . implode(',', array_keys($m)) . ') VALUES (' . implode(',', array_fill(0, count($m), '?')) . ')', array_values($m));
+            }
+            moda_setting('digest_week', $week);
+        }
+    }
+
     public function testDailyTasksHookIsWired(): void
     {
         $this->assertStringContainsString("if (function_exists('digest_daily')) digest_daily();", (string) file_get_contents(dirname(__DIR__, 2) . '/app/extra_lib.php'));

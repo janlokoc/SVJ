@@ -198,6 +198,15 @@ function digest_house_on(): bool
     return setting('digest_off') !== '1';
 }
 
+/**
+ * Je web už oznámený sousedům? Do té doby přehled neodchází (11/2026): nově založený web by jinak hned poslal
+ * „Vítejte na novém webu“ dřív, než ho správce připraví. Oznámením je první hromadný e-mail z webu
+ * (krok „Dát vědět sousedům“); domy, kterým přehled už chodil, pokračují beze změny.
+ */
+function digest_house_launched(): bool
+{
+    return setting('digest_week') !== '' || (int) val('SELECT COUNT(*) FROM mailings') > 0;
+}
 /** Obsah přehledu pro jednoho uživatele od data $since (Y-m-d H:i:s). Prázdné části se vynechají. */
 function digest_for(array $u, string $since): array
 {
@@ -329,7 +338,7 @@ function digest_send_all(string $since): array
 function digest_daily(bool $force = false): ?array
 {
     try {
-        if (!moda_mail_ready() || !digest_house_on()) {
+        if (!moda_mail_ready() || !digest_house_on() || !digest_house_launched()) {
             return null;
         }
         if (function_exists('plan_tenant') && ($t = plan_tenant()) && !empty($t['demo'])) {
