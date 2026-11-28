@@ -607,6 +607,11 @@ $route('POST', '/admin/nastaveni', function () {
         if ($k === 'site_look' && !isset(LOOKS[$v])) {
             $v = 'les';
         }
+        // Prémiovou šablonu a barvu jde uložit jen v Premium nebo při běžící zkoušce – dřív šla „vybrat do zásoby“
+        // a správce nevěděl, že web vypadá jinak, než zvolil (11/2026).
+        if (plan_managed() && !plan_has('vzhledy-plus') && (($k === 'site_style' && in_array($v, PREMIUM_STYLES, true)) || ($k === 'site_look' && in_array($v, PREMIUM_LOOKS, true)))) {
+            $v = $k === 'site_style' ? site_style_used() : site_look_used();
+        }
         if ($k === 'site_lang' && !isset(LANGS[$v])) {
             $v = 'cs';
         }
