@@ -2006,7 +2006,7 @@ function planned_features(bool $public = false): array
     foreach (PLANNED_FEATURES as $key => $f) {
         $live = false;
         foreach (PLANNED_BETA[$key] ?? [] as $b) {
-            if (function_exists('beta_stage') && ($public ? beta_stage($b) !== 'off' : beta_visible($b))) {
+            if (function_exists('beta_stage') && ($public ? beta_stage($b) === 'on' : beta_visible($b))) {
                 $live = true;
             }
         }

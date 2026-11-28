@@ -360,6 +360,12 @@ legend { font-weight: 700; padding-inline: .4rem; }
 .footer-grid p { margin: .35rem 0 0; }
 .footer-links { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; margin: 0; padding: 0; align-items: center; }
 .footer-links a { font-weight: 600; }
+.footer-cols { display: grid; grid-template-columns: repeat(3, minmax(10rem, 1fr)); gap: 1.5rem 2.5rem; flex: 1 1 32rem; max-width: 52rem; }
+.footer-head { font: 600 .8rem var(--font); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .5rem; }
+.footer-cols ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.footer-cols a { font-weight: 600; }
+.footer-bottom { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+@media (max-width: 640px) { .footer-cols { grid-template-columns: 1fr 1fr; } }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media print { .site-header, .admin-nav, .site-footer, .btn, .chips, .doc-filter { display: none !important; } body { background: #fff; } }

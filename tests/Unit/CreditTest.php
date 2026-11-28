@@ -385,7 +385,9 @@ final class CreditTest extends TestCase
         $html = str_replace("\u{a0}", ' ', (string) ob_get_clean());
         $this->assertStringContainsString('Služby z kreditu a doplňky', $html);
         $this->assertMatchesRegularExpression('~Lustrace v Centrální evidenci exekucí</strong><br>~', $html, 'spuštěná funkce bez štítku');
-        $this->assertMatchesRegularExpression('~Ověření hlasu přes Bank iD</strong> <span class="tag">připravujeme</span>~', $html);
+        $this->assertMatchesRegularExpression('~Hlasování s ověřením přes Bank iD</strong> <span class="tag">připravujeme</span>~', $html);
+        $this->assertMatchesRegularExpression('~Sledování změn v katastru</strong> <span class="tag">připravujeme</span>~', $html, 'beta se veřejně ukazuje jako připravujeme');
+        $this->assertStringNotContainsString('tag-beta', $html);
         $this->assertStringContainsString('99 Kč', $html);
         $this->assertStringNotContainsString('119,79 Kč', $html, 'only prices without VAT');
         $this->assertStringNotContainsString('s DPH', $html);

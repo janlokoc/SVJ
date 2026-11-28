@@ -33,6 +33,7 @@ const PLAN_FEATURES = [
     'push' => ['standard', 'Upozornění do telefonu', 'Nové aktuality, zprávy od výboru a sousedů, změny u závad a měsíční spotřeba přímo na displej telefonu – web přidaný na plochu funguje jako aplikace.', null],
     'odecty' => ['standard', 'Odečty měřidel', 'Dálkové odečty od odečtové firmy (import i automatický příjem), měsíční spotřeba pro obyvatele a ruční samoodečty ostatních měřidel.', '~^/(admin/)?odecty(/|$)~'],
     'rezervace' => ['premium', 'Rezervace', 'Rezervace společenské místnosti, sušárny nebo parkovacího místa.', '~^/(admin/)?(rezervace|prostory)(/|$)~'],
+    'api' => ['standard', 'API a napojení', 'Napojení dodavatelů (odečtová firma, účetní program, správce) a AI asistentů přes API a MCP.', '~^/admin/api(/|$)~'],
     'revize' => ['standard', 'Revize', 'Hlídání termínů revizí a kontrol s upozorněním předem.', '~^/admin/revize(/|$)~'],
     'klice' => ['standard', 'Klíče a čipy', 'Evidence, kdo má který klíč a čip.', '~^/admin/klice(/|$)~'],
     'ukoly' => ['standard', 'Úkoly a usnesení', 'Co kdo slíbil zařídit a do kdy – úkoly z jednání výboru a shromáždění.', '~^/admin/ukoly(/|$)~'],
@@ -240,7 +241,7 @@ const BETA_FEATURES = [
     'katastr' => ['Sledování změn v katastru (WSDP ČÚZK, placené)', '/admin/rejstriky/katastr', ''],
     'exekuce' => ['Lustrace v Centrální evidenci exekucí (placené)', '/admin/rejstriky/exekuce', ''],
     'sso' => ['Přihlášení přes Google, Microsoft, Apple a Facebook', '/muj-ucet#sso', ''],
-    'bankid' => ['Ověření hlasu přes Bank iD (hlasování mimo zasedání)', '/admin/hlasovani', ''],
+    'bankid' => ['Hlasování s ověřením přes Bank iD (per rollam)', '/admin/hlasovani', ''],
 ];
 const BETA_STAGES = ['off' => 'vypnuto', 'beta' => 'beta – jen Premium', 'on' => 'spuštěno'];
 

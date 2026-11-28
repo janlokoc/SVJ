@@ -21,7 +21,7 @@ declare(strict_types=1);
  * Daňový režim kreditu (jednoúčelový poukaz, DPH při platbě) musí potvrdit účetní – viz UKOLY-PROVOZOVATELE.md.
  */
 
-const CREDIT_KINDS = ['topup' => 'Dobití', 'sms' => 'SMS zprávy', 'exekuce' => 'Lustrace exekucí', 'bankid' => 'Ověření hlasu přes Bank iD', 'online' => 'Shromáždění online',
+const CREDIT_KINDS = ['topup' => 'Dobití', 'sms' => 'SMS zprávy', 'exekuce' => 'Lustrace exekucí', 'bankid' => 'Hlasování s ověřením přes Bank iD', 'online' => 'Shromáždění online',
     'refund' => 'Vrácení zůstatku', 'fix' => 'Oprava', 'expire' => 'Propadnutí po době platnosti', 'migrate' => 'Převod dosavadního SMS kreditu'];
 /** Služby, které čerpají kredit (souhrn spotřeby). */
 const CREDIT_SERVICES = ['sms', 'exekuce', 'bankid', 'online'];
@@ -501,7 +501,7 @@ function credit_price_list(): array
     $rows = [
         ['key' => 'sms', 'name' => 'SMS zpráva', 'desc' => 'Naléhavá oznámení vlastníkům a kódy pro potvrzení hlasu.' . ($free ? ' V edici Premium ' . $free . ' SMS ročně v ceně.' : ''), 'h' => $sms, 'unit' => 'za každou odeslanou SMS, z kreditu', 'credit' => true],
         ['key' => 'exekuce', 'name' => 'Lustrace v Centrální evidenci exekucí', 'desc' => 'Na kliknutí výboru, platí se jen úspěšný dotaz.', 'h' => (function_exists('rej_price') ? rej_price('rej_price_exekuce') : 99) * 100, 'unit' => 'za každý dotaz, z kreditu', 'credit' => true],
-        ['key' => 'bankid', 'name' => 'Ověření hlasu přes Bank iD', 'desc' => 'Hlasování mimo zasedání s ověřením totožnosti přes banku.', 'h' => credit_setting('bankid_price') * 100, 'unit' => 'za každý ověřený hlas, z kreditu', 'credit' => true],
+        ['key' => 'bankid', 'name' => 'Hlasování s ověřením přes Bank iD', 'desc' => 'Hlasování mimo zasedání (per rollam), kde vlastník potvrdí svou totožnost přihlášením do banky.', 'h' => credit_setting('bankid_price') * 100, 'unit' => 'za každého ověřeného hlasujícího, z kreditu', 'credit' => true],
     ];
     if (function_exists('rej_katastr_year_price')) {
         $rows[] = ['key' => 'katastr', 'name' => 'Sledování změn v katastru', 'desc' => 'Edice Premium. Kontrola listu vlastnictví každých ' . max(1, rej_price('rej_katastr_days')) . ' dní; každý další LV '

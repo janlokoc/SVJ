@@ -20,7 +20,7 @@ const ROLLAM_CODE_TTL = 600;
 const ROLLAM_CODE_ATTEMPTS = 5;
 const ROLLAM_CODE_SENDS = 3;
 /** Hláška vlastníkovi, když kredit domu nestačí na ověření přes Bank iD. */
-const ROLLAM_BANKID_NO_CREDIT = 'Ověření hlasu přes Bank iD je dočasně nedostupné: společenství nemá předplacený kredit na tuto službu. Výbor jsme upozornili, aby kredit dobil – zkuste to prosím později, nebo se obraťte na výbor (můžete hlasovat i listinně).';
+const ROLLAM_BANKID_NO_CREDIT = 'Ověření totožnosti přes Bank iD je dočasně nedostupné: společenství nemá předplacený kredit na tuto službu. Výbor jsme upozornili, aby kredit dobil – zkuste to prosím později, nebo se obraťte na výbor (můžete hlasovat i listinně).';
 
 function rollam_ready(?PDO $pdo = null): void
 {

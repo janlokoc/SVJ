@@ -44,19 +44,25 @@
       <strong class="footer-title"><?= e($service) ?></strong>
       <?php $op = operator(); if ($op['name'] !== ''): ?><p><?= e($op['name']) ?><?= $op['address'] !== '' ? ', ' . e($op['address']) : '' ?><?= $op['ico'] !== '' ? '<br>IČO ' . e($op['ico']) : '' ?><?= $op['phone'] !== '' ? ' · ' . e($op['phone']) : '' ?></p><?php endif ?>
     </div>
-    <ul class="footer-links">
-      <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
-      <li><a href="<?= url('/registrace') ?>">Založit web</a></li>
-      <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
-      <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
-      <li><a href="<?= url('/zpracovani-udaju') ?>">Smlouva o zpracování údajů</a></li>
-      <li><a href="<?= url('/bezpecnost') ?>">Bezpečnost a ochrana dat</a></li>
-      <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
-      <li><a href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open>Nahlásit problém nebo nápad</a></li>
-      <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li>
-      <li><?= theme_switch() ?></li>
-    </ul>
+    <nav class="footer-cols" aria-label="Patička">
+      <div><h2 class="footer-head">Služba</h2><ul>
+        <li><a href="<?= url('/funkce') ?>">Funkce</a></li>
+        <li><a href="<?= url('/cenik') ?>">Ceník</a></li>
+        <li><a href="<?= url('/pro-spravce') ?>">Pro správcovské firmy</a></li>
+        <li><a href="<?= url('/cenik') ?>#pripravujeme">Připravujeme</a></li>
+        <li><a href="<?= url('/registrace') ?>">Založit web</a></li></ul></div>
+      <div><h2 class="footer-head">Smlouvy a bezpečnost</h2><ul>
+        <li><a href="<?= url('/podminky') ?>">Obchodní podmínky</a></li>
+        <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
+        <li><a href="<?= url('/zpracovani-udaju') ?>">Smlouva o zpracování údajů</a></li>
+        <li><a href="<?= url('/bezpecnost') ?>">Bezpečnost a ochrana dat</a></li></ul></div>
+      <div><h2 class="footer-head">Kontakt a podpora</h2><ul>
+        <?php if (pset('contact_email') !== ''): ?><li><a href="mailto:<?= e(pset('contact_email')) ?>"><?= e(pset('contact_email')) ?></a></li><?php endif ?>
+        <li><a href="<?= url('/hlaseni') ?>?z=<?= e(rawurlencode(report_back($GLOBALS['PATH'] ?? '/'))) ?>" data-report-open>Nahlásit problém nebo nápad</a></li>
+        <li><a href="<?= url('/sprava') ?>" rel="nofollow">Správa platformy</a></li></ul></div>
+    </nav>
   </div>
+  <div class="wrap footer-bottom"><?= theme_switch() ?></div>
 </footer>
 <?php require __DIR__ . '/../reports/_widget.php'; ?>
 </body>
