@@ -1273,4 +1273,6 @@ return [
     ', z toho po splatnosti' => ', trong đó quá hạn',
     'Vše je uhrazeno.' => 'Đã thanh toán đầy đủ.',
     'po splatnosti' => 'quá hạn',
+    'Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem. Do té doby si web v klidu připravte – nikomu nic neodchází.' => 'Bản tổng hợp sẽ bắt đầu được gửi khi bạn thông báo trang web cho hàng xóm bằng e-mail hàng loạt đầu tiên. Trước đó, hãy chuẩn bị trang web – không ai nhận được gì.',
+    'Napsat e-mail sousedům' => 'Viết e-mail cho hàng xóm',
 ];

@@ -15,7 +15,7 @@ $dgOn = digest_enabled($u); ?>
           <label class="check"><input type="radio" name="house" value="off"<?= digest_house_on() ? '' : ' checked' ?>> <span>Nerozesílat nikomu</span></label>
         </fieldset>
       <?php endif ?>
-      <?php if ($u['role'] === 'admin' && !digest_house_launched()): ?><p class="hint">Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem (<a href="<?= url('/admin/zpravy/nova') ?>">Zprávy → Nová zpráva</a>). Do té doby si web v klidu připravte – nikomu nic neodchází.</p><?php endif ?>
+      <?php if ($u['role'] === 'admin' && !digest_house_launched()): ?><p class="hint">Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem. Do té doby si web v klidu připravte – nikomu nic neodchází. <a href="<?= url('/admin/zpravy/nova') ?>">Napsat e-mail sousedům</a></p><?php endif ?>
       <?php if (!moda_mail_ready()): ?><p class="hint">Web zatím neumí posílat e-maily (chybí adresa odesílatele v Nastavení), proto přehled zatím neodchází.</p><?php endif ?>
       <button class="btn" type="submit">Uložit</button>
     </form>

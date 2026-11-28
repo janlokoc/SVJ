@@ -1273,4 +1273,6 @@ return [
     ', z toho po splatnosti' => ', з них прострочено',
     'Vše je uhrazeno.' => 'Усе сплачено.',
     'po splatnosti' => 'прострочено',
+    'Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem. Do té doby si web v klidu připravte – nikomu nic neodchází.' => 'Огляд почне надходити, щойно ви оголосите сайт сусідам першим масовим листом. До того часу спокійно підготуйте сайт – нікому нічого не надсилається.',
+    'Napsat e-mail sousedům' => 'Написати лист сусідам',
 ];

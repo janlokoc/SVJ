@@ -1273,4 +1273,6 @@ return [
     ', z toho po splatnosti' => ', of which overdue',
     'Vše je uhrazeno.' => 'Everything is paid.',
     'po splatnosti' => 'overdue',
+    'Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem. Do té doby si web v klidu připravte – nikomu nic neodchází.' => 'The summary will start once you announce the website to your neighbours with the first bulk e-mail. Until then, prepare the website in peace – nothing is sent to anyone.',
+    'Napsat e-mail sousedům' => 'Write an e-mail to neighbours',
 ];

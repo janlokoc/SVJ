@@ -1273,4 +1273,6 @@ return [
     ', z toho po splatnosti' => ', z toho po splatnosti',
     'Vše je uhrazeno.' => 'Všetko je uhradené.',
     'po splatnosti' => 'po splatnosti',
+    'Přehled začne chodit, až web oznámíte sousedům prvním hromadným e-mailem. Do té doby si web v klidu připravte – nikomu nic neodchází.' => 'Prehľad začne chodiť, až web oznámite susedom prvým hromadným e-mailom. Dovtedy si web v pokoji pripravte – nikomu nič neodchádza.',
+    'Napsat e-mail sousedům' => 'Napísať e-mail susedom',
 ];
