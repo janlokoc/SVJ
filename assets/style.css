@@ -368,7 +368,9 @@ legend { font-weight: 700; padding-inline: .4rem; }
 .ref-promo h3 { margin: 0 0 .35rem; }
 .ref-promo p { margin: 0; max-width: 46rem; }
 .ref-steps { display: grid; gap: .9rem; padding-left: 1.4rem; max-width: 48rem; }
-.footer-bottom { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.footer-bottom { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; }
+.footer-cols-2 { grid-template-columns: repeat(2, minmax(10rem, 1fr)); max-width: 36rem; }
+.footer-cols .powered { font-size: .9rem; }
 @media (max-width: 640px) { .footer-cols { grid-template-columns: 1fr 1fr; } }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }

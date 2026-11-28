@@ -201,23 +201,27 @@ $flash = http_response_code() >= 400 && http_response_code() !== 422 ? null : fl
   <div class="wrap footer-grid">
     <div>
       <strong class="footer-title"><?= e(site('full')) ?></strong>
-      <p><?= e(setting('address')) ?><br>IČ <?= e(setting('ico')) ?> · účet <?= e(setting('account')) ?></p>
+      <?php $fAddr = setting('address'); $fIco = setting('ico'); $fAcc = setting('account'); ?>
+      <?php if ($fAddr !== '' || $fIco !== '' || $fAcc !== ''): ?><p><?= e($fAddr) ?><?= $fAddr !== '' && ($fIco !== '' || $fAcc !== '') ? '<br>' : '' ?><?= $fIco !== '' ? 'IČ ' . e($fIco) : '' ?><?= $fIco !== '' && $fAcc !== '' ? ' · ' : '' ?><?= $fAcc !== '' ? 'účet ' . e($fAcc) : '' ?></p><?php endif ?>
       <?php if (function_exists('partner_brand') && ($pb = partner_brand())): ?>
       <p class="partner-brand" translate="no"><?php if ($pb['logo'] !== ''): ?><img src="<?= e($pb['logo']) ?>" alt="" class="partner-brand-logo"><?php endif ?>
         <span>Dům spravuje <strong><?= $pb['web'] !== '' ? '<a href="' . e($pb['web']) . '" rel="noopener" target="_blank">' . e($pb['name']) . '</a>' : e($pb['name']) ?></strong><?= $pb['phone'] !== '' ? '<br><a href="' . e(tel_href($pb['phone'])) . '">' . e($pb['phone']) . '</a>' : '' ?><?= $pb['email'] !== '' ? ($pb['phone'] !== '' ? ' · ' : '<br>') . '<a href="mailto:' . e($pb['email']) . '">' . e($pb['email']) . '</a>' : '' ?></span></p>
       <?php endif ?>
     </div>
-    <ul class="footer-links">
-      <li><a href="<?= url('/aktuality') ?>">Aktuality</a></li>
-      <li><a href="<?= url('/dokumenty') ?>">Dokumenty</a></li>
-      <li><a href="<?= url('/kontakty') ?>">Kontakty</a></li>
-      <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
-      <?php if ($u): ?><li><a href="<?= url('/hlaseni') ?>#moje">Moje hlášení</a></li><?php endif ?>
-      <?php if (plan_managed() && plan_edition() === 'free'): ?><li class="powered">Web běží zdarma na <a href="<?= e(platform_url()) ?>"><?= e(pset('service_name')) ?></a></li><?php endif ?>
-      <li><?= theme_switch() ?></li>
-      <?php if (plan_has('jazyky')): ?><li class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></li><?php endif ?>
-      <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
-    </ul>
+    <nav class="footer-cols footer-cols-2" aria-label="Patička">
+      <div><h2 class="footer-head">Na webu</h2><ul>
+        <?php if (feature_on('aktuality')): ?><li><a href="<?= url('/aktuality') ?>">Aktuality</a></li><?php endif ?>
+        <?php if (feature_on('dokumenty')): ?><li><a href="<?= url('/dokumenty') ?>">Dokumenty</a></li><?php endif ?>
+        <?php if (feature_on('kontakty')): ?><li><a href="<?= url('/kontakty') ?>">Kontakty</a></li><?php endif ?>
+        <?php if ($u): ?><li><a href="<?= url('/hlaseni') ?>#moje">Moje hlášení</a></li><?php endif ?></ul></div>
+      <div><h2 class="footer-head">Informace</h2><ul>
+        <li><a href="<?= url('/ochrana-udaju') ?>">Ochrana osobních údajů</a></li>
+        <?php if (setting('webmaster_email')): ?><li><a href="mailto:<?= e(setting('webmaster_email')) ?>">Napsat správci webu</a></li><?php endif ?>
+        <?php if (plan_managed() && plan_edition() === 'free'): ?><li class="powered">Web běží zdarma na <a href="<?= e(platform_url()) ?>"><?= e(pset('service_name')) ?></a></li><?php endif ?></ul></div>
+    </nav>
+  </div>
+  <div class="wrap footer-bottom"><?= theme_switch() ?>
+    <?php if (plan_has('jazyky')): ?><span class="lang-switch" translate="no"><?php foreach (LANGS as $code => $langName): ?><a href="<?= url('/jazyk/' . $code) ?>" lang="<?= $code ?>" hreflang="<?= $code ?>"<?= current_lang() === $code ? ' aria-current="true"' : '' ?>><?= strtoupper($code) ?></a><?php endforeach ?></span><?php endif ?>
   </div>
 </footer>
 <?php require __DIR__ . '/reports/_widget.php'; ?>
