@@ -40,7 +40,7 @@ Přístupové údaje patří **jen do `storage/config.php`** na serveru (vzor je
 | Kdo je online na shromáždění a nehlasuje – počítat jako „zdržel se“? | ano, zdržel se |
 | Plán oprav a fond – jen Premium? | ano, Premium |
 | Vyúčtování služeb vidí jen vlastníci (ne nájemníci)? | ano, jen vlastníci |
-| Facebook: věřit e-mailu z Facebooku (přihlásit k existujícímu účtu se stejným e-mailem)? | ano; vypnete `sso.facebook.trust_email = false` – pak jen účty, které si uživatel propojil sám |
+| Facebook: věřit e-mailu z Facebooku (přihlásit k existujícímu účtu se stejným e-mailem)? | ne (od 11/2026, bezpečnost) – jen účty, které si uživatel propojil sám; zapnete `sso.facebook.trust_email = true` (v konzoli a portálu se podle e-mailu nepřihlašuje nikdy) |
 | Nové hlasování per rollam: ověřovat hlas kódem z e-mailu? | ano u nových, staré beze změny |
 | Bank iD vypnuté uprostřed hlasování | hlasování se odmítne (nepřepne se tiše na e-mail) |
 | AI pomocník pro obyvatele | zapnutý, 20× denně na osobu, výbor může vypnout |
@@ -60,7 +60,7 @@ dostane dobití na její společnou fakturu. Kredit platí 24 měsíců, zbytek 
 | SMS | 1,50 Kč za SMS; Premium 100 SMS ročně v ceně | `sms_price_h` (haléře), `sms_free_premium` |
 | Lustrace exekucí | 99 Kč za úspěšný dotaz | `rej_price_exekuce` |
 | Ověření hlasu přes Bank iD | 19 Kč za ověřený hlas | `bankid_price` |
-| Shromáždění online | Premium v ceně, Standard 490 Kč za shromáždění | `price_online_meeting` |
+| Shromáždění online | v ceně (Standard i Premium), výchozí 0 Kč | `price_online_meeting` |
 | Sledování katastru (doplněk k ročnímu předplatnému) | 1 490 Kč za dům a rok vč. 1 LV, další LV 990 Kč; kontrola po 30 dnech | `rej_price_katastr_house`, `rej_price_katastr_lv_extra`, `rej_katastr_days` |
 | Kredit | platnost 24 měsíců, upozornění správcům pod 100 Kč | `credit_valid_months`, `credit_low_h` (haléře) |
 
