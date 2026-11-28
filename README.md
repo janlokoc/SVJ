@@ -574,30 +574,25 @@ Na vlastním počítači fungují adresy `tabor.localhost:8080` v běžných
 prohlížečích bez dalšího nastavení; ve variantě se složkami je to
 `localhost:8080/tabor`.
 
-### Import obsahu ze starého webu
+### Převod obsahu ze starého webu
 
-Převod je i placená služba: správce společenství si ho objedná
-v **Předplatném** formulářem „Převod obsahu ze starého webu“ (adresa
-starého webu, co převést, jak se k obsahu dostaneme, kontaktní osoba,
-potvrzení práv k obsahu). Vznikne zálohová faktura s QR platbou (výchozí
-1 500 Kč jednorázově, mění se v Nastavení služby). Po potvrzení platby
-v konzoli najdete objednávku u společenství; obsah naimportujete nástroji
-níže a převod označíte jako hotový – kontaktní osoba dostane e-mail.
-Samotný import se nespouští automaticky.
+Obsah starého webu (nebo exportu z portálu správce) převádí správce
+společenství sám přes **API nebo MCP** webu – skriptem nebo s AI
+asistentem (Průvodce nastavením, krok „Obsah ze starého webu“; nápověda
+„API a MCP“; dokumentace na `/api` webu služby). Záznamy s `ext_id` se při
+opakování jen přepíšou, obyvatelům se nic neposílá.
 
-Aktuality, dokumenty, kontakty a název lze nahrát ze souboru JSON
-(formát `svj-import-1`) připraveného převodem původního webu:
+Převod je i placená služba: správce si ho objedná v **Předplatném**
+(adresa starého webu nebo přiložený export / odkaz ke stažení, co
+převést, kontakt, potvrzení práv). Vznikne zálohová faktura s QR platbou
+(výchozí 1 500 Kč, mění se v Nastavení služby). Po potvrzení platby
+najdete objednávku v konzoli u společenství (export stáhnete tamtéž; po
+dokončení se smaže). Obsah převedete stejně přes API/MCP – klíč vytvoříte
+v administraci domu → API a napojení – a převod označíte jako hotový.
 
-- v konzoli hlavního správce na stránce společenství, část **Import
-  obsahu ze starého webu**, nebo
-- příkazem `SVJ_TENANT=adresa php tools/import-content.php soubor.json`
-  (na webu jednoho SVJ bez `SVJ_TENANT`; `--pridat` obsah nepřepíše,
-  jen přidá).
-
-Dokumenty se nejdřív založí jako odkazy na původní web. Skutečné soubory
-stáhne správce společenství tlačítkem v administraci na stránce Přehled,
-nebo příkaz `php tools/import-webnode.php`. Soubory, které už původní
-web nevydá, zůstanou jako odkaz.
+Dokumenty, které dřívější importy založily jen jako odkazy na starý web,
+stáhne tlačítko v administraci na stránce Přehled nebo příkaz
+`php tools/import-webnode.php`.
 
 Bez nastavení `platform` web funguje jako dosud pro jedno společenství.
 

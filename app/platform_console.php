@@ -287,7 +287,7 @@ if ($PATH === '/svj/nove') {
     render('platform/tenant_form', ['title' => 'Nové společenství', 't' => $t, 'errors' => $errors, 'new' => true]);
     exit;
 }
-if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/import|/domena|/certifikat|/prevod-export|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni|/vybor)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
+if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor-smazat|/spravce|/smazat|/domena|/certifikat|/prevod-export|/prevod|/predplatne|/zkouska|/vstoupit|/heslo|/overeni|/vybor)?$~', $PATH, $m) && ($t = tenant_row($m[1]))) {
     $slug = $t['slug'];
     $action = $m[2] ?? '';
     if ($METHOD === 'POST' && $action === '/smazat') {
@@ -455,26 +455,6 @@ if (preg_match('~^/svj/([a-z0-9][a-z0-9-]{1,38})(/soubory|/soubor-nahrat|/soubor
         platform_log('Stažení souborů ze starého webu', $slug . ' · staženo ' . $done . ', nepodařilo se ' . $failed . ', zbývá ' . $still);
         flash('Staženo souborů: ' . $done . '.' . ($left ? ' Zbývá vyzkoušet ' . $left . ' – klikněte znovu.' : '') . (!$left && $still ? ' ' . $still . ' souborů se stáhnout nepodařilo – seznam s důvody je níže; nahrajte je ručně, nebo dokument odeberte.' : '') . (!$still ? ' Všechny dokumenty jsou uložené na našem serveru.' : ''), $still ? 'info' : 'ok');
         redirect('/svj/' . $slug . '#soubory');
-    }
-    if ($METHOD === 'POST' && $action === '/import') {
-        $f = $_FILES['file'] ?? null;
-        $data = $f && ($f['error'] ?? 1) === UPLOAD_ERR_OK && $f['size'] <= 5 * 1048576 ? json_decode((string) file_get_contents($f['tmp_name']), true) : null;
-        $result = is_array($data) ? import_content(tenant_pdo($slug), $data, isset($_POST['replace'])) : 'Vyberte soubor JSON s obsahem k importu (do 5 MB).';
-        if (is_string($result)) {
-            flash($result, 'error');
-        } else {
-            // Název z importu se propíše i do seznamu společenství.
-            $ts = tenant_settings($slug);
-            pq('UPDATE tenants SET name = ?, title = ?, accent = ?, tagline = ?, "full" = ?, address = ? WHERE slug = ?',
-                [$ts['site_name'] ?? $t['name'], $ts['site_title'] ?? $t['title'], $ts['site_accent'] ?? $t['accent'], $ts['site_tagline'] ?? $t['tagline'], $ts['site_full'] ?? $t['full'], $ts['address'] ?? $t['address'], $slug]);
-            // Soubory se stáhnou hned – převzatý dokument nesmí zůstat odkazem na starý web.
-            @set_time_limit(150);
-            [$got, $bad] = import_external_files_into(tenant_pdo($slug), tenant_storage($slug) . '/uploads', 500, 100);
-            $still = external_doc_count(tenant_pdo($slug));
-            platform_log('Import obsahu', $slug . ' · aktualit ' . $result['posts'] . ', dokumentů ' . $result['documents'] . ', kontaktů ' . $result['contacts'] . ' · staženo souborů ' . $got . ($still ? ', zbývá ' . $still : ''));
-            flash('Naimportováno: ' . $result['posts'] . ' aktualit, ' . $result['documents'] . ' dokumentů a ' . $result['contacts'] . ' kontaktů. Staženo souborů: ' . $got . '.' . ($still ? ' Zbývá stáhnout ' . $still . ' souborů – dokončete to tlačítkem „Stáhnout soubory“ níže; do té doby převod není hotový.' : ' Všechny soubory jsou uložené na našem serveru.'), $still ? 'info' : 'ok');
-        }
-        redirect('/svj/' . $slug);
     }
     // Podpora: vstup do webu jako jeho uživatel, odkaz na nové heslo, vypnutí dvoufázového ověření.
     if ($METHOD === 'POST' && in_array($action, ['/vstoupit', '/heslo', '/overeni'], true)) {

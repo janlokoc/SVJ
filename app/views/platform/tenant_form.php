@@ -176,7 +176,7 @@
     </dl>
     <?php if ($migration['status'] === 'ordered'): ?><p class="hint">Čeká na platbu – potvrdíte ji v části Platby. Do té doby na převodu nepracujte.</p>
     <?php elseif ($migration['status'] === 'paid'): ?>
-      <p class="hint">Obsah naimportujete nástroji popsanými v README (Import obsahu ze starého webu), případně ručně. Potom převod označte jako hotový – kontaktní osoba dostane e-mail.</p>
+      <p class="hint">Obsah převeďte přes API nebo MCP webu (klíč v jeho administraci → API a napojení, nápověda „API a MCP“), případně ručně. Potom převod označte jako hotový – kontaktní osoba dostane e-mail.</p>
       <form method="post" action="<?= url('/svj/' . $t['slug'] . '/prevod') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="do" value="done">
         <label>Vzkaz pro společenství (nepovinné) <input type="text" name="done_note" maxlength="500" placeholder="Např. Převedeno 42 dokumentů a 18 aktualit; 3 soubory už na starém webu nebyly."></label>
         <div class="actions"><button class="btn" type="submit">Označit převod jako hotový</button></div></form>
@@ -186,7 +186,7 @@
   <div class="card" id="prevod">
     <h2>Převod obsahu ze starého webu</h2>
     <p>Společenství převod zatím neobjednalo. Objednává ho správce webu v části Předplatné → Převod obsahu ze starého webu; po zaplacení se objednávka objeví tady.</p>
-    <p class="hint">Obsah (soubor ve formátu svj-import-1) můžete nahrát i bez objednávky – v části <a href="#import">Import obsahu ze starého webu</a> níže. Dokumenty se nejdřív založí jako odkazy na starý web a stáhnete je tlačítkem „Stáhnout soubory ze starého webu“.</p>
+    <p class="hint">Obsah převedete přes API nebo MCP webu (klíč vytvoříte za správce v jeho administraci → API a napojení) – stejně jako to dělají správci sami; postup je v nápovědě „API a MCP“.</p>
   </div>
   <?php endif ?>
   <?php if ($raw['domain_status'] !== ''): ?>
@@ -270,14 +270,6 @@
     <div class="form-row"><label>Jméno a příjmení <input type="text" name="name" id="ta-name" required></label><label>E-mail <input type="email" name="email" id="ta-email" required></label></div>
     <button class="btn" type="submit">Vytvořit účet a zobrazit pozvánku</button>
     <p class="hint">Vytvoření účtu správce se zapisuje do záznamů platformy.</p>
-  </form>
-  <form method="post" action="<?= url('/svj/' . $t['slug'] . '/import') ?>" enctype="multipart/form-data" class="card form" id="import">
-    <h2>Import obsahu ze starého webu</h2>
-    <?= csrf_field() ?>
-    <p>Nahraje aktuality, dokumenty, kontakty a název ze souboru připraveného převodem původního webu (formát JSON). Účty, jednotky ani hlasování se nemění.</p>
-    <label>Soubor s obsahem <input type="file" name="file" accept=".json,application/json" required></label>
-    <label class="check"><input type="checkbox" name="replace" checked> <span>Nahradit dosavadní aktuality, dokumenty a kontakty <small>Hodí se u nově založeného webu, který obsahuje jen uvítací text. Bez zaškrtnutí se obsah přidá ke stávajícímu.</small></span></label>
-    <button class="btn" type="submit" data-confirm-import>Importovat obsah</button>
   </form>
   <?php if (!empty($t['demo'])): ?>
   <form method="post" action="<?= url('/demo') ?>" class="card form" data-confirm="Ukázkový web se smaže a založí znovu s čerstvými daty. Pokračovat?">
