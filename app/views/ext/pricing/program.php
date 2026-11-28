@@ -52,19 +52,43 @@ $op = operator();
   <h2 class="no-print">Leták k tisku</h2>
   <p class="hint no-print">Jedna strana A4 pro schůzku s klientem nebo do kanceláře. Vytiskněte ji, nebo uložte jako PDF (Tisk → Uložit jako PDF).</p>
   <div class="actions no-print"><button class="btn" type="button" data-print>Vytisknout leták</button></div>
+  <?php $lfUrl = platform_url('/pro-spravce/program'); $lfShot = is_file(__DIR__ . '/../../../../assets/landing/partner-prehled.jpg'); ?>
+  <div class="leaflet-stage">
   <article class="leaflet">
-    <header><strong><?= e(pset('service_name')) ?></strong> <span>Partnerský program pro správcovské firmy</span></header>
-    <h3>Web pro každý Váš dům. Portál pro Vás zdarma.</h3>
-    <ul>
-      <li><strong>Portál zdarma</strong> – všechny spravované domy, hlášení a termíny na jednom místě.</li>
-      <li><strong>Sleva<?= $maxPct ? ' až ' . $maxPct . ' %' : '' ?></strong> podle počtu domů, jedna faktura za všechny.</li>
-      <li><strong>Vaše cena pro SVJ</strong> – marži spočítá portál, faktury SVJ vystavíte z portálu.</li>
-      <li><strong>Vaše značka</strong> na webu každého domu a registrační odkaz pro nové domy.</li>
-      <li><strong>Pro výbory:</strong> shromáždění s prezencí a hlasováním podle podílů, dálkové odečty s měsíční informací o spotřebě, závady, dokumenty, upozornění do telefonu.</li>
+    <header class="lf-band">
+      <div class="lf-brand"><svg class="lf-mark" viewBox="0 0 44 32" aria-hidden="true"><rect x="1" y="9" width="9" height="22" rx="1.5"/><rect x="12" y="3" width="9" height="28" rx="1.5"/><rect x="23" y="9" width="9" height="22" rx="1.5"/><rect x="34" y="3" width="9" height="28" rx="1.5"/></svg>
+        <strong><?= e(pset('service_name')) ?></strong></div>
+      <p class="lf-kicker">Partnerský program pro správcovské firmy</p>
+      <h3>Web pro každý Váš dům.<br>Portál pro Vás zdarma.</h3>
+      <p class="lf-lead">Všechny spravované domy, hlášení závad, termíny a faktury na jednom místě – a každé SVJ s vlastním webem pod Vaší značkou.</p>
+    </header>
+    <?php if ($lfShot): ?><figure class="lf-shot"><img src="<?= url('/assets/landing/partner-prehled.jpg') ?>" alt="Partnerský portál: přehled domů ve správě se závadami, termíny a revizemi" width="1280" height="800"></figure><?php endif ?>
+    <ul class="lf-benefits">
+      <li><span class="lf-num">1</span><strong>Portál zdarma</strong><span>Bez poplatku za firmu, pracovníky i počet domů.</span></li>
+      <li><span class="lf-num">2</span><strong>Sleva<?= $maxPct ? ' až ' . $maxPct . ' %' : '' ?></strong><span>Podle počtu domů. Jedna faktura za všechny.</span></li>
+      <li><span class="lf-num">3</span><strong>Vaše cena pro SVJ</strong><span>Marži spočítá portál, faktury SVJ vystavíte z něj.</span></li>
+      <li><span class="lf-num">4</span><strong>Vaše značka</strong><span>Na webu každého domu a v odkazu pro nové domy.</span></li>
     </ul>
-    <p class="leaflet-price">Web domu: Standard <?= money_czk($std) ?>, Premium <?= money_czk($prem) ?> za rok bez DPH<?= price_size_note('standard') !== '' ? ' (' . e(price_size_note('standard')) . ' ve Standardu)' : '' ?>. Edice Zdarma pro začátek.</p>
-    <footer><?= e(platform_url('/pro-spravce')) ?><?= $contact ? ' · ' . e($contact) : '' ?><?= $op['phone'] !== '' ? ' · ' . e($op['phone']) : '' ?><?= $op['name'] !== '' ? '<br>' . e($op['name']) . ($op['ico'] !== '' ? ', IČO ' . e($op['ico']) : '') : '' ?></footer>
+    <section class="lf-committee">
+      <h4>Co dostanou výbory a vlastníci</h4>
+      <p>Shromáždění s prezencí a hlasováním podle podílů · dálkové odečty s měsíční informací o spotřebě · hlášení závad · dokumenty · upozornění do telefonu</p>
+    </section>
+    <div class="lf-bottom">
+      <div class="lf-prices">
+        <h4>Web domu <small>ceny za rok bez DPH</small></h4>
+        <dl>
+          <div><dt>Zdarma</dt><dd>0 Kč</dd></div>
+          <div><dt>Standard</dt><dd><?= money_czk($std) ?></dd></div>
+          <div><dt>Premium</dt><dd><?= money_czk($prem) ?></dd></div>
+        </dl>
+        <?php if (price_size_note('standard') !== ''): ?><p class="lf-note">Standard: <?= e(price_size_note('standard')) ?>.</p><?php endif ?>
+        <?php if ($tiers): ?><p class="lf-tiers"><?php foreach ($tiers as $from => $pct): ?><span>od <?= (int) $from ?> domů <strong>−<?= (int) $pct ?> %</strong></span><?php endforeach ?></p><?php endif ?>
+      </div>
+      <div class="lf-qr"><?= qr_svg($lfUrl, 'QR kód: partnerský program') ?><span>Podrobnosti a ukázka portálu</span></div>
+    </div>
+    <footer class="lf-foot"><span><?= e(preg_replace('~^https?://~', '', $lfUrl)) ?></span><?= $contact ? '<span>' . e($contact) . '</span>' : '' ?><?= $op['phone'] !== '' ? '<span>' . e($op['phone']) . '</span>' : '' ?><?= $op['name'] !== '' ? '<span>' . e($op['name']) . ($op['ico'] !== '' ? ', IČO ' . e($op['ico']) : '') . '</span>' : '' ?></footer>
   </article>
+  </div>
 </section>
 
 <?php if ($mail): ?><section class="lpx-cta no-print"><div class="wrap"><h2>Domluvme se na partnerském účtu.</h2><a class="btn btn-big lpx-cta-btn" href="<?= e($mail) ?>">Napsat nám</a></div></section><?php endif ?>

@@ -133,6 +133,10 @@ final class ModGSiteTest extends TestCase
         $html = $this->view('ext/pricing/program');
         $this->assertStringContainsString('class="leaflet"', $html);
         $this->assertStringContainsString('data-print', $html);
+        $this->assertStringContainsString('class="lf-qr"', $html, 'leták má QR kód na program');
+        $this->assertStringContainsString('od 20 domů <strong>−15 %</strong>', $html, 'tabulka slev na letáku');
+        $this->assertStringContainsString('partner-prehled.jpg', $html, 'snímek portálu');
+        $this->assertStringContainsString('@page { size: A4; margin: 0; }', (string) file_get_contents(dirname(__DIR__, 2) . '/assets/style.css'), 'tisk na jednu A4');
         $this->assertStringContainsString('až 15 %', $html);
         $this->assertStringContainsString(money_czk((int) round(edition_price('standard') * 0.9)), $html, 'cena po slevě 10 %');
     }

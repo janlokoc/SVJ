@@ -1863,16 +1863,49 @@ a.dash-tile:hover { border-color: var(--primary); }
 .compare-features .cmp-n, .compare-features .cmp-q { color: var(--muted); }
 .compare-features small { display: block; color: var(--muted); font-weight: 400; }
 .vote-offer { margin: 0 0 1rem; }
-.leaflet { max-width: 190mm; margin: 1rem auto 0; padding: 1.4rem 1.6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
-.leaflet header { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: space-between; border-bottom: 2px solid var(--primary); padding-bottom: .5rem; }
-.leaflet header span { color: var(--muted); }
-.leaflet h3 { font-family: var(--display); font-size: 1.6rem; margin: 1rem 0 .6rem; }
-.leaflet ul { padding-left: 1.2rem; }
-.leaflet li { margin: .35rem 0; }
-.leaflet-price { font-weight: 600; }
-.leaflet footer { margin-top: 1rem; padding-top: .5rem; border-top: 1px solid var(--line); font-size: .9rem; color: var(--muted); }
+/* Leták A4 partnerského programu (app/views/ext/pricing/program.php): na obrazovce zmenšená stránka, v tisku přesně A4. */
+.leaflet-stage { overflow-x: auto; padding: 1rem 0 2rem; }
+.leaflet { --lf-ink: #14262a; --lf-brand: #0f5c5f; --lf-accent: #b4532a; --lf-soft: #eef4f3; width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; color: var(--lf-ink);
+  box-shadow: 0 10px 40px rgba(0,0,0,.14); display: flex; flex-direction: column; font: 400 10.5pt/1.45 var(--font); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.lf-band { background: var(--lf-brand); color: #fff; padding: 12mm 16mm 20mm; }
+.lf-brand { display: flex; align-items: center; gap: 3mm; font-size: 13pt; }
+.lf-mark { width: 12mm; height: 9mm; fill: #fff; }
+.lf-mark rect:nth-child(2) { fill: #f0b48f; }
+.lf-kicker { margin: 7mm 0 2mm; text-transform: uppercase; letter-spacing: .12em; font-size: 9pt; font-weight: 600; color: #bfe0dc; }
+.lf-band h3 { font: 700 27pt/1.08 var(--display); margin: 0; color: #fff; }
+.lf-lead { margin: 4mm 0 0; font-size: 12pt; max-width: 150mm; color: #e3f0ee; }
+.lf-shot { margin: -14mm 16mm 0; }
+.lf-shot img { display: block; width: 100%; height: 64mm; object-fit: cover; object-position: top left; border-radius: 3mm; box-shadow: 0 4mm 10mm rgba(0,0,0,.18); border: 1px solid #d8e2e1; }
+.lf-benefits { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; margin: 7mm 16mm 0; padding: 0; }
+.lf-benefits li { position: relative; padding: 3.5mm 4mm 3.5mm 15mm; background: var(--lf-soft); border-radius: 3mm; display: flex; flex-direction: column; margin: 0; }
+.lf-benefits strong { font-size: 12pt; color: var(--lf-brand); }
+.lf-num { position: absolute; left: 4mm; top: 4mm; width: 8mm; height: 8mm; border-radius: 50%; background: var(--lf-accent); color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 10pt; }
+.lf-committee { margin: 6mm 16mm 0; padding-left: 4mm; border-left: 1.2mm solid var(--lf-accent); }
+.lf-committee h4, .lf-prices h4 { margin: 0 0 1.5mm; font-size: 11pt; }
+.lf-committee p { margin: 0; color: #3b4f52; }
+.lf-bottom { display: flex; gap: 8mm; align-items: stretch; margin: 6mm 16mm 7mm; }
+.lf-prices { flex: 1; border: 1px solid #d8e2e1; border-radius: 3mm; padding: 4mm 5mm; }
+.lf-prices small { font-weight: 400; color: #5b6e70; font-size: 8.5pt; }
+.lf-prices dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; margin: 2mm 0 0; }
+.lf-prices dl div { text-align: center; padding: 2mm; border-radius: 2mm; background: var(--lf-soft); }
+.lf-prices dl div:nth-child(2) { background: var(--lf-brand); color: #fff; }
+.lf-prices dt { font-size: 9pt; font-weight: 600; }
+.lf-prices dd { margin: 0; font: 700 14pt/1.2 var(--display); }
+.lf-note { margin: 2.5mm 0 0; font-size: 8.5pt; color: #5b6e70; }
+.lf-tiers { display: flex; flex-wrap: wrap; gap: 1.5mm 4mm; margin: 2mm 0 0; font-size: 9pt; }
+.lf-tiers strong { color: var(--lf-accent); }
+.lf-qr { width: 38mm; display: flex; flex-direction: column; align-items: center; gap: 2mm; text-align: center; font-size: 8.5pt; color: #3b4f52; }
+.lf-qr svg { width: 34mm; height: 34mm; }
+.lf-foot { margin-top: auto; padding: 5mm 16mm; background: var(--lf-soft); display: flex; flex-wrap: wrap; gap: 1mm 6mm; font-size: 9pt; color: #3b4f52; }
+.lf-foot span:first-child { font-weight: 700; color: var(--lf-brand); }
 @media print {
-  .leaflet { border: 0; margin: 0; padding: 0; max-width: none; color: #000; background: #fff; }
+  @page { size: A4; margin: 0; }
+  .leaflet-stage { padding: 0; overflow: visible; }
+  .leaflet { box-shadow: none; width: 210mm; height: 297mm; min-height: 0; overflow: hidden; }
+  body:has(.leaflet) > :not(main) { display: none !important; }
+  main:has(.leaflet) > :not(#letak), main:has(.leaflet) { padding: 0 !important; margin: 0 !important; }
+  main:has(.leaflet) > :not(#letak) { display: none !important; }
+  #letak { padding: 0 !important; margin: 0 !important; max-width: none !important; }
   .lp-page-head.no-print, .lpx-cta.no-print { display: none !important; }
 }
 /* ---------- Modul C: SMS zprávy a propojení s bankou (app/ext/sms_lib.php, app/ext/psd2_lib.php) ---------- */
