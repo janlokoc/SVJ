@@ -130,10 +130,10 @@ $host = $demo ? (string) parse_url(tenant_url($demo, '/'), PHP_URL_HOST) : '';
         </div>
       <?php endforeach ?>
     </div>
-    <?php if (vat_payer()): ?><p class="vat-note"><?= e(vat_note()) ?></p><?php endif ?>
     <p class="lp-more"><a href="<?= url('/cenik') ?>">Podrobné porovnání edic, limity a doplňky</a></p>
     <?php require __DIR__ . '/_founding.php'; ?>
     <p class="lpx-partner-note"><strong>Spravujete víc domů?</strong> Partnerský portál pro správcovské firmy je zdarma – platíte jen za weby domů, a ty Vám platí jednotlivá SVJ. <a href="<?= url('/pro-spravce') ?>">Jak to funguje</a></p>
+    <?php if (vat_payer()): ?><p class="vat-note"><?= e(vat_note()) ?></p><?php endif ?>
   </div>
 </section>
 
