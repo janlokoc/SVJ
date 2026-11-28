@@ -65,7 +65,7 @@ final class OnboardingTipsTest extends TestCase
     public function testStepsStructureAndAutoDetection(): void
     {
         $steps = onboarding_steps();
-        $this->assertSame(['udaje', 'vzhled', 'overeni', 'jednotky', 'ucty', 'vybor', 'kontakty', 'dokumenty', 'aktualita', 'termin', 'prevod', 'udaje-ochrana', 'zastup', 'oznameni'],
+        $this->assertSame(['udaje', 'vzhled', 'overeni', 'prevod', 'jednotky', 'ucty', 'vybor', 'kontakty', 'dokumenty', 'aktualita', 'termin', 'udaje-ochrana', 'zastup', 'oznameni'],
             array_keys($steps), 'Premium offers all steps');
         foreach ($steps as $key => $s) {
             $this->assertSame($key, $s['key']);

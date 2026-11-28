@@ -17,6 +17,7 @@ $left = count($o['waiting']); $n = 0; ?>
       <div class="onb-body">
         <h3><?= e($s['title']) ?> <span class="onb-state"><?= ['done' => 'hotovo', 'must' => 'čeká – důležité', 'wait' => 'čeká', 'skip' => 'přeskočeno'][$light] ?></span></h3>
         <p><?= e($s['why']) ?></p>
+        <?php if (!empty($s['via_prevod'])): ?><p class="onb-alt">Máte starý web nebo export? Tohle přinese <a href="#krok-prevod">převod ze starého webu</a> – nemusíte to zadávat ručně.</p><?php endif ?>
         <?php if (!empty($s['how']) && $s['state'] === 'wait'): ?>
         <ol class="onb-how"><?php foreach ($s['how']['steps'] as $hs): ?><li><?= e($hs) ?></li><?php endforeach ?></ol>
         <?php if (!empty($s['how']['help'])): ?><p class="hint"><?= help_link($s['how']['help'], 'Podrobný návod se snímky') ?></p><?php endif ?>

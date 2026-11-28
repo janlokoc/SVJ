@@ -4,7 +4,9 @@ declare(strict_types=1);
 // Průvodce pro nového správce: co je potřeba udělat, než web ukáže sousedům. U každého kroku semafor –
 // hotovo (pozná se samo podle obsahu webu, nebo to správce odškrtne), čeká, nebo přeskočeno.
 
-const ONBOARDING_GROUPS = ['zaklad' => 'Základ webu', 'dum' => 'Dům a lidé', 'obsah' => 'Obsah', 'start' => 'Před spuštěním'];
+const ONBOARDING_GROUPS = ['zaklad' => 'Základ webu', 'prevod' => 'Převod ze starého webu', 'dum' => 'Dům a lidé', 'obsah' => 'Obsah', 'start' => 'Před spuštěním'];
+/** Kroky, které přinese převod starého webu (u nich průvodce odkáže na převod, dokud o něm správce nerozhodne). */
+const ONBOARDING_FROM_MIGRATION = ['jednotky', 'ucty', 'kontakty', 'dokumenty', 'aktualita', 'termin'];
 
 /**
  * Kroky průvodce: klíč => [skupina, název, proč, odkaz, text odkazu, splněno podle obsahu webu, důležité].
@@ -13,6 +15,12 @@ function onboarding_steps(): array
 {
     $n = fn(string $sql, array $p = []) => (int) val($sql, $p);
     $me = function_exists('user') ? (user() ?: []) : [];
+    // Převod přes API/MCP (záznamy s ext_id) krok „Obsah ze starého webu“ splní sám.
+    $apiImported = false;
+    if (function_exists('api_ready')) {
+        api_ready();
+        $apiImported = $n('SELECT COUNT(*) FROM api_refs') > 0;
+    }
     $steps = [
         'udaje' => ['zaklad', 'Údaje společenství', 'Celý název, adresa a IČO se zobrazují v patičce, v kontaktech a na fakturách za web.',
             '/admin/nastaveni', 'Otevřít nastavení', setting('address') !== '' && setting('ico') !== '', true],
@@ -20,6 +28,8 @@ function onboarding_steps(): array
             '/admin/nastaveni', 'Upravit vzhled', setting('logo') !== '', false],
         'overeni' => ['zaklad', 'Dvoufázové ověření správce', 'Účet správce vidí osobní údaje všech obyvatel. Druhý krok při přihlášení ho ochrání, i kdyby uniklo heslo.',
             '/muj-ucet#overeni', 'Zapnout ověření', (int) ($me['totp_enabled'] ?? 0) === 1, true],
+        'prevod' => ['prevod', 'Obsah ze starého webu', 'Máte starší web nebo export z portálu správce? Převeďte ho sami s pomocí AI asistenta – zdarma, za pár minut. Pokud žádný starý web nemáte, krok přeskočte.',
+            '/admin/api', 'Vytvořit klíč pro AI asistenta', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== '' || $apiImported), true],
         'jednotky' => ['dum', 'Seznam jednotek', 'Jednotky s vlastníky a podíly založíte naráz z výpisu z katastru nemovitostí. Bez nich nejde přiřadit účty k bytům, hlasovat podle podílů ani evidovat odečty.',
             '/admin/jednotky/import', 'Import z katastru', $n('SELECT COUNT(*) FROM units') > 0, true],
         'ucty' => ['dum', 'Účty obyvatel', 'Vlastníky a nájemníky přidáte hromadně z tabulky, nebo zapnete odkaz, přes který se k jednotce přihlásí sami a Vy jen schválíte. Každému pak přijde e-mail s odkazem na nastavení hesla.',
@@ -34,8 +44,6 @@ function onboarding_steps(): array
             '/admin/aktuality/nova', 'Napsat aktualitu', $n("SELECT COUNT(*) FROM posts WHERE title <> 'Vítejte na novém webu'") > 0, false],
         'termin' => ['obsah', 'Nejbližší termín', 'Shromáždění, odečty, revize nebo úklid. Termíny se ukazují na úvodní stránce a jdou přidat do kalendáře.',
             '/admin/terminy/novy', 'Přidat termín', $n('SELECT COUNT(*) FROM events') > 0, false],
-        'prevod' => ['obsah', 'Obsah ze starého webu', 'Máte starší web nebo export z portálu správce? Převeďte ho sami s pomocí AI asistenta – zdarma, za pár minut. Pokud žádný starý web nemáte, krok přeskočte.',
-            '/admin/api', 'Vytvořit klíč pro AI asistenta', function_exists('migration_row') && defined('TENANT') && TENANT !== '' && (migration_row(TENANT) !== null || tenant_migrated(TENANT) !== ''), false],
         'udaje-ochrana' => ['start', 'Ochrana osobních údajů', 'Přečtěte si text stránky „Ochrana osobních údajů“ a doplňte, kdo je ve Vašem společenství kontaktní osobou.',
             '/admin/nastaveni', 'Zkontrolovat text', false, true],
         'zastup' => ['start', 'Zástup správce', 'Druhý účet správce se hodí při dovolené nebo nemoci. Web nesmí stát na jednom člověku.',
@@ -66,6 +74,14 @@ function onboarding_steps(): array
         $state = $auto || $manual === 'done' ? 'done' : ($manual === 'skip' ? 'skip' : 'wait');
         $out[$key] = ['key' => $key, 'group' => $group, 'title' => $title, 'why' => $why, 'href' => $href, 'label' => $label,
             'auto' => (bool) $auto, 'important' => $important, 'state' => $state, 'how' => $how[$key] ?? null];
+    }
+    // Dokud správce o převodu nerozhodl, kroky s obsahem odkazují na něj – nemusí je zadávat ručně.
+    if (isset($out['prevod']) && $out['prevod']['state'] === 'wait') {
+        foreach (ONBOARDING_FROM_MIGRATION as $k) {
+            if (isset($out[$k]) && $out[$k]['state'] === 'wait') {
+                $out[$k]['via_prevod'] = true;
+            }
+        }
     }
     return $out;
 }

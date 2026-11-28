@@ -14,8 +14,14 @@ final class OnboardingMigrationTest extends TestCase
             $route = function (): void {};
             require_once dirname(__DIR__, 2) . '/app/routes_onboarding.php';
         }
+        if (!function_exists('help_link')) {
+            $route = function (): void {};
+            require_once dirname(__DIR__, 2) . '/app/routes_help.php';
+        }
         $this->loginAs('admin');
         q("DELETE FROM settings WHERE `key` = 'onb_prevod'");
+        api_ready();
+        q('DELETE FROM api_refs');   // převod přes API by krok splnil sám
         $s = onboarding_steps()['prevod'];
         $this->assertSame('/admin/api', $s['href']);
         $how = implode(' ', $s['how']['steps']);
@@ -33,5 +39,15 @@ final class OnboardingMigrationTest extends TestCase
         $html = (string) ob_get_clean();
         $this->assertStringContainsString('class="onb-how"', $html);
         $this->assertStringContainsString('Vytvořit klíč pro AI asistenta', $html);
+        $this->assertLessThan(strpos($html, 'id="krok-kontakty"'), strpos($html, 'id="krok-prevod"'), 'převod je před ručním zadáváním obsahu');
+        foreach (ONBOARDING_FROM_MIGRATION as $k) {
+            if (($o['steps'][$k]['state'] ?? '') === 'wait') {
+                $this->assertTrue(!empty($o['steps'][$k]['via_prevod']), $k . ' odkazuje na převod');
+            }
+        }
+        $this->assertStringContainsString('přinese <a href="#krok-prevod">převod ze starého webu</a>', (string) file_get_contents(dirname(__DIR__, 2) . '/app/views/admin/onboarding.php'));
+        onboarding_save('prevod', 'skip');
+        $this->assertArrayNotHasKey('via_prevod', onboarding_steps()['kontakty'], 'bez převodu žádný odkaz');
+        onboarding_save('prevod', '');
     }
 }
