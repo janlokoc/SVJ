@@ -41,13 +41,27 @@ $contact = filter_var(pset('contact_email'), FILTER_VALIDATE_EMAIL) ? pset('cont
     <li><code>POST /api/v1/posts</code> – aktualita <code>{"title", "body", "visibility": "public"|"residents"}</code>, obyvatelé dostanou upozornění.</li>
   </ul>
 
+  <h2 id="prevod">Převod obsahu ze starého webu</h2>
+  <p>Obsah starého webu (nebo exportu z jiného portálu) převedete sami – skriptem nebo s pomocí AI asistenta přes MCP. Každý záznam může mít <code>ext_id</code> (označení v původním systému): opakované odeslání ho jen přepíše, nic se nezdvojí. Obyvatelům při převodu nic nechodí – žádná upozornění ani pozvánky.</p>
+  <ul>
+    <li><code>PUT /api/v1/units</code> (<code>units:write</code>) – jednotky <code>{"entrance": "A", "number": "12", "floor": "3", "share": "652/100000", "area": 54.3}</code>; párují se podle vchodu a čísla.</li>
+    <li><code>POST /api/v1/people</code> (<code>people:write</code>) – účty obyvatel <code>{"name", "email", "phone", "kind": "owner"|"tenant", "units": ["A/12"]}</code>. Pozvánky se neposílají, pošle je výbor. Nájemník jen k jednotce s vlastníkem.</li>
+    <li><code>POST /api/v1/documents</code> (<code>documents:write</code>) – jeden soubor: <code>multipart/form-data</code> s polem <code>file</code>, nebo JSON <code>{"filename", "content_base64"}</code>; dále <code>title</code>, <code>category</code> (<?= e(implode(', ', array_keys(CATEGORIES))) ?>), <code>date</code>, <code>visibility</code>, <code>unit</code>, <code>ext_id</code>.</li>
+    <li><code>PUT /api/v1/events</code> (<code>events:write</code>) – termíny <code>{"ext_id", "title", "date", "time", "place", "note"}</code>.</li>
+    <li><code>PUT /api/v1/contacts</code> (<code>contacts:write</code>) – kontakty <code>{"ext_id", "group": "vybor"|"sprava"|"havarie", "role", "name", "phone", "email"}</code>.</li>
+    <li><code>PUT /api/v1/posts</code> (<code>posts:write</code>) – starší aktuality s datem <code>{"ext_id", "title", "body", "published_at", "visibility"}</code>, bez upozornění.</li>
+  </ul>
+  <pre class="code-sample">curl -H "Authorization: Bearer swk_…" -F file=@stanovy.pdf -F title="Stanovy SVJ" \
+     -F category=zakladni -F visibility=residents -F ext_id=old-17 \
+     https://&lt;dům&gt;.spolecnyweb.cz/api/v1/documents</pre>
+
   <h2>Odpovědi a limity</h2>
   <ul>
-    <li>JSON v UTF-8. Chyba: <code>{"ok": false, "error": "…"}</code> s kódem 400 (špatná data), 401 (klíč), 402 (funkce není v edici domu), 403 (oprávnění nebo IP), 413 (nad 5 MB), 429 (blokace).</li>
+    <li>JSON v UTF-8. Chyba: <code>{"ok": false, "error": "…"}</code> s kódem 400 (špatná data), 401 (klíč), 402 (funkce není v edici domu), 403 (oprávnění nebo IP), 413 (nad 5 MB; dokument podle limitu serveru a úložiště edice), 429 (blokace).</li>
     <li>Nejvýše 5 000 řádků v jednom požadavku. Po 10 neplatných pokusech za hodinu z jedné adresy blokace na hodinu.</li>
     <li>Každé volání vidí výbor v administraci (kdy, odkud, výsledek).</li>
   </ul>
 
   <h2>MCP pro AI asistenty</h2>
-  <p>Na adrese <code>https://&lt;dům&gt;.spolecnyweb.cz/mcp</code> běží server Model Context Protocol (Streamable HTTP). Asistent (Claude, ChatGPT, Copilot…) s klíčem od výboru vidí přehled domu, jednotky, závady a nedoplatky a na pokyn zveřejní aktualitu – vždy jen v rozsahu oprávnění klíče a bez osobních údajů obyvatel. Klientům, které neumějí hlavičku, lze dát adresu <code>…/mcp/swk_…</code>.</p>
+  <p>Na adrese <code>https://&lt;dům&gt;.spolecnyweb.cz/mcp</code> běží server Model Context Protocol (Streamable HTTP). Asistent (Claude, ChatGPT, Copilot…) s klíčem od výboru vidí přehled domu, jednotky, závady a nedoplatky, na pokyn zveřejní aktualitu a umí převést obsah starého webu (jednotky, účty, dokumenty, termíny, kontakty, aktuality) – vždy jen v rozsahu oprávnění klíče a bez osobních údajů obyvatel. Klientům, které neumějí hlavičku, lze dát adresu <code>…/mcp/swk_…</code>.</p>
 </section>

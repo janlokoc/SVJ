@@ -130,6 +130,74 @@ $route('POST', '/api/v1/posts', function () use ($apiAuth, $apiDone, $apiJson) {
     $apiDone(201, ['ok' => true, 'id' => $id, 'url' => absolute_url('/aktuality/' . $id)], 'aktualita ' . $id);
 });
 
+// ---------- Převod obsahu (např. ze starého webu): jednotky, dokumenty, termíny, kontakty, lidé, starší aktuality ----------
+$apiRows = function (array $data, string $key) {
+    return array_is_list($data) ? $data : (array) ($data[$key] ?? []);
+};
+$route('PUT', '/api/v1/units', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $apiAuth('units:write');
+    [$new, $upd, $err] = api_units_save($apiRows($apiJson(), 'units'));
+    $apiDone(200, ['ok' => true, 'created' => $new, 'updated' => $upd, 'errors' => array_slice($err, 0, 100)], "jednotky: nových $new, upravených $upd");
+});
+$route('PUT', '/api/v1/events', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $apiAuth('events:write');
+    [$new, $upd, $err] = api_events_save($apiRows($apiJson(), 'events'));
+    $apiDone(200, ['ok' => true, 'created' => $new, 'updated' => $upd, 'errors' => array_slice($err, 0, 100)], "termíny: nových $new, upravených $upd");
+});
+$route('PUT', '/api/v1/contacts', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $apiAuth('contacts:write');
+    [$new, $upd, $err] = api_contacts_save($apiRows($apiJson(), 'contacts'));
+    $apiDone(200, ['ok' => true, 'created' => $new, 'updated' => $upd, 'errors' => array_slice($err, 0, 100)], "kontakty: nových $new, upravených $upd");
+});
+$route('POST', '/api/v1/people', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $k = $apiAuth('people:write');
+    [$new, $linked, $err] = api_people_save($apiRows($apiJson(), 'people'));
+    if ($new || $linked) {
+        audit('users_imported', "API ({$k['name']}): nových účtů $new, doplněno jednotek u $linked – pozvánky neodeslány");
+    }
+    $apiDone(200, ['ok' => true, 'created' => $new, 'linked' => $linked, 'invites_sent' => 0, 'errors' => array_slice($err, 0, 100)], "lidé: nových $new, doplněných $linked");
+});
+// Dokument: multipart/form-data (file + pole), nebo JSON {filename, content_base64, …}. Nejvýše 1 soubor na volání.
+$route('POST', '/api/v1/documents', function () use ($apiAuth, $apiDone) {
+    $k = $apiAuth('documents:write');
+    $file = null;
+    if (isset($_FILES['file'])) {
+        $m = $_POST;
+        $file = store_upload($_FILES['file']);
+    } else {
+        $body = (string) file_get_contents('php://input', false, null, 0, 3 * API_MAX_BODY);
+        $m = json_decode($body, true);
+        if (!is_array($m)) {
+            $apiDone(400, ['ok' => false, 'error' => 'Pošlete soubor jako multipart/form-data (pole file), nebo JSON s filename a content_base64.']);
+        }
+        if (($m['content_base64'] ?? '') !== '') {
+            $data = base64_decode((string) $m['content_base64'], true);
+            if ($data === false || $data === '') {
+                $apiDone(400, ['ok' => false, 'error' => 'content_base64 není platný base64.']);
+            }
+            $file = store_file_data((string) ($m['filename'] ?? 'dokument'), $data);
+        }
+    }
+    if (is_string($file)) {
+        $apiDone(400, ['ok' => false, 'error' => $file]);
+    }
+    $r = api_document_save($m, $file);
+    if (is_string($r)) {
+        if ($file) {
+            @unlink(UPLOAD_DIR . '/' . $file[0]);
+        }
+        $apiDone(400, ['ok' => false, 'error' => $r]);
+    }
+    [$id, $created] = $r;
+    $apiDone($created ? 201 : 200, ['ok' => true, 'id' => $id, 'created' => $created], ($created ? 'dokument nový ' : 'dokument upraven ') . $id);
+});
+// Starší aktuality ze starého webu: s datem v minulosti a bez upozornění obyvatelům; upsert podle ext_id.
+$route('PUT', '/api/v1/posts', function () use ($apiAuth, $apiDone, $apiJson, $apiRows) {
+    $apiAuth('posts:write');
+    [$new, $upd, $err] = api_posts_import($apiRows($apiJson(), 'posts'));
+    $apiDone(200, ['ok' => true, 'created' => $new, 'updated' => $upd, 'notified' => 0, 'errors' => array_slice($err, 0, 100)], "aktuality (převod): nových $new, upravených $upd");
+});
+
 // ---------- Administrace: klíče API a MCP ----------
 
 $adminApi = function () {
@@ -170,7 +238,7 @@ $mcpHouse = function (string $urlKey = '') use ($apiOut) {
         header('WWW-Authenticate: Bearer realm="spolecnyweb"');
         $apiOut($k[0], ['error' => $k[1]]);
     }
-    $req = json_decode((string) file_get_contents('php://input', false, null, 0, 1048576), true);
+    $req = json_decode((string) file_get_contents('php://input', false, null, 0, 8 * 1048576), true);
     if (!is_array($req)) {
         $apiOut(400, ['jsonrpc' => '2.0', 'id' => null, 'error' => ['code' => -32700, 'message' => 'Parse error']]);
     }

@@ -139,6 +139,17 @@
     ],
     "note": "Postup v samotné POHODĚ (XML export) jsme neověřovali – cizí program; ověřen je import vzorového souboru podle dokumentace Stormware."
   },
+  "api-a-mcp": {
+    "date": "2026-11-28",
+    "checks": 8,
+    "steps": [
+      "Správce v API a napojení vytvořil klíč „Převod starého webu“ s oprávněními documents:write, events:write, contacts:write a posts:write; klíč swk_… se ukázal jednou.",
+      "Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ pro obyvatele a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.",
+      "AI asistent přes MCP (initialize, tools/list) viděl jen nástroje podle oprávnění klíče (bez účtů obyvatel) a nástrojem import_contacts převedl havarijní kontakt, který se ukázal v Kontaktech.",
+      "Volání jsou vidět v části Poslední volání; po kliknutí na Zrušit klíč přestal okamžitě platit (401)."
+    ],
+    "note": "Napojení konkrétních AI asistentů (Claude, ChatGPT, Copilot) na MCP jsme neověřovali – cizí aplikace; běh posílá stejné požadavky protokolu MCP přes HTTP jako asistent."
+  },
   "kontrolni-komise-a-napojeni": {
     "date": "2026-11-28",
     "checks": 5,

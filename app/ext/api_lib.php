@@ -21,6 +21,12 @@ const API_SCOPES = [
     'meters:write' => 'Posílat odečty měřidel',
     'tickets:read' => 'Číst závady a požadavky (bez jmen obyvatel)',
     'posts:write' => 'Zveřejňovat aktuality (odstávky, opravy, kontejnery…)',
+    // Převod obsahu (např. ze starého webu) – 11/2026
+    'units:write' => 'Zakládat a upravovat jednotky (označení, patro, podíl, plocha)',
+    'documents:write' => 'Nahrávat dokumenty (PDF, Office, obrázky)',
+    'events:write' => 'Zapisovat termíny (shromáždění, odečty, revize…)',
+    'contacts:write' => 'Zapisovat kontakty (výbor, správa, havarijní služby)',
+    'people:write' => 'Zakládat účty obyvatel a přiřazovat je k jednotkám (osobní údaje; pozvánky se neposílají)',
 ];
 const API_FAIL_LIMIT = 10;
 $GLOBALS['EXT_ADMIN_NAV']['/admin/api'] = ['API a napojení', 'Správa webu'];
@@ -45,6 +51,10 @@ function api_ready(?PDO $pdo = null): void
     $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     if (!in_array('api_keys', $have, true)) {
         $pdo->exec("CREATE TABLE api_keys ($id, name {$s(100)}, prefix {$s(12)}, hash {$s(64)}, scopes {$s(300)}, ips {$s(500)}, created_by $int, created_at {$s(19)}, last_used_at {$s(19)}, revoked_at {$s(19)})$end");
+    }
+    if (!in_array('api_refs', $have, true)) {
+        // Převod obsahu: ext_id z původního systému → záznam u nás; opakované volání nic nezdvojí.
+        $pdo->exec("CREATE TABLE api_refs (kind {$s(20)}, ext_id {$s(100)}, local_id $int, created_at {$s(19)}, PRIMARY KEY (kind, ext_id))$end");
     }
     if (!in_array('api_log', $have, true)) {
         // ok: 1 úspěch, 0 odmítnuto; key_id 0 = neplatný klíč.
@@ -240,6 +250,280 @@ function api_amr_kind(string $medium, string $unit): ?string
     };
 }
 
+// ---------- Převod obsahu: jednotky, dokumenty, termíny, kontakty, lidé (idempotentně podle ext_id) ----------
+
+/** Záznam u nás pro ext_id (nebo 0); existuje-li ještě. */
+function api_ref(string $kind, string $ext, string $table): int
+{
+    api_ready();
+    if ($ext === '') {
+        return 0;
+    }
+    $id = (int) val('SELECT local_id FROM api_refs WHERE kind = ? AND ext_id = ?', [$kind, $ext]);
+    if ($id && !val("SELECT 1 FROM $table WHERE id = ?", [$id])) {
+        q('DELETE FROM api_refs WHERE kind = ? AND ext_id = ?', [$kind, $ext]);
+        return 0;
+    }
+    return $id;
+}
+function api_ref_save(string $kind, string $ext, int $id): void
+{
+    if ($ext !== '') {
+        q('DELETE FROM api_refs WHERE kind = ? AND ext_id = ?', [$kind, $ext]);
+        q('INSERT INTO api_refs (kind, ext_id, local_id, created_at) VALUES (?,?,?,?)', [$kind, $ext, $id, date('Y-m-d H:i:s')]);
+    }
+}
+function api_ext(array $r): string
+{
+    return mb_substr(trim((string) ($r['ext_id'] ?? '')), 0, 100);
+}
+/** Jednotka podle označení „A/12“, „371/1“ nebo „12“ (bez vchodu, je-li jednoznačné); null = nenalezena. */
+function api_unit_find(string $label): ?array
+{
+    $label = mb_strtoupper(trim(preg_replace('/^' . preg_quote(mb_strtoupper(unit_prefix()), '/') . '/u', '', mb_strtoupper(trim($label)))));
+    $hit = [];
+    foreach (all_units() as $un) {
+        if (mb_strtoupper($un['entrance'] . '/' . $un['number']) === $label) {
+            return $un;
+        }
+        if (mb_strtoupper((string) $un['number']) === $label) {
+            $hit[] = $un;
+        }
+    }
+    return count($hit) === 1 ? $hit[0] : null;
+}
+/** Jednotky: upsert podle vchodu a čísla. Vrací [nových, upravených, chyby]. */
+function api_units_save(array $rows): array
+{
+    $new = $upd = 0;
+    $err = [];
+    foreach (array_slice($rows, 0, API_MAX_ROWS) as $i => $r) {
+        $entrance = mb_substr(trim((string) ($r['entrance'] ?? '')), 0, 20);
+        $number = mb_substr(trim((string) ($r['number'] ?? '')), 0, 20);
+        if (!is_array($r) || $number === '') {
+            $err[] = ['row' => $i + 1, 'error' => 'Chybí číslo jednotky (number)'];
+            continue;
+        }
+        if (isset($r['area']) && $r['area'] !== null && $r['area'] !== '' && !is_numeric($r['area'])) {
+            $err[] = ['row' => $i + 1, 'error' => 'Plocha (area) není číslo'];
+            continue;
+        }
+        $f = ['floor' => mb_substr((string) ($r['floor'] ?? ''), 0, 20), 'share' => mb_substr((string) ($r['share'] ?? ''), 0, 30), 'owner_note' => mb_substr((string) ($r['owner_note'] ?? ''), 0, 200)];
+        $area = isset($r['area']) && is_numeric($r['area']) ? round((float) $r['area'], 2) : null;
+        $id = (int) val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$entrance, $number]);
+        if ($id) {
+            $sets = [];
+            $args = [];
+            foreach ($f as $k => $v) {
+                if (array_key_exists($k, $r)) {
+                    $sets[] = "$k = ?";
+                    $args[] = $v;
+                }
+            }
+            if ($area !== null) {
+                $sets[] = 'area = ?';
+                $args[] = $area;
+            }
+            if ($sets) {
+                q('UPDATE units SET ' . implode(', ', $sets) . ' WHERE id = ?', [...$args, $id]);
+            }
+            $upd++;
+        } else {
+            q('INSERT INTO units (entrance, number, floor, share, owner_note, area) VALUES (?,?,?,?,?,?)', [$entrance, $number, $f['floor'], $f['share'], $f['owner_note'], $area]);
+            $new++;
+        }
+    }
+    return [$new, $upd, $err];
+}
+/** Termíny: upsert podle ext_id (bez něj vždy nový). */
+function api_events_save(array $rows): array
+{
+    $new = $upd = 0;
+    $err = [];
+    foreach (array_slice($rows, 0, API_MAX_ROWS) as $i => $r) {
+        $title = mb_substr(trim((string) ($r['title'] ?? '')), 0, 200);
+        $date = substr((string) ($r['date'] ?? ''), 0, 10);
+        $time = substr(trim((string) ($r['time'] ?? '')), 0, 5);
+        $e = match (true) {
+            !is_array($r) || $title === '' => 'Chybí název (title)',
+            !valid_date($date) => 'Neplatné datum (date, RRRR-MM-DD)',
+            $time !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) => 'Neplatný čas (time, HH:MM)',
+            default => '',
+        };
+        if ($e !== '') {
+            $err[] = ['row' => $i + 1, 'error' => $e];
+            continue;
+        }
+        $args = [$title, $date, $time, mb_substr((string) ($r['place'] ?? ''), 0, 200), mb_substr((string) ($r['note'] ?? ''), 0, 5000)];
+        $ext = api_ext($r);
+        if ($id = api_ref('event', $ext, 'events')) {
+            q('UPDATE events SET title = ?, event_date = ?, event_time = ?, place = ?, note = ? WHERE id = ?', [...$args, $id]);
+            $upd++;
+        } else {
+            q('INSERT INTO events (title, event_date, event_time, place, note) VALUES (?,?,?,?,?)', $args);
+            api_ref_save('event', $ext, (int) db()->lastInsertId());
+            $new++;
+        }
+    }
+    return [$new, $upd, $err];
+}
+/** Kontakty: upsert podle ext_id, jinak podle skupiny a jména. */
+function api_contacts_save(array $rows): array
+{
+    $new = $upd = 0;
+    $err = [];
+    foreach (array_slice($rows, 0, 500) as $i => $r) {
+        $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 200);
+        $grp = (string) ($r['group'] ?? 'vybor');
+        if (!is_array($r) || $name === '' || !isset(CONTACT_GROUPS[$grp])) {
+            $err[] = ['row' => $i + 1, 'error' => $name === '' ? 'Chybí jméno (name)' : 'Skupina (group) musí být vybor, sprava nebo havarie'];
+            continue;
+        }
+        $email = trim((string) ($r['email'] ?? ''));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $err[] = ['row' => $i + 1, 'error' => 'Neplatný e-mail'];
+            continue;
+        }
+        $args = [$grp, mb_substr((string) ($r['role'] ?? ''), 0, 100), $name, mb_substr(trim((string) ($r['phone'] ?? '')), 0, 60), $email, mb_substr((string) ($r['note'] ?? ''), 0, 500), (int) ($r['sort'] ?? 100)];
+        $ext = api_ext($r);
+        $id = api_ref('contact', $ext, 'contacts') ?: ($ext === '' ? (int) val('SELECT id FROM contacts WHERE grp = ? AND name = ?', [$grp, $name]) : 0);
+        if ($id) {
+            q('UPDATE contacts SET grp = ?, role = ?, name = ?, phone = ?, email = ?, note = ?, sort = ? WHERE id = ?', [...$args, $id]);
+            $upd++;
+        } else {
+            q('INSERT INTO contacts (grp, role, name, phone, email, note, sort) VALUES (?,?,?,?,?,?,?)', $args);
+            api_ref_save('contact', $ext, (int) db()->lastInsertId());
+            $new++;
+        }
+    }
+    return [$new, $upd, $err];
+}
+/**
+ * Dokument (soubor už uložený přes store_upload/store_file_data): upsert podle ext_id. $m: title, category, date, visibility, unit.
+ * Vrací [id, nový?] nebo text chyby. Dokument jednotky je vždy jen pro obyvatele.
+ */
+function api_document_save(array $m, ?array $file): array|string
+{
+    $cat = isset(CATEGORIES[$m['category'] ?? '']) ? (string) $m['category'] : 'oznameni';
+    $date = substr((string) ($m['date'] ?? ''), 0, 10);
+    if ($date !== '' && !valid_date($date)) {
+        return 'Neplatné datum (date, RRRR-MM-DD)';
+    }
+    $unitId = null;
+    if (trim((string) ($m['unit'] ?? '')) !== '') {
+        $un = api_unit_find((string) $m['unit']);
+        if (!$un) {
+            return 'Jednotka „' . $m['unit'] . '“ neexistuje';
+        }
+        $unitId = (int) $un['id'];
+    }
+    $vis = $unitId ? 'residents' : (($m['visibility'] ?? '') === 'residents' ? 'residents' : 'public');
+    $title = mb_substr(trim((string) ($m['title'] ?? '')), 0, 200) ?: ($file ? pathinfo($file[1], PATHINFO_FILENAME) : 'Dokument');
+    $ext = api_ext($m);
+    if ($id = api_ref('document', $ext, 'documents')) {
+        q('UPDATE documents SET title = ?, category = ?, visibility = ?, doc_date = ?, unit_id = ? WHERE id = ?', [$title, $cat, $vis, $date ?: null, $unitId, $id]);
+        if ($file) {
+            $old = (string) val('SELECT filename FROM documents WHERE id = ?', [$id]);
+            if ($old !== '') {
+                @unlink(UPLOAD_DIR . '/' . basename($old));
+            }
+            q('UPDATE documents SET filename = ?, original_name = ?, size = ?, external_url = NULL WHERE id = ?', [$file[0], $file[1], $file[2], $id]);
+        }
+        return [$id, false];
+    }
+    if (!$file) {
+        return 'Chybí soubor';
+    }
+    q('INSERT INTO documents (title, category, visibility, doc_date, filename, original_name, size, unit_id) VALUES (?,?,?,?,?,?,?,?)', [$title, $cat, $vis, $date ?: null, $file[0], $file[1], $file[2], $unitId]);
+    $id = (int) db()->lastInsertId();
+    api_ref_save('document', $ext, $id);
+    return [$id, true];
+}
+/**
+ * Lidé: účet obyvatele s jednotkami (podle označení). Pozvánky se neposílají – pošle je výbor, až bude web připravený.
+ * Existující e-mail: doplní jednotky. Nájemník jen k jednotce, která má vlastníka (vlastníci se proto zpracují první).
+ */
+function api_people_save(array $rows): array
+{
+    $new = $linked = 0;
+    $err = [];
+    $rows = array_slice($rows, 0, 1000, true);
+    uasort($rows, fn($a, $b) => (($a['kind'] ?? 'owner') === 'tenant') <=> (($b['kind'] ?? 'owner') === 'tenant'));
+    foreach ($rows as $i => $r) {
+        $name = mb_substr(trim((string) ($r['name'] ?? '')), 0, 120);
+        $email = mb_strtolower(trim((string) ($r['email'] ?? '')));
+        $kind = ($r['kind'] ?? 'owner') === 'tenant' ? 'tenant' : 'owner';
+        $phone = phone_clean((string) ($r['phone'] ?? ''));
+        $units = [];
+        $bad = '';
+        foreach ((array) ($r['units'] ?? []) as $lbl) {
+            $un = api_unit_find((string) $lbl);
+            $un ? $units[] = (int) $un['id'] : $bad = (string) $lbl;
+        }
+        $e = match (true) {
+            !is_array($r) || $name === '' => 'Chybí jméno (name)',
+            !filter_var($email, FILTER_VALIDATE_EMAIL) => 'Neplatný e-mail',
+            $phone === null => PHONE_ERROR,
+            $bad !== '' => 'Jednotka „' . $bad . '“ neexistuje',
+            $kind === 'tenant' && ($te = tenant_units_error($units)) !== null => $te,
+            default => '',
+        };
+        if ($e !== '') {
+            $err[] = ['row' => $i + 1, 'error' => $e];
+            continue;
+        }
+        $id = (int) val('SELECT id FROM users WHERE email = ?', [$email]);
+        if (!$id) {
+            if ($limit = plan_limit_error('users')) {
+                $err[] = ['row' => $i + 1, 'error' => $limit];
+                continue;
+            }
+            q("INSERT INTO users (name, email, phone, kind, role, password_hash) VALUES (?,?,?,?,'resident',?)", [$name, $email, $phone, $kind, NO_PASSWORD]);
+            $id = (int) db()->lastInsertId();
+            $new++;
+        } else {
+            $linked++;
+        }
+        foreach ($units as $uid) {
+            q('INSERT OR IGNORE INTO user_units (user_id, unit_id) VALUES (?,?)', [$id, $uid]);
+        }
+    }
+    return [$new, $linked, $err];
+}
+
+/** Starší aktuality (převod): datum published_at, bez upozornění obyvatelům; upsert podle ext_id. */
+function api_posts_import(array $rows): array
+{
+    $new = $upd = 0;
+    $err = [];
+    foreach (array_slice($rows, 0, API_MAX_ROWS) as $i => $r) {
+        $title = mb_substr(trim((string) ($r['title'] ?? '')), 0, 200);
+        $body = trim((string) ($r['body'] ?? ''));
+        $date = substr((string) ($r['published_at'] ?? ''), 0, 10);
+        $e = match (true) {
+            !is_array($r) || $title === '' || $body === '' => 'Vyplňte title a body',
+            mb_strlen($body) > 50000 => 'Text (body) je delší než 50 000 znaků',
+            !valid_date($date) => 'Neplatné datum zveřejnění (published_at, RRRR-MM-DD)',
+            default => '',
+        };
+        if ($e !== '') {
+            $err[] = ['row' => $i + 1, 'error' => $e];
+            continue;
+        }
+        $vis = ($r['visibility'] ?? '') === 'residents' ? 'residents' : 'public';
+        $ext = api_ext($r);
+        if ($id = api_ref('post', $ext, 'posts')) {
+            q('UPDATE posts SET title = ?, body = ?, visibility = ?, published_at = ? WHERE id = ?', [$title, $body, $vis, $date, $id]);
+            $upd++;
+        } else {
+            q('INSERT INTO posts (title, body, visibility, pinned, published_at, author_id) VALUES (?,?,?,?,?,?)', [$title, $body, $vis, 0, $date, null]);
+            api_ref_save('post', $ext, (int) db()->lastInsertId());
+            $new++;
+        }
+    }
+    return [$new, $upd, $err];
+}
+
 // ---------- MCP (Model Context Protocol) pro AI asistenty výboru – nástroje podle rozsahů klíče ----------
 
 const API_MCP_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -258,6 +542,19 @@ function api_mcp_tools(array $key): array
             'inputSchema' => ['type' => 'object', 'properties' => ['status' => ['type' => 'string', 'enum' => ['open', 'new', 'in_progress', 'done', 'all']], 'limit' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 200]]]],
         ['name' => 'list_debtors', 'scope' => 'ledger:read', 'title' => 'Nedoplatky', 'description' => 'Jednotky s nedoplatkem podle konta (označení, VS, výše, k datu) – bez jmen.',
             'inputSchema' => ['type' => 'object', 'properties' => new stdClass()]],
+        ['name' => 'import_units', 'scope' => 'units:write', 'title' => 'Převod: jednotky', 'description' => 'Založí nebo upraví jednotky (entrance, number, floor, share, area, owner_note). Opakované volání nic nezdvojí.',
+            'inputSchema' => ['type' => 'object', 'required' => ['units'], 'properties' => ['units' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'import_events', 'scope' => 'events:write', 'title' => 'Převod: termíny', 'description' => 'Zapíše termíny {ext_id, title, date RRRR-MM-DD, time HH:MM, place, note}; stejné ext_id přepíše.',
+            'inputSchema' => ['type' => 'object', 'required' => ['events'], 'properties' => ['events' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'import_contacts', 'scope' => 'contacts:write', 'title' => 'Převod: kontakty', 'description' => 'Zapíše kontakty {ext_id, group vybor|sprava|havarie, role, name, phone, email, note}.',
+            'inputSchema' => ['type' => 'object', 'required' => ['contacts'], 'properties' => ['contacts' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'import_posts', 'scope' => 'posts:write', 'title' => 'Převod: starší aktuality', 'description' => 'Zapíše starší aktuality {ext_id, title, body, published_at, visibility} bez upozornění obyvatelům.',
+            'inputSchema' => ['type' => 'object', 'required' => ['posts'], 'properties' => ['posts' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'import_people', 'scope' => 'people:write', 'title' => 'Převod: účty obyvatel', 'description' => 'Založí účty obyvatel {name, email, phone, kind owner|tenant, units ["A/12"]} bez pozvánek. Osobní údaje – jen na pokyn správce.',
+            'inputSchema' => ['type' => 'object', 'required' => ['people'], 'properties' => ['people' => ['type' => 'array', 'items' => ['type' => 'object']]]]],
+        ['name' => 'upload_document', 'scope' => 'documents:write', 'title' => 'Převod: dokument', 'description' => 'Nahraje jeden dokument {filename, content_base64, title, category, date, visibility, unit, ext_id}. Větší soubory raději přes REST /api/v1/documents.',
+            'inputSchema' => ['type' => 'object', 'required' => ['filename', 'content_base64'], 'properties' => ['filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string'], 'title' => ['type' => 'string'], 'category' => ['type' => 'string', 'enum' => array_keys(CATEGORIES)],
+                'date' => ['type' => 'string'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']], 'unit' => ['type' => 'string'], 'ext_id' => ['type' => 'string']]]],
         ['name' => 'create_post', 'scope' => 'posts:write', 'title' => 'Zveřejnit aktualitu', 'description' => 'Zveřejní aktualitu na webu domu a pošle upozornění obyvatelům. Jen na výslovný pokyn uživatele s potvrzeným textem.',
             'inputSchema' => ['type' => 'object', 'required' => ['title', 'body'], 'properties' => ['title' => ['type' => 'string', 'maxLength' => 200], 'body' => ['type' => 'string', 'maxLength' => 20000],
                 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']]]]],
@@ -292,6 +589,37 @@ function api_mcp_call(array $key, string $name, array $a): array
             return $text(api_tickets($st === 'all' ? '' : $st, (int) ($a['limit'] ?? 100)));
         case 'list_debtors':
             return $text(array_values(array_filter(api_balances(), fn($b) => $b['balance'] < 0)));
+        case 'import_units':
+            [$n, $u, $e] = api_units_save((array) ($a['units'] ?? []));
+            return $text(['created' => $n, 'updated' => $u, 'errors' => $e]);
+        case 'import_events':
+            [$n, $u, $e] = api_events_save((array) ($a['events'] ?? []));
+            return $text(['created' => $n, 'updated' => $u, 'errors' => $e]);
+        case 'import_contacts':
+            [$n, $u, $e] = api_contacts_save((array) ($a['contacts'] ?? []));
+            return $text(['created' => $n, 'updated' => $u, 'errors' => $e]);
+        case 'import_posts':
+            [$n, $u, $e] = api_posts_import((array) ($a['posts'] ?? []));
+            return $text(['created' => $n, 'updated' => $u, 'errors' => $e]);
+        case 'import_people':
+            [$n, $l, $e] = api_people_save((array) ($a['people'] ?? []));
+            audit('users_imported', 'AI asistent (' . $key['name'] . "): nových účtů $n – pozvánky neodeslány");
+            return $text(['created' => $n, 'linked' => $l, 'invites_sent' => 0, 'errors' => $e]);
+        case 'upload_document':
+            $data = base64_decode((string) ($a['content_base64'] ?? ''), true);
+            if ($data === false || $data === '') {
+                return $text('content_base64 není platný base64.', true);
+            }
+            $file = store_file_data((string) ($a['filename'] ?? 'dokument'), $data);
+            if (is_string($file)) {
+                return $text($file, true);
+            }
+            $r = api_document_save($a, $file);
+            if (is_string($r)) {
+                @unlink(UPLOAD_DIR . '/' . $file[0]);
+                return $text($r, true);
+            }
+            return $text(['id' => $r[0], 'created' => $r[1]]);
         case 'create_post':
             $title = trim((string) ($a['title'] ?? ''));
             $body = trim((string) ($a['body'] ?? ''));
@@ -351,7 +679,7 @@ function api_openapi(): array
         'servers' => [['url' => 'https://{dum}.spolecnyweb.cz/api/v1', 'variables' => ['dum' => ['default' => 'ukazka', 'description' => 'Adresa webu domu']]]],
         'security' => [['bearer' => []]],
         'paths' => [
-            '/units' => ['get' => ['summary' => 'Jednotky domu (bez osobních údajů)', 'x-scope' => 'units:read', 'responses' => $okArr('units', 'Unit')]],
+            '/units' => ['get' => ['summary' => 'Jednotky domu (bez osobních údajů)', 'x-scope' => 'units:read', 'responses' => $okArr('units', 'Unit')], 'put' => ['summary' => 'Převod: jednotky – upsert podle entrance + number', 'x-scope' => 'units:write', 'requestBody' => $body('UnitIn'), 'responses' => $saved]],
             '/ledger/balances' => ['get' => ['summary' => 'Předpis a saldo jednotek', 'x-scope' => 'ledger:read', 'responses' => $okArr('balances', 'Balance')]],
             '/ledger/receivables' => ['put' => ['summary' => 'Pohledávky (předpisy záloh, vyúčtování) – upsert podle ext_id', 'x-scope' => 'ledger:write', 'requestBody' => $body('Receivable'), 'responses' => $saved]],
             '/ledger/payments' => ['put' => ['summary' => 'Přijaté platby – upsert podle ext_id', 'x-scope' => 'ledger:write', 'requestBody' => $body('Payment'), 'responses' => $saved]],
@@ -360,7 +688,12 @@ function api_openapi(): array
                 'requestBody' => ['content' => ['application/json' => ['schema' => ['oneOf' => [['type' => 'array', 'items' => ['$ref' => '#/components/schemas/Reading']], ['$ref' => '#/components/schemas/DomusAmr']]]], 'text/csv' => ['schema' => ['type' => 'string']]]],
                 'responses' => ['200' => ['description' => 'Přijato (held = řádky čekající na schválení výborem)', 'content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/ReadingsResult']]]], '400' => $err, '401' => $err, '403' => $err, '429' => $err]]],
             '/tickets' => ['get' => ['summary' => 'Závady a požadavky (bez jmen obyvatel)', 'x-scope' => 'tickets:read', 'parameters' => [['name' => 'status', 'in' => 'query', 'schema' => ['type' => 'string', 'enum' => ['open', 'new', 'in_progress', 'done']]]], 'responses' => $okArr('tickets', 'Ticket')]],
-            '/posts' => ['post' => ['summary' => 'Zveřejnit aktualitu', 'x-scope' => 'posts:write', 'requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Post']]]], 'responses' => ['201' => ['description' => 'Zveřejněno'], '400' => $err, '401' => $err, '403' => $err]]],
+            '/posts' => ['post' => ['summary' => 'Zveřejnit aktualitu', 'x-scope' => 'posts:write', 'requestBody' => ['content' => ['application/json' => ['schema' => ['$ref' => '#/components/schemas/Post']]]], 'responses' => ['201' => ['description' => 'Zveřejněno'], '400' => $err, '401' => $err, '403' => $err]], 'put' => ['summary' => 'Převod: starší aktuality s datem, bez upozornění obyvatelům', 'x-scope' => 'posts:write', 'requestBody' => $body('PostIn'), 'responses' => $saved]],
+            '/events' => ['put' => ['summary' => 'Převod: termíny – upsert podle ext_id', 'x-scope' => 'events:write', 'requestBody' => $body('EventIn'), 'responses' => $saved]],
+            '/contacts' => ['put' => ['summary' => 'Převod: kontakty – upsert podle ext_id (jinak skupina + jméno)', 'x-scope' => 'contacts:write', 'requestBody' => $body('ContactIn'), 'responses' => $saved]],
+            '/people' => ['post' => ['summary' => 'Převod: účty obyvatel s jednotkami; pozvánky se neposílají', 'x-scope' => 'people:write', 'requestBody' => $body('PersonIn'), 'responses' => $saved]],
+            '/documents' => ['post' => ['summary' => 'Převod: jeden dokument (multipart pole file, nebo JSON content_base64); upsert podle ext_id', 'x-scope' => 'documents:write',
+                'requestBody' => ['content' => ['multipart/form-data' => ['schema' => ['$ref' => '#/components/schemas/DocumentIn']], 'application/json' => ['schema' => ['$ref' => '#/components/schemas/DocumentIn']]]], 'responses' => $saved]],
         ],
         'components' => [
             'securitySchemes' => ['bearer' => ['type' => 'http', 'scheme' => 'bearer', 'description' => 'Klíč swk_… od výboru domu']],
@@ -378,6 +711,13 @@ function api_openapi(): array
                 'ReadingsResult' => ['type' => 'object', 'properties' => ['ok' => ['type' => 'boolean'], 'format' => ['type' => 'string'], 'saved' => ['type' => 'integer'], 'updated' => ['type' => 'integer'], 'held' => ['type' => 'integer'], 'errors' => ['type' => 'array', 'items' => ['type' => 'object']]]],
                 'Ticket' => ['type' => 'object', 'properties' => ['id' => ['type' => 'integer'], 'subject' => ['type' => 'string'], 'location' => ['type' => 'string'], 'status' => ['type' => 'string'], 'status_label' => ['type' => 'string'], 'due' => ['type' => 'string'], 'created_at' => ['type' => 'string']]],
                 'Post' => ['type' => 'object', 'required' => ['title', 'body'], 'properties' => ['title' => ['type' => 'string', 'maxLength' => 200], 'body' => ['type' => 'string'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']]]],
+                'UnitIn' => ['type' => 'object', 'required' => ['number'], 'properties' => ['entrance' => ['type' => 'string'], 'number' => ['type' => 'string'], 'floor' => ['type' => 'string'], 'share' => ['type' => 'string', 'description' => 'např. 652/100000'], 'area' => ['type' => 'number'], 'owner_note' => ['type' => 'string', 'description' => 'vlastník dle evidence (text)']]],
+                'EventIn' => ['type' => 'object', 'required' => ['title', 'date'], 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'date' => ['type' => 'string', 'format' => 'date'], 'time' => ['type' => 'string', 'description' => 'HH:MM'], 'place' => ['type' => 'string'], 'note' => ['type' => 'string']]],
+                'ContactIn' => ['type' => 'object', 'required' => ['name', 'group'], 'properties' => ['ext_id' => ['type' => 'string'], 'group' => ['type' => 'string', 'enum' => array_keys(CONTACT_GROUPS)], 'role' => ['type' => 'string'], 'name' => ['type' => 'string'], 'phone' => ['type' => 'string'], 'email' => ['type' => 'string'], 'note' => ['type' => 'string'], 'sort' => ['type' => 'integer']]],
+                'PersonIn' => ['type' => 'object', 'required' => ['name', 'email'], 'properties' => ['name' => ['type' => 'string'], 'email' => ['type' => 'string'], 'phone' => ['type' => 'string'], 'kind' => ['type' => 'string', 'enum' => ['owner', 'tenant']], 'units' => ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'označení jednotek, např. A/12']]],
+                'DocumentIn' => ['type' => 'object', 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'category' => ['type' => 'string', 'enum' => array_keys(CATEGORIES)], 'date' => ['type' => 'string', 'format' => 'date'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']], 'unit' => ['type' => 'string', 'description' => 'dokument jedné jednotky (vždy jen pro obyvatele)'],
+                    'file' => ['type' => 'string', 'format' => 'binary'], 'filename' => ['type' => 'string'], 'content_base64' => ['type' => 'string']]],
+                'PostIn' => ['type' => 'object', 'required' => ['title', 'body', 'published_at'], 'properties' => ['ext_id' => ['type' => 'string'], 'title' => ['type' => 'string'], 'body' => ['type' => 'string'], 'published_at' => ['type' => 'string', 'format' => 'date'], 'visibility' => ['type' => 'string', 'enum' => ['public', 'residents']]]],
             ],
         ],
     ];

@@ -900,6 +900,54 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       run('DELETE FROM ledger_docs'); run('DELETE FROM unit_accounts'); run('INSERT INTO unit_accounts SELECT * FROM ua_zaloha'); run('DROP TABLE ua_zaloha');
     }
 
+    // ---------- API a MCP: klíč a převod obsahu ----------
+    begin('api-a-mcp', 'Napojení konkrétních AI asistentů (Claude, ChatGPT, Copilot) na MCP jsme neověřovali – cizí aplikace; běh posílá stejné požadavky protokolu MCP přes HTTP jako asistent.');
+    {
+      const call = (method, url, body, type, key) => new Promise((resolve, reject) => {
+        const u = new URL(url);
+        const req = http.request({ host: '127.0.0.1', port: PORT, path: u.pathname + u.search, method, headers: { Host: u.host, 'X-Forwarded-Proto': 'https', 'Content-Type': type, 'Content-Length': Buffer.byteLength(body), Authorization: 'Bearer ' + key } }, (res) => {
+          let d = ''; res.on('data', (c) => { d += c; }); res.on('end', () => resolve({ status: res.statusCode, body: d }));
+        });
+        req.on('error', reject); req.end(body);
+      });
+      await admin.goto(T + '/admin/api');
+      await admin.fill('#novy [name=name]', 'Převod starého webu');
+      for (const sc of ['documents:write', 'events:write', 'contacts:write', 'posts:write']) await admin.check(`#novy input[value="${sc}"]`);
+      await admin.click('#novy button[type=submit]');
+      const key = await admin.inputValue('.api-new input');
+      check(/^swk_[a-f0-9]{40}$/.test(key) && (await flash(admin)).includes('Zkopírujte si ho hned'), 'klíč vytvořen a ukázán jednou');
+      await shot(admin.locator('main'), 'api-1-klic.jpg', 650);
+      step('Správce v API a napojení vytvořil klíč „Převod starého webu“ s oprávněními documents:write, events:write, contacts:write a posts:write; klíč swk_… se ukázal jednou.');
+      const r1 = await call('PUT', T + '/api/v1/events', JSON.stringify([{ ext_id: 'old-ev-1', title: 'Jarní úklid sklepů (převod)', date: `${new Date().getFullYear() + 1}-04-18`, time: '09:00', place: 'Sklepy' }]), 'application/json', key);
+      const r1b = await call('PUT', T + '/api/v1/events', JSON.stringify([{ ext_id: 'old-ev-1', title: 'Jarní úklid sklepů (převod)', date: `${new Date().getFullYear() + 1}-04-18`, time: '10:00', place: 'Sklepy' }]), 'application/json', key);
+      check(r1.status === 200 && JSON.parse(r1.body).created === 1 && JSON.parse(r1b.body).updated === 1 && sql("SELECT COUNT(*) FROM events WHERE title = 'Jarní úklid sklepů (převod)'") === '1', 'termín: vytvořen a podruhé jen upraven: ' + r1.body + r1b.body);
+      const pdf = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n').toString('base64');
+      const m0 = mailLen();
+      const r2 = await call('POST', T + '/api/v1/documents', JSON.stringify({ ext_id: 'old-doc-1', filename: 'domovni-rad.pdf', content_base64: pdf, title: 'Domovní řád (převod)', category: 'zakladni', date: '2018-03-01', visibility: 'residents' }), 'application/json', key);
+      const r3 = await call('PUT', T + '/api/v1/posts', JSON.stringify([{ ext_id: 'old-post-1', title: 'Výměna vodoměrů (převod)', body: 'Proběhla výměna vodoměrů.', published_at: '2019-05-02' }]), 'application/json', key);
+      check(r2.status === 201 && r3.status === 200 && JSON.parse(r3.body).created === 1 && mailLen() === m0, 'dokument a starší aktualita uloženy, nikomu nic neodešlo: ' + r2.body + r3.body);
+      await owner.goto(T + '/dokumenty');
+      check((await text(owner)).includes('Domovní řád (převod)'), 'obyvatel vidí převedený dokument');
+      step('Přes REST API se převedl termín (opakované odeslání se stejným ext_id ho jen upravilo), dokument „Domovní řád“ pro obyvatele a starší aktualita s původním datem; obyvatelům nepřišel žádný e-mail.');
+      const mcp = (m) => call('POST', T + '/mcp', JSON.stringify(m), 'application/json', key).then((r) => JSON.parse(r.body));
+      const init = await mcp({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'overeni', version: '1' } } });
+      const tl = (await mcp({ jsonrpc: '2.0', id: 2, method: 'tools/list' })).result.tools.map((t) => t.name);
+      const rc = await mcp({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'import_contacts', arguments: { contacts: [{ ext_id: 'old-c-1', group: 'havarie', role: 'Výtahy', name: 'Výtahy Servis (převod)', phone: '+420 777 123 456' }] } } });
+      check(init.result.serverInfo.name === 'spolecnyweb-dum' && tl.includes('import_contacts') && tl.includes('upload_document') && !tl.includes('import_people') && !rc.result.isError, 'MCP: initialize, nástroje podle oprávnění, převod kontaktu: ' + tl.join(','));
+      await owner.goto(T + '/kontakty');
+      check((await text(owner)).includes('Výtahy Servis (převod)'), 'kontakt z MCP je na webu');
+      step('AI asistent přes MCP (initialize, tools/list) viděl jen nástroje podle oprávnění klíče (bez účtů obyvatel) a nástrojem import_contacts převedl havarijní kontakt, který se ukázal v Kontaktech.');
+      await admin.goto(T + '/admin/api');
+      check((await text(admin)).includes('termíny: nových 1') && (await text(admin)).includes('mcp: import_contacts'), 'volání jsou v Posledních voláních');
+      await admin.evaluate(() => { const h = [...document.querySelectorAll('h2')].find((x) => x.textContent.includes('Poslední volání')); if (h) window.scrollTo(0, h.getBoundingClientRect().top + window.scrollY - 80); });
+      await shot(admin.locator('section.card:has(h2:has-text("Poslední volání"))'), 'api-2-volani.jpg', 700);
+      await admin.locator('tr:has-text("Převod starého webu") button').click();
+      const r4 = await call('PUT', T + '/api/v1/events', '[]', 'application/json', key);
+      check(r4.status === 401, 'zrušený klíč přestal platit: ' + r4.status);
+      step('Volání jsou vidět v části Poslední volání; po kliknutí na Zrušit klíč přestal okamžitě platit (401).');
+      run("DELETE FROM events WHERE title LIKE '%(převod)'"); run("DELETE FROM documents WHERE title LIKE '%(převod)'"); run("DELETE FROM posts WHERE title LIKE '%(převod)'"); run("DELETE FROM contacts WHERE name LIKE '%(převod)'"); run('DELETE FROM api_refs');
+    }
+
     // ---------- Kontrolní komise a napojení na programy (bez návodu – kontrola chování) ----------
     begin('kontrolni-komise-a-napojeni', 'Funkce bez návodu v nápovědě; běh ověřuje chování.');
     {
