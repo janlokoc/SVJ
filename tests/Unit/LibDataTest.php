@@ -318,6 +318,49 @@ TXT;
         $this->assertSame(0.0, $r['total']);
     }
 
+    // ---------- Nájemník bez vlastníka nevznikne (11/2026) ----------
+
+    public function testTenantNeedsUnitWithOwnerAccount(): void
+    {
+        $owned = units_with_owner();
+        $this->assertNotEmpty($owned);
+        $free = (int) val('SELECT id FROM units WHERE id NOT IN (' . implode(',', $owned) . ') ORDER BY id LIMIT 1');
+        $this->assertNull(tenant_units_error([$owned[0]]));
+        $this->assertStringContainsString('musí být přiřazený k jednotce', (string) tenant_units_error([]));
+        if ($free) {
+            $this->assertStringContainsString('nemá vlastníka s účtem', (string) tenant_units_error([$owned[0], $free]));
+            // Import: nájemník k bytu, jehož vlastník je ve stejném seznamu → v pořádku.
+            $unitName = unit_name(one('SELECT * FROM units WHERE id = ?', [$free]));
+            $label = preg_replace('/^' . preg_quote(unit_prefix(), '/') . '/', '', $unitName);
+            $a = 'imp-o-' . bin2hex(random_bytes(3)) . '@example.cz';
+            $rows = parse_user_import("Jméno;Příjmení;Telefon;E-mail;Vztah;Jednotka\nNoví;Vlastník;;$a;vlastník;$label\nNová;Nájemnice;;t-$a;nájemník;$label\n");
+            $this->assertSame(['ok', 'ok'], array_column($rows, 'status'), 'vlastník v témže seznamu stačí');
+            $rows = parse_user_import("Jméno;Příjmení;Telefon;E-mail;Vztah;Jednotka\nNová;Nájemnice;;t2-$a;nájemník;$label\n");
+            $this->assertSame('error', $rows[0]['status']);
+        }
+        // Odebrání jediného vlastníka bytu s nájemníkem se nepovolí.
+        $tenantUnit = (int) val("SELECT uu.unit_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.kind = 'tenant' AND u.active = 1 LIMIT 1");
+        $owner = (int) val("SELECT id FROM users WHERE kind = 'owner' AND active = 1 AND role <> 'admin' AND id NOT IN (SELECT user_id FROM user_units WHERE unit_id = ?) ORDER BY id DESC LIMIT 1", [$tenantUnit]);
+        $others = all("SELECT uu.user_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE uu.unit_id = ? AND u.kind = 'owner'", [$tenantUnit]);
+        q("DELETE FROM user_units WHERE unit_id = ? AND user_id IN (SELECT id FROM users WHERE kind = 'owner')", [$tenantUnit]);
+        q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$owner, $tenantUnit]);
+        try {
+            $this->assertStringContainsString('bydlí nájemník', (string) owner_change_error($owner, []), 'smazání / vypnutí jediného vlastníka');
+            $this->assertNull(owner_change_error($owner, [$tenantUnit]), 'vlastník byt ponechá');
+            $this->assertNull(owner_change_error(0, []));
+        } finally {
+            q('DELETE FROM user_units WHERE user_id = ? AND unit_id = ?', [$owner, $tenantUnit]);
+            foreach ($others as $o) {
+                q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$o['user_id'], $tenantUnit]);
+            }
+        }
+        $src = (string) file_get_contents(dirname(__DIR__, 2) . '/app/routes_admin.php');
+        $this->assertStringContainsString('tenant_units_error(', $src, 'formulář účtu');
+        $this->assertStringContainsString('owner_change_error($id, [])', $src, 'smazání účtu');
+        $this->assertStringContainsString('Nájemník bez vlastníka být nemůže', $src, 'formulář jednotky');
+        $this->assertStringContainsString('tenant_units_error([(int) $unit[\'id\']])', (string) file_get_contents(dirname(__DIR__, 2) . '/app/routes_join.php'), 'schválení žádosti');
+    }
+
     // ---------- User import ----------
 
     public function testParseUserImport(): void
@@ -341,10 +384,11 @@ TXT;
         $this->assertSame('owner', $karel['kind']);
         $this->assertSame(['A/1', 'B/2'], array_map(fn($u) => $u['entrance'] . '/' . $u['number'], $karel['units']));
 
-        $this->assertSame('ok', $olga['status'], 'semicolon separated');
+        $this->assertSame('error', $olga['status'], 'semicolon separated; nájemník bez jednotky (s vlastníkem) nevznikne');
         $this->assertSame('tenant', $olga['kind']);
         $this->assertSame([], $olga['units']);
         $this->assertStringContainsString('Jednotka 12A/99 v seznamu jednotek není.', $olga['message']);
+        $this->assertStringContainsString('Nájemník musí mít uvedenou jednotku.', $olga['message']);
 
         $this->assertSame('exists', $petr['status']);
         $this->assertSame('error', $bad['status']);

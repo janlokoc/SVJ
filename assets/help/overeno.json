@@ -35,7 +35,7 @@
     "date": "2026-11-28",
     "checks": 11,
     "steps": [
-      "Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail.",
+      "Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail jen s upozorněním a odkazem (bez obsahu zprávy).",
       "Vlastník závadu otevřel, nastavil „Řeší se“ a odpověděl; nájemník odpověď i stav vidí.",
       "Správce webu (výbor) vlákno ani přílohu neotevře."
     ],
@@ -122,7 +122,7 @@
     "checks": 18,
     "steps": [
       "Vyúčtování za rok 2025 je založené; web ukazuje zákonnou lhůtu pro doručení 30. 4. 2026 (4 měsíce od konce období).",
-      "Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12A/5 je označená „bez účtu vlastníka“.",
+      "Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12B/2 je označená „bez účtu vlastníka“.",
       "Po „Zveřejnit“ dostali vlastníci e-mail (nájemník ne); námitky lze podat do 28. 12. 2026 a vyúčtování už nejde smazat.",
       "Vlastník přes Můj účet → Moje vyúčtování otevřel PDF, potvrdil převzetí a podal námitku; správcům přišel e-mail.",
       "Stav po jednotkách ukázal potvrzení převzetí, lhůtu pro námitky a lhůtu k vyřízení; „Odeslat odpověď a uzavřít“ poslalo vlastníkovi odpověď e-mailem.",

@@ -140,6 +140,10 @@ $route('POST', '/admin/uzivatele/zadosti/(\d+)', function (int $id) {
         flash('Žádost je zamítnutá a žadatel o tom dostal e-mail.', 'info');
         redirect('/admin/uzivatele/zadosti');
     }
+    if ($r['kind'] === 'tenant' && ($tenantError = tenant_units_error([(int) $unit['id']]))) {
+        flash($tenantError . ' Žádost zatím nechte čekat.', 'error');
+        redirect('/admin/uzivatele/zadosti#z' . $id);
+    }
     if (!isset($_POST['verified'])) {
         flash('Před schválením potvrďte, že jste ověřili, že e-mail patří uvedené osobě a ta k jednotce patří.', 'error');
         redirect('/admin/uzivatele/zadosti#z' . $id);

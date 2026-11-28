@@ -9,7 +9,8 @@ declare(strict_types=1);
  * Spoluvlastníci i více nájemníků téže jednotky vidí totéž. Výbor ani správa domu obsah NEVIDÍ (soukromá věc mezi
  * vlastníkem a nájemníkem). Nájemník, kterého výbor od jednotky odpojí, přestane vlákna vidět; vlastník je má dál.
  *
- * Upozornění: druhé straně e-mail a upozornění do telefonu (bez odpovědi e-mailem – odpovídá se na webu).
+ * Upozornění: druhé straně e-mail a upozornění do telefonu jen jako oznámení BEZ obsahu – komunikace jen na webu.
+ * Nájemník bez vlastníka nevznikne (tenant_units_error v app/lib.php), přesto je ošetřeno, že druhá strana chybí.
  * Zapíná se v Nastavení → Menu (položka Závady v bytě), výchozí zapnuto, ve všech edicích.
  */
 
@@ -192,7 +193,7 @@ function unitcase_create(array $u, int $unitId, string $kind, string $subject, s
     $caseId = (int) db()->lastInsertId();
     unitcase_add_message($caseId, $u, $body, $files, false);
     $case = one('SELECT * FROM unit_cases WHERE id = ?', [$caseId]);
-    unitcase_notify($case, $u, $kind === 'zavada' ? 'Nová závada v bytě' : 'Nová zpráva', $body);
+    unitcase_notify($case, $u, $kind === 'zavada' ? 'nová závada' : 'nová zpráva');
     audit('unitcase_new', UNITCASE_KINDS[$kind] . ' · ' . ($units[$unitId]['name']));   // bez textu – obsah je soukromý
     return $caseId;
 }
@@ -208,7 +209,7 @@ function unitcase_add_message(int $caseId, array $u, string $body, array $files 
     q('UPDATE unit_cases SET updated_at = ? WHERE id = ?', [$now, $caseId]);
     unitcase_mark_read($caseId, (int) $u['id']);
     if ($notify) {
-        unitcase_notify(one('SELECT * FROM unit_cases WHERE id = ?', [$caseId]), $u, 'Odpověď', trim($body));
+        unitcase_notify(one('SELECT * FROM unit_cases WHERE id = ?', [$caseId]), $u, 'odpověď');
     }
     return $msgId;
 }
@@ -220,24 +221,27 @@ function unitcase_set_status(array $case, array $u, string $status): bool
     }
     q('UPDATE unit_cases SET status = ?, updated_at = ? WHERE id = ?', [$status, date('Y-m-d H:i:s'), $case['id']]);
     unitcase_add_message((int) $case['id'], $u, 'Stav změněn na: ' . UNITCASE_STATUS[$status] . '.', [], false);
-    unitcase_notify(array_merge($case, ['status' => $status]), $u, 'Změna stavu: ' . UNITCASE_STATUS[$status], 'Stav závady „' . $case['subject'] . '“ je teď: ' . UNITCASE_STATUS[$status] . '.');
+    unitcase_notify(array_merge($case, ['status' => $status]), $u, 'změna stavu závady');
     return true;
 }
-/** E-mail a upozornění do telefonu druhé straně (všem jejím účtům u jednotky). Vrací počet odeslaných e-mailů. */
-function unitcase_notify(array $case, array $from, string $what, string $text): int
+/**
+ * Upozornění druhé straně (všem jejím účtům u jednotky): e-mail a upozornění do telefonu BEZ obsahu zprávy – komunikace
+ * probíhá jen na webu (rozhodnutí provozovatele 11/2026). Vrací počet odeslaných e-mailů.
+ */
+function unitcase_notify(array $case, array $from, string $what, string $text = ''): int
 {
     $to = unitcase_people((int) $case['unit_id'], unitcase_other(unitcase_side($from)));
     $unit = unit_options()[(int) $case['unit_id']] ?? '';
-    $role = unitcase_side($from) === 'tenant' ? 'nájemník' : 'vlastník';
+    $who = unitcase_side($from) === 'tenant' ? 'Nájemník' : 'Vlastník';
     $link = absolute_url('/byt/' . $case['id']);
     $sent = 0;
     foreach ($to as $p) {
-        $mail = "Dobrý den,\n\n" . $from['name'] . " ($role, byt $unit) Vám na webu " . site('name') . " píše:\n\n„" . $case['subject'] . "“\n\n"
-            . mb_strimwidth($text, 0, 1500, '…') . "\n\nCelé vlákno a odpověď: $link\n\nOdpovídejte prosím na webu – odpověď na tento e-mail se nepřipojí.\n";
-        $sent += send_mail($p['email'], $what . ': ' . $case['subject'] . ' – byt ' . $unit, $mail) ? 1 : 0;
+        $mail = "Dobrý den,\n\n$who bytu $unit Vám píše na webu " . site('name') . " ($what).\n\nPřečíst a odpovědět můžete po přihlášení: $link\n\n"
+            . "Z důvodu soukromí e-mail obsah zprávy neobsahuje a odpověď na něj se nikam nedostane – odpovídejte prosím na webu.\n";
+        $sent += send_mail($p['email'], $who . ' bytu ' . $unit . ' Vám píše – ' . site('name'), $mail) ? 1 : 0;
     }
     if ($to && function_exists('push_notify')) {
-        push_notify(array_keys($to), $what . ' – byt ' . $unit, $case['subject'], '/byt/' . $case['id']);
+        push_notify(array_keys($to), $who . ' bytu ' . $unit . ' Vám píše', 'Zprávu najdete na webu v části Závady v bytě.', '/byt/' . $case['id']);
     }
     return $sent;
 }

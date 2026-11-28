@@ -288,8 +288,8 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       await ten.click('main form button[type=submit]');
       const caseId = sql("SELECT id FROM unit_cases ORDER BY id DESC LIMIT 1");
       check(!!caseId && ten.url().endsWith('/byt/' + caseId) && (await text(ten)).includes('Kape kohoutek v kuchyni') && (await text(ten)).includes('kohoutek.png'), 'závada odeslaná i s fotkou');
-      check(mailsSince(since).some((m) => m.to === who.owner && m.subject.startsWith('Nová závada v bytě')), 'vlastník dostal e-mail');
-      step('Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail.');
+      const om = mailsSince(since).find((m) => m.to === who.owner); check(!!om && om.subject.startsWith('Nájemník bytu') && !om.body.includes('Od včerejška kape'), 'vlastník dostal jen upozornění bez obsahu zprávy');
+      step('Nájemník na stránce Závady v bytě napsal vlastníkovi závadu s fotkou; vlastník dostal e-mail jen s upozorněním a odkazem (bez obsahu zprávy).');
       await owner.goto(T + '/byt');
       check((await text(owner)).includes('Kape kohoutek v kuchyni') && !!(await owner.$('.ucase-row.is-unread')), 'vlastník vidí novou nepřečtenou závadu');
       await owner.click('.ucase-row');
@@ -824,14 +824,14 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const sid = admin.url().split('/').pop();
       check((await text(admin, '.page-head')).includes(`Zákonná lhůta pro doručení: 30. 4. ${Y + 1}`), `lhůta pro doručení do 30. 4. ${Y + 1}`);
       step(`Vyúčtování za rok ${Y} je založené; web ukazuje zákonnou lhůtu pro doručení 30. 4. ${Y + 1} (4 měsíce od konce období).`);
-      await admin.setInputFiles('[name="files[]"]', ['A-1.pdf', 'vyuctovani_A_2.pdf', 'A-3.pdf', 'A-5.pdf', 'B-1.pdf', 'sken-0042.pdf'].map(pdfFile));
+      await admin.setInputFiles('[name="files[]"]', ['A-1.pdf', 'vyuctovani_A_2.pdf', 'A-3.pdf', 'B-2.pdf', 'B-1.pdf', 'sken-0042.pdf'].map(pdfFile));
       await admin.click('button:has-text("Nahrát")');
       check((await flash(admin)).includes('Nahráno a přiřazeno k jednotkám: 5. U 1 souborů se jednotka z názvu nepoznala'), 'nahráno 5 + 1 bez jednotky: ' + await flash(admin));
-      check((await text(admin)).includes('Soubory bez jednotky') && (await text(admin, '#j' + sql(`SELECT id FROM modf_settlement_items WHERE original_name = 'A-5.pdf'`))).includes('bez účtu vlastníka'), 'soubor bez jednotky a jednotka bez účtu vlastníka');
+      check((await text(admin)).includes('Soubory bez jednotky') && (await text(admin, '#j' + sql(`SELECT id FROM modf_settlement_items WHERE original_name = 'B-2.pdf'`))).includes('bez účtu vlastníka'), 'soubor bez jednotky a jednotka bez účtu vlastníka');
       await shot(admin.locator('section:has(#modf-un-h)'), 'vyuctovani-1-nahrano.jpg', 1100);
       await admin.selectOption('section:has(#modf-un-h) select[name=unit_id]', unitId('A/4')); await admin.click('section:has(#modf-un-h) button:has-text("Přiřadit")');
       check((await flash(admin)).includes('Soubor je přiřazený k jednotce') && !(await admin.$('#modf-un-h')), 'ručně přiřazeno');
-      step('Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12A/5 je označená „bez účtu vlastníka“.');
+      step('Nahráno 6 souborů: 5 se podle názvu přiřadilo k jednotkám, „sken-0042.pdf“ byl v Souborech bez jednotky a po výběru jednotky a „Přiřadit“ se přiřadil; jednotka 12B/2 je označená „bez účtu vlastníka“.');
       const m0 = mailLen();
       await admin.fill('[name=delivery_date]', today); await admin.click('button:has-text("Zveřejnit")');
       check((await flash(admin)).includes('Vyúčtování je zveřejněné a doručené 6 jednotkám'), 'zveřejněno: ' + await flash(admin));

@@ -11,7 +11,6 @@ final class UnitCaseTest extends TestCase
     private int $unit;
     private array $tenant;
     private array $owner;
-    private bool $linked = false;
 
     protected function setUp(): void
     {
@@ -19,16 +18,15 @@ final class UnitCaseTest extends TestCase
         unitcase_ready();
         $this->tenant = one("SELECT u.* FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE u.kind = 'tenant' AND u.active = 1 ORDER BY u.id LIMIT 1");
         $this->unit = (int) val('SELECT unit_id FROM user_units WHERE user_id = ?', [$this->tenant['id']]);
-        $this->owner = one("SELECT * FROM users WHERE kind = 'owner' AND active = 1 AND role <> 'admin' AND id NOT IN (SELECT user_id FROM user_units WHERE unit_id = ?) ORDER BY id DESC LIMIT 1", [$this->unit]);
+        // Vlastník bytu nájemníka (ukázkový dům ho má – nájemník bez vlastníka nevznikne).
+        $this->owner = one("SELECT u.* FROM users u JOIN user_units uu ON uu.user_id = u.id WHERE uu.unit_id = ? AND u.kind = 'owner' AND u.active = 1 ORDER BY u.id LIMIT 1", [$this->unit]);
         q("DELETE FROM settings WHERE `key` = 'unitcase_enabled'");
         setting('__reset');
     }
 
     protected function tearDown(): void
     {
-        if ($this->linked) {
-            q('DELETE FROM user_units WHERE user_id = ? AND unit_id = ?', [$this->owner['id'], $this->unit]);
-        }
+        q('INSERT INTO user_units (user_id, unit_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM user_units WHERE user_id = ? AND unit_id = ?)', [$this->owner['id'], $this->unit, $this->owner['id'], $this->unit]);
         q('INSERT INTO user_units (user_id, unit_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM user_units WHERE user_id = ? AND unit_id = ?)', [$this->tenant['id'], $this->unit, $this->tenant['id'], $this->unit]);
         q('DELETE FROM unit_case_messages WHERE case_id IN (SELECT id FROM unit_cases WHERE unit_id = ?)', [$this->unit]);
         q('DELETE FROM unit_case_reads WHERE case_id IN (SELECT id FROM unit_cases WHERE unit_id = ?)', [$this->unit]);
@@ -40,17 +38,17 @@ final class UnitCaseTest extends TestCase
 
     private function linkOwner(): void
     {
-        q('INSERT INTO user_units (user_id, unit_id) VALUES (?,?)', [$this->owner['id'], $this->unit]);
-        $this->linked = true;
+        $this->assertNotNull($this->owner, 'ukázkový nájemník má vlastníka s účtem');
     }
 
     public function testTenantWithoutOwnerAccountIsToldWhy(): void
     {
+        q('DELETE FROM user_units WHERE user_id = ? AND unit_id = ?', [$this->owner['id'], $this->unit]);   // vlastník odpojen (obrana, běžně nenastane)
         $units = unitcase_my_units($this->tenant);
         $this->assertSame(0, $units[$this->unit]['other']);
         $this->assertSame('tenant', $units[$this->unit]['side']);
         $this->assertStringContainsString('nemá na webu účet', (string) unitcase_create($this->tenant, $this->unit, 'zavada', 'Kape kohoutek', 'Od včera.'));
-        $this->assertArrayNotHasKey($this->unit, unitcase_my_units($this->owner), 'cizí byt vlastník nevidí');
+        $this->assertArrayNotHasKey($this->unit, unitcase_my_units($this->owner), 'odpojený vlastník byt nevidí');
     }
 
     public function testTenantReportsOwnerRepliesStatusAndPrivacy(): void
@@ -64,6 +62,10 @@ final class UnitCaseTest extends TestCase
         $mails = $this->mails();
         $this->assertCount(1, $mails);
         $this->assertSame($this->owner['email'], $mails[0]['to']);
+        $body = quoted_printable_decode(str_replace("=\r\n", '', $mails[0]['body']));
+        $this->assertStringNotContainsString('Kape od včera', $body, 'e-mail je jen upozornění, bez obsahu');
+        $this->assertStringNotContainsString('Kape kohoutek', $body . mb_decode_mimeheader($mails[0]['subject']), 'ani předmět vlákna');
+        $this->assertStringContainsString('/byt/' . $id, $body);
         $case = one('SELECT * FROM unit_cases WHERE id = ?', [$id]);
         $this->assertSame(['zavada', 'new', 'tenant'], [$case['kind'], $case['status'], $case['side']]);
 

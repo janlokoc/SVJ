@@ -1886,7 +1886,68 @@ function parse_user_import(string $text): array
         }
         $rows[] = $row;
     }
+    // Nájemník bez vlastníka nevznikne (11/2026): jednotka nájemníka musí mít vlastníka s účtem – už na webu, nebo v tomto seznamu.
+    $owned = array_flip(units_with_owner());
+    foreach ($rows as $r) {
+        if ($r['kind'] === 'owner' && $r['status'] !== 'error') {
+            foreach ($r['units'] as $un) {
+                $owned[(int) $un['id']] = true;
+            }
+        }
+    }
+    foreach ($rows as &$r) {
+        if ($r['kind'] === 'tenant' && $r['status'] === 'ok') {
+            $missing = array_filter($r['units'], fn($un) => !isset($owned[(int) $un['id']]));
+            if (!$r['units'] || $missing) {
+                $r['status'] = 'error';
+                $r['message'] = trim($r['message'] . ' ' . (!$r['units'] ? 'Nájemník musí mít uvedenou jednotku.' : 'Jednotka ' . implode(', ', array_map('unit_name', $missing)) . ' nemá vlastníka s účtem – nejdřív přidejte vlastníka.'));
+            }
+        }
+    }
+    unset($r);
     return $rows;
+}
+/**
+ * Zůstali by po změně účtu $userId nájemníci bez vlastníka? $keepUnits = jednotky, u kterých účet zůstane aktivním vlastníkem.
+ * Vrací chybu, nebo null (11/2026: nájemník bez vlastníka nevznikne – ani odebráním vlastníka).
+ */
+function owner_change_error(int $userId, array $keepUnits): ?string
+{
+    if ($userId <= 0) {
+        return null;
+    }
+    $was = array_map('intval', array_column(all("SELECT uu.unit_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.id = ? AND u.active = 1 AND u.kind = 'owner'", [$userId]), 'unit_id'));
+    $lost = array_diff($was, array_map('intval', $keepUnits));
+    if (!$lost) {
+        return null;
+    }
+    $owned = array_flip(units_with_owner($userId));
+    $names = unit_options();
+    $orphan = [];
+    foreach ($lost as $unitId) {
+        if (!isset($owned[$unitId]) && val("SELECT 1 FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE uu.unit_id = ? AND u.active = 1 AND u.kind = 'tenant'", [$unitId])) {
+            $orphan[] = $names[$unitId] ?? (string) $unitId;
+        }
+    }
+    return $orphan ? 'V jednotce ' . implode(', ', $orphan) . ' bydlí nájemník a jiný vlastník s účtem tam není. Nájemník bez vlastníka zůstat nemůže – nejdřív přiřaďte jiného vlastníka, nebo odeberte nájemníka.' : null;
+}
+/** Jednotky, ke kterým je přiřazený aktivní účet vlastníka (kromě $exceptUser). */
+function units_with_owner(int $exceptUser = 0): array
+{
+    return array_map('intval', array_column(all("SELECT DISTINCT uu.unit_id FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 AND u.kind = 'owner' AND u.id <> ?", [$exceptUser]), 'unit_id'));
+}
+/** Chyba, když by nájemník vznikl bez vlastníka (žádná jednotka, nebo jednotka bez účtu vlastníka), jinak null. */
+function tenant_units_error(array $unitIds, int $exceptUser = 0): ?string
+{
+    if (!$unitIds) {
+        return 'Nájemník musí být přiřazený k jednotce – vyberte byt, ve kterém bydlí.';
+    }
+    $missing = array_diff(array_map('intval', $unitIds), units_with_owner($exceptUser));
+    if (!$missing) {
+        return null;
+    }
+    $names = unit_options();
+    return 'Jednotka ' . implode(', ', array_map(fn($id) => $names[$id] ?? (string) $id, $missing)) . ' nemá vlastníka s účtem na webu. Nájemník bez vlastníka vzniknout nemůže – nejdřív založte účet vlastníka.';
 }
 /** Vystaví účtu, který ještě nemá heslo, pozvánku a pošle ji e-mailem. Vrací [odesláno?, odkaz]. */
 function send_account_invite(array $user): array

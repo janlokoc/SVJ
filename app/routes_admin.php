@@ -350,6 +350,12 @@ $userForm = function (int $id = 0) {
         if ($id === (int) $me['id'] && ($u['role'] !== 'admin' || !$u['active'])) {
             $errors[] = 'Sami sobě nemůžete odebrat práva správce ani účet vypnout.';
         }
+        if ($u['kind'] === 'tenant' && $u['active'] && ($tenantError = tenant_units_error(array_values(array_unique($unitIds)), $id))) {
+            $errors[] = $tenantError;
+        }
+        if ($ownerError = owner_change_error($id, $u['kind'] === 'owner' && $u['active'] ? $unitIds : [])) {
+            $errors[] = $ownerError;
+        }
         if (!$errors) {
             $args = [$u['name'], $u['email'], $u['role'], $u['phone'], $u['active'], $u['kind'], $u['email_notify'], $u['position']];
             if ($id) {
@@ -392,6 +398,8 @@ $route('POST', '/admin/uzivatele/(\d+)/smazat', function (int $id) {
     $me = require_admin();
     if ($id === (int) $me['id']) {
         flash('Vlastní účet smazat nelze.', 'error');
+    } elseif ($ownerError = owner_change_error($id, [])) {
+        flash($ownerError, 'error');
     } else {
         q('DELETE FROM users WHERE id = ?', [$id]);
         flash('Uživatel byl smazán.');
@@ -767,6 +775,12 @@ $unitForm = function (int $id = 0) {
         }
         if ($area === false) {
             $errors[] = 'Plochu zadejte v m² jako číslo, např. 54,3 (nebo pole nechte prázdné).';
+        }
+        // Nájemník bez vlastníka nevznikne: když jsou mezi účty jednotky aktivní nájemníci, musí tam být i aktivní vlastník.
+        $picked = $userIds ? all('SELECT kind FROM users WHERE active = 1 AND id IN (' . implode(',', array_map('intval', array_unique($userIds))) . ')') : [];
+        $kinds = array_column($picked, 'kind');
+        if (in_array('tenant', $kinds, true) && !in_array('owner', $kinds, true)) {
+            $errors[] = 'K jednotce je přiřazený nájemník, ale žádný vlastník s účtem. Nájemník bez vlastníka být nemůže – přiřaďte i účet vlastníka.';
         }
         if (!$errors) {
             $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact'], $area];

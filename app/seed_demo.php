@@ -39,7 +39,9 @@ function seed_demo(PDO $pdo, string $uploads): void
     $people = [['Jana Výborová', 'jana.vyborova@example.cz', 'admin', 'owner', '602 111 222'], ['Petr Novák', 'petr.novak@example.cz', 'resident', 'owner', '603 222 333'],
         ['Marie Nováková', 'marie.novakova@example.cz', 'resident', 'owner', ''], ['Tomáš Dvořák', 'tomas.dvorak@example.cz', 'resident', 'owner', '604 333 444'],
         ['Eva Svobodová', 'eva.svobodova@example.cz', 'resident', 'owner', ''], ['Lukáš Černý', 'lukas.cerny@example.cz', 'resident', 'tenant', '605 444 555'],
-        ['Hana Procházková', 'hana.prochazkova@example.cz', 'resident', 'owner', ''], ['Martin Kučera', 'martin.kucera@example.cz', 'resident', 'owner', '606 555 666']];
+        ['Hana Procházková', 'hana.prochazkova@example.cz', 'resident', 'owner', ''], ['Martin Kučera', 'martin.kucera@example.cz', 'resident', 'owner', '606 555 666'],
+        // Vlastník bytu A/5, který pronajímá Lukáši Černému (nájemník bez vlastníka s účtem vzniknout nemůže).
+        ['Jiří Horák', 'jiri.horak@example.cz', 'resident', 'owner', '']];
     $uid = [];
     foreach ($people as $i => [$name, $email, $role, $kind, $phone]) {
         $uid[] = $ins('users', ['name' => $name, 'email' => $email, 'role' => $role, 'kind' => $kind, 'phone' => $phone, 'password_hash' => $nologin, 'last_login_at' => $at(-$i - 1, '19:1' . $i . ':00')]);
@@ -52,7 +54,7 @@ function seed_demo(PDO $pdo, string $uploads): void
         $unit[] = $ins('units', ['entrance' => $i < 6 ? 'A' : 'B', 'number' => (string) ($i % 6 + 1), 'floor' => (string) (intdiv($i % 6, 2) + 1), 'share' => $shares[$i] . '/10000', 'owner_note' => $owner,
             'owner_contact' => 'Zahradní 12, 602 00 Brno']);
     }
-    foreach ([[0, 0], [1, 1], [2, 1], [3, 2], [4, 3], [5, 4], [6, 5], [7, 6]] as [$u, $j]) {
+    foreach ([[0, 0], [1, 1], [2, 1], [3, 2], [4, 3], [5, 4], [6, 5], [7, 6], [8, 4]] as [$u, $j]) {
         $ins('user_units', ['user_id' => $uid[$u], 'unit_id' => $unit[$j]]);
     }
 
