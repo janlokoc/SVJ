@@ -24,6 +24,7 @@ $with = array_filter($rows, fn($r) => $r['as_of'] !== null); $debtors = array_fi
     <form method="post" data-confirm="Smazat celý přehled plateb? Vlastníci ho přestanou vidět."><?= csrf_field() ?><input type="hidden" name="action" value="clear"><button class="btn btn-ghost" type="submit">Smazat přehled</button></form>
   </div>
   <?php endif ?>
+  <?php require __DIR__ . '/../ext/ledger/_admin.php'; ?>
   <section class="card" id="banka">
     <h2>Párování plateb s bankou</h2>
     <p><?= help_link('parovani-plateb') ?></p>

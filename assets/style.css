@@ -2104,3 +2104,8 @@ tr.is-neg td { color: var(--accent); }
 .ucase-row.is-unread { border-left: 4px solid var(--primary); }
 .ucase-subj { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ucase-status { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; margin: 1rem 0; }
+/* Konto bytu z účetnictví (POHODA), 11/2026 */
+.ledger { margin-top: 1rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+.ledger h3 { margin: .8rem 0 .4rem; font-size: 1rem; }
+.ledger .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ledger-items .sum td { font-weight: 700; border-top: 2px solid var(--line); }

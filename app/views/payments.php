@@ -16,6 +16,7 @@
       <?php if ($r['qr_month']): ?><div class="pay-qr"><?= $r['qr_month'] ?><small>Zaplatit měsíční zálohu</small></div><?php endif ?>
     </div><?php endif ?>
     <?php if ((string) $r['account_note'] !== ''): ?><p class="hint" translate="no"><?= e($r['account_note']) ?></p><?php endif ?>
+    <?php if (function_exists('ledger_account') && ($acc = ledger_account((int) $r['id'])) && ($acc['receivables'] || $acc['payments'])): require __DIR__ . '/ext/ledger/_unit.php'; endif ?>
   </section>
   <?php endforeach ?>
   <?php if ($rows): ?><p class="hint">Údaje nahrává výbor z účetnictví k uvedenému dni; platby, které na účet společenství přijdou později, se připočítávají podle výpisu z banky.</p><?php endif ?>

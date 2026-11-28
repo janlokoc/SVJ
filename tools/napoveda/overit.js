@@ -874,6 +874,32 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       step('Denní úloha webu připomněla správcům námitku, které za 5 dní končí lhůta k vyřízení, a vyúčtování, které je třeba doručit do 10 dnů.');
     }
 
+    // ---------- Konto bytu z POHODY ----------
+    begin('pohoda-konto', 'Postup v samotné POHODĚ (XML export) jsme neověřovali – cizí program; ověřen je import vzorového souboru podle dokumentace Stormware.');
+    {
+      const oUnit = sql(`SELECT un.entrance || '/' || un.number FROM units un JOIN user_units uu ON uu.unit_id = un.id JOIN users u ON u.id = uu.user_id WHERE u.email = '${who.owner}' ORDER BY un.id LIMIT 1`);
+      run('DROP TABLE IF EXISTS ua_zaloha'); run('CREATE TABLE ua_zaloha AS SELECT * FROM unit_accounts');   // vrátit po kontrole (další návody s nimi počítají)
+      await admin.goto(T + '/admin/platby');
+      await admin.fill('textarea[name=text]', `${oUnit} ; 3450 ; 0 ; 004812`); await admin.click('form:has([name=text]) button[type=submit]');
+      const m0 = new Date().toISOString().slice(0, 7); const d1 = new Date(); d1.setDate(1); d1.setMonth(d1.getMonth() - 1); const m1 = d1.toISOString().slice(0, 7);
+      const xml = fs.readFileSync(path.join(ROOT, 'tests/fixtures/pohoda-pohledavky.xml.tpl'), 'utf8').replaceAll('{VS}', '4812').replaceAll('{M0}', m0).replaceAll('{M1}', m1);
+      const xf = path.join(STORE, 'pohoda-export.xml'); fs.writeFileSync(xf, execFileSync('iconv', ['-f', 'UTF-8', '-t', 'WINDOWS-1250'], { input: xml }));
+      await admin.setInputFiles('#pohoda input[type=file]', xf); await admin.click('#pohoda button[type=submit]');
+      const pv = await text(admin, '#pohoda');
+      check(/pohledávek 3, plateb 1, jiných dokladů \(přeskočí se\) 2\. Přiřadí se k 1 jednotkám/.test(pv) && pv.includes('99999'), 'náhled: počty a neznámý VS: ' + pv.slice(0, 200));
+      await shot(admin.locator('#pohoda'), 'pohoda-1-nahled.jpg', 700);
+      await admin.click('#pohoda button:has-text("Uložit doklady")');
+      check((await flash(admin)).includes('Uloženo dokladů: 4, přiřazeno k 1 jednotkám'), 'uloženo: ' + await flash(admin));
+      step('Správce doplnil jednotce VS 004812, nahrál XML export (Windows-1250) a náhled ukázal 3 pohledávky, 1 platbu, 2 přeskočené doklady, 1 jednotku a neznámý VS 99999; po „Uložit doklady“ se uložily 4 doklady.');
+      await owner.goto(T + '/platby');
+      const ov = await text(owner);
+      check(ov.includes('Dlouhodobá záloha na opravy (fond oprav)') && ov.includes('Pohledávky a úhrady') && ov.includes('Přijaté platby') && /Zbývá uhradit 2\s?450\s?Kč/.test(ov), 'vlastník vidí předpis po položkách, pohledávky a platby: ' + ov.slice(0, 300));
+      step('Vlastník v Platby a zálohy vidí předpis po položkách (fond oprav, teplo, studená voda), pohledávky se splatností a zbývající částkou 2 450 Kč a přijatou platbu.');
+      await owner.evaluate(() => { const l = document.querySelector('.ledger'); if (l) window.scrollTo(0, l.getBoundingClientRect().top + window.scrollY - 80); });
+      await shot(owner.locator('.pay-unit').first(), 'pohoda-2-vlastnik.jpg', 1600);
+      run('DELETE FROM ledger_docs'); run('DELETE FROM unit_accounts'); run('INSERT INTO unit_accounts SELECT * FROM ua_zaloha'); run('DROP TABLE ua_zaloha');
+    }
+
     // ---------- Plán oprav a fond oprav ----------
     begin('plan-oprav', 'Stav fondu oprav z účetnictví si správce přináší zvenku – běh použil smyšlenou částku.');
     {

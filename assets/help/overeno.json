@@ -130,6 +130,15 @@
     ],
     "note": "Jak soubory vyúčtování pojmenovává odečtová nebo správcovská firma, jsme ověřit nemohli – běh použil názvy podle návodu (A-1.pdf, vyuctovani_A_2.pdf …) a jeden soubor s názvem bez jednotky."
   },
+  "pohoda-konto": {
+    "date": "2026-11-28",
+    "checks": 3,
+    "steps": [
+      "Správce doplnil jednotce VS 004812, nahrál XML export (Windows-1250) a náhled ukázal 3 pohledávky, 1 platbu, 2 přeskočené doklady, 1 jednotku a neznámý VS 99999; po „Uložit doklady“ se uložily 4 doklady.",
+      "Vlastník v Platby a zálohy vidí předpis po položkách (fond oprav, teplo, studená voda), pohledávky se splatností a zbývající částkou 2 450 Kč a přijatou platbu."
+    ],
+    "note": "Postup v samotné POHODĚ (XML export) jsme neověřovali – cizí program; ověřen je import vzorového souboru podle dokumentace Stormware."
+  },
   "plan-oprav": {
     "date": "2026-11-28",
     "checks": 9,

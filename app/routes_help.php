@@ -16,6 +16,7 @@ const HELP = [
     'shromazdeni-online' => ['Shromáždění online a hybridně', 'Stanovy, zapnutí pro dům, připojení vlastníků přes videohovor, prezence a hlasování na dálku.', false, ['/admin/shromazdeni-online', '/admin/terminy'], ['shromazdeni-online']],
     'vyuctovani-sluzeb' => ['Vyúčtování služeb přes web', 'Doručení vyúčtování vlastníkům, potvrzení převzetí, námitky a zákonné lhůty.', false, ['/admin/vyuctovani']],
     'plan-oprav' => ['Plán oprav a fond oprav', 'Jak zadat stav fondu a plánované opravy a z výpočtu poznat, zda je třeba zvýšit příspěvky.', false, ['/admin/plan-oprav']],
+    'pohoda-konto' => ['Konto bytu z POHODY', 'Jak z POHODY nahrát předpisy záloh, pohledávky a platby, aby je vlastníci viděli u svého bytu.', false, ['/admin/platby']],
     'ucetnictvi' => ['Propojení s účetnictvím (POHODA, Money, ABRA Flexi)', 'Export adresáře, předpisů a plateb do účetnictví a import z programu správy domů.', false, ['/admin/ucetnictvi']],
     'propojeni-banky' => ['Propojení s účty u dalších bank', 'Automatické stahování plateb z ČS, KB, ČSOB a dalších bank přes rozhraní PSD2.', false, ['/admin/platby'], ['bank-psd2']],
     'sms-zpravy' => ['SMS zprávy vlastníkům', 'Kredit, výběr příjemců a odeslání SMS při havárii nebo odstávce.', false, ['/admin/sms'], ['sms']],

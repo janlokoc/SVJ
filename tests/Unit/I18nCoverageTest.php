@@ -18,7 +18,7 @@ final class I18nCoverageTest extends TestCase
         // moduly
         'ext/hybrid/_event_box', 'ext/hybrid/owner', 'ext/moda/_digest_box', 'ext/moda/digest_unsub', 'ext/moda/magic_confirm',
         'ext/moda/magic_request', 'ext/modf/fund_public', 'ext/modf/my', 'ext/modf/_chart', 'ext/rollam/_poll_note', 'ext/rollam/confirm',
-        'ext/unitcase/list', 'ext/unitcase/form', 'ext/unitcase/case', 'ext/listing/page', 'ext/listing/list', 'ext/listing/mine', 'ext/listing/form', 'ext/listing/report', 'ext/listing/extend', 'ext/listing/inquiries', 'ext/listing/inquiry',
+        'ext/ledger/_unit', 'ext/unitcase/list', 'ext/unitcase/form', 'ext/unitcase/case', 'ext/listing/page', 'ext/listing/list', 'ext/listing/mine', 'ext/listing/form', 'ext/listing/report', 'ext/listing/extend', 'ext/listing/inquiries', 'ext/listing/inquiry',
         '_ai_mini',
         // jádro
         'account', 'gdpr', 'chat', 'chat_thread', 'contacts', 'event', 'events', 'file_view', 'home', 'invite', 'join', 'login',
