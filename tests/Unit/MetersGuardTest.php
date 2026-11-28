@@ -148,7 +148,7 @@ final class MetersGuardTest extends TestCase
         $this->assertSame($key, meter_bearer());
         $_SERVER['HTTP_X_API_KEY'] = 'short';
         $this->assertSame('', meter_bearer());
-        $this->assertMatchesRegularExpression('~\(/\[a-f0-9\]\{40\}\)\?\$~', (string) file_get_contents(dirname(__DIR__, 2) . '/index.php'), 'adresa bez klíče je vyjmutá z kontroly formulářového tokenu');
+        $this->assertStringContainsString('api/odecty(/[a-f0-9]{40})?|api/v1(/.*)?|mcp', (string) file_get_contents(dirname(__DIR__, 2) . '/index.php'), 'adresy pro stroje jsou vyjmuté z kontroly formulářového tokenu');
     }
 
     public function testFailedAttemptsBlockAddressAndMailAdminsOnce(): void

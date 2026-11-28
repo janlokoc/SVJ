@@ -246,8 +246,12 @@ if ($dbProblem !== null) {
 }
 
 $METHOD = $_SERVER['REQUEST_METHOD'] === 'POST' ? 'POST' : 'GET';
-// Adresa pro příjem odečtů ze strojů (odečtová firma, sběrnice) se ověřuje tajným klíčem (hlavička nebo adresa), ne formulářovým tokenem.
-if ($METHOD === 'POST' && !preg_match('~^/api/odecty(/[a-f0-9]{40})?$~', $PATH) && $PATH !== '/sso/callback/apple') {
+// API v1 (app/ext/routes_api.php) používá i PUT; jinde web zná jen GET a POST.
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'PUT' && str_starts_with($PATH, '/api/v1/')) {
+    $METHOD = 'PUT';
+}
+// Adresy pro stroje (odečty, API v1, MCP) se ověřují klíčem v hlavičce, ne formulářovým tokenem.
+if ($METHOD === 'POST' && !preg_match('~^/(api/odecty(/[a-f0-9]{40})?|api/v1(/.*)?|mcp(/swk_[a-f0-9]{40})?)$~', $PATH) && $PATH !== '/sso/callback/apple') {
     check_csrf();
 }
 
