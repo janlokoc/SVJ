@@ -195,6 +195,7 @@ function db_mysql(string $tenant): PDO
         schema_v17($pdo, true);
         schema_v18($pdo, true);
         schema_v19($pdo, true);
+        schema_v20($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -254,7 +255,19 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 19) {
         schema_v19($pdo, true);
     }
+    if ($mysqlVersion < 20) {
+        schema_v20($pdo, true);
+    }
     return $pdo;
+}
+/** Dvacátá verze: druh jednotky zadaný ručně (1) – import z katastru ho pak nepřepíše; odhad z importu ano. */
+function schema_v20(PDO $pdo, bool $mysql): void
+{
+    $cols = $mysql ? array_column($pdo->query('SHOW COLUMNS FROM units')->fetchAll(), 'Field') : array_column($pdo->query('PRAGMA table_info(units)')->fetchAll(), 'name');
+    if (!in_array('kind_manual', $cols, true)) {
+        $pdo->exec('ALTER TABLE units ADD COLUMN kind_manual ' . ($mysql ? 'TINYINT NOT NULL DEFAULT 0' : 'INTEGER NOT NULL DEFAULT 0'));
+    }
+    $mysql ? $pdo->exec("UPDATE settings SET value = '20' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 20');
 }
 /** Devatenáctá verze databáze: druh jednotky (byt, garáž, nebytový prostor; '' = nezadáno). */
 function schema_v19(PDO $pdo, bool $mysql): void
@@ -466,6 +479,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v17($pdo, false);
         schema_v18($pdo, false);
         schema_v19($pdo, false);
+        schema_v20($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -610,6 +624,9 @@ SQL);
     }
     if ($version < 19) {
         schema_v19($pdo, false);
+    }
+    if ($version < 20) {
+        schema_v20($pdo, false);
     }
     return $pdo;
 }
@@ -1971,7 +1988,7 @@ function cadastre_typical_shares(array $values): array
  * Rozdělí společný podíl $total na $n jednotek podle typických podílů: najde kombinaci byt/garáž, jejíž součet
  * se nejvíc blíží $total (odchylka do 3 %), a podíl rozdělí v tomto poměru. Vrací [[[čitatel, jmenovatel], druh], …] nebo null.
  */
-function cadastre_split_share(float $total, int $n, array $typical, array $exact = []): ?array
+function cadastre_split_share(float $total, int $n, array $typical, array $exact = [], array $prior = []): ?array
 {
     if ($n < 2 || $n > 6 || !isset($typical['byt'])) {
         return null;
@@ -1991,8 +2008,13 @@ function cadastre_split_share(float $total, int $n, array $typical, array $exact
     foreach ($combos as $c) {
         $sum = array_sum(array_map(fn($k) => $typical[$k], $c));
         $err = abs($sum - $total) / $total;
-        if ($best === null || $err < $best[0] - 1e-12) {
-            $best = [$err, $c, $sum];
+        // Při stejné odchylce rozhodne číslování: jednotka v řadě čísel, kde jsou garáže (např. 101–108), je spíš garáž.
+        $match = 0;
+        foreach ($c as $i => $k) {
+            $match += isset($prior[$i]) && $prior[$i] === $k ? 1 : 0;
+        }
+        if ($best === null || $err < $best[0] - 1e-9 || (abs($err - $best[0]) <= 1e-9 && $match > $best[3])) {
+            $best = [$err, $c, $sum, $match];
         }
     }
     if ($best === null || $best[0] > 0.03) {
@@ -2101,11 +2123,25 @@ function parse_cadastre(string $text): array
         }
     }
     $typical = cadastre_typical_shares(array_values($single));
+    // Řady čísel (stovky) jednotek, které jsou podle vlastního podílu byty, resp. garáže – vodítko pro společné podíly.
+    $hundreds = ['byt' => [], 'garaz' => []];
+    if (isset($typical['byt'], $typical['garaz'])) {
+        foreach ($single as $k => $v) {
+            $kind = abs(log($v / $typical['byt'])) <= abs(log($v / $typical['garaz'])) ? 'byt' : 'garaz';
+            $hundreds[$kind][intdiv((int) explode('/', $k)[1], 100)] = true;
+        }
+    }
+    $priorOf = function (string $unitKey) use ($hundreds): ?string {
+        $h = intdiv((int) explode('/', $unitKey)[1], 100);
+        $g = isset($hundreds['garaz'][$h]);
+        $b = isset($hundreds['byt'][$h]);
+        return $g && !$b ? 'garaz' : ($b && !$g ? 'byt' : null);
+    };
     $split = [];   // jednotka => [podíl jako zlomek, odhadnutý druh]
     foreach ($rows as [$name, $contact, $fractions, $num, $den]) {
         $parts = null;
         if (count($fractions) > 1 && $typical) {
-            $parts = cadastre_split_share($num / $den, count($fractions), $typical, [$num, $den]);
+            $parts = cadastre_split_share($num / $den, count($fractions), $typical, [$num, $den], array_map($priorOf, $fractions));
         }
         if (count($fractions) > 1) {
             $warnings[] = $name . ': jeden podíl ' . $num . '/' . $den . ' je v katastru uveden společně pro jednotky ' . implode(', ', $fractions) . '. '

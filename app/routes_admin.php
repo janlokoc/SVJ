@@ -818,7 +818,11 @@ $unitForm = function (int $id = 0) {
         if (!$errors) {
             $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact'], $area, $unit['kind']];
             if ($id) {
+                $was = one('SELECT kind FROM units WHERE id = ?', [$id]);
                 q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ?, area = ?, kind = ? WHERE id = ?', [...$args, $id]);
+                if ($was && (string) $was['kind'] !== $unit['kind']) {
+                    q('UPDATE units SET kind_manual = 1 WHERE id = ?', [$id]);   // výbor druh změnil – import ho už nepřepíše
+                }
             } else {
                 q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact, area, kind) VALUES (?,?,?,?,?,?,?,?,?)', $args);
                 $id = (int) db()->lastInsertId();
@@ -961,7 +965,7 @@ $cadastreImport = function () {
                 $id = val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$u['entrance'], $u['number']]);
                 if ($id) {
                     q('UPDATE units SET share = ?, owner_note = ?, owner_contact = ? WHERE id = ?', [$u['share'], $u['owner_note'], $u['owner_contact'], $id]);
-                    q("UPDATE units SET kind = ? WHERE id = ? AND kind = ''", [$u['kind'], $id]);   // druh zadaný výborem se nepřepíše
+                    q('UPDATE units SET kind = ? WHERE id = ? AND kind_manual = 0', [$u['kind'], $id]);   // druh zadaný výborem ručně se nepřepíše
                     $updated++;
                 } else {
                     q('INSERT INTO units (entrance, number, share, owner_note, owner_contact, kind) VALUES (?,?,?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note'], $u['owner_contact'], $u['kind']]);

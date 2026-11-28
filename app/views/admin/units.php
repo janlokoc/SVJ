@@ -19,7 +19,7 @@
     <tbody>
     <?php foreach ($units as $un): ?>
       <tr>
-        <td data-label="Jednotka"><a href="<?= url('/admin/jednotky/' . $un['id']) ?>"><strong><?= e(unit_name($un)) ?></strong></a><?= ($un['kind'] ?? '') !== '' && $un['kind'] !== 'byt' ? ' <span class="tag">' . e(mb_strtolower(explode(' (', UNIT_KINDS[$un['kind']] ?? '')[0])) . '</span>' : '' ?></td>
+        <td data-label="Jednotka"><a href="<?= url('/admin/jednotky/' . $un['id']) ?>"><strong><?= e(unit_name($un)) ?></strong></a><?= ($un['kind'] ?? '') !== '' ? ' <span class="tag tag-kind-' . e($un['kind']) . '">' . e(mb_strtolower(explode(' (', UNIT_KINDS[$un['kind']] ?? '')[0])) . '</span>' : '' ?></td>
         <td data-label="Patro"><?= e($un['floor']) ?></td>
         <td data-label="Plocha"><?= e(unit_area_label($un['area'] ?? null)) ?></td>
         <td data-label="Podíl"><?= e($un['share']) ?><?= share_percent_cz((string) $un['share']) !== '' ? '<br><small class="muted">' . e(share_percent_cz((string) $un['share'])) . '</small>' : '' ?></td>

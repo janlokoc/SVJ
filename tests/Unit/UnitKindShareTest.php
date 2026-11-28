@@ -47,6 +47,18 @@ final class UnitKindShareTest extends TestCase
         $this->assertNull(cadastre_split_share(0.5, 2, ['byt' => 0.0564, 'garaz' => 0.0098]), 'nesedí-li kombinace, rovným dílem');
     }
 
+    /** Stejný součet pro obě rozdělení: rozhodne číslování (garáže v řadě 101–108, byty 1–10). */
+    public function testTieBrokenByUnitNumbering(): void
+    {
+        $text = self::cadastre() . "Horák Petr, Zahradní 1200/12, Brno\nJednotka: 1200/104, 1200/9\t331/5000\n";
+        $r = parse_cadastre($text);
+        $this->assertSame(['garaz', 'byt'], [$r['units']['1200/104']['kind'], $r['units']['1200/9']['kind']], 'garáž v řadě 10x i když je uvedena první');
+        $this->assertSame(['49/5000', '141/2500'], [$r['units']['1200/104']['share'], $r['units']['1200/9']['share']]);
+        $routes = (string) file_get_contents(dirname(__DIR__, 2) . '/app/routes_admin.php');
+        $this->assertStringContainsString('AND kind_manual = 0', $routes, 'import přepíše jen odhad, ne ručně zadaný druh');
+        $this->assertStringContainsString('UPDATE units SET kind_manual = 1', $routes);
+    }
+
     public function testSnapshotDiff(): void
     {
         $r = parse_cadastre(self::cadastre());
