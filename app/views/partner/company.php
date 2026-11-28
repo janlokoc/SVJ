@@ -22,7 +22,7 @@
   <form method="post" class="card form" id="fakturace-svj"><h2>Fakturační údaje pro SVJ</h2><?= csrf_field() ?><input type="hidden" name="action" value="svjbill">
     <p class="muted">Společenstvím fakturujete za web přímo z portálu (<a href="<?= url('/fakturace/svj') ?>">Faktury společenstvím</a>). Na faktuře budou údaje firmy (název, IČO, DIČ, sídlo – mění je provozovatel služby) a tyto platební údaje.</p>
     <div class="form-row"><label>Číslo účtu <input type="text" name="account" value="<?= e($partner['account'] ?? '') ?>" placeholder="123456789/0100"<?= $owner ? '' : ' disabled' ?>></label>
-      <label>IBAN <small class="muted">(pro QR platbu)</small> <input type="text" name="iban" value="<?= e($partner['iban'] ?? '') ?>" placeholder="CZ65 0800 0000 1920 0014 5399"<?= $owner ? '' : ' disabled' ?>></label></div>
+      <label>IBAN <small class="muted">(pro QR platbu)</small> <input type="text" name="iban" value="<?= e($partner['iban'] ?? '') ?>" placeholder="CZ00 0800 0000 0001 2345 6789"<?= $owner ? '' : ' disabled' ?>></label></div>
     <div class="form-row"><label>Splatnost (dní) <input type="number" name="inv_due" value="<?= (int) ($partner['inv_due'] ?? 14) ?>" min="0" max="90"<?= $owner ? '' : ' disabled' ?>></label>
       <label class="check"><input type="checkbox" name="vat" value="1"<?= (int) ($partner['vat_rate'] ?? 0) ? ' checked' : '' ?><?= $owner ? '' : ' disabled' ?>> Jsme plátci DPH (21 %)</label></div>
     <?php if ($owner): ?><button class="btn" type="submit">Uložit</button><?php endif ?></form>

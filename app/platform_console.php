@@ -721,7 +721,7 @@ if ($PATH === '/nastaveni') {
             }
         }
         if ($in['account'] !== '' && !cz_iban($in['account'])) {
-            $errors[] = 'Číslo účtu není platné. Zadejte ho ve tvaru 19-2000145399/0800 nebo jako IBAN (CZ…).';
+            $errors[] = 'Číslo účtu není platné. Zadejte ho ve tvaru 123456789/0800 nebo jako IBAN (CZ…).';
         }
         if ($in['service_name'] === '') {
             $errors[] = 'Vyplňte název služby.';

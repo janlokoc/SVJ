@@ -252,7 +252,7 @@ a `post_max_size` v nastavení PHP).
 ## Provoz pro více SVJ (platforma)
 
 Jedna instalace umí obsluhovat stovky společenství. Každé má vlastní
-adresu (`tabor.svj.cz`, `zahradecka.svj.cz`), vlastní správce a úplně
+adresu (`tabor.svj.cz`, `zahradni.svj.cz`), vlastní správce a úplně
 oddělená data: vlastní databázi, soubory i přihlášení ve složce
 `storage/tenants/<adresa>/`.
 

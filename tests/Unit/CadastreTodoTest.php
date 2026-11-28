@@ -16,12 +16,12 @@ final class CadastreTodoTest extends TestCase
 
     public function testListIsStoredAndResolvedOneByOne(): void
     {
-        cadastre_todo_save(['SJ Novák Jan a Nováková Eva: jeden podíl 331/5000 pro 372/6, 372/9', '', 'Dvořáková Marie: 372/4, 372/10', 42]);
-        $this->assertSame(['SJ Novák Jan a Nováková Eva: jeden podíl 331/5000 pro 372/6, 372/9', 'Dvořáková Marie: 372/4, 372/10'], cadastre_todo(), 'prázdné a nesmyslné položky pryč');
+        cadastre_todo_save(['SJ Novák Jan a Nováková Eva: jeden podíl 331/5000 pro 12/6, 12/9', '', 'Dvořáková Marie: 12/4, 12/10', 42]);
+        $this->assertSame(['SJ Novák Jan a Nováková Eva: jeden podíl 331/5000 pro 12/6, 12/9', 'Dvořáková Marie: 12/4, 12/10'], cadastre_todo(), 'prázdné a nesmyslné položky pryč');
         $list = cadastre_todo();
         unset($list[0]);
         cadastre_todo_save($list);
-        $this->assertSame(['Dvořáková Marie: 372/4, 372/10'], cadastre_todo());
+        $this->assertSame(['Dvořáková Marie: 12/4, 12/10'], cadastre_todo());
         cadastre_todo_save([]);
         $this->assertSame([], cadastre_todo());
         $this->assertSame('', setting('cadastre_todo'));
@@ -39,13 +39,13 @@ final class CadastreTodoTest extends TestCase
 
     public function testPageShowsTodo(): void
     {
-        cadastre_todo_save(['Horák Petr: 371/101, 372/3']);
+        cadastre_todo_save(['Horák Petr: 11/101, 12/3']);
         $this->loginAs('admin');
         $units = all_units();
         ob_start();
         require dirname(__DIR__, 2) . '/app/views/admin/units.php';
         $html = (string) ob_get_clean();
         $this->assertStringContainsString('K ověření po importu z katastru (1)', $html);
-        $this->assertStringContainsString('Horák Petr: 371/101, 372/3', $html);
+        $this->assertStringContainsString('Horák Petr: 11/101, 12/3', $html);
     }
 }

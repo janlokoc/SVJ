@@ -6,14 +6,14 @@
   <form method="post" class="card form">
     <?= csrf_field() ?>
     <?php $aresUrl = url('/ares'); require __DIR__ . '/../platform/_ares.php'; ?>
-    <label>Název společenství <input type="text" name="name" data-ares-field="site_name" value="<?= e($in['name']) ?>" required placeholder="SVJ Zahrádecká 372"></label>
+    <label>Název společenství <input type="text" name="name" data-ares-field="site_name" value="<?= e($in['name']) ?>" required placeholder="SVJ Zahradní 12"></label>
     <div class="form-row">
-      <label>Krátký název na web <input type="text" name="title" data-ares-field="short" value="<?= e($in['title']) ?>" required placeholder="Zahrádecká 372"></label>
+      <label>Krátký název na web <input type="text" name="title" data-ares-field="short" value="<?= e($in['title']) ?>" required placeholder="Zahradní 12"></label>
       <label>IČO <input type="text" name="ico" data-ares-field="ico" value="<?= e($in['ico']) ?>" inputmode="numeric" maxlength="8" placeholder="12345678"></label>
     </div>
-    <label>Celý název (patička, plná moc) <input type="text" name="full" data-ares-field="name" value="<?= e($in['full']) ?>" placeholder="Společenství vlastníků jednotek Zahrádecká 372"></label>
-    <label>Adresa domu <input type="text" name="address" data-ares-field="address" value="<?= e($in['address']) ?>" placeholder="Zahrádecká 372/4, Praha 4"></label>
-    <label>Adresa webu (nepovinné) <input type="text" name="slug" value="<?= e($in['slug']) ?>" maxlength="39" placeholder="zahradecka-372"></label>
+    <label>Celý název (patička, plná moc) <input type="text" name="full" data-ares-field="name" value="<?= e($in['full']) ?>" placeholder="Společenství vlastníků jednotek Zahradní 12"></label>
+    <label>Adresa domu <input type="text" name="address" data-ares-field="address" value="<?= e($in['address']) ?>" placeholder="Zahradní 1200/12, Brno"></label>
+    <label>Adresa webu (nepovinné) <input type="text" name="slug" value="<?= e($in['slug']) ?>" maxlength="39" placeholder="zahradni-12"></label>
     <p class="hint">Web poběží na adrese <code><?= e(tenant_address('…')) ?></code>. Když pole necháte prázdné, vytvoříme ji z krátkého názvu.</p>
     <fieldset>
       <legend>Kontakt na výbor (nepovinné)</legend>

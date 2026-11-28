@@ -75,22 +75,22 @@
     <?php if (!$new): ?><details class="ares-later"><summary>Doplnit nebo opravit údaje z ARES</summary><?php require __DIR__ . '/_ares.php'; ?><p class="hint">Vyplní název, celý název, adresu a IČO níže – uloží se až tlačítkem pod formulářem.</p></details><?php endif ?>
     <?php if ($new): ?>
       <?php require __DIR__ . '/_ares.php'; ?>
-      <label>Adresa webu <span class="slug-row"><?php if (platform_main_paths()): ?><span><?= e(platform_main_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_main_domain()) ?>" aria-describedby="slug-fixed-note" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradecka"><?php if (!platform_main_paths()): ?><span>.<?= e(platform_main_domain()) ?></span><?php endif ?></span></label>
+      <label>Adresa webu <span class="slug-row"><?php if (platform_main_paths()): ?><span><?= e(platform_main_domain()) ?>/</span><?php endif ?><input type="text" name="slug" data-slug-fixed="<?= e(platform_main_domain()) ?>" aria-describedby="slug-fixed-note" id="t-slug" value="<?= e($t['slug']) ?>" pattern="[a-z0-9][a-z0-9\-]{1,38}" required placeholder="zahradni"><?php if (!platform_main_paths()): ?><span>.<?= e(platform_main_domain()) ?></span><?php endif ?></span></label>
       <p class="hint">Jen malá písmena bez diakritiky, číslice a pomlčka. Adresu později nejde změnit.</p>
     <?php endif ?>
-    <label>Název společenství <input type="text" name="name" data-ares-field="site_name" value="<?= e($t['name']) ?>" required placeholder="SVJ Zahrádecká 372"></label>
+    <label>Název společenství <input type="text" name="name" data-ares-field="site_name" value="<?= e($t['name']) ?>" required placeholder="SVJ Zahradní 12"></label>
     <div class="form-row">
-      <label>Krátký název na web <input type="text" name="title" data-ares-field="short" value="<?= e($t['title']) ?>" required placeholder="Zahrádecká 372"></label>
+      <label>Krátký název na web <input type="text" name="title" data-ares-field="short" value="<?= e($t['title']) ?>" required placeholder="Zahradní 12"></label>
       <label>Doplněk názvu (nepovinné) <input type="text" name="accent" value="<?= e($t['accent']) ?>" placeholder="a–d"></label>
     </div>
-    <label>Celý název (patička, plná moc) <input type="text" name="full" data-ares-field="name" value="<?= e($t['full']) ?>" placeholder="Společenství vlastníků jednotek Zahrádecká 372"></label>
+    <label>Celý název (patička, plná moc) <input type="text" name="full" data-ares-field="name" value="<?= e($t['full']) ?>" placeholder="Společenství vlastníků jednotek Zahradní 12"></label>
     <label>Řádek nad názvem <input type="text" name="tagline" value="<?= e($t['tagline']) ?>" placeholder="Společenství vlastníků jednotek · Praha"></label>
     <div class="form-row">
-      <label>Adresa domu <input type="text" name="address" data-ares-field="address" value="<?= e($t['address']) ?>" placeholder="Zahrádecká 372/4, Praha 4"></label>
+      <label>Adresa domu <input type="text" name="address" data-ares-field="address" value="<?= e($t['address']) ?>" placeholder="Zahradní 1200/12, Brno"></label>
       <label>IČO <input type="text" name="ico" data-ares-field="ico" value="<?= e($t['ico'] ?? '') ?>" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="12345678"></label>
     </div>
     <div class="form-row">
-      <label>Číslo před označením jednotky <input type="text" name="unit_prefix" value="<?= e($t['unit_prefix']) ?>" maxlength="10" placeholder="372"></label>
+      <label>Číslo před označením jednotky <input type="text" name="unit_prefix" value="<?= e($t['unit_prefix']) ?>" maxlength="10" placeholder="1200"></label>
       <label>Vchody (oddělené čárkou) <input type="text" name="entrances" value="<?= e($t['entrances']) ?>" placeholder="A,B,C"></label>
     </div>
     <p class="hint">Jednotka se pak zobrazuje například jako 372A/5.</p>
