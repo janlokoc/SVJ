@@ -1219,14 +1219,18 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       // Insolvence osob (před kontrolou katastru – převzetí nového vlastníka pak údaje smaže).
       await admin.goto(T + '/admin/insolvence#osoby');
       check(!(await admin.$('#osoby input[name*=rodne], #osoby input[name*=rc]')), 'rodné číslo se nezadává');
-      await admin.selectOption('#osoby [name=unit_id]', unitId('A/3')); await admin.fill('#osoby [name=surname]', 'Dvořák'); await admin.fill('#osoby [name=first_name]', 'Tomáš'); await admin.fill('#osoby [name=birth_date]', '1980-05-12');
+      run(`UPDATE units SET owner_note = 'Dvořák Tomáš' WHERE id = ${unitId('A/3')}`); await admin.reload();
+      await admin.selectOption('#osoby [name=unit_id]', unitId('A/3'));
+      await admin.locator('#osoby [data-person-list] button', { hasText: 'Dvořák Tomáš' }).click();
+      check(await admin.inputValue('#osoby [name=surname]') === 'Dvořák' && await admin.inputValue('#osoby [name=first_name]') === 'Tomáš' && !(await admin.isVisible('#osoby [name=surname]')), 'po výběru jednotky stačí klepnout na vlastníka – jméno se doplní samo');
+      await admin.fill('#osoby [name=birth_date]', '1980-05-12');
       await admin.click('#osoby button:has-text("Hlídat")');
       check((await flash(admin)).includes('Osoba se bude hlídat'), 'osoba přidána');
       const m0 = mailLen();
-      await admin.click('#osoby button:has-text("Zkontrolovat osoby teď")');
-      check((await flash(admin)).includes('Nalezená řízení: 1') && (await text(admin, '#osoby')).includes('27 INS 1234/2026'), 'řízení nalezeno: ' + await flash(admin));
+      await admin.click('#osoby button:has-text("Zkontrolovat teď")');
+      check(await admin.locator('#osoby .flash').count() === 1 && (await flash(admin)).includes('Nalezená řízení: 1') && (await text(admin, '#osoby')).includes('27 INS 1234/2026'), 'řízení nalezeno, hlášení přímo v části Fyzické osoby: ' + await flash(admin));
       check(mailsSince(m0, who.admin).some((m) => m.subject.startsWith('Insolvence vlastníka jednotky') && m.body.includes('dvou měsíců')), 'e-mail správcům o insolvenci');
-      step('Insolvence vlastníků → Fyzické osoby: jednotka, příjmení, jméno a datum narození (rodné číslo se nezadává), „Hlídat“; kontrola našla řízení a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.');
+      step('Insolvence vlastníků → Fyzické osoby: po výběru jednotky web nabídl jejího vlastníka (z katastru, případně uživatele webu u jednotky) – klepnutím se doplnilo příjmení a jméno; ručně jen datum narození (rodné číslo se nezadává), „Hlídat“. „Zkontrolovat teď“ našlo řízení, výsledek se ukázal přímo v části Fyzické osoby a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.');
       // Exekuce.
       run(`UPDATE units SET owner_note = 'Stavby Novák s.r.o.', owner_contact = 'IČO 27082440' WHERE id = ${unitId('B/6')}`);
       await admin.goto(T + '/admin/rejstriky/exekuce');
@@ -1265,8 +1269,10 @@ const shot = async (locator, file, maxHeight = 900, dir = OUT) => {
       const ownerSees = await owner.goto(T + '/admin/insolvence');
       check(!(await text(owner)).includes('Fyzické osoby'), 'obyvatel údaje nevidí');
       await admin.goto(T + '/admin/insolvence#osoby');
-      await admin.selectOption('#osoby [name=unit_id]', unitId('B/2')); await admin.fill('#osoby [name=surname]', 'Veselá'); await admin.fill('#osoby [name=first_name]', 'Alena'); await admin.fill('#osoby [name=birth_date]', '1975-03-01');
-      await admin.click('#osoby button:has-text("Hlídat")'); await admin.click('#osoby button:has-text("Zkontrolovat osoby teď")');
+      await admin.selectOption('#osoby [name=unit_id]', unitId('B/2'));
+      if (await admin.isVisible('#osoby [data-person-pick]')) await admin.locator('#osoby [data-person-list] button', { hasText: 'Jiná osoba' }).click();
+      await admin.fill('#osoby [name=surname]', 'Veselá'); await admin.fill('#osoby [name=first_name]', 'Alena'); await admin.fill('#osoby [name=birth_date]', '1975-03-01');
+      await admin.click('#osoby button:has-text("Hlídat")'); await admin.click('#osoby button:has-text("Zkontrolovat teď")');
       await admin.locator('#osoby tr', { hasText: 'Veselá' }).locator('button:has-text("Nehlídat a smazat")').click();
       check((await flash(admin)).includes('údaje jsou smazané') && sql("SELECT COUNT(*) FROM rej_persons WHERE surname = 'Veselá'") === '0', 'Nehlídat a smazat');
       step('Údaje vidí jen správci (obyvatel stránku neotevře); „Nehlídat a smazat“ osobu i její výsledky smazalo.');

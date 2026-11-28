@@ -2231,3 +2231,12 @@ body.in-admin .narrow:has(table.table) { max-width: 1240px; }
 .sales-goal { padding: 1rem 1.25rem; border-radius: 14px; background: var(--accent-soft); border: 2px solid var(--accent); margin: 1rem 0; }
 .sales-goal progress { width: 100%; height: .8rem; }
 .inline-form { display: inline; }
+
+/* Hlídání insolvencí osob: patička tabulky s poslední kontrolou, oddělený formulář a výběr osoby u jednotky */
+.table-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1rem; margin: .6rem 0 0; font-size: .92rem; }
+.form-sub { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.form-sub h3 { margin-top: 0; }
+.person-pick { border: 0; padding: 0; margin: 0; }
+.person-pick legend { font-weight: 600; margin-bottom: .4rem; padding: 0; }
+.person-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.person-chips .asst-chip[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }

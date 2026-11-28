@@ -51,6 +51,42 @@ function rej_owner_people(string $note): array
     }
     return $out;
 }
+/**
+ * Lidé u jednotek k rychlému výběru při přidání hlídané osoby: vlastníci z katastru (owner_note) a uživatelé webu
+ * přiřazení k jednotce. [unit_id => [['surname', 'first'], …]] bez duplicit a bez těch, kdo se už u jednotky hlídají.
+ */
+function rej_unit_people(): array
+{
+    $out = [];
+    $seen = [];
+    $add = function (int $unit, string $surname, string $first) use (&$out, &$seen): void {
+        $surname = trim($surname);
+        $first = trim($first);
+        $k = $unit . '|' . mb_strtolower($surname . '|' . $first);
+        if ($surname === '' || isset($seen[$k])) {
+            return;
+        }
+        $seen[$k] = true;
+        $out[$unit][] = ['surname' => $surname, 'first' => $first];
+    };
+    foreach (rej_persons() as $p) {
+        $seen[(int) $p['unit_id'] . '|' . mb_strtolower(trim($p['surname']) . '|' . trim($p['first_name']))] = true;
+    }
+    foreach (all_units() as $u) {
+        foreach (rej_owner_people((string) $u['owner_note']) as $rp) {
+            $add((int) $u['id'], $rp['surname'], $rp['first']);
+        }
+    }
+    // Uživatelé webu mají jméno ve tvaru „Jméno Příjmení“ (tituly se vynechají).
+    foreach (all('SELECT uu.unit_id, u.name FROM user_units uu JOIN users u ON u.id = uu.user_id WHERE u.active = 1 ORDER BY u.name') as $r) {
+        $name = trim(preg_replace('/\b(Ing|Mgr|Bc|JUDr|MUDr|MVDr|PhDr|RNDr|PaedDr|doc|prof|CSc|Ph\.D|DiS|MBA)\.?(?=\s|,|$)/u', '', explode(',', (string) $r['name'])[0]));
+        $words = preg_split('/\s+/u', $name, -1, PREG_SPLIT_NO_EMPTY);
+        if (count($words) >= 2) {
+            $add((int) $r['unit_id'], (string) array_pop($words), implode(' ', $words));
+        }
+    }
+    return $out;
+}
 function rej_person_add(int $unitId, string $surname, string $first, string $birth, int $by): ?string
 {
     rej_ready();

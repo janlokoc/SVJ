@@ -35,7 +35,7 @@
   </div>
 </header>
 <main id="obsah">
-  <?php if ($flash): ?><div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status"><?= e($flash['msg']) ?></div></div><?php endif ?>
+  <?php if ($flash): ?><div class="wrap"><div class="flash flash-<?= e($flash['type']) ?>" role="status" data-flash><?= e($flash['msg']) ?></div></div><?php endif ?>
   <?= $content ?>
 </main>
 <footer class="site-footer">

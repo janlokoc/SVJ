@@ -906,22 +906,61 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Chyba po uložení s návratem na oddíl (#kotva): hlášení je nahoře, ale stránka sjede k oddílu – ukázat ho i tam (11/2026).
+// Hlášení po uložení s návratem na oddíl (#kotva) – úspěch i chyba – patří tam, kde uživatel klikal: přesune se
+// do oddílu a nahoře nezůstane, ať stránka neskáče nahoru a dolů (11/2026; dřív jen chyba a jako kopie).
 document.addEventListener('DOMContentLoaded', () => {
-  const err = document.querySelector('main .flash-error');
+  const msg = document.querySelector('main [data-flash]');
   const id = decodeURIComponent(location.hash.slice(1));
   const target = id && document.getElementById(id);
-  if (!err || !target || target.contains(err)) return;
-  const copy = err.cloneNode(true);
-  copy.removeAttribute('id');
-  copy.setAttribute('role', 'alert');
-  copy.classList.add('flash-here');
+  if (!msg || !target || target.contains(msg)) return;
+  const wrap = msg.parentElement && msg.parentElement.classList.contains('wrap') && msg.parentElement.children.length === 1 ? msg.parentElement : null;
+  if (msg.classList.contains('flash-error')) msg.setAttribute('role', 'alert');
+  msg.classList.add('flash-here');
   const host = target.matches('form, section, fieldset, .card') ? target : target.closest('form, section, .card') || target;
   const first = host.querySelector('legend, h2, h3');
-  if (first && first.parentElement === host) first.after(copy); else host.prepend(copy);
+  if (first && first.parentElement === host) first.after(msg); else host.prepend(msg);
+  if (wrap) wrap.remove();
   // Až po vlastním skoku prohlížeče na kotvu – jinak by ho přebil.
-  const show = () => copy.scrollIntoView({ block: 'center', behavior: 'instant' });
+  const show = () => msg.scrollIntoView({ block: 'center', behavior: 'instant' });
   show();
   if (document.readyState === 'complete') setTimeout(show, 30); else window.addEventListener('load', () => setTimeout(show, 30), { once: true });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(show);
+});
+
+// Hlídání insolvencí: po výběru jednotky nabídne její vlastníky a uživatele; klepnutí doplní jméno, „Jiná osoba“ otevře ruční vyplnění.
+document.querySelectorAll('[data-person-form]').forEach((form) => {
+  let people = {};
+  try { people = JSON.parse(form.dataset.people || '{}'); } catch (e) { people = {}; }
+  const unit = form.querySelector('[data-person-unit]');
+  const pick = form.querySelector('[data-person-pick]');
+  const list = form.querySelector('[data-person-list]');
+  const manual = form.querySelector('[data-person-manual]');
+  const sur = form.querySelector('[name=surname]');
+  const first = form.querySelector('[name=first_name]');
+  if (!unit || !pick || !list || !manual || !sur || !first) return;
+  const choose = (btn, p) => {
+    list.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+    if (p) { sur.value = p.surname; first.value = p.first; manual.hidden = true; } else { sur.value = ''; first.value = ''; manual.hidden = false; sur.focus(); }
+  };
+  const render = () => {
+    const ps = people[unit.value] || [];
+    list.textContent = '';
+    pick.hidden = ps.length === 0;
+    manual.hidden = false;
+    if (!ps.length) return;
+    ps.forEach((p) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'asst-chip'; b.setAttribute('aria-pressed', 'false');
+      b.textContent = (p.surname + ' ' + p.first).trim();
+      b.addEventListener('click', () => choose(b, p));
+      list.appendChild(b);
+    });
+    const other = document.createElement('button');
+    other.type = 'button'; other.className = 'asst-chip'; other.setAttribute('aria-pressed', 'false'); other.textContent = 'Jiná osoba…';
+    other.addEventListener('click', () => choose(other, null));
+    list.appendChild(other);
+    if (ps.length === 1) { choose(list.querySelector('button'), ps[0]); } else { manual.hidden = true; }
+  };
+  unit.addEventListener('change', render);
+  render();
 });

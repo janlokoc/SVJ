@@ -14,7 +14,7 @@ foreach ($rejUnits as $ru) {
 <section class="card" id="osoby">
   <h2>Fyzické osoby</h2>
   <p>U vlastníků, kteří nejsou firmy, rejstřík hledá podle příjmení, jména a data narození. Datum narození doplňte jen u vlastníků, u kterých má hlídání smysl (např. dlužníci nebo pronajímané byty). Kontrola proběhne jednou týdně spolu s firmami.
-    <?= ($rejLast[0] ?? '') !== '' ? 'Poslední kontrola osob ' . e($rejLast[0]) . ': ' . e($rejLast[2] ?? '') . '.' : '' ?></p>
+</p>
   <p class="hint">Údaje vidí jen správci webu a slouží jen k ochraně pohledávek společenství (oprávněný zájem SVJ). Rodné číslo se nezadává ani neukládá. Když se v katastru převezme nový vlastník jednotky, údaje bývalého vlastníka se smažou. <?= help_link('katastr-a-rejstriky', 'Ochrana osobních údajů') ?></p>
   <?php if ($rejPersons): ?>
   <table class="table">
@@ -32,14 +32,19 @@ foreach ($rejUnits as $ru) {
       </tr>
     <?php endforeach ?></tbody>
   </table>
-  <form method="post" action="<?= url('/admin/insolvence/osoby') ?>" class="actions"><?= csrf_field() ?><button class="btn btn-ghost" type="submit" name="action" value="run">Zkontrolovat osoby teď</button></form>
+  <form method="post" action="<?= url('/admin/insolvence/osoby') ?>" class="table-foot"><?= csrf_field() ?>
+    <span class="muted"><?= ($rejLast[0] ?? '') !== '' ? 'Poslední kontrola ' . e($rejLast[0]) . ': ' . e($rejLast[2] ?? '') . '.' : 'Zatím neproběhla žádná kontrola.' ?></span>
+    <button class="btn btn-small btn-ghost" type="submit" name="action" value="run">Zkontrolovat teď</button></form>
   <?php endif ?>
-  <form method="post" action="<?= url('/admin/insolvence/osoby') ?>" class="form">
+  <form method="post" action="<?= url('/admin/insolvence/osoby') ?>" class="form form-sub" data-person-form data-people="<?= e(json_encode(rej_unit_people(), JSON_UNESCAPED_UNICODE)) ?>">
     <?= csrf_field() ?><input type="hidden" name="action" value="add">
     <h3>Přidat osobu</h3>
-    <label>Jednotka <select name="unit_id" required><option value="">– vyberte –</option><?php foreach ($rejUnits as $ru): ?><option value="<?= (int) $ru['id'] ?>"><?= e(unit_name($ru) . ($ru['owner_note'] !== '' ? ' – ' . mb_strimwidth($ru['owner_note'], 0, 50, '…') : '')) ?></option><?php endforeach ?></select></label>
+    <label>Jednotka <select name="unit_id" required data-person-unit><option value="">– vyberte –</option><?php foreach ($rejUnits as $ru): ?><option value="<?= (int) $ru['id'] ?>"><?= e(unit_name($ru) . ($ru['owner_note'] !== '' ? ' – ' . mb_strimwidth($ru['owner_note'], 0, 50, '…') : '')) ?></option><?php endforeach ?></select></label>
+    <fieldset class="person-pick" data-person-pick hidden><legend>Osoba</legend><div class="person-chips" data-person-list></div></fieldset>
+    <div data-person-manual>
     <label>Příjmení <input type="text" name="surname" maxlength="100" required list="rej-surnames" autocomplete="off"></label>
     <label>Jméno <input type="text" name="first_name" maxlength="100" list="rej-first" autocomplete="off"></label>
+    </div>
     <label>Datum narození <input type="date" name="birth_date" required max="<?= e(date('Y-m-d', strtotime('-15 years'))) ?>"></label>
     <datalist id="rej-surnames"><?php foreach (array_keys($rejSurnames) as $n): ?><option value="<?= e($n) ?>"><?php endforeach ?></datalist>
     <datalist id="rej-first"><?php foreach (array_keys($rejFirst) as $n): ?><option value="<?= e($n) ?>"><?php endforeach ?></datalist>

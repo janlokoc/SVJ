@@ -15,8 +15,12 @@ final class FlashInSectionTest extends TestCase
     {
         $root = dirname(__DIR__, 2);
         $js = (string) file_get_contents($root . '/assets/app.js');
-        $this->assertStringContainsString("document.querySelector('main .flash-error')", $js);
-        $this->assertStringContainsString("copy.classList.add('flash-here')", $js);
+        $this->assertStringContainsString("document.querySelector('main [data-flash]')", $js, 'úspěch i chyba');
+        $this->assertStringContainsString("msg.classList.add('flash-here')", $js);
+        $this->assertStringContainsString('if (wrap) wrap.remove();', $js, 'nahoře nezůstane – stránka neskáče');
+        foreach (['app/views/layout.php', 'app/views/platform/layout.php', 'app/views/platform/site_layout.php'] as $l) {
+            $this->assertStringContainsString('role="status" data-flash>', (string) file_get_contents($root . '/' . $l), $l);
+        }
         $this->assertStringContainsString("\$_SESSION['penb_form']", (string) file_get_contents($root . '/app/ext/routes_listing.php'));
         $v = (string) file_get_contents($root . '/app/views/ext/listing/_settings.php');
         $this->assertStringContainsString("unset(\$_SESSION['penb_form'])", $v);

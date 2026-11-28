@@ -126,7 +126,7 @@ $route('POST', '/admin/insolvence/osoby', function () use ($rejGate) {
             flash($err, 'error');
         } else {
             audit('Insolvence: hlídaná osoba přidána', post('surname') . ' (jednotka ' . (int) post('unit_id') . ')');
-            flash('Osoba se bude hlídat. Ověří se při nejbližší týdenní kontrole, nebo hned tlačítkem „Zkontrolovat osoby teď“.');
+            flash('Osoba se bude hlídat. Ověří se při nejbližší týdenní kontrole, nebo hned tlačítkem „Zkontrolovat teď“ pod tabulkou.');
         }
     } elseif ($action === 'delete') {
         if (rej_person_delete((int) post('id'))) {
