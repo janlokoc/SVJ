@@ -2197,3 +2197,11 @@ tr.is-neg td { color: var(--accent); }
 .doc-edit { position: absolute; right: .55rem; bottom: .45rem; padding: .2rem; border-radius: 6px; color: var(--muted); line-height: 0; }
 .doc-edit:hover { color: var(--primary); background: var(--soft); }
 .flash-here { margin: .5rem 0 1rem; }
+
+/* Dokumenty v administraci: přepínač viditelnosti jedním kliknutím */
+.vis-toggle { display: inline; }
+.vis-btn { display: inline-flex; align-items: center; gap: .3rem; white-space: nowrap; padding: .2rem .6rem; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .88rem; cursor: pointer; }
+.vis-btn:hover { border-color: var(--primary); }
+.vis-btn.vis-residents { background: var(--soft); }
+.vis-btn .icon { width: 1em; height: 1em; }
+.vis-swap { color: var(--muted); }

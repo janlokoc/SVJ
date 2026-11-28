@@ -193,6 +193,17 @@ $route('GET', '/admin/dokumenty/novy', $docForm);
 $route('POST', '/admin/dokumenty/novy', $docForm);
 $route('GET', '/admin/dokumenty/(\d+)', $docForm);
 $route('POST', '/admin/dokumenty/(\d+)', $docForm);
+// Přepnutí viditelnosti jedním kliknutím v seznamu dokumentů (dokument jednotky zůstává jen pro ni).
+$route('POST', '/admin/dokumenty/(\d+)/viditelnost', function (int $id) {
+    require_admin();
+    $d = one('SELECT * FROM documents WHERE id = ?', [$id]) ?? not_found();
+    $vis = post('visibility') === 'residents' ? 'residents' : 'public';
+    if (!$d['unit_id']) {
+        q('UPDATE documents SET visibility = ? WHERE id = ?', [$vis, $id]);
+        flash('„' . $d['title'] . '“ je teď ' . ($vis === 'public' ? 'veřejný – uvidí ho každý návštěvník webu.' : 'jen pro přihlášené obyvatele.'));
+    }
+    redirect('/admin/dokumenty' . (isset($_GET['kategorie']) ? '?kategorie=' . rawurlencode((string) $_GET['kategorie']) : ''));
+});
 $route('POST', '/admin/dokumenty/(\d+)/smazat', function (int $id) {
     require_admin();
     delete_document($id);

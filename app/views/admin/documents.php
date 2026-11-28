@@ -13,8 +13,10 @@
           <?php if (!$d['filename']): ?><span class="tag">na starém webu</span><?php endif ?></td>
         <td data-label="Kategorie"><?= CATEGORIES[$d['category']] ?? e($d['category']) ?></td>
         <td data-label="Datum"><?= cz_date($d['doc_date']) ?></td>
-        <td data-label="Viditelnost"><?= $d['unit_id'] ? 'Jen jednotka ' . e(unit_options()[$d['unit_id']] ?? '') : VISIBILITY[$d['visibility']] ?></td>
-        <td class="t-actions"><a href="<?= url('/soubor/' . $d['id']) ?>">Otevřít</a>
+        <td data-label="Viditelnost"><?php if ($d['unit_id']): ?>Jen jednotka <?= e(unit_options()[$d['unit_id']] ?? '') ?><?php else: $vOther = $d['visibility'] === 'public' ? 'residents' : 'public'; ?>
+          <form method="post" action="<?= url('/admin/dokumenty/' . $d['id'] . '/viditelnost') ?>" class="vis-toggle"><?= csrf_field() ?><input type="hidden" name="visibility" value="<?= $vOther ?>">
+            <button type="submit" class="vis-btn vis-<?= e($d['visibility']) ?>" title="Kliknutím změníte na: <?= e(mb_strtolower(VISIBILITY[$vOther])) ?>"><?= $d['visibility'] === 'residents' ? icon('lock') . ' ' : '' ?><?= e(VISIBILITY[$d['visibility']]) ?> <span class="vis-swap" aria-hidden="true">⇄</span></button></form><?php endif ?></td>
+        <td class="t-actions"><a href="<?= url('/admin/dokumenty/' . $d['id']) ?>">Upravit</a> <a href="<?= url('/soubor/' . $d['id']) ?>">Otevřít</a>
           <form method="post" action="<?= url('/admin/dokumenty/' . $d['id'] . '/smazat') ?>" data-confirm="Opravdu smazat dokument „<?= e($d['title']) ?>“?"><?= csrf_field() ?><button class="link-danger" type="submit">Smazat</button></form></td>
       </tr>
     <?php endforeach ?>
