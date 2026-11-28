@@ -733,6 +733,17 @@ $route('POST', '/admin/zpravy/nova', $mailForm);
 
 // ---------- Jednotky ----------
 
+$route('POST', '/admin/jednotky/k-overeni', function () {
+    require_admin();
+    $list = cadastre_todo();
+    if (post('all') === '1') {
+        $list = [];
+    } else {
+        unset($list[(int) post('i')]);
+    }
+    cadastre_todo_save($list);
+    redirect('/admin/jednotky' . ($list ? '#k-overeni' : ''));
+});
 $route('GET', '/admin/jednotky', function () {
     require_admin();
     $people = [];
@@ -939,10 +950,11 @@ $cadastreImport = function () {
                     $new++;
                 }
             }
+            cadastre_todo_save($parsed['warnings']);   // nový import nahradí upozornění z předchozího
             audit('units_imported', "nových $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : ''));
             setting('__reset');
-            flash("Import hotov: nových jednotek $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : '') . '. Účty přiřazené k jednotkám zůstaly beze změny.');
-            redirect('/admin/jednotky');
+            flash("Import hotov: nových jednotek $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : '') . '. Účty přiřazené k jednotkám zůstaly beze změny.' . ($parsed['warnings'] ? ' Zbývá ověřit ' . count($parsed['warnings']) . ' věcí – najdete je nahoře.' : ''));
+            redirect('/admin/jednotky' . ($parsed['warnings'] ? '#k-overeni' : ''));
         }
     }
     $existing = [];

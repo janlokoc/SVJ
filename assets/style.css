@@ -2160,3 +2160,9 @@ tr.is-neg td { color: var(--accent); }
 .ledger-items td { padding: .4rem .2rem; border-bottom: 1px solid var(--line); }
 .set-tabs { margin-bottom: 1.25rem; }
 .set-part[hidden] { display: none !important; }
+
+/* Jednotky: upozornění z importu z katastru k ověření */
+.todo-list { list-style: none; padding: 0; margin: .5rem 0 1rem; display: grid; gap: .5rem; }
+.todo-list li { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: .55rem .75rem; background: var(--surface); border-radius: 10px; }
+.todo-list li form { flex: none; }
+@media (max-width: 640px) { .todo-list li { flex-direction: column; align-items: flex-start; } }

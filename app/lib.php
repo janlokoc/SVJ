@@ -653,6 +653,25 @@ function feature_on(string $key): bool
 {
     return !in_array($key, array_filter(explode(',', setting('hidden_features'))), true);
 }
+/**
+ * Upozornění z posledního importu z katastru (sdílené podíly, nečitelné řádky), která má správce ověřit.
+ * Uloží se při importu a připomínají se na Přehledu a u Jednotek, dokud je správce neodškrtne (11/2026 – dřív
+ * byla vidět jen v náhledu a po uložení se ztratila).
+ */
+function cadastre_todo(): array
+{
+    $l = json_decode(setting('cadastre_todo'), true);
+    return is_array($l) ? array_values(array_filter($l, fn($x) => is_string($x) && $x !== '')) : [];
+}
+function cadastre_todo_save(array $list): void
+{
+    $list = array_values(array_slice(array_filter($list, fn($x) => is_string($x) && $x !== ''), 0, 200));
+    q('DELETE FROM settings WHERE `key` = ?', ['cadastre_todo']);
+    if ($list) {
+        q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['cadastre_todo', json_encode($list, JSON_UNESCAPED_UNICODE)]);
+    }
+    setting('__reset');
+}
 function setting(string $key, string $default = ''): string
 {
     static $cache = null;

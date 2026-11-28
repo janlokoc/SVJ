@@ -1,6 +1,17 @@
 <div class="wrap page">
   <header class="page-head row"><h1>Jednotky</h1><span class="actions"><a class="btn btn-ghost" href="<?= url('/admin/jednotky/export') ?>">Seznam členů (CSV)</a><a class="btn btn-ghost" href="<?= url('/admin/jednotky/import') ?>">Import z katastru</a><a class="btn" href="<?= url('/admin/jednotky/nova') ?>">+ Nová jednotka</a></span></header>
   <p class="lead">Seznam jednotek v domě, jejich vlastníci a účty, které k nim patří. Seznam vidí jen správci webu.</p>
+  <?php if ($todo = cadastre_todo()): ?>
+  <section class="card callout" id="k-overeni">
+    <h2>K ověření po importu z katastru (<?= count($todo) ?>)</h2>
+    <p class="hint">Katastr tyto údaje neuvádí jednoznačně. Ověřte je v prohlášení vlastníka a případně opravte u jednotky; pak položku odškrtněte.</p>
+    <ul class="todo-list">
+      <?php foreach ($todo as $i => $t): ?><li><span><?= e($t) ?></span>
+        <form method="post" action="<?= url('/admin/jednotky/k-overeni') ?>"><?= csrf_field() ?><input type="hidden" name="i" value="<?= $i ?>"><button class="btn btn-small btn-ghost" type="submit">Ověřeno</button></form></li><?php endforeach ?>
+    </ul>
+    <?php if (count($todo) > 1): ?><form method="post" action="<?= url('/admin/jednotky/k-overeni') ?>" data-confirm="Označit všechny položky jako ověřené?"><?= csrf_field() ?><input type="hidden" name="all" value="1"><button class="btn btn-small btn-ghost" type="submit">Vše ověřeno</button></form><?php endif ?>
+  </section>
+  <?php endif ?>
   <?php if (!$units): ?><p class="empty">Zatím tu není žádná jednotka. Přidejte je jednotlivě, nebo najednou formulářem níže.</p><?php else: ?>
   <label class="table-filter">Hledat <input type="search" data-filter="#units-table tbody" data-filter-rows="tr" placeholder="Číslo jednotky nebo jméno…"></label>
   <table class="table" id="units-table">

@@ -10,6 +10,7 @@
   <p class="plan-line">Edice <strong><?= e(EDITIONS[$bs['edition']]) ?></strong><?= match ($bs['mode']) { 'paid' => ' · zaplaceno do ' . cz_date($bs['until']), 'trial' => ' · na zkoušku do ' . cz_date($bs['until']), 'grace' => ' · předplatné skončilo ' . cz_date($bs['until']), default => ' · bez časového omezení' } ?><?php foreach ($activeTrials as $tr): ?> · zkouška „<?= e(PLAN_FEATURES[$tr['feature']][1]) ?>“ do <?= cz_date($tr['ends']) ?><?php endforeach ?>
     · <a href="<?= url('/admin/predplatne') ?>">Předplatné a limity</a></p>
   <?php endif ?>
+  <?php if ($ct = count(cadastre_todo())): ?><div class="flash flash-info">Po importu z katastru zbývá ověřit <?= $ct ?> <?= $ct === 1 ? 'věc' : ($ct < 5 ? 'věci' : 'věcí') ?> (společné podíly více jednotek). <a href="<?= url('/admin/jednotky') ?>#k-overeni">Zobrazit a ověřit</a></div><?php endif ?>
   <?php if ($jp = join_pending_count()): ?><div class="flash flash-info">Žádosti o přiřazení k jednotce čekají na schválení: <?= $jp ?>. <a href="<?= url('/admin/uzivatele/zadosti') ?>">Ověřit a schválit</a></div><?php endif ?>
   <?php $onb = onboarding_summary(); if ($onb['waiting'] && !$onb['hidden']): ?>
   <div class="card onb-card">
