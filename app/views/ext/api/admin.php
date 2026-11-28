@@ -43,6 +43,8 @@ $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
       <?php foreach (API_SCOPES as $k => $label): ?><label class="check"><input type="checkbox" name="scopes[]" value="<?= e($k) ?>"> <span><code><?= e($k) ?></code> <small><?= e($label) ?></small></span></label><?php endforeach ?>
     </fieldset>
     <label>Jen z IP adres dodavatele (nepovinné) <input type="text" name="ips" placeholder="203.0.113.10, 198.51.100.0/24"></label>
+    <label>Platnost <select name="ttl"><?php foreach (API_KEY_TTL as $th => $tl): ?><option value="<?= $th ?>"<?= $th === 24 ? ' selected' : '' ?>><?= e($tl) ?></option><?php endforeach ?></select>
+      <small>Klíč, který zůstane zapomenutý, po vypršení sám přestane platit. Odečtové firmě nebo účetní dejte delší platnost.</small></label>
     <div class="actions"><button class="btn" type="submit">Vytvořit klíč</button></div>
   </form>
   <section class="card">
@@ -50,12 +52,14 @@ $docs = function_exists('platform_url') ? platform_url('/api') : ''; ?>
     <?php if (!$keys): ?><p class="empty">Zatím žádný klíč.</p><?php else: ?>
     <table class="table"><thead><tr><th>Název</th><th>Oprávnění</th><th>Naposledy použit</th><th></th></tr></thead><tbody>
       <?php foreach ($keys as $k): ?><tr<?= $k['revoked_at'] !== '' ? ' class="muted"' : '' ?>>
-        <td data-label="Název"><strong><?= e($k['name']) ?></strong> <small class="muted"><code><?= e($k['prefix']) ?>…</code></small><?= $k['ips'] !== '' ? '<br><small class="muted">jen z ' . e($k['ips']) . '</small>' : '' ?></td>
+        <td data-label="Název"><strong><?= e($k['name']) ?></strong> <small class="muted"><code><?= e($k['prefix']) ?>…</code></small><?= $k['ips'] !== '' ? '<br><small class="muted">jen z ' . e($k['ips']) . '</small>' : '' ?>
+          <?php if ($k['revoked_at'] === '' && $k['expires_at'] !== ''): ?><br><small class="<?= $k['expires_at'] < date('Y-m-d H:i:s') ? 'status status-new' : 'muted' ?>"><?= $k['expires_at'] < date('Y-m-d H:i:s') ? 'vypršel ' : 'platí do ' ?><?= e(cz_datetime($k['expires_at'])) ?></small><?php endif ?></td>
         <td data-label="Oprávnění"><small><?= e(str_replace(' ', ', ', $k['scopes'])) ?></small>
           <?php if ($k['revoked_at'] === ''): $kScopes = explode(' ', (string) $k['scopes']); ?><details class="api-edit"><summary>Upravit oprávnění</summary>
             <form method="post" action="<?= url('/admin/api') ?>" class="form"><?= csrf_field() ?><input type="hidden" name="do" value="update"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>">
               <fieldset class="checks"><legend>Co smí</legend><?php foreach (API_SCOPES as $sk => $sl): ?><label class="check"><input type="checkbox" name="scopes[]" value="<?= e($sk) ?>"<?= in_array($sk, $kScopes, true) ? ' checked' : '' ?>> <span><code><?= e($sk) ?></code> <small><?= e($sl) ?></small></span></label><?php endforeach ?></fieldset>
               <label>Jen z IP adres (nepovinné) <input type="text" name="ips" value="<?= e($k['ips']) ?>"></label>
+              <label>Platnost <select name="ttl"><option value="keep">ponechat (<?= $k['expires_at'] !== '' ? 'do ' . e(cz_datetime($k['expires_at'])) : 'bez omezení' ?>)</option><?php foreach (API_KEY_TTL as $th => $tl): ?><option value="<?= $th ?>"><?= $th ? 'prodloužit: ' . e($tl) . ' od teď' : e($tl) ?></option><?php endforeach ?></select></label>
               <button class="btn btn-small" type="submit">Uložit oprávnění</button></form></details><?php endif ?></td>
         <td data-label="Naposledy použit"><?= $k['last_used_at'] !== '' ? e(cz_datetime($k['last_used_at'])) : '–' ?></td>
         <td data-label=""><?php if ($k['revoked_at'] === ''): ?><form method="post" action="<?= url('/admin/api') ?>" data-confirm="Zrušit klíč „<?= e($k['name']) ?>“? Dodavatel přestane posílat data."><?= csrf_field() ?><input type="hidden" name="do" value="revoke"><input type="hidden" name="id" value="<?= (int) $k['id'] ?>"><button class="btn btn-small btn-ghost nowrap" type="submit">Zrušit</button></form><?php else: ?><small>zrušen <?= e(cz_date($k['revoked_at'])) ?></small><?php endif ?></td>

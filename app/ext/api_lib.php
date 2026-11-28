@@ -55,7 +55,12 @@ function api_ready(?PDO $pdo = null): void
     $id = 'id ' . ($mysql ? 'INT AUTO_INCREMENT PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT');
     $end = $mysql ? ' ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' : '';
     if (!in_array('api_keys', $have, true)) {
-        $pdo->exec("CREATE TABLE api_keys ($id, name {$s(100)}, prefix {$s(12)}, hash {$s(64)}, scopes {$s(300)}, ips {$s(500)}, created_by $int, created_at {$s(19)}, last_used_at {$s(19)}, revoked_at {$s(19)})$end");
+        $pdo->exec("CREATE TABLE api_keys ($id, name {$s(100)}, prefix {$s(12)}, hash {$s(64)}, scopes {$s(300)}, ips {$s(500)}, created_by $int, created_at {$s(19)}, last_used_at {$s(19)}, revoked_at {$s(19)}, expires_at {$s(19)})$end");
+    }
+    // Platnost klíče (11/2026): prázdné = bez omezení; nový klíč má výchozí platnost 24 hodin.
+    $cols = $mysql ? array_column($pdo->query('SHOW COLUMNS FROM api_keys')->fetchAll(), 'Field') : array_column($pdo->query('PRAGMA table_info(api_keys)')->fetchAll(), 'name');
+    if (in_array('api_keys', $have, true) && !in_array('expires_at', $cols, true)) {
+        $pdo->exec("ALTER TABLE api_keys ADD COLUMN expires_at {$s(19)}");
     }
     if (!in_array('api_refs', $have, true)) {
         // Převod obsahu: ext_id z původního systému → záznam u nás; opakované volání nic nezdvojí.
@@ -75,19 +80,25 @@ function api_available(): bool
 }
 
 /** Vytvoří klíč; vrací [id, klíč v čitelné podobě – zobrazí se jen jednou]. */
-function api_key_create(string $name, array $scopes, string $ips, int $userId): array
+/** Volby platnosti klíče: hodin => popis; 0 = bez omezení. */
+const API_KEY_TTL = [24 => '24 hodin', 168 => '7 dní', 720 => '30 dní', 8760 => '1 rok', 0 => 'bez omezení (trvalé napojení dodavatele)'];
+function api_key_expiry(int $hours): string
+{
+    return $hours > 0 ? date('Y-m-d H:i:s', time() + $hours * 3600) : '';
+}
+function api_key_create(string $name, array $scopes, string $ips, int $userId, int $ttlHours = 24): array
 {
     api_ready();
     $scopes = array_values(array_intersect(array_keys(API_SCOPES), $scopes));
     $plain = 'swk_' . bin2hex(random_bytes(20));
-    q('INSERT INTO api_keys (name, prefix, hash, scopes, ips, created_by, created_at) VALUES (?,?,?,?,?,?,?)',
-        [mb_substr(trim($name) ?: 'Klíč', 0, 100), substr($plain, 0, 10), hash('sha256', $plain), implode(' ', $scopes), $ips, $userId, date('Y-m-d H:i:s')]);
+    q('INSERT INTO api_keys (name, prefix, hash, scopes, ips, created_by, created_at, expires_at) VALUES (?,?,?,?,?,?,?,?)',
+        [mb_substr(trim($name) ?: 'Klíč', 0, 100), substr($plain, 0, 10), hash('sha256', $plain), implode(' ', $scopes), $ips, $userId, date('Y-m-d H:i:s'), api_key_expiry($ttlHours)]);
     $id = (int) db()->lastInsertId();
     audit('api_key_new', mb_substr(trim($name), 0, 100) . ' · ' . (implode(', ', $scopes) ?: 'bez oprávnění'));
     return [$id, $plain];
 }
 /** Změní oprávnění a povolené IP adresy klíče (klíč sám zůstává stejný). */
-function api_key_update(int $id, array $scopes, string $ips): bool
+function api_key_update(int $id, array $scopes, string $ips, ?int $ttlHours = null): bool
 {
     api_ready();
     $k = one('SELECT * FROM api_keys WHERE id = ? AND revoked_at = ?', [$id, '']);
@@ -96,6 +107,9 @@ function api_key_update(int $id, array $scopes, string $ips): bool
         return false;
     }
     q('UPDATE api_keys SET scopes = ?, ips = ? WHERE id = ?', [implode(' ', $scopes), $ips, $id]);
+    if ($ttlHours !== null) {
+        q('UPDATE api_keys SET expires_at = ? WHERE id = ?', [api_key_expiry($ttlHours), $id]);
+    }
     audit('api_key_update', $k['name'] . ' · ' . implode(', ', $scopes) . ($ips !== '' ? ' · jen z ' . $ips : ''));
     return true;
 }
@@ -153,6 +167,10 @@ function api_authenticate(string $plain, string $ip): array
             }
         }
         return [401, 'Neplatný nebo zrušený klíč.'];
+    }
+    if ((string) ($k['expires_at'] ?? '') !== '' && $k['expires_at'] < date('Y-m-d H:i:s')) {
+        api_log((int) $k['id'], $ip, $GLOBALS['METHOD'] ?? '', $GLOBALS['PATH'] ?? '', 401, false, 'platnost klíče vypršela');
+        return [401, 'Platnost klíče vypršela. Správce webu ji může prodloužit v Administrace → API a napojení.'];
     }
     if (function_exists('meter_ip_allowed') && !meter_ip_allowed($ip, (string) $k['ips'])) {
         api_log((int) $k['id'], $ip, $GLOBALS['METHOD'] ?? '', $GLOBALS['PATH'] ?? '', 403, false, 'adresa není povolená');
@@ -523,7 +541,7 @@ function api_prompts_committee(): array
 function api_migration_key(): ?array
 {
     api_ready();
-    return one('SELECT * FROM api_keys WHERE name = ? AND revoked_at = ? ORDER BY id DESC LIMIT 1', [API_MIGRATION_KEY, '']);
+    return one("SELECT * FROM api_keys WHERE name = ? AND revoked_at = ? AND (expires_at = '' OR expires_at >= ?) ORDER BY id DESC LIMIT 1", [API_MIGRATION_KEY, '', date('Y-m-d H:i:s')]);
 }
 /**
  * Totéž zadání pro asistenta, který místo MCP volá REST API (MCP může být ve firmě zakázané): asistent si napíše a spustí

@@ -14,7 +14,7 @@
             <?php if ($name === 'next_date' && $state): ?> <span class="status status-<?= $state === 'overdue' ? 'new' : 'in_progress' ?>"><?= $state === 'overdue' ? 'po termínu' : 'blíží se' ?></span><?php endif ?></td>
         <?php $first = false; endforeach ?>
         <td class="t-actions">
-          <?php if ($slug === 'revize'): ?><form method="post" action="<?= url('/admin/revize/' . $r['id'] . '/provedeno') ?>" data-confirm="Zapsat „<?= e($r['title']) ?>“ jako provedeno dnes?"><?= csrf_field() ?><button class="link" type="submit">Provedeno dnes</button></form><?php endif ?>
+          <?php if ($slug === 'revize'): ?><form method="post" action="<?= url('/admin/revize/' . $r['id'] . '/provedeno') ?>" class="done-form"><?= csrf_field() ?><label class="sr-only" for="done-<?= (int) $r['id'] ?>">Kdy proběhla</label><input type="date" id="done-<?= (int) $r['id'] ?>" name="done_date" value="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d') ?>" required><button class="link" type="submit">Zapsat provedení</button></form><?php endif ?>
           <form method="post" action="<?= url("/admin/$slug/" . $r['id'] . '/smazat') ?>" data-confirm="Opravdu smazat?"><?= csrf_field() ?><button class="link-danger" type="submit">Smazat</button></form></td>
       </tr>
     <?php endforeach ?>

@@ -48,6 +48,25 @@ final class ApiTest extends TestCase
         $this->assertFalse(api_key_update($id, ['units:read'], ''), 'zrušený klíč nejde upravit');
     }
 
+    public function testKeyExpiresAfter24HoursByDefault(): void
+    {
+        [$id, $plain] = api_key_create('Výchozí platnost', ['units:read'], '', 1);
+        $exp = (string) val('SELECT expires_at FROM api_keys WHERE id = ?', [$id]);
+        $this->assertEqualsWithDelta(time() + 86400, strtotime($exp), 5, 'výchozí platnost 24 hodin');
+        $this->assertArrayHasKey('id', api_authenticate($plain, $this->ip));
+        q('UPDATE api_keys SET expires_at = ? WHERE id = ?', [date('Y-m-d H:i:s', time() - 60), $id]);
+        $r = api_authenticate($plain, $this->ip);
+        $this->assertSame(401, $r[0]);
+        $this->assertStringContainsString('vypršela', $r[1]);
+        $this->assertTrue(api_key_update($id, ['units:read'], '', 0));
+        $this->assertSame('', (string) val('SELECT expires_at FROM api_keys WHERE id = ?', [$id]), 'prodloužení na bez omezení');
+        $this->assertArrayHasKey('id', api_authenticate($plain, $this->ip));
+        [$id2] = api_key_create('Trvalý', ['units:read'], '', 1, 0);
+        $this->assertSame('', (string) val('SELECT expires_at FROM api_keys WHERE id = ?', [$id2]));
+        api_key_revoke($id);
+        api_key_revoke($id2);
+    }
+
     public function testBearerHeaderParsing(): void
     {
         $k = 'swk_' . str_repeat('a', 40);

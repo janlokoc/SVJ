@@ -7,11 +7,11 @@ $mig = function_exists('pset_int') ? pset_int('price_migration', 0, 1000000) : 0
   <section class="card mig-step" id="krok-1">
     <h2><span class="mig-num">1</span> Klíč pro asistenta</h2>
     <?php if ($new !== ''): ?>
-      <p><strong>Zkopírujte si klíč teď</strong> – znovu ho neuvidíte (web ukládá jen jeho otisk).</p>
+      <p><strong>Zkopírujte si klíč teď</strong> – znovu ho neuvidíte (web ukládá jen jeho otisk). Platí 24 hodin; když na zrušení zapomenete, přestane platit sám.</p>
       <p><input type="text" class="join-url" value="<?= e($new) ?>" readonly data-select-all aria-label="Klíč pro převod"></p>
       <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($new) ?>">Zkopírovat klíč</button></p>
     <?php elseif ($key): ?>
-      <p>Klíč pro převod je vytvořený <?= e(cz_datetime($key['created_at'])) ?><?= $key['last_used_at'] !== '' ? ', naposledy použit ' . e(cz_datetime($key['last_used_at'])) : '' ?>. Když jste ho ztratili, vytvořte nový – starý se tím zruší.</p>
+      <p>Klíč pro převod je vytvořený <?= e(cz_datetime($key['created_at'])) ?><?= $key['expires_at'] !== '' ? ' a platí do ' . e(cz_datetime($key['expires_at'])) : '' ?><?= $key['last_used_at'] !== '' ? ', naposledy použit ' . e(cz_datetime($key['last_used_at'])) : '' ?>. Když jste ho ztratili, vytvořte nový – starý se tím zruší.</p>
     <?php else: ?>
       <p>Klíč dovolí asistentovi zapsat aktuality, dokumenty, termíny, kontakty, revize, jednotky a účty obyvatel (bez pozvánek). Nic jiného.</p>
     <?php endif ?>

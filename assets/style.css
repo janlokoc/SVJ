@@ -2191,3 +2191,5 @@ tr.is-neg td { color: var(--accent); }
 .api-edit summary { cursor: pointer; font-size: .9rem; }
 .cal-feed { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
 .cal-feed summary { cursor: pointer; font-weight: 600; }
+.done-form { display: inline-flex; gap: .4rem; align-items: center; }
+.done-form input[type=date] { padding: .2rem .4rem; min-height: 0; font-size: .9rem; width: auto; }

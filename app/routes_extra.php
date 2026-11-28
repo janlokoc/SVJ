@@ -293,9 +293,15 @@ foreach (crud_defs() as $slug => $def) {
 $route('POST', '/admin/revize/(\d+)/provedeno', function (int $id) {
     require_admin();
     $m = one('SELECT * FROM maintenance WHERE id = ?', [$id]) ?? not_found();
-    $next = $m['interval_months'] > 0 ? date('Y-m-d', strtotime('+' . (int) $m['interval_months'] . ' months')) : null;
-    q('UPDATE maintenance SET last_date = ?, next_date = ?, reminded_for = NULL WHERE id = ?', [date('Y-m-d'), $next, $id]);
-    flash('Zapsáno jako provedeno dnes.' . ($next ? ' Příští termín: ' . cz_date($next) . '.' : ''));
+    // Skutečné datum provedení (výchozí dnes); příští termín se počítá od něj. Budoucí datum ne.
+    $done = post('done_date') !== '' ? post('done_date') : date('Y-m-d');
+    if (!valid_date($done) || $done > date('Y-m-d')) {
+        flash('Zadejte datum, kdy revize proběhla (nejpozději dnes).', 'error');
+        redirect('/admin/revize');
+    }
+    $next = $m['interval_months'] > 0 ? date('Y-m-d', strtotime($done . ' +' . (int) $m['interval_months'] . ' months')) : null;
+    q('UPDATE maintenance SET last_date = ?, next_date = ?, reminded_for = NULL WHERE id = ?', [$done, $next, $id]);
+    flash('Zapsáno jako provedeno ' . cz_date($done) . '.' . ($next ? ' Příští termín: ' . cz_date($next) . '.' : ''));
     redirect('/admin/revize');
 });
 

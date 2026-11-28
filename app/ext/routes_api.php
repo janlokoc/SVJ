@@ -220,7 +220,7 @@ $adminApi = function () {
             } elseif (!array_intersect($scopes, array_keys(API_SCOPES))) {
                 flash('Vyberte aspoň jedno oprávnění.', 'error');
             } else {
-                [, $plain] = api_key_create(post('name'), $scopes, $ips, (int) $me['id']);
+                [, $plain] = api_key_create(post('name'), $scopes, $ips, (int) $me['id'], array_key_exists((int) post('ttl'), API_KEY_TTL) ? (int) post('ttl') : 24);
                 $_SESSION['api_new_key'] = $plain;
                 flash('Klíč je vytvořený. Zkopírujte si ho hned – znovu ho už neuvidíte.');
             }
@@ -229,7 +229,7 @@ $adminApi = function () {
             if (is_array($ips)) {
                 flash($ips['error'], 'error');
             } else {
-                flash(api_key_update((int) post('id'), array_map('strval', (array) ($_POST['scopes'] ?? [])), $ips) ? 'Oprávnění klíče jsou upravená – platí hned, klíč zůstává stejný.' : 'Vyberte aspoň jedno oprávnění.', 'info');
+                flash(api_key_update((int) post('id'), array_map('strval', (array) ($_POST['scopes'] ?? [])), $ips, post('ttl') === 'keep' || !array_key_exists((int) post('ttl'), API_KEY_TTL) ? null : (int) post('ttl')) ? 'Oprávnění klíče jsou upravená – platí hned, klíč zůstává stejný.' : 'Vyberte aspoň jedno oprávnění.', 'info');
             }
         } elseif (post('do') === 'revoke') {
             flash(api_key_revoke((int) post('id')) ? 'Klíč je zrušený, přestal platit okamžitě.' : 'Klíč už zrušený je.', 'info');
