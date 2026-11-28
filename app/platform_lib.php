@@ -627,6 +627,58 @@ function platform_login_failed(string $account = ''): void
         pq('INSERT INTO attempts (ip, at) VALUES (?,?)', [platform_login_account_key($account), time()]);
     }
 }
+/*
+ * Ztracená ověřovací aplikace v konzoli: jednorázový kód e-mailem (11/2026, vedle kódu v souboru na serveru).
+ * Kód jen jednou přihlásí – dvoufázové ověření zůstává zapnuté. Aby samotná schránka nestačila k převzetí účtu
+ * (zapomenuté heslo jde také e-mailem), kód e-mailem nejde poslat do 7 dnů od nastavení hesla přes odkaz z e-mailu;
+ * tehdy zbývá kód v souboru na serveru. Platí 15 minut, nejvýše 5 pokusů, uložen jen otisk.
+ */
+const CONSOLE_MAIL_CODE_TTL = 900;
+const CONSOLE_MAIL_CODE_TRIES = 5;
+const CONSOLE_MAIL_CODE_RESET_LOCK = 7 * 86400;
+/** Proč kód e-mailem nejde poslat (null = jde). */
+function console_mail_code_refusal(array $a): ?string
+{
+    if (!filter_var((string) $a['email'], FILTER_VALIDATE_EMAIL) || pset('mail_from') === '') {
+        return 'Platforma zatím nemá nastavené odesílání e-mailů – použijte kód v souboru na serveru.';
+    }
+    if (time() - (int) pset('super_pw_reset_' . (int) $a['id']) < CONSOLE_MAIL_CODE_RESET_LOCK) {
+        return 'Heslo bylo v posledních 7 dnech nastaveno přes odkaz z e-mailu. Z bezpečnostních důvodů teď kód e-mailem neposíláme – použijte kód v souboru na serveru.';
+    }
+    return null;
+}
+/** Vytvoří a odešle kód; vrací chybu, nebo null. */
+function console_mail_code_send(array $a): ?string
+{
+    if ($why = console_mail_code_refusal($a)) {
+        return $why;
+    }
+    $code = (string) random_int(10000000, 99999999);
+    pset_save('super_2fa_mail', json_encode(['id' => (int) $a['id'], 'hash' => hash('sha256', $code), 'exp' => time() + CONSOLE_MAIL_CODE_TTL, 'tries' => 0]));
+    $ok = platform_mail((string) $a['email'], 'Kód pro přihlášení do správy platformy', "Dobrý den,\n\nkód pro přihlášení do správy platformy bez ověřovací aplikace je:\n\n    $code\n\n"
+        . "Platí 15 minut a jen jednou. Dvoufázové ověření zůstává zapnuté – ztracenou aplikaci po přihlášení nastavte znovu v části Můj účet.\n"
+        . 'Žádost přišla z adresy ' . client_ip() . ". Pokud jste o kód nežádal(a), někdo zná Vaše heslo: hned si ho změňte.");
+    if (!$ok) {
+        pset_save('super_2fa_mail', '');
+        return 'E-mail se nepodařilo odeslat – použijte kód v souboru na serveru.';
+    }
+    return null;
+}
+/** Ověří kód (jednorázově); po 5 chybách nebo vypršení kód zanikne. */
+function console_mail_code_check(int $id, string $code): bool
+{
+    $s = (array) json_decode(pset('super_2fa_mail'), true);
+    if ((int) ($s['id'] ?? 0) !== $id || time() >= (int) ($s['exp'] ?? 0) || (int) ($s['tries'] ?? 0) >= CONSOLE_MAIL_CODE_TRIES) {
+        return false;
+    }
+    if (hash_equals((string) $s['hash'], hash('sha256', preg_replace('/\D/', '', $code)))) {
+        pset_save('super_2fa_mail', '');
+        return true;
+    }
+    $s['tries'] = (int) ($s['tries'] ?? 0) + 1;
+    pset_save('super_2fa_mail', json_encode($s));
+    return false;
+}
 /** Veřejné dotazy do ARES: nejvýše 30 za hodinu z jedné adresy (v databázi – dřív jen v relaci, šlo obejít smazáním cookie). */
 const ARES_PER_HOUR = 30;
 function ares_rate_ok(): bool

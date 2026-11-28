@@ -90,7 +90,7 @@ if (!$super) {
     $pending = $_SESSION['spending'] ?? null;
     // Záchrana bez ověřovací aplikace: kód v souboru storage/obnova-2fa-*.txt, ke kterému se dostane jen ten, kdo má přístup na hosting (FTP).
     $recovery = !empty($pending['recovery']);
-    if ($PATH === '/overeni' && $pending && time() - $pending['at'] < ($recovery ? 1800 : 300)) {
+    if ($PATH === '/overeni' && $pending && time() - $pending['at'] < ($recovery ? 1800 : (!empty($pending['mail']) ? CONSOLE_MAIL_CODE_TTL : 300))) {
         $a = pq('SELECT * FROM super_admins WHERE id = ?', [$pending['id']])->fetch();
         if ($METHOD === 'POST' && $a && post('action') === 'recovery_start') {
             array_map('unlink', glob(ROOT_STORAGE . '/obnova-2fa-*.txt') ?: []);
@@ -98,6 +98,29 @@ if (!$super) {
             $_SESSION['spending'] = ['id' => (int) $a['id'], 'at' => time(), 'recovery' => true];
             pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova 2FA: vytvořen kód na serveru', '']);
             redirect('/overeni');
+        }
+        // Kód e-mailem: jen jednou přihlásí, dvoufázové ověření zůstává (podmínky viz console_mail_code_refusal).
+        if ($METHOD === 'POST' && $a && post('action') === 'mail_start') {
+            $why = $blocked($a['email']) ? 'Příliš mnoho pokusů. Zkuste to znovu za 15 minut.' : console_mail_code_send($a);
+            if ($why === null) {
+                $failed($a['email']);   // i odeslání se počítá – omezí rozesílání
+                $_SESSION['spending'] = ['id' => (int) $a['id'], 'at' => time(), 'mail' => true];
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Obnova 2FA: odeslán kód e-mailem', '']);
+                redirect('/overeni');
+            }
+            http_response_code(422);
+            render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $why, 'verify' => true, 'recovery' => $recovery, 'mailSent' => false]);
+            exit;
+        }
+        if ($METHOD === 'POST' && $a && post('action') === 'mail_code' && !empty($pending['mail'])) {
+            if (!$blocked($a['email']) && console_mail_code_check((int) $a['id'], post('mail_code'))) {
+                pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Přihlášení kódem z e-mailu (bez ověřovací aplikace)', '']);
+                $signIn($a);
+            }
+            $failed($a['email']);
+            http_response_code(422);
+            render('platform/login', ['title' => 'Ověření přihlášení', 'error' => 'Kód z e-mailu nesouhlasí nebo už neplatí.', 'verify' => true, 'recovery' => $recovery, 'mailSent' => true]);
+            exit;
         }
         if ($METHOD === 'POST' && $a && post('action') === 'recovery' && $recovery) {
             $file = glob(ROOT_STORAGE . '/obnova-2fa-*.txt')[0] ?? '';
@@ -124,7 +147,7 @@ if (!$super) {
             $error = 'Kód není správný nebo už vypršel.';
             http_response_code(422);
         }
-        render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true, 'recovery' => $recovery]);
+        render('platform/login', ['title' => 'Ověření přihlášení', 'error' => $error, 'verify' => true, 'recovery' => $recovery, 'mailSent' => !empty($pending['mail'])]);
         exit;
     }
     if ($METHOD === 'POST' && $PATH === '/prihlaseni') {
@@ -182,6 +205,7 @@ if (!$super) {
                 pset_save('super_reset', '');
                 pq('UPDATE super_admins SET password_hash = ? WHERE id = ?', [password_hash($pass, PASSWORD_DEFAULT), $a['id']]);
                 pq('DELETE FROM attempts WHERE ip = ?', [client_ip()]);
+                pset_save('super_pw_reset_' . (int) $a['id'], (string) time());   // 7 dní bez kódu 2FA e-mailem
                 pq('INSERT INTO platform_log (at, admin, ip, action, detail) VALUES (?,?,?,?,?)', [date('Y-m-d H:i:s'), $a['email'], client_ip(), 'Zapomenuté heslo: nastaveno nové heslo', '']);
                 if ($a['totp_enabled']) {
                     session_regenerate_id(true);
