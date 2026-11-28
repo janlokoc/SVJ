@@ -336,6 +336,11 @@ $userForm = function (int $id = 0) {
         if ($u['name'] === '') {
             $errors[] = 'Vyplňte jméno.';
         }
+        if (($ph = phone_clean((string) $u['phone'])) === null) {
+            $errors[] = PHONE_ERROR;
+        } else {
+            $u['phone'] = $ph;
+        }
         if (!filter_var($u['email'], FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Zadejte platný e-mail – slouží jako přihlašovací jméno.';
         } elseif (val('SELECT 1 FROM users WHERE email = ? AND id <> ?', [$u['email'], $id])) {

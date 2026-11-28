@@ -9,7 +9,7 @@
       <h2>Kontaktní údaje</h2>
       <?= csrf_field() ?><input type="hidden" name="action" value="profile">
       <label>Jméno a příjmení <input type="text" name="name" value="<?= e($u['name']) ?>" required></label>
-      <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>" autocomplete="tel"></label>
+      <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>" autocomplete="tel" placeholder="+420 777 123 456"></label>
       <p class="hint">Telefon vidí jen výbor – kvůli řešení závad a požadavků.</p>
       <p class="h-small">Jak Vám máme dávat vědět</p>
       <label class="check"><input type="checkbox" name="email_notify"<?= $u['email_notify'] ? ' checked' : '' ?>> <span>Posílat mi důležité zprávy výboru e-mailem <small>Například pozvánky na shromáždění nebo oznámení o odstávkách.</small></span></label>

@@ -54,6 +54,11 @@ $joinForm = function (string $token) {
             if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL)) {
                 $errors[] = 'Zadejte platný e-mail.';
             }
+            if (($ph = phone_clean($in['phone'])) === null) {
+                $errors[] = PHONE_ERROR;
+            } else {
+                $in['phone'] = $ph;
+            }
             if (!$in['unit_id'] || !val('SELECT 1 FROM units WHERE id = ?', [$in['unit_id']])) {
                 $errors[] = 'Vyberte svou jednotku.';
             }

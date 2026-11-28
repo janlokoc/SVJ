@@ -16,7 +16,7 @@
         <span class="hp" aria-hidden="true"><input type="text" name="website" tabindex="-1" autocomplete="off"></span>
         <label>Jméno a příjmení <input type="text" name="name" value="<?= e($in['name']) ?>" autocomplete="name" required maxlength="120"></label>
         <label>E-mail <small>budete se jím přihlašovat</small> <input type="email" name="email" value="<?= e($in['email']) ?>" autocomplete="email" required maxlength="190"></label>
-        <label>Telefon <small>nepovinné – výbor Vám může zavolat kvůli ověření</small> <input type="tel" name="phone" value="<?= e($in['phone']) ?>" autocomplete="tel" maxlength="40"></label>
+        <label>Telefon <small>nepovinné – výbor Vám může zavolat kvůli ověření</small> <input type="tel" name="phone" value="<?= e($in['phone']) ?>" autocomplete="tel" maxlength="40" placeholder="+420 777 123 456"></label>
         <label>Jednotka <select name="unit_id" required><option value="">– vyberte –</option>
           <?php foreach ($units as $un): ?><option value="<?= (int) $un['id'] ?>"<?= (int) $in['unit_id'] === (int) $un['id'] ? ' selected' : '' ?>><?= e(unit_name($un)) ?><?= $un['floor'] !== '' ? ' · ' . e($un['floor']) . '. patro' : '' ?></option><?php endforeach ?>
         </select></label>

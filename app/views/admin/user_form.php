@@ -10,7 +10,7 @@
       <label>Role
         <select name="role"><?php foreach (ROLES as $k => $label): ?><option value="<?= $k ?>"<?= $u['role'] === $k ? ' selected' : '' ?>><?= $label ?></option><?php endforeach ?></select>
       </label>
-      <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>"></label>
+      <label>Telefon <input type="tel" name="phone" value="<?= e($u['phone']) ?>" placeholder="+420 777 123 456"></label>
     </div>
     <p class="hint">Obyvatel domu (vlastník i nájemník) vidí neveřejné dokumenty, diskuzi a hlášení závad a požadavků. Správce webu navíc upravuje obsah a účty.</p>
     <fieldset>

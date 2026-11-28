@@ -38,31 +38,8 @@ $GLOBALS['EXT_ADMIN_NAV']['/admin/sms'] = ['SMS zprávy', 'Komunikace', fn() => 
  */
 function sms_normalize(string $phone): ?string
 {
-    $p = preg_replace('/[\s\-\/().\x{00a0}]/u', '', trim($phone));
-    if ($p === '' || !preg_match('/^(\+|00)?\d+$/', $p)) {
-        return null;
-    }
-    if (str_starts_with($p, '00')) {
-        $p = '+' . substr($p, 2);
-    }
-    if ($p[0] !== '+') {
-        if (strlen($p) === 9) {
-            $p = '+420' . $p;
-        } elseif (strlen($p) === 12 && (str_starts_with($p, '420') || str_starts_with($p, '421'))) {
-            $p = '+' . $p;
-        } else {
-            return null;
-        }
-    }
-    $digits = substr($p, 1);
-    if ($digits[0] === '0' || strlen($digits) < 8 || strlen($digits) > 15) {
-        return null;
-    }
-    // Česko a Slovensko: po předvolbě přesně 9 číslic.
-    if ((str_starts_with($digits, '420') || str_starts_with($digits, '421')) && strlen($digits) !== 12) {
-        return null;
-    }
-    return $p;
+    $p = phone_clean($phone);
+    return $p === null || $p === '' ? null : str_replace(' ', '', $p);
 }
 /** Je to český mobil? (Mobilní čísla začínají 60x, 70x, 72x–79x; pevné linky SMS nepřijmou.) */
 function sms_is_mobile(string $e164): bool

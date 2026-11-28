@@ -52,8 +52,11 @@ $route('POST', '/muj-ucet', function () use ($accountData) {
         if ($name === '') {
             $errors[] = 'Vyplňte jméno.';
         }
+        if (($phone = phone_clean(post('phone'))) === null) {
+            $errors[] = PHONE_ERROR;
+        }
         if (!$errors) {
-            q('UPDATE users SET name = ?, phone = ?, email_notify = ?, chat_off = ?, push_notify = ? WHERE id = ?', [$name, post('phone'), isset($_POST['email_notify']) ? 1 : 0, isset($_POST['chat_off']) ? 1 : 0, plan_has('push') ? (isset($_POST['push_notify']) ? 1 : 0) : (int) ($u['push_notify'] ?? 1), $u['id']]);
+            q('UPDATE users SET name = ?, phone = ?, email_notify = ?, chat_off = ?, push_notify = ? WHERE id = ?', [$name, $phone, isset($_POST['email_notify']) ? 1 : 0, isset($_POST['chat_off']) ? 1 : 0, plan_has('push') ? (isset($_POST['push_notify']) ? 1 : 0) : (int) ($u['push_notify'] ?? 1), $u['id']]);
             flash('Údaje byly uloženy.');
             redirect('/muj-ucet');
         }

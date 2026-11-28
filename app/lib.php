@@ -654,6 +654,42 @@ function feature_on(string $key): bool
     return !in_array($key, array_filter(explode(',', setting('hidden_features'))), true);
 }
 /**
+ * Telefon obyvatele: '' (nevyplněno), číslo s předvolbou ve tvaru „+420 777 123 456“, nebo null (nejde přečíst).
+ * Devět číslic bez předvolby se bere jako české číslo; přijímá „+“, „00“, mezery, pomlčky, závorky (11/2026).
+ */
+const PHONE_ERROR = 'Telefon zadejte i s předvolbou, např. +420 777 123 456.';
+function phone_clean(string $phone): ?string
+{
+    $p = preg_replace('/[\s\-\/().\x{00a0}]/u', '', trim($phone));
+    if ($p === '') {
+        return '';
+    }
+    if (!preg_match('/^(\+|00)?\d+$/', $p)) {
+        return null;
+    }
+    if (str_starts_with($p, '00')) {
+        $p = '+' . substr($p, 2);
+    }
+    if ($p[0] !== '+') {
+        if (strlen($p) === 9) {
+            $p = '+420' . $p;
+        } elseif (strlen($p) === 12 && (str_starts_with($p, '420') || str_starts_with($p, '421'))) {
+            $p = '+' . $p;
+        } else {
+            return null;
+        }
+    }
+    $d = substr($p, 1);
+    if ($d[0] === '0' || strlen($d) < 8 || strlen($d) > 15) {
+        return null;
+    }
+    if ((str_starts_with($d, '420') || str_starts_with($d, '421')) && strlen($d) !== 12) {
+        return null;   // Česko a Slovensko: po předvolbě přesně 9 číslic
+    }
+    // Česká a slovenská čísla: předvolba a tři trojice; ostatní necháme bez mezer.
+    return preg_match('/^(420|421)(\d{3})(\d{3})(\d{3})$/', $d, $m) ? "+$m[1] $m[2] $m[3] $m[4]" : $p;
+}
+/**
  * Upozornění z posledního importu z katastru (sdílené podíly, nečitelné řádky), která má správce ověřit.
  * Uloží se při importu a připomínají se na Přehledu a u Jednotek, dokud je správce neodškrtne (11/2026 – dřív
  * byla vidět jen v náhledu a po uložení se ztratila).
