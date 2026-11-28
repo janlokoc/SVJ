@@ -207,10 +207,10 @@
   },
   "katastr-a-rejstriky": {
     "date": "2026-11-28",
-    "checks": 25,
+    "checks": 27,
     "steps": [
       "Změny v katastru: kód k. ú. 610372 a LV uloženy; u tlačítka je cena 1 490 Kč za dům a rok bez DPH včetně 1 LV (se dvěma LV 2 480 Kč). Po potvrzení ceny „Zapnout sledování“ vznikla výzva k platbě za zbytek zaplaceného období (dál se platí s ročním předplatným). Web kontroluje každých 30 dní. Bez nastavení u provozovatele web jen upozorní; funkce je jen v edici Premium.",
-      "Insolvence vlastníků → Fyzické osoby: jednotka, příjmení, jméno a datum narození (rodné číslo se nezadává), „Hlídat“; kontrola našla řízení a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.",
+      "Insolvence vlastníků → Fyzické osoby: po výběru jednotky web nabídl jejího vlastníka (z katastru, případně uživatele webu u jednotky) – klepnutím se doplnilo příjmení a jméno; ručně jen datum narození (rodné číslo se nezadává), „Hlídat“. „Zkontrolovat teď“ našlo řízení, výsledek se ukázal přímo v části Fyzické osoby a správcům přišel e-mail s upozorněním na lhůtu dvou měsíců.",
       "Lustrace exekucí: na seznamu je osoba s datem narození i firma s IČO; cena 99 Kč bez DPH za dotaz se platí z kreditu služeb – když kredit nestačí, web lustraci vůbec nenabídne. Po zaškrtnutí ceny a „Lustrovat“ web uložil nalezenou exekuci 999EX120/23 s datem a z kreditu strhl 99 Kč. Sám se dotaz nespustil.",
       "„Zkontrolovat teď“: web stáhl výpis LV a napoprvé ho porovnal s evidencí jednotek – ukázal nového vlastníka jednotky 12A/3 a probíhající řízení (plombu); správcům přišel e-mail.",
       "„Převzít do evidence“ přepsalo vlastníka jednotky 12A/3 a smazalo údaje bývalého vlastníka (hlídání insolvence i výsledek lustrace); plombu jsme „vzali na vědomí“.",
