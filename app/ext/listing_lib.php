@@ -467,6 +467,8 @@ const LISTING_FEATURES = [
     'sklep_plocha' => ['kind' => 'area', 'group' => 'prislusenstvi', 'label' => 'Plocha sklepa (m²)', 'needs' => 'sklep', 'max' => 200],
     'parkovani' => ['kind' => 'choice', 'group' => 'prislusenstvi', 'label' => 'Parkování', 'options' => ['garaz' => 'Garáž', 'stani_kryte' => 'Kryté parkovací stání', 'stani_venkovni' => 'Venkovní parkovací stání']],
     'parkovani_cena' => ['kind' => 'int', 'group' => 'prislusenstvi', 'label' => 'Příplatek za parkování (Kč)', 'needs' => 'parkovani', 'min' => 1, 'max' => 99999999],
+    'predzahradka' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Předzahrádka'],
+    'predzahradka_plocha' => ['kind' => 'area', 'group' => 'prislusenstvi', 'label' => 'Plocha předzahrádky (m²)', 'needs' => 'predzahradka', 'max' => 500],
     'komora' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Komora / půda'],
     'kolarna' => ['kind' => 'bool', 'group' => 'prislusenstvi', 'label' => 'Kolárna'],
     'vytah' => ['kind' => 'choice', 'group' => 'dum', 'label' => 'Výtah', 'options' => ['ano' => 'Výtah', 'ne' => 'Bez výtahu']],

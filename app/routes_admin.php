@@ -789,13 +789,14 @@ $route('POST', '/admin/jednotky/hromadne', function () {
 $unitForm = function (int $id = 0) {
     require_admin();
     $unit = $id ? (one('SELECT * FROM units WHERE id = ?', [$id]) ?? not_found())
-        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => '', 'owner_contact' => '', 'area' => null];
+        : ['id' => 0, 'entrance' => 'A', 'number' => '', 'floor' => '', 'share' => '', 'owner_note' => '', 'note' => '', 'owner_contact' => '', 'area' => null, 'kind' => ''];
     $userIds = $id ? array_map('intval', array_column(all('SELECT user_id FROM user_units WHERE unit_id = ?', [$id]), 'user_id')) : [];
     $errors = [];
     if ($GLOBALS['METHOD'] === 'POST') {
         $unit = array_merge($unit, [
             'entrance' => in_array(post('entrance'), entrances(), true) ? post('entrance') : '',
             'number' => post('number'), 'floor' => post('floor'), 'share' => post('share'), 'owner_note' => post('owner_note'), 'note' => post('note'), 'owner_contact' => mb_substr(post('owner_contact'), 0, 2000),
+            'kind' => isset(UNIT_KINDS[post('kind')]) ? post('kind') : '',
         ]);
         $area = unit_area_parse(post('area'));
         $unit['area'] = $area === false ? post('area') : $area;
@@ -815,11 +816,11 @@ $unitForm = function (int $id = 0) {
             $errors[] = 'K jednotce je přiřazený nájemník, ale žádný vlastník s účtem. Nájemník bez vlastníka být nemůže – přiřaďte i účet vlastníka.';
         }
         if (!$errors) {
-            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact'], $area];
+            $args = [$unit['entrance'], $unit['number'], $unit['floor'], $unit['share'], $unit['owner_note'], $unit['note'], $unit['owner_contact'], $area, $unit['kind']];
             if ($id) {
-                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ?, area = ? WHERE id = ?', [...$args, $id]);
+                q('UPDATE units SET entrance = ?, number = ?, floor = ?, share = ?, owner_note = ?, note = ?, owner_contact = ?, area = ?, kind = ? WHERE id = ?', [...$args, $id]);
             } else {
-                q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact, area) VALUES (?,?,?,?,?,?,?,?)', $args);
+                q('INSERT INTO units (entrance, number, floor, share, owner_note, note, owner_contact, area, kind) VALUES (?,?,?,?,?,?,?,?,?)', $args);
                 $id = (int) db()->lastInsertId();
             }
             q('DELETE FROM user_units WHERE unit_id = ?', [$id]);
@@ -960,13 +961,15 @@ $cadastreImport = function () {
                 $id = val('SELECT id FROM units WHERE entrance = ? AND number = ?', [$u['entrance'], $u['number']]);
                 if ($id) {
                     q('UPDATE units SET share = ?, owner_note = ?, owner_contact = ? WHERE id = ?', [$u['share'], $u['owner_note'], $u['owner_contact'], $id]);
+                    q("UPDATE units SET kind = ? WHERE id = ? AND kind = ''", [$u['kind'], $id]);   // druh zadaný výborem se nepřepíše
                     $updated++;
                 } else {
-                    q('INSERT INTO units (entrance, number, share, owner_note, owner_contact) VALUES (?,?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note'], $u['owner_contact']]);
+                    q('INSERT INTO units (entrance, number, share, owner_note, owner_contact, kind) VALUES (?,?,?,?,?,?)', [$u['entrance'], $u['number'], $u['share'], $u['owner_note'], $u['owner_contact'], $u['kind']]);
                     $new++;
                 }
             }
             cadastre_todo_save($parsed['warnings']);   // nový import nahradí upozornění z předchozího
+            cadastre_snapshot_save($parsed);
             audit('units_imported', "nových $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : ''));
             setting('__reset');
             flash("Import hotov: nových jednotek $new, aktualizovaných $updated" . ($removed ? ", smazaných $removed" : '') . '. Účty přiřazené k jednotkám zůstaly beze změny.' . ($parsed['warnings'] ? ' Zbývá ověřit ' . count($parsed['warnings']) . ' věcí – najdete je nahoře.' : ''));

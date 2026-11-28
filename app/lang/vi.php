@@ -1278,4 +1278,5 @@ return [
     'Napsat e-mail sousedům' => 'Viết e-mail cho hàng xóm',
     'Na webu' => 'Trên trang web',
     'Informace' => 'Thông tin',
+    'Plocha předzahrádky (m²)' => 'Diện tích vườn trước (m²)',
 ];

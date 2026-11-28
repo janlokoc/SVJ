@@ -1278,4 +1278,5 @@ return [
     'Napsat e-mail sousedům' => 'Написати лист сусідам',
     'Na webu' => 'На сайті',
     'Informace' => 'Інформація',
+    'Plocha předzahrádky (m²)' => 'Площа палісадника (м²)',
 ];

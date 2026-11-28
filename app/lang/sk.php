@@ -1278,4 +1278,5 @@ return [
     'Napsat e-mail sousedům' => 'Napísať e-mail susedom',
     'Na webu' => 'Na webe',
     'Informace' => 'Informácie',
+    'Plocha předzahrádky (m²)' => 'Plocha predzáhradky (m²)',
 ];

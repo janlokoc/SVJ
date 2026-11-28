@@ -1278,4 +1278,5 @@ return [
     'Napsat e-mail sousedům' => 'Write an e-mail to neighbours',
     'Na webu' => 'On the website',
     'Informace' => 'Information',
+    'Plocha předzahrádky (m²)' => 'Front garden area (m²)',
 ];

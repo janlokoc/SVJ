@@ -19,17 +19,26 @@
     <h2>Náhled</h2>
     <p>Nalezeno jednotek: <strong><?= count($parsed['units']) ?></strong>. Součet podílů: <strong><?= percent_cz($parsed['total'] * 100) ?></strong><?= abs($parsed['total'] - 1) < 0.0001 ? ' – sedí.' : ' – nevychází na 100 %, zkontrolujte, zda je text úplný.' ?></p>
     <?php if ($parsed['by_cp']): ?><div class="flash flash-info">Dům má <?= count($parsed['by_cp']) ?> čísel popisných (<?= e(implode(', ', $parsed['by_cp'])) ?>). Vchody se označí těmito čísly a jednotky se budou jmenovat stejně jako v katastru, například <?= e(array_key_first($parsed['units'])) ?>.</div><?php endif ?>
+    <?php $snap = cadastre_snapshot(); $diff = cadastre_diff($parsed, $snap); if ($snap): ?>
+    <div class="card card-soft"><h3>Změny od posledního importu (<?= e(cz_date(substr($snap['at'], 0, 10))) ?>)</h3>
+      <?php if (!$diff): ?><p class="muted">Vlastníci ani podíly se nezměnili.</p><?php else: ?><ul>
+      <?php foreach ($diff as $d): ?><li><strong><?= e($d['unit']) ?></strong>: <?= e(match ($d['what']) { 'new' => 'nová jednotka – ' . $d['new'], 'gone' => 'v katastru už není (dřív ' . $d['old'] . ')', 'share' => 'podíl ' . $d['old'] . ' → ' . $d['new'], default => 'vlastník ' . $d['old'] . ' → ' . $d['new'] }) ?></li><?php endforeach ?>
+      </ul><p class="hint">Po uložení se u jednotek přepíše vlastník dle evidence; účty obyvatel na webu zůstávají – nového vlastníka pozvěte, bývalému účet ukončete v Uživatelích.</p><?php endif ?></div>
+    <?php endif ?>
+    <?php if (!empty($parsed['meta'])): $mt = $parsed['meta']; ?><p class="muted">Stavba <?= e($mt['stavba'] ?? '') ?><?= isset($mt['ku']) ? ' · k. ú. ' . e($mt['ku']) : '' ?><?= isset($mt['lv']) ? ' · LV ' . e($mt['lv']) : '' ?><?= isset($mt['pozemek']) ? ' · pozemek ' . e($mt['pozemek']) : '' ?><?= isset($mt['platnost']) ? ' · data k ' . e(cz_date($mt['platnost'])) : '' ?></p><?php endif ?>
+    <?php if (array_filter(array_column($parsed['units'], 'kind_est'))): ?><p class="hint">Druh jednotky (byt, garáž) katastr ve vloženém textu neuvádí, proto je to <strong>odhad podle podílu</strong> – garáže a sklepy mají výrazně menší podíl než byty. Po uložení ho můžete u jednotky změnit; ručně zadaný druh další import nepřepíše.</p><?php endif ?>
     <?php foreach ($parsed['warnings'] as $w): ?><div class="flash flash-info"><?= e($w) ?></div><?php endforeach ?>
     <p class="hint">Uložením se u existujících jednotek přepíše vlastník dle evidence a podíl. Patro, poznámka a přiřazené účty zůstanou. Adresy vlastníků z katastru se uloží k jednotce pro seznam členů a doručování; vidí je jen správci webu.</p>
     <table class="table">
-      <thead><tr><th>Jednotka</th><th>V katastru</th><th>Vlastník dle evidence</th><th>Podíl</th><th>Stav</th></tr></thead>
+      <thead><tr><th>Jednotka</th><th>V katastru</th><th>Druh</th><th>Vlastník dle evidence</th><th>Podíl</th><th>Stav</th></tr></thead>
       <tbody>
       <?php foreach ($parsed['units'] as $key => $u): $ex = $existing[$u['entrance'] . '/' . $u['number']] ?? null; ?>
         <tr>
           <td data-label="Jednotka"><strong><?= e($parsed['by_cp'] ? $u['entrance'] . '/' . $u['number'] : unit_name($u)) ?></strong></td>
           <td data-label="V katastru"><?= e($key) ?></td>
+          <td data-label="Druh"><?= e(UNIT_KINDS[$u['kind']] ?? '') ?><?= $u['kind_est'] ? ' <small class="muted">odhad</small>' : '' ?></td>
           <td data-label="Vlastník dle evidence"><?= e($u['owner_note']) ?></td>
-          <td data-label="Podíl"><?= e($u['share']) ?></td>
+          <td data-label="Podíl"><?= e($u['share']) ?> <small class="muted"><?= e(share_percent_cz($u['share'])) ?></small></td>
           <td data-label="Stav"><?php if (!$ex): ?><span class="status status-done">nová</span><?php elseif ($ex['share'] === $u['share'] && $ex['owner_note'] === $u['owner_note']): ?><span class="muted">beze změny</span><?php else: ?><span class="status status-in_progress">změna</span><?php endif ?></td>
         </tr>
       <?php endforeach ?>

@@ -75,7 +75,7 @@ final class AuditRoleTest extends TestCase
             }
             unset($old);
             $pdo = open_database($dir, '');
-            $this->assertSame(18, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
+            $this->assertGreaterThanOrEqual(18, (int) $pdo->query('PRAGMA user_version')->fetchColumn());
             $pdo->exec("INSERT INTO users (name, email, role, password_hash) VALUES ('K', 'k2@example.cz', 'kontrola', 'x')");
             $this->assertSame('admin', (string) $pdo->query("SELECT role FROM users WHERE email = 'stara@example.cz'")->fetchColumn(), 'data zůstala');
             $this->assertSame('ok', (string) $pdo->query('PRAGMA integrity_check')->fetchColumn());

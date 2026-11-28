@@ -8,9 +8,10 @@
       <label>Vchod <select name="entrance"><?php foreach (entrances() as $en): ?><option value="<?= e($en) ?>"<?= $unit['entrance'] === $en ? ' selected' : '' ?>><?= $en === '' ? '—' : e(unit_prefix() . ' ' . $en) ?></option><?php endforeach ?></select></label>
       <label>Číslo jednotky <input type="text" name="number" value="<?= e($unit['number']) ?>" maxlength="10" required></label>
       <label>Patro <input type="text" name="floor" value="<?= e($unit['floor']) ?>" maxlength="10"></label>
+      <label>Druh <select name="kind"><option value="">nezadáno</option><?php foreach (UNIT_KINDS as $kk => $kl): ?><option value="<?= $kk ?>"<?= ($unit['kind'] ?? '') === $kk ? ' selected' : '' ?>><?= e($kl) ?></option><?php endforeach ?></select></label>
     </div>
     <div class="form-row">
-      <label>Spoluvlastnický podíl <input type="text" name="share" value="<?= e($unit['share']) ?>" placeholder="Např. 652/100000"></label>
+      <label>Spoluvlastnický podíl <input type="text" name="share" value="<?= e($unit['share']) ?>" placeholder="Např. 652/100000"><?php if (share_percent_cz((string) $unit['share']) !== ''): ?> <small><?= e(share_percent_cz((string) $unit['share'])) ?></small><?php endif ?></label>
       <label>Plocha (m²) <input type="text" name="area" inputmode="decimal" value="<?= e(is_numeric($unit['area'] ?? null) ? str_replace('.', ',', (string) (float) $unit['area']) : (string) ($unit['area'] ?? '')) ?>" maxlength="10" placeholder="Např. 54,3"></label>
     </div>
     <p class="hint">Podlahová plocha jednotky (nepovinné). Vlastník ji vidí ve svém účtu a předvyplní se mu do inzerátu; měnit ji může jen výbor.</p>

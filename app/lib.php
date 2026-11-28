@@ -90,6 +90,18 @@ const CATEGORIES = [
 const CONTACT_GROUPS = ['vybor' => 'Výbor SVJ', 'sprava' => 'Správa a účetnictví', 'havarie' => 'Havarijní servis'];
 const TICKET_STATUS = ['new' => 'Nová', 'in_progress' => 'Řeší se', 'done' => 'Vyřešeno'];
 const VISIBILITY = ['public' => 'Veřejné', 'residents' => 'Jen pro přihlášené'];
+/** Druh jednotky (z katastru, nebo odhad podle podílu při importu; správce ho může změnit). */
+const UNIT_KINDS = ['byt' => 'Byt', 'garaz' => 'Garáž', 'nebyt' => 'Nebytový prostor (obchod, kancelář, sklep…)'];
+/** Podíl „141/2500“ v procentech (5.64), nebo null. */
+function share_percent(string $share): ?float
+{
+    return preg_match('~^\s*(\d+)\s*/\s*(\d+)\s*$~', $share, $m) && (int) $m[2] > 0 ? round(100 * (int) $m[1] / (int) $m[2], 2) : null;
+}
+function share_percent_cz(string $share): string
+{
+    $p = share_percent($share);
+    return $p === null ? '' : str_replace('.', ',', rtrim(rtrim(number_format($p, 2, '.', ''), '0'), '.')) . ' %';
+}
 const KINDS = ['owner' => 'Vlastník', 'tenant' => 'Nájemník'];
 const AUDIENCES = ['owners' => 'Vlastníci', 'all' => 'Všichni obyvatelé (vlastníci i nájemníci)'];
 const NO_PASSWORD = '!'; // účet čeká na přijetí pozvánky, přihlásit se zatím nejde
@@ -182,6 +194,7 @@ function db_mysql(string $tenant): PDO
         schema_v16($pdo, true);
         schema_v17($pdo, true);
         schema_v18($pdo, true);
+        schema_v19($pdo, true);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -238,7 +251,19 @@ function db_mysql(string $tenant): PDO
     if ($mysqlVersion < 18) {
         schema_v18($pdo, true);
     }
+    if ($mysqlVersion < 19) {
+        schema_v19($pdo, true);
+    }
     return $pdo;
+}
+/** Devatenáctá verze databáze: druh jednotky (byt, garáž, nebytový prostor; '' = nezadáno). */
+function schema_v19(PDO $pdo, bool $mysql): void
+{
+    $cols = $mysql ? array_column($pdo->query('SHOW COLUMNS FROM units')->fetchAll(), 'Field') : array_column($pdo->query('PRAGMA table_info(units)')->fetchAll(), 'name');
+    if (!in_array('kind', $cols, true)) {
+        $pdo->exec('ALTER TABLE units ADD COLUMN kind ' . ($mysql ? "VARCHAR(20) NOT NULL DEFAULT ''" : "TEXT NOT NULL DEFAULT ''"));
+    }
+    $mysql ? $pdo->exec("UPDATE settings SET value = '19' WHERE `key` = 'schema_version'") : $pdo->exec('PRAGMA user_version = 19');
 }
 /**
  * Osmnáctá verze databáze: role „kontrolní komise“ (kontrola). SQLite: rozšíření omezení CHECK u users.role postupem
@@ -440,6 +465,7 @@ function open_database(string $storage, string $tenant): PDO
         schema_v16($pdo, false);
         schema_v17($pdo, false);
         schema_v18($pdo, false);
+        schema_v19($pdo, false);
         seed_after($pdo, $tenant);
         return $pdo;
     }
@@ -582,6 +608,9 @@ SQL);
     if ($version < 18) {
         schema_v18($pdo, false);
     }
+    if ($version < 19) {
+        schema_v19($pdo, false);
+    }
     return $pdo;
 }
 
@@ -689,6 +718,47 @@ function phone_clean(string $phone): ?string
     }
     // Česká a slovenská čísla: předvolba a tři trojice; ostatní necháme bez mezer.
     return preg_match('/^(420|421)(\d{3})(\d{3})(\d{3})$/', $d, $m) ? "+$m[1] $m[2] $m[3] $m[4]" : $p;
+}
+/**
+ * Snímek posledního importu z katastru (údaje o stavbě a vlastníci podle jednotek) – při dalším importu náhled ukáže,
+ * co se od minula změnilo (nový vlastník, nová nebo zmizelá jednotka). Uloženo v nastavení domu (vidí jen správci).
+ */
+function cadastre_snapshot(): ?array
+{
+    $s = json_decode(setting('cadastre_snapshot'), true);
+    return is_array($s) && isset($s['units']) ? $s : null;
+}
+function cadastre_snapshot_save(array $parsed): void
+{
+    $units = [];
+    foreach ($parsed['units'] as $key => $u) {
+        $units[$key] = ['owner' => (string) $u['owner_note'], 'share' => (string) $u['share']];
+    }
+    q('DELETE FROM settings WHERE `key` = ?', ['cadastre_snapshot']);
+    q('INSERT INTO settings (`key`, value) VALUES (?,?)', ['cadastre_snapshot', json_encode(['at' => date('Y-m-d H:i:s'), 'meta' => $parsed['meta'] ?? [], 'units' => $units], JSON_UNESCAPED_UNICODE)]);
+    setting('__reset');
+}
+/** Rozdíly proti snímku: [['unit', 'what' => owner|share|new|gone, 'old', 'new'], …]. */
+function cadastre_diff(array $parsed, ?array $snap): array
+{
+    if (!$snap) {
+        return [];
+    }
+    $out = [];
+    foreach ($parsed['units'] as $key => $u) {
+        $old = $snap['units'][$key] ?? null;
+        if ($old === null) {
+            $out[] = ['unit' => $key, 'what' => 'new', 'old' => '', 'new' => (string) $u['owner_note']];
+        } elseif ($old['owner'] !== (string) $u['owner_note']) {
+            $out[] = ['unit' => $key, 'what' => 'owner', 'old' => $old['owner'], 'new' => (string) $u['owner_note']];
+        } elseif ($old['share'] !== (string) $u['share']) {
+            $out[] = ['unit' => $key, 'what' => 'share', 'old' => $old['share'], 'new' => (string) $u['share']];
+        }
+    }
+    foreach (array_diff_key($snap['units'], $parsed['units']) as $key => $old) {
+        $out[] = ['unit' => (string) $key, 'what' => 'gone', 'old' => $old['owner'], 'new' => ''];
+    }
+    return $out;
 }
 /**
  * Upozornění z posledního importu z katastru (sdílené podíly, nečitelné řádky), která má správce ověřit.
@@ -1871,6 +1941,121 @@ function gcd_int(int $a, int $b): int
  * Zpracuje text zkopírovaný z Nahlížení do KN (stránka stavby, část „Vlastníci, jiní oprávnění“).
  * Vrací jednotky s vlastníky a podílem (součet podílů vlastníků jednotky) a případná upozornění.
  */
+/**
+ * Typické podíly v domě: ['byt' => zlomek, 'garaz' => zlomek] (nejčastější velký a nejčastější malý podíl jednotek
+ * s vlastním podílem; malý = méně než 35 % největšího). Prázdné pole, když se nedají určit.
+ */
+function cadastre_typical_shares(array $values): array
+{
+    $values = array_values(array_filter($values, fn($v) => $v > 0));
+    if (!$values) {
+        return [];
+    }
+    $max = max($values);
+    $mode = function (array $vs): ?float {
+        if (!$vs) {
+            return null;
+        }
+        $c = [];
+        foreach ($vs as $v) {
+            $c[(string) round($v, 8)] = ($c[(string) round($v, 8)] ?? 0) + 1;
+        }
+        arsort($c);
+        return (float) array_key_first($c);
+    };
+    $big = $mode(array_filter($values, fn($v) => $v >= 0.35 * $max));
+    $small = $mode(array_filter($values, fn($v) => $v < 0.35 * $max));
+    return array_filter(['byt' => $big, 'garaz' => $small], fn($v) => $v !== null);
+}
+/**
+ * Rozdělí společný podíl $total na $n jednotek podle typických podílů: najde kombinaci byt/garáž, jejíž součet
+ * se nejvíc blíží $total (odchylka do 3 %), a podíl rozdělí v tomto poměru. Vrací [[[čitatel, jmenovatel], druh], …] nebo null.
+ */
+function cadastre_split_share(float $total, int $n, array $typical, array $exact = []): ?array
+{
+    if ($n < 2 || $n > 6 || !isset($typical['byt'])) {
+        return null;
+    }
+    $kinds = array_keys($typical);
+    $best = null;
+    $combos = [[]];
+    for ($i = 0; $i < $n; $i++) {
+        $next = [];
+        foreach ($combos as $c) {
+            foreach ($kinds as $k) {
+                $next[] = [...$c, $k];
+            }
+        }
+        $combos = $next;
+    }
+    foreach ($combos as $c) {
+        $sum = array_sum(array_map(fn($k) => $typical[$k], $c));
+        $err = abs($sum - $total) / $total;
+        if ($best === null || $err < $best[0] - 1e-12) {
+            $best = [$err, $c, $sum];
+        }
+    }
+    if ($best === null || $best[0] > 0.03) {
+        return null;
+    }
+    // Zlomky: jednotky dostanou přesně typický podíl, kromě poslední garáže (nebo posledního bytu), která dostane zbytek do celku
+    // – součet sedí přesně (331/5000 = byt 141/2500 + garáž 49/5000).
+    [$tn, $td] = $exact ?: float_fraction($total);
+    $rest = array_key_last(array_filter($best[1], fn($k) => $k === 'garaz')) ?? array_key_last($best[1]);
+    [$sn, $sd] = [0, 1];
+    $typ = [];
+    foreach ($best[1] as $i => $k) {
+        if ($i !== $rest) {
+            $typ[$i] = float_fraction($typical[$k]);
+            [$sn, $sd] = [$sn * $typ[$i][1] + $typ[$i][0] * $sd, $sd * $typ[$i][1]];
+        }
+    }
+    $rn = $tn * $sd - $sn * $td;
+    if ($rn > 0) {
+        $out = [];
+        foreach ($best[1] as $i => $k) {
+            [$pn, $pd] = $i === $rest ? [$rn, $td * $sd] : $typ[$i];
+            $g = gcd_int($pn, $pd) ?: 1;
+            $out[] = [[intdiv($pn, $g), intdiv($pd, $g)], $k];
+        }
+        return $out;
+    }
+    $out = [];
+    [$sn, $sd] = [0, 1];
+    foreach ($best[1] as $i => $k) {
+        if ($i < $n - 1) {
+            [$pn, $pd] = float_fraction($total * $typical[$k] / $best[2]);
+            [$sn, $sd] = [$sn * $pd + $pn * $sd, $sd * $pd];
+        } else {
+            [$pn, $pd] = [$tn * $sd - $sn * $td, $td * $sd];
+        }
+        $g = gcd_int(abs($pn), $pd) ?: 1;
+        $out[] = [[intdiv($pn, $g), intdiv($pd, $g)], $k];
+        $g = gcd_int(abs($sn), $sd) ?: 1;
+        [$sn, $sd] = [intdiv($sn, $g), intdiv($sd, $g)];
+    }
+    return $out[array_key_last($out)][0][0] > 0 ? $out : null;
+}
+/** Desetinné číslo → zlomek [čitatel, jmenovatel] (řetězové zlomky, jmenovatel nejvýše $maxDen). */
+function float_fraction(float $x, int $maxDen = 100000): array
+{
+    [$h0, $h1, $k0, $k1] = [0, 1, 1, 0];
+    $v = $x;
+    for ($i = 0; $i < 30; $i++) {
+        $a = (int) floor($v);
+        [$h0, $h1] = [$h1, $a * $h1 + $h0];
+        [$k0, $k1] = [$k1, $a * $k1 + $k0];
+        if ($k1 > $maxDen) {
+            [$h1, $k1] = [$h0, $k0];
+            break;
+        }
+        if (abs($x - $h1 / $k1) < 1e-12 || $v - $a < 1e-12) {
+            break;
+        }
+        $v = 1 / ($v - $a);
+    }
+    return [$h1, max(1, $k1)];
+}
 function parse_cadastre(string $text): array
 {
     $text = preg_replace('/\[([^\]]*)\]\([^)]*\)/u', '$1', $text);   // odkazy ve tvaru [text](adresa) → text
@@ -1883,6 +2068,7 @@ function parse_cadastre(string $text): array
     }
     $units = [];
     $warnings = [];
+    $rows = [];   // [jméno, kontakt, jednotky, čitatel, jmenovatel]
     for ($i = $start; $i < count($lines) - 1; $i++) {
         if (!preg_match('/^Jednotk[ay]\s*:\s*(.+)$/u', $lines[$i + 1], $m) || str_starts_with($lines[$i], 'Jednotk')) {
             continue;
@@ -1901,20 +2087,43 @@ function parse_cadastre(string $text): array
             && !str_starts_with($lines[$j], 'Jednotk') && !str_starts_with($lines[$j + 1] ?? '', 'Jednotk'); $j++) {
             $contact .= ' | ' . $lines[$j];
         }
-        if ($den <= 0 || $name === '') {
-            continue;
+        if ($den > 0 && $name !== '') {
+            $rows[] = [$name, $contact, $fractions, $num, $den];
+        }
+        $i++;
+    }
+    // Typické podíly bytu a garáže v domě z jednotek s vlastním podílem (11/2026): společný podíl více jednotek
+    // („371/101, 372/3 – 331/5000“) se pak rozdělí podle nich (byt + garáž), ne rovným dílem.
+    $single = [];
+    foreach ($rows as [, , $fr, $num, $den]) {
+        if (count($fr) === 1) {
+            $single[$fr[0]] = ($single[$fr[0]] ?? 0) + $num / $den;
+        }
+    }
+    $typical = cadastre_typical_shares(array_values($single));
+    $split = [];   // jednotka => [podíl jako zlomek, odhadnutý druh]
+    foreach ($rows as [$name, $contact, $fractions, $num, $den]) {
+        $parts = null;
+        if (count($fractions) > 1 && $typical) {
+            $parts = cadastre_split_share($num / $den, count($fractions), $typical, [$num, $den]);
         }
         if (count($fractions) > 1) {
-            $warnings[] = $name . ': jeden podíl ' . $num . '/' . $den . ' je v katastru uveden společně pro jednotky ' . implode(', ', $fractions) . '. Rozdělil se mezi ně rovným dílem – skutečné rozdělení ověřte v prohlášení vlastníka.';
+            $warnings[] = $name . ': jeden podíl ' . $num . '/' . $den . ' je v katastru uveden společně pro jednotky ' . implode(', ', $fractions) . '. '
+                . ($parts ? 'Rozdělil se podle typických podílů v domě (' . implode(', ', array_map(fn($k, $kind) => $k . ' ' . (UNIT_KINDS[$kind] ?? ''), $fractions, array_column($parts, 1))) . ')'
+                    : 'Rozdělil se mezi ně rovným dílem') . ' – skutečné rozdělení ověřte v prohlášení vlastníka.';
         }
-        foreach ($fractions as $unitKey) {
+        foreach ($fractions as $idx => $unitKey) {
             [$cp, $number] = explode('/', $unitKey);
             $units[$unitKey] ??= ['cp' => (int) $cp, 'number' => $number, 'owners' => [], 'num' => 0, 'den' => 1];
             $u = &$units[$unitKey];
             $u['owners'][] = ['name' => $name, 'share' => $num . '/' . $den, 'contact' => $contact];
+            if ($parts) {
+                [$addNum, $addDen] = $parts[$idx][0];
+                $split[$unitKey] = $parts[$idx][1];
+            } else {
+                [$addNum, $addDen] = [$num, $den * count($fractions)];
+            }
             // přičtení podílu: a/b + c/d
-            $addNum = $num;
-            $addDen = $den * count($fractions);
             $u['num'] = $u['num'] * $addDen + $addNum * $u['den'];
             $u['den'] *= $addDen;
             $g = gcd_int($u['num'], $u['den']);
@@ -1922,7 +2131,6 @@ function parse_cadastre(string $text): array
             $u['den'] = intdiv($u['den'], $g);
             unset($u);
         }
-        $i++;
     }
     // Čísla popisná → vchody A, B, C, D podle pořadí.
     $cps = array_values(array_unique(array_column($units, 'cp')));
@@ -1940,8 +2148,46 @@ function parse_cadastre(string $text): array
         $total += $u['num'] / $u['den'];
     }
     unset($u);
+    // Druh jednotky: když ho vložený text u jednotky uvádí („371/1 byt“, „371/101 (garáž)“), převezme se;
+    // jinak odhad podle podílu – garáže a sklepy mají výrazně menší podíl než byty (méně než 35 % mediánu).
+    $explicit = [];
+    if (preg_match_all('~(\d+\s*/\s*\d+)[\s,(:–-]*\b(byt|garáž|garaz|jiný nebytový prostor|nebytový prostor|ateliér|dílna nebo provozovna)\b~iu', $text, $km, PREG_SET_ORDER)) {
+        foreach ($km as $k) {
+            $t = mb_strtolower($k[2]);
+            $explicit[preg_replace('/\s+/', '', $k[1])] = $t === 'byt' ? 'byt' : (in_array($t, ['garáž', 'garaz'], true) ? 'garaz' : 'nebyt');
+        }
+    }
+    $vals = array_map(fn($u) => $u['num'] / $u['den'], $units);
+    sort($vals);
+    $median = $vals ? $vals[intdiv(count($vals), 2)] : 0;
+    foreach ($units as $key => &$u) {
+        if (isset($explicit[$key])) {
+            [$u['kind'], $u['kind_est']] = [$explicit[$key], false];
+        } elseif (isset($split[$key])) {
+            [$u['kind'], $u['kind_est']] = [$split[$key], true];
+        } else {
+            $v = $u['num'] / $u['den'];
+            if (isset($typical['byt'], $typical['garaz'])) {   // blíž typickému bytu, nebo garáži (poměrově)
+                $kind = abs(log($v / $typical['byt'])) <= abs(log($v / $typical['garaz'])) ? 'byt' : 'garaz';
+            } else {
+                $kind = $median > 0 && $v < 0.35 * $median ? 'garaz' : 'byt';
+            }
+            [$u['kind'], $u['kind_est']] = [$kind, true];
+        }
+    }
+    unset($u);
     uasort($units, fn($a, $b) => [$a['cp'], (int) $a['number']] <=> [$b['cp'], (int) $b['number']]);
-    return ['units' => $units, 'warnings' => $warnings, 'total' => $total, 'by_cp' => $byCp ? array_map('strval', $cps) : []];
+    // Údaje o stavbě pro pozdější kontroly (číslo LV, katastrální území, pozemek, k jakému datu data platí).
+    $meta = [];
+    foreach (['stavba' => 'Stavba', 'obec' => 'Obec', 'ku' => 'Katastrální území', 'lv' => 'Číslo LV', 'pozemek' => 'Stavba stojí na pozemku', 'vyuziti' => 'Způsob využití'] as $mk => $label) {
+        if (preg_match('/^' . preg_quote($label, '/') . '\s*:\s*(.+)$/mu', $text, $mm)) {
+            $meta[$mk] = mb_substr(trim($mm[1]), 0, 200);
+        }
+    }
+    if (preg_match('/Platnost dat k\s+(\d{1,2})\.(\d{1,2})\.(\d{4})/u', $text, $pd)) {
+        $meta['platnost'] = sprintf('%04d-%02d-%02d', $pd[3], $pd[2], $pd[1]);
+    }
+    return ['units' => $units, 'warnings' => $warnings, 'total' => $total, 'by_cp' => $byCp ? array_map('strval', $cps) : [], 'meta' => $meta];
 }
 
 // ---------- Import uživatelů a pozvánky od správce ----------
