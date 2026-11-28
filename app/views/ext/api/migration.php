@@ -28,6 +28,7 @@ $mig = function_exists('pset_int') ? pset_int('price_migration', 0, 1000000) : 0
     </div>
     <?php foreach (api_prompts_migration() as $pi => [$pTitle, , $pText]): $pRest = api_prompt_rest($pText); ?>
     <details class="api-prompt"<?= $pi === 0 ? ' open' : '' ?>><summary><strong><?= e($pTitle) ?></strong></summary>
+      <?php if (str_starts_with($pTitle, 'Převod z exportu')): ?><p class="callout">Potřebujete <strong>export dat od Vaší správcovské firmy</strong> (z jejího portálu, např. INTEGRI G5i nebo DOMUS). Pokud ho nemáte, požádejte o něj správce – bez exportu tento převod nejde.</p><?php elseif (str_starts_with($pTitle, 'Jednotky a obyvatelé')): ?><p class="hint">Potřebujete tabulku (Excel, CSV) se seznamem jednotek a jejich vlastníků – obvykle ji má výbor nebo správcovská firma.</p><?php endif ?>
       <p class="actions"><button class="btn btn-small" type="button" data-copy="<?= e($pText) ?>">Zkopírovat zadání – MCP</button>
         <button class="btn btn-small btn-ghost" type="button" data-copy="<?= e($pRest) ?>">Zkopírovat zadání – API</button></p>
       <textarea readonly rows="7" aria-label="Zadání: <?= e($pTitle) ?>"><?= e($pText) ?></textarea>

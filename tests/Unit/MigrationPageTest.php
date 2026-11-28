@@ -42,6 +42,7 @@ final class MigrationPageTest extends TestCase
         $mv = (string) file_get_contents($root . '/app/views/ext/api/migration.php');
         $this->assertStringContainsString('Zkopírovat zadání – API', $mv);
         $this->assertStringContainsString('Objednat převod', $mv);
+        $this->assertStringContainsString('export dat od Vaší správcovské firmy', $mv, 'u převodu z exportu je řečeno, že export je nutný');
         $av = (string) file_get_contents($root . '/app/views/ext/api/admin.php');
         $this->assertStringContainsString('api_prompts_committee()', $av, 'API a napojení bez zadání pro převod');
         $this->assertStringNotContainsString('api_prompts_migration()', $av);
